@@ -24,7 +24,6 @@
     .form-W { background:var(--green); }
     .form-D { background:var(--gold); }
     .form-L { background:var(--red); }
-    .form-blank { background:var(--border); }
     .arrow-up { color:var(--green); font-size:11px; font-weight:700; }
     .arrow-dn { color:var(--red); font-size:11px; font-weight:700; }
     .arrow-eq { color:var(--text-muted); font-size:11px; }
@@ -33,6 +32,11 @@
     .gd-neg { color:var(--red); font-weight:600; }
     .gd-zero { color:var(--text-muted); }
     .tiebreak-val { color:var(--text-muted); font-size:12px; }
+    .round-heading {
+      font-size:12px; font-weight:600; color:var(--text-muted);
+      text-transform:uppercase; letter-spacing:0.05em;
+      margin-bottom:12px;
+    }
     thead th { white-space:nowrap; font-size:11px; color:var(--text-muted); }
     td { font-size:13px; }
     @media(max-width:600px) { .hide-mobile { display:none; } }
@@ -49,10 +53,11 @@
 
   <main>
     <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:8px">
         <div class="card-title" style="margin-bottom:0">📊 Leaderboard</div>
         <span id="last-updated" style="font-size:11px; color:var(--text-muted)"></span>
       </div>
+      <div id="round-heading" class="round-heading"></div>
 
       <div id="loading" class="loading">
         <div class="spinner"></div>
@@ -125,16 +130,30 @@
           { data: gdData },
           { data: furthestData },
           { data: teamsUsed },
-          { data: todayPicks }
+          { data: todayPicks },
+          { data: rounds }
         ] = await Promise.all([
           db.from('player_scores').select('*'),
           db.from('player_gd').select('*'),
           db.from('player_furthest_round').select('*'),
           db.from('player_teams_used').select('player_id, match_result'),
-          db.from('todays_match_picks').select('player_slug, flag_emoji, pick_is_longshot').is('points_earned', null)
+          db.from('todays_match_picks').select('player_slug, flag_emoji, pick_is_longshot').is('points_earned', null),
+          db.from('rounds').select('name, round_type, sort_order, is_complete').order('sort_order')
         ]);
 
         if (error) throw error;
+
+        // Work out current round label
+        const currentRound = (rounds || []).find(r => !r.is_complete);
+        if (currentRound) {
+          // Count how many rounds of this type are complete
+          const completedSameType = (rounds || []).filter(r => r.is_complete && r.round_type === currentRound.round_type).length;
+          let label = currentRound.name;
+          if (currentRound.round_type === 'group') {
+            label = 'Group Stage · Round ' + currentRound.sort_order;
+          }
+          document.getElementById('round-heading').textContent = label;
+        }
 
         // Lookup maps
         const gdMap = {};
@@ -143,7 +162,6 @@
         const furthestMap = {};
         (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
 
-        // Today — keyed by slug, first pick only
         const todayMap = {};
         (todayPicks || []).forEach(r => {
           if (!todayMap[r.player_slug]) {
@@ -151,7 +169,7 @@
           }
         });
 
-        // Form — from player_teams_used
+        // Form — chronological order (oldest first = left, newest = right)
         const formMap = {};
         (teamsUsed || []).forEach(r => {
           if (!formMap[r.player_id]) formMap[r.player_id] = [];
@@ -163,19 +181,25 @@
           }
         });
 
-        // Sort
+        // Sort — fixed tiebreaker order
         const sorted = (scores || []).sort((a, b) => {
+          // 1. Total points
           if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+          // 2. Furthest round (longest in competition)
           const afr = furthestMap[a.player_id] || 0;
           const bfr = furthestMap[b.player_id] || 0;
           if (bfr !== afr) return bfr - afr;
+          // 3. KO points
           if (b.knockout_points !== a.knockout_points) return b.knockout_points - a.knockout_points;
+          // 4. GD — higher is better
           const agd = gdMap[a.player_id] || 0;
           const bgd = gdMap[b.player_id] || 0;
           if (bgd !== agd) return bgd - agd;
+          // 5. Goals prediction — lower number wins (closest to actual)
           const ag = a.total_goals_prediction || 999;
           const bg = b.total_goals_prediction || 999;
           if (ag !== bg) return ag - bg;
+          // 6. Alpha
           return a.name.localeCompare(b.name);
         });
 
@@ -194,7 +218,7 @@
           const isPlayingToday = !!todayMap[p.slug];
           const todayInfo = todayMap[p.slug];
 
-          // Arrow
+          // Movement arrow
           let arrowHtml = '<span class="arrow-eq">—</span>';
           if (prevPos[p.player_id]) {
             const prev = prevPos[p.player_id];
@@ -202,11 +226,10 @@
             else if (pos > prev) arrowHtml = '<span class="arrow-dn">▼' + (pos - prev) + '</span>';
           }
 
-          // Form pips — last 5
+          // Form pips — last 5, left to right, no grey placeholders
           const recentForm = form.slice(-5);
-          while (recentForm.length < 5) recentForm.unshift('blank');
           const formHtml = recentForm.map(f =>
-            '<span class="form-pip form-' + f + '" title="' + (f === 'blank' ? '—' : f) + '"></span>'
+            '<span class="form-pip form-' + f + '" title="' + f + '"></span>'
           ).join('');
 
           // GD
@@ -216,7 +239,7 @@
               ? '<span class="gd-neg">' + gd + '</span>'
               : '<span class="gd-zero">0</span>';
 
-          // Flag
+          // Flag next to name if playing today
           const flagHtml = isPlayingToday
             ? '<span class="flag-inline">' + todayInfo.flag + (todayInfo.isLongshot ? '⭐' : '') + '</span>'
             : '';
