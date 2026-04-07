@@ -8,18 +8,15 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     .pos { font-weight:700; color:var(--text-muted); width:32px; }
-    .prior { width:36px; text-align:center; }
+    .prior { width:40px; text-align:center; font-size:11px; }
     .medal { width:24px; text-align:center; }
     .player-name { font-weight:600; }
     .player-name a { color:var(--text); text-decoration:none; }
     .player-name a:hover { color:var(--accent); }
     .points { font-size:16px; font-weight:700; }
     .out-row { opacity:0.45; }
-
-    /* Blue highlight for playing today - full row */
     .playing-row { background:rgba(59,130,246,0.12) !important; }
     .playing-row:hover { background:rgba(59,130,246,0.18) !important; }
-
     .form-pip {
       display:inline-block; width:10px; height:10px;
       border-radius:50%; margin:0 1px;
@@ -28,24 +25,17 @@
     .form-D { background:var(--gold); }
     .form-L { background:var(--red); }
     .form-blank { background:var(--border); }
-
     .arrow-up { color:var(--green); font-size:11px; font-weight:700; }
     .arrow-dn { color:var(--red); font-size:11px; font-weight:700; }
     .arrow-eq { color:var(--text-muted); font-size:11px; }
-
-    .flag-inline { font-size:16px; margin-left:5px; vertical-align:middle; }
-
+    .flag-inline { font-size:15px; margin-left:5px; vertical-align:middle; }
     .gd-pos { color:var(--green); font-weight:600; }
     .gd-neg { color:var(--red); font-weight:600; }
     .gd-zero { color:var(--text-muted); }
-
     .tiebreak-val { color:var(--text-muted); font-size:12px; }
-
     thead th { white-space:nowrap; font-size:11px; color:var(--text-muted); }
-
-    @media(max-width:600px) {
-      .hide-mobile { display:none; }
-    }
+    td { font-size:13px; }
+    @media(max-width:600px) { .hide-mobile { display:none; } }
   </style>
 </head>
 <body>
@@ -105,216 +95,150 @@
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Store previous positions in localStorage so we can show movement arrows
-    // Key: 'lb_positions_YYYY-MM-DD' → JSON array of {id, pos}
-    function getPreviousPositions() {
-      try {
-        const stored = localStorage.getItem('lb_prev_positions');
-        return stored ? JSON.parse(stored) : {};
-      } catch { return {}; }
+    function getPrevPositions() {
+      try { return JSON.parse(localStorage.getItem('lb_prev_pos') || '{}'); }
+      catch { return {}; }
     }
 
-    function saveCurrentPositions(sortedPlayers) {
+    function saveCurrPositions(sorted) {
       try {
-        const map = {};
-        sortedPlayers.forEach((p, i) => { map[p.id] = i + 1; });
-        // Only update stored positions once per hour to avoid overwriting on refresh
-        const lastSaved = localStorage.getItem('lb_positions_saved_at');
-        const now = Date.now();
-        if (!lastSaved || now - parseInt(lastSaved) > 3600000) {
-          localStorage.setItem('lb_prev_positions', JSON.stringify(map));
-          localStorage.setItem('lb_positions_saved_at', now.toString());
+        const lastSaved = parseInt(localStorage.getItem('lb_pos_saved_at') || '0');
+        if (Date.now() - lastSaved > 3600000) {
+          const map = {};
+          sorted.forEach((p, i) => { map[p.player_id] = i + 1; });
+          localStorage.setItem('lb_prev_pos', JSON.stringify(map));
+          localStorage.setItem('lb_pos_saved_at', Date.now().toString());
         }
       } catch {}
     }
 
+    function ordinal(n) {
+      const s = ['th','st','nd','rd'];
+      const v = n % 100;
+      return n + (s[(v-20)%10] || s[v] || s[0]);
+    }
+
     async function loadLeaderboard() {
       try {
-        // Get all players
-        const { data: players, error } = await db
-          .from('players')
-          .select('id, name, slug, is_eliminated, total_goals_prediction');
+        const [
+          { data: scores, error },
+          { data: gdData },
+          { data: furthestData },
+          { data: teamsUsed },
+          { data: todayPicks }
+        ] = await Promise.all([
+          db.from('player_scores').select('*'),
+          db.from('player_gd').select('*'),
+          db.from('player_furthest_round').select('*'),
+          db.from('player_teams_used').select('player_id, match_result'),
+          db.from('todays_match_picks').select('player_slug, flag_emoji, pick_is_longshot').is('points_earned', null)
+        ]);
+
         if (error) throw error;
 
-        // Get all picks with results and match scores for GD
-        const { data: picks } = await db
-          .from('picks')
-          .select(`
-            player_id, multiplier, team_id,
-            rounds(round_type, sort_order),
-            teams(name, flag_emoji, is_longshot),
-            pick_results(points_earned, match_result),
-            matches(home_score, away_score, home_team_id, away_team_id, kickoff)
-          `);
+        // Lookup maps
+        const gdMap = {};
+        (gdData || []).forEach(r => { gdMap[r.player_id] = r.gd; });
 
-        // Get today's matches to flag who is playing
-        const today = new Date().toISOString().split('T')[0];
-        const { data: todayMatches } = await db
-          .from('matches')
-          .select('home_team_id, away_team_id')
-          .gte('kickoff', today + 'T00:00:00')
-          .lte('kickoff', today + 'T23:59:59');
+        const furthestMap = {};
+        (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
 
-        const todayTeamIds = new Set();
-        (todayMatches || []).forEach(m => {
-          todayTeamIds.add(m.home_team_id);
-          todayTeamIds.add(m.away_team_id);
+        // Today — keyed by slug, first pick only
+        const todayMap = {};
+        (todayPicks || []).forEach(r => {
+          if (!todayMap[r.player_slug]) {
+            todayMap[r.player_slug] = { flag: r.flag_emoji, isLongshot: r.pick_is_longshot };
+          }
         });
 
-        // Build player stats
-        const statsMap = {};
-        players.forEach(p => {
-          statsMap[p.id] = {
-            ...p,
-            totalPoints: 0,
-            koPoints: 0,
-            pld: 0,
-            teamsUsed: 0,
-            gd: 0,
-            furthestRound: 0,
-            form: [],
-            isPlayingToday: false,
-            todayFlag: null,
-            currentTeamFlag: null,
-            isLongshot: false
-          };
-        });
-
-        (picks || []).forEach(pick => {
-          const s = statsMap[pick.player_id];
-          if (!s) return;
-          s.teamsUsed++;
-
-          const res = pick.pick_results && pick.pick_results.length > 0 ? pick.pick_results[0] : null;
-
-          if (res) {
-            s.pld++;
-            s.totalPoints += res.points_earned || 0;
-
-            // KO points
-            if (pick.rounds && pick.rounds.round_type === 'knockout') {
-              s.koPoints += res.points_earned || 0;
-            }
-
-            // Furthest round (tiebreaker 1 - longest in competition)
-            if (pick.rounds && pick.rounds.sort_order > s.furthestRound) {
-              s.furthestRound = pick.rounds.sort_order;
-            }
-
-            // GD - work out from match scores
-            if (pick.matches) {
-              const m = pick.matches;
-              if (m.home_score !== null && m.away_score !== null) {
-                const isHome = m.home_team_id === pick.team_id;
-                const goalsFor = isHome ? m.home_score : m.away_score;
-                const goalsAgainst = isHome ? m.away_score : m.home_score;
-                s.gd += (goalsFor - goalsAgainst);
-              }
-            }
-
-            // Form
-            s.form.push(
-              res.match_result === 'win' ? 'W' :
-              res.match_result === 'draw' ? 'D' : 'L'
+        // Form — from player_teams_used
+        const formMap = {};
+        (teamsUsed || []).forEach(r => {
+          if (!formMap[r.player_id]) formMap[r.player_id] = [];
+          if (r.match_result) {
+            formMap[r.player_id].push(
+              r.match_result === 'win' ? 'W' :
+              r.match_result === 'draw' ? 'D' : 'L'
             );
           }
-
-          // Playing today flag
-          if (todayTeamIds.has(pick.team_id) && !res) {
-            s.isPlayingToday = true;
-            if (pick.teams) {
-              s.todayFlag = pick.teams.flag_emoji;
-              s.isLongshot = pick.teams.is_longshot;
-            }
-          }
         });
 
-        // Sort by tiebreak rules:
-        // 1. Total points (desc)
-        // 2. Furthest round / longest in competition (desc)
-        // 3. KO points (desc)
-        // 4. GD (desc)
-        // 5. Goals prediction (asc — lower = more accurate? or as submitted)
-        // 6. Name (alpha)
-        const sorted = Object.values(statsMap).sort((a, b) => {
-          if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
-          if (b.furthestRound !== a.furthestRound) return b.furthestRound - a.furthestRound;
-          if (b.koPoints !== a.koPoints) return b.koPoints - a.koPoints;
-          if (b.gd !== a.gd) return b.gd - a.gd;
-          if (a.total_goals_prediction !== b.total_goals_prediction) {
-            return (a.total_goals_prediction || 999) - (b.total_goals_prediction || 999);
-          }
+        // Sort
+        const sorted = (scores || []).sort((a, b) => {
+          if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+          const afr = furthestMap[a.player_id] || 0;
+          const bfr = furthestMap[b.player_id] || 0;
+          if (bfr !== afr) return bfr - afr;
+          if (b.knockout_points !== a.knockout_points) return b.knockout_points - a.knockout_points;
+          const agd = gdMap[a.player_id] || 0;
+          const bgd = gdMap[b.player_id] || 0;
+          if (bgd !== agd) return bgd - agd;
+          const ag = a.total_goals_prediction || 999;
+          const bg = b.total_goals_prediction || 999;
+          if (ag !== bg) return ag - bg;
           return a.name.localeCompare(b.name);
         });
 
-        // Get previous positions for movement arrows
-        const prevPositions = getPreviousPositions();
-        saveCurrentPositions(sorted);
+        const prevPos = getPrevPositions();
+        saveCurrPositions(sorted);
 
         const tbody = document.getElementById('leaderboard-body');
         tbody.innerHTML = '';
 
         sorted.forEach((p, i) => {
           const pos = i + 1;
-          const teamsLeft = 48 - p.teamsUsed;
+          const teamsLeft = 48 - (p.teams_used || 0);
           const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
+          const gd = gdMap[p.player_id] || 0;
+          const form = formMap[p.player_id] || [];
+          const isPlayingToday = !!todayMap[p.slug];
+          const todayInfo = todayMap[p.slug];
 
-          // Movement arrow
+          // Arrow
           let arrowHtml = '<span class="arrow-eq">—</span>';
-          if (prevPositions[p.id]) {
-            const prev = prevPositions[p.id];
-            if (pos < prev) {
-              arrowHtml = '<span class="arrow-up">▲' + (prev - pos) + '</span>';
-            } else if (pos > prev) {
-              arrowHtml = '<span class="arrow-dn">▼' + (pos - prev) + '</span>';
-            } else {
-              arrowHtml = '<span class="arrow-eq">—</span>';
-            }
+          if (prevPos[p.player_id]) {
+            const prev = prevPos[p.player_id];
+            if (pos < prev) arrowHtml = '<span class="arrow-up">▲' + (prev - pos) + '</span>';
+            else if (pos > prev) arrowHtml = '<span class="arrow-dn">▼' + (pos - prev) + '</span>';
           }
 
           // Form pips — last 5
-          const recentForm = p.form.slice(-5);
+          const recentForm = form.slice(-5);
           while (recentForm.length < 5) recentForm.unshift('blank');
           const formHtml = recentForm.map(f =>
             '<span class="form-pip form-' + f + '" title="' + (f === 'blank' ? '—' : f) + '"></span>'
           ).join('');
 
-          // GD display
-          const gdHtml = p.gd > 0
-            ? '<span class="gd-pos">+' + p.gd + '</span>'
-            : p.gd < 0
-              ? '<span class="gd-neg">' + p.gd + '</span>'
+          // GD
+          const gdHtml = gd > 0
+            ? '<span class="gd-pos">+' + gd + '</span>'
+            : gd < 0
+              ? '<span class="gd-neg">' + gd + '</span>'
               : '<span class="gd-zero">0</span>';
 
-          // Tie break display — show position within tied group
-          // Simple: show their sorted index as ordinal
-          const tbOrdinal = pos + (pos === 1 ? 'st' : pos === 2 ? 'nd' : pos === 3 ? 'rd' : 'th');
-
-          // Player name + flag if playing today
-          const flagHtml = p.isPlayingToday && p.todayFlag
-            ? '<span class="flag-inline">' + p.todayFlag + (p.isLongshot ? '⭐' : '') + '</span>'
+          // Flag
+          const flagHtml = isPlayingToday
+            ? '<span class="flag-inline">' + todayInfo.flag + (todayInfo.isLongshot ? '⭐' : '') + '</span>'
             : '';
 
           const row = document.createElement('tr');
           if (p.is_eliminated) row.classList.add('out-row');
-          if (p.isPlayingToday && !p.is_eliminated) row.classList.add('playing-row');
+          if (isPlayingToday && !p.is_eliminated) row.classList.add('playing-row');
 
           row.innerHTML =
             '<td class="pos">' + pos + '</td>' +
             '<td class="prior hide-mobile">' + arrowHtml + '</td>' +
             '<td class="medal">' + medal + '</td>' +
-            '<td class="player-name">' +
-              '<a href="/' + p.slug + '">' + p.name + '</a>' + flagHtml +
-            '</td>' +
-            '<td class="hide-mobile" style="color:var(--text-muted)">' + p.pld + '</td>' +
-            '<td class="points">' + p.totalPoints + '</td>' +
+            '<td class="player-name"><a href="/' + p.slug + '">' + p.name + '</a>' + flagHtml + '</td>' +
+            '<td class="hide-mobile" style="color:var(--text-muted)">' + (p.rounds_played || 0) + '</td>' +
+            '<td class="points">' + (p.total_points || 0) + '</td>' +
             '<td class="hide-mobile">' + gdHtml + '</td>' +
-            '<td class="hide-mobile tiebreak-val">' + tbOrdinal + '</td>' +
+            '<td class="hide-mobile tiebreak-val">' + ordinal(pos) + '</td>' +
             '<td class="hide-mobile">' + formHtml + '</td>' +
             '<td class="hide-mobile" style="color:var(--text-muted)">' + teamsLeft + '</td>' +
             '<td>' + (p.is_eliminated
               ? '<span class="badge badge-red">OUT</span>'
-              : p.isPlayingToday
+              : isPlayingToday
                 ? '<span class="badge badge-blue">Playing</span>'
                 : '<span class="badge badge-green">Alive</span>'
             ) + '</td>';
