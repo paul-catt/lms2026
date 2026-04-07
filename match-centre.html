@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Match Centre — LMS 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .match-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+      background: var(--surface);
+    }
+    .match-card.live { border-color: var(--blue); }
+    .match-card.complete { border-color: var(--border); opacity: 0.85; }
+    .match-teams {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin: 10px 0;
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .match-score {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+      min-width: 60px;
+      text-align: center;
+    }
+    .match-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+    .picks-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .pick-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--surface2);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+    .pick-chip.win { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); }
+    .pick-chip.draw { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); }
+    .pick-chip.loss { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); }
+    .odds-row {
+      display: flex;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .odds-pill {
+      background: var(--surface2);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 11px;
+    }
+    .round-header {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 20px 0 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .no-picks { color: var(--text-muted); font-size: 12px; font-style: italic; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="/">⚽ LMS 2026</a>
+    <div class="nav-links">
+      <a href="/leaderboard">Leaderboard</a>
+      <a href="/match-centre" class="active">Match Centre</a>
+      <a href="/rules">Rules</a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- TODAY -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
+        <div class="card-title" style="margin-bottom:0">⚽ Today's Matches</div>
+        <span id="today-date" style="font-size:11px; color:var(--text-muted)"></span>
+      </div>
+      <div id="today-loading" class="loading"><div class="spinner"></div>Loading...</div>
+      <div id="today-content"></div>
+    </div>
+
+    <!-- ALL RESULTS -->
+    <div class="card">
+      <div class="card-title">📅 Results Archive</div>
+      <div id="results-loading" class="loading"><div class="spinner"></div>Loading...</div>
+      <div id="results-content"></div>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://jrdjdqjepffdcjdfuarc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZGpkcWplcGZmZGNqZGZ1YXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTczMTcsImV4cCI6MjA5MTAzMzMxN30.nzriEXXYSau-2wBElzgWw-Gwhf1crzVA2lcvPexjq0M';
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
+
+    function matchCard(match, picks, allPlayers) {
+      const kickoff = new Date(match.kickoff).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+      const scoreStr = match.home_score !== null ? match.home_score + ' – ' + match.away_score : 'vs';
+      const isComplete = match.status === 'complete';
+      const isLive = match.status === 'live';
+
+      // Find picks for this match
+      const homePicks = picks.filter(p => p.team_id === match.home_team_id);
+      const awayPicks = picks.filter(p => p.team_id === match.away_team_id);
+      const allMatchPicks = [...homePicks, ...awayPicks];
+
+      const picksHtml = allMatchPicks.length === 0
+        ? '<span class="no-picks">No picks for this match</span>'
+        : allMatchPicks.map(function(p) {
+            const player = allPlayers.find(pl => pl.id === p.player_id);
+            const playerName = player ? player.name : '?';
+            const result = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
+            const chipClass = result ? result.match_result : '';
+            const pts = result ? '+' + result.points_earned : '';
+            const side = p.team_id === match.home_team_id ? match.home_team.name : match.away_team.name;
+            const flag = p.team_id === match.home_team_id ? match.home_team.flag_emoji : match.away_team.flag_emoji;
+            const isLongshot = p.team_id === match.home_team_id ? match.home_team.is_longshot : match.away_team.is_longshot;
+            return '<div class="pick-chip ' + chipClass + '">' +
+              '<a href="/' + (player ? player.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:600">' + playerName + '</a>' +
+              ' ' + flag +
+              '<span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px">' + p.multiplier + 'pt</span>' +
+              (isLongshot ? '<span title="Longshot bonus">⭐</span>' : '') +
+              (pts ? '<strong>' + pts + '</strong>' : '') +
+              '</div>';
+          }).join('');
+
+      const oddsHtml = match.odds_home
+        ? '<div class="odds-row">' +
+          '<span style="color:var(--text-muted)">Odds:</span>' +
+          '<span class="odds-pill">' + match.home_team.name + ' ' + match.odds_home + '</span>' +
+          '<span class="odds-pill">Draw ' + match.odds_draw + '</span>' +
+          '<span class="odds-pill">' + match.away_team.name + ' ' + match.odds_away + '</span>' +
+          '</div>'
+        : '';
+
+      return '<div class="match-card ' + match.status + '">' +
+        '<div class="match-meta">' +
+          '<span>' + match.rounds.name + ' · ' + kickoff + '</span>' +
+          '<span class="badge badge-' + (isComplete ? 'grey' : isLive ? 'blue' : 'grey') + '">' +
+            (isComplete ? 'FT' : isLive ? '🔴 Live' : kickoff) +
+          '</span>' +
+        '</div>' +
+        '<div class="match-teams">' +
+          '<span>' + match.home_team.flag_emoji + ' ' + match.home_team.name + '</span>' +
+          '<span class="match-score">' + scoreStr + '</span>' +
+          '<span>' + match.away_team.name + ' ' + match.away_team.flag_emoji + '</span>' +
+        '</div>' +
+        oddsHtml +
+        '<div class="picks-row">' + picksHtml + '</div>' +
+        '</div>';
+    }
+
+    async function loadAll() {
+      try {
+        // All players
+        const { data: players } = await db.from('players').select('id, name, slug');
+
+        // All picks with results
+        const { data: picks } = await db
+          .from('picks')
+          .select('player_id, team_id, multiplier, pick_results(points_earned, match_result)');
+
+        // Today's matches
+        const today = new Date().toISOString().split('T')[0];
+        const { data: todayMatches } = await db
+          .from('matches')
+          .select('id, kickoff, status, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, rounds(name), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)')
+          .gte('kickoff', today + 'T00:00:00')
+          .lte('kickoff', today + 'T23:59:59')
+          .order('kickoff');
+
+        document.getElementById('today-loading').style.display = 'none';
+        const todayContent = document.getElementById('today-content');
+
+        if (!todayMatches || todayMatches.length === 0) {
+          todayContent.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:24px">No matches today.</p>';
+        } else {
+          todayContent.innerHTML = todayMatches.map(m => matchCard(m, picks || [], players || [])).join('');
+        }
+
+        // All completed matches grouped by round
+        const { data: allMatches } = await db
+          .from('matches')
+          .select('id, kickoff, status, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, rounds(name, sort_order), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)')
+          .eq('status', 'complete')
+          .order('kickoff', { ascending: false });
+
+        document.getElementById('results-loading').style.display = 'none';
+        const resultsContent = document.getElementById('results-content');
+
+        if (!allMatches || allMatches.length === 0) {
+          resultsContent.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:24px">No results yet.</p>';
+          return;
+        }
+
+        // Group by round
+        const byRound = {};
+        allMatches.forEach(m => {
+          const rname = m.rounds.name;
+          if (!byRound[rname]) byRound[rname] = [];
+          byRound[rname].push(m);
+        });
+
+        resultsContent.innerHTML = Object.entries(byRound).map(([round, matches]) =>
+          '<div class="round-header">' + round + '</div>' +
+          matches.map(m => matchCard(m, picks || [], players || [])).join('')
+        ).join('');
+
+      } catch(err) {
+        console.error(err);
+        document.getElementById('today-loading').style.display = 'none';
+        document.getElementById('results-loading').style.display = 'none';
+        document.getElementById('today-content').innerHTML = '<p style="color:var(--red)">Failed to load. Check console.</p>';
+      }
+    }
+
+    loadAll();
+    setInterval(loadAll, 60000);
+  </script>
+</body>
+</html>

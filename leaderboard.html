@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard — LMS 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .pos { font-weight:700; color:var(--text-muted); width:32px; }
+    .medal { width:24px; text-align:center; }
+    .player-name { font-weight:600; }
+    .player-name a { color:var(--text); text-decoration:none; }
+    .player-name a:hover { color:var(--accent); }
+    .points { font-size:16px; font-weight:700; }
+    .out-row { opacity:0.45; }
+    .playing-row td:first-child { border-left:3px solid var(--blue); }
+    .form-pip {
+      display:inline-block; width:10px; height:10px;
+      border-radius:50%; margin:0 1px;
+    }
+    .form-W { background:var(--green); }
+    .form-D { background:var(--gold); }
+    .form-L { background:var(--red); }
+    .form-blank { background:var(--border); }
+    .arrow-up { color:var(--green); font-size:12px; }
+    .arrow-dn { color:var(--red); font-size:12px; }
+    .arrow-eq { color:var(--text-muted); font-size:12px; }
+    thead th { white-space:nowrap; }
+    @media(max-width:600px) {
+      .hide-mobile { display:none; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="/">⚽ LMS 2026</a>
+    <div class="nav-links">
+      <a href="/leaderboard" class="active">Leaderboard</a>
+      <a href="/match-centre">Match Centre</a>
+      <a href="/rules">Rules</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px">
+        <div class="card-title" style="margin-bottom:0">📊 Leaderboard</div>
+        <span id="last-updated" style="font-size:11px; color:var(--text-muted)"></span>
+      </div>
+
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        Loading standings...
+      </div>
+
+      <div id="leaderboard-wrap" class="table-wrap" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th class="pos">#</th>
+              <th class="medal"></th>
+              <th>Player</th>
+              <th>Pts</th>
+              <th class="hide-mobile">KO Pts</th>
+              <th class="hide-mobile">Form</th>
+              <th class="hide-mobile">Teams Left</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body"></tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:14px; font-size:11px; color:var(--text-muted); display:flex; gap:16px; flex-wrap:wrap">
+        <span>🔵 Playing today</span>
+        <span>🟢 Alive</span>
+        <span>🔴 Eliminated</span>
+        <span>⭐ Longshot pick</span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://jrdjdqjepffdcjdfuarc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZGpkcWplcGZmZGNqZGZ1YXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTczMTcsImV4cCI6MjA5MTAzMzMxN30.nzriEXXYSau-2wBElzgWw-Gwhf1crzVA2lcvPexjq0M';
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function loadLeaderboard() {
+      try {
+        // Get all players
+        const { data: players, error } = await db
+          .from('players')
+          .select('id, name, slug, is_eliminated');
+
+        if (error) throw error;
+
+        // Get all picks with results
+        const { data: picks } = await db
+          .from('picks')
+          .select('player_id, multiplier, team_id, rounds(round_type), pick_results(points_earned, match_result)');
+
+        // Get today's matches to flag who is playing
+        const today = new Date().toISOString().split('T')[0];
+        const { data: todayMatches } = await db
+          .from('matches')
+          .select('home_team_id, away_team_id')
+          .gte('kickoff', today + 'T00:00:00')
+          .lte('kickoff', today + 'T23:59:59');
+
+        const todayTeamIds = new Set();
+        (todayMatches || []).forEach(m => {
+          todayTeamIds.add(m.home_team_id);
+          todayTeamIds.add(m.away_team_id);
+        });
+
+        // Get current picks (no result yet = this round's pick)
+        const { data: currentPicks } = await db
+          .from('picks')
+          .select('player_id, team_id, multiplier, teams(name, flag_emoji, is_longshot), pick_results(match_result)')
+          .is('pick_results.match_result', null);
+
+        // Build player stats
+        const statsMap = {};
+        players.forEach(p => {
+          statsMap[p.id] = {
+            ...p,
+            totalPoints: 0,
+            koPoints: 0,
+            teamsUsed: 0,
+            form: [],
+            isPlayingToday: false,
+            currentPicks: []
+          };
+        });
+
+        (picks || []).forEach(pick => {
+          const s = statsMap[pick.player_id];
+          if (!s) return;
+          s.teamsUsed++;
+          const res = pick.pick_results && pick.pick_results.length > 0 ? pick.pick_results[0] : null;
+          if (res) {
+            s.totalPoints += res.points_earned || 0;
+            if (pick.rounds && pick.rounds.round_type === 'knockout') {
+              s.koPoints += res.points_earned || 0;
+            }
+            s.form.push(res.match_result === 'win' ? 'W' : res.match_result === 'draw' ? 'D' : 'L');
+          }
+          if (todayTeamIds.has(pick.team_id)) {
+            s.isPlayingToday = true;
+          }
+        });
+
+        // Sort: points desc, then ko points, then teams used (longer = better tiebreaker 1)
+        const sorted = Object.values(statsMap).sort((a, b) => {
+          if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+          if (b.koPoints !== a.koPoints) return b.koPoints - a.koPoints;
+          if (b.teamsUsed !== a.teamsUsed) return b.teamsUsed - a.teamsUsed;
+          return a.name.localeCompare(b.name);
+        });
+
+        const tbody = document.getElementById('leaderboard-body');
+        tbody.innerHTML = '';
+
+        sorted.forEach((p, i) => {
+          const pos = i + 1;
+          const teamsLeft = 48 - p.teamsUsed;
+          const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
+
+          // Form pips — last 5
+          const recentForm = p.form.slice(-5);
+          while (recentForm.length < 5) recentForm.unshift('blank');
+          const formHtml = recentForm.map(f =>
+            '<span class="form-pip form-' + f + '" title="' + (f === 'blank' ? 'no result' : f) + '"></span>'
+          ).join('');
+
+          const row = document.createElement('tr');
+          if (p.is_eliminated) row.classList.add('out-row');
+          if (p.isPlayingToday && !p.is_eliminated) row.classList.add('playing-row');
+
+          row.innerHTML =
+            '<td class="pos">' + pos + '</td>' +
+            '<td class="medal">' + medal + '</td>' +
+            '<td class="player-name"><a href="/' + p.slug + '">' + p.name + '</a></td>' +
+            '<td class="points">' + p.totalPoints + '</td>' +
+            '<td class="hide-mobile" style="color:var(--text-muted)">' + p.koPoints + '</td>' +
+            '<td class="hide-mobile">' + formHtml + '</td>' +
+            '<td class="hide-mobile">' + teamsLeft + '</td>' +
+            '<td>' + (p.is_eliminated
+              ? '<span class="badge badge-red">OUT</span>'
+              : p.isPlayingToday
+                ? '<span class="badge badge-blue">Playing</span>'
+                : '<span class="badge badge-green">Alive</span>'
+            ) + '</td>';
+
+          tbody.appendChild(row);
+        });
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('leaderboard-wrap').style.display = 'block';
+        document.getElementById('last-updated').textContent =
+          'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+
+      } catch(err) {
+        console.error(err);
+        document.getElementById('loading').innerHTML =
+          '<p style="color:var(--red)">Failed to load. Check console.</p>';
+      }
+    }
+
+    loadLeaderboard();
+    // Refresh every 60 seconds
+    setInterval(loadLeaderboard, 60000);
+  </script>
+</body>
+</html>

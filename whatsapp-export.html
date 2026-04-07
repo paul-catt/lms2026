@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Export — LMS 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <style>
+    .export-btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    /* =============================================
+       LEADERBOARD TABLE - matches Euros design
+       ============================================= */
+    #lb-render {
+      background: #fff;
+      padding: 0;
+      width: 820px;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      color: #000;
+      border: 1px solid #ccc;
+    }
+
+    .lb-title {
+      background: #404040;
+      color: #fff;
+      text-align: center;
+      font-size: 15px;
+      font-weight: bold;
+      padding: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .lb-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .lb-table th {
+      background: #606060;
+      color: #fff;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 4px 5px;
+      text-align: center;
+      border: 1px solid #888;
+      white-space: nowrap;
+    }
+
+    .lb-table th.name-col { text-align: left; }
+
+    .lb-table td {
+      padding: 3px 5px;
+      border: 1px solid #ddd;
+      text-align: center;
+      font-size: 11px;
+    }
+
+    .lb-table td.name-col {
+      text-align: left;
+      font-weight: bold;
+      font-size: 12px;
+      padding-left: 8px;
+    }
+
+    .lb-table tr:nth-child(even) { background: #f5f5f5; }
+    .lb-table tr:nth-child(odd) { background: #ffffff; }
+
+    /* Eliminated rows */
+    .lb-table tr.row-out td { color: #cc0000; }
+    .lb-table tr.row-out td.name-col { color: #cc0000; }
+
+    /* Top 3 highlight */
+    .lb-table tr.row-top3 { background: #e8f5e9 !important; }
+
+    /* Movement arrows */
+    .arrow-up { color: #007700; font-weight: bold; }
+    .arrow-dn { color: #cc0000; font-weight: bold; }
+    .arrow-eq { color: #888; }
+
+    /* Form string */
+    .form-str { font-family: monospace; font-size: 10px; letter-spacing: 1px; }
+    .form-W { color: #007700; font-weight: bold; }
+    .form-D { color: #cc6600; }
+    .form-L { color: #cc0000; }
+
+    /* OUT badge */
+    .out-badge {
+      color: #cc0000;
+      font-weight: bold;
+      font-style: italic;
+      font-size: 11px;
+    }
+
+    /* Points column - bold */
+    .pts-col { font-weight: bold; font-size: 13px; }
+
+    /* Tiebreak section header */
+    .tb-section-header {
+      background: #808080;
+      color: #fff;
+      font-size: 10px;
+      font-weight: bold;
+      text-align: center;
+      padding: 2px 4px;
+      border: 1px solid #888;
+    }
+
+    /* Preview container */
+    #preview-wrap {
+      overflow-x: auto;
+      background: #888;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    #preview-wrap > div {
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="/">⚽ LMS 2026</a>
+    <div class="nav-links">
+      <a href="/leaderboard">Leaderboard</a>
+      <a href="/match-centre">Match Centre</a>
+      <a href="/admin" class="active">Admin</a>
+      <a href="/rules">Rules</a>
+    </div>
+  </nav>
+
+  <main style="max-width:1000px">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+      <h1 style="font-size:20px; font-weight:800">📱 WhatsApp Exports</h1>
+      <a href="/admin" class="btn btn-secondary">← Admin</a>
+    </div>
+
+    <!-- Export buttons -->
+    <div class="card">
+      <div class="card-title">Generate Images</div>
+      <div class="export-btn-row">
+        <button class="btn btn-primary" id="btn-leaderboard">📊 Generate Leaderboard</button>
+        <button class="btn btn-secondary" id="btn-combinations" disabled>🔢 Combinations Table (soon)</button>
+        <button class="btn btn-secondary" id="btn-matrix" disabled>🗺️ Teams Matrix (soon)</button>
+      </div>
+      <div id="gen-status" style="font-size:12px; color:var(--text-muted)"></div>
+    </div>
+
+    <!-- Round info input -->
+    <div class="card">
+      <div class="card-title">Header Info</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px">
+        <div class="form-group">
+          <label>Round Name</label>
+          <input type="text" id="round-label" placeholder="e.g. RND 3 [GP3], DAY 1" value="RND 1 [GP1], DAY 1" />
+        </div>
+        <div class="form-group">
+          <label>Competition Name</label>
+          <input type="text" id="comp-label" placeholder="e.g. WC '26 LMS" value="WC '26 LMS" />
+        </div>
+        <div class="form-group">
+          <label>Next Match Info</label>
+          <input type="text" id="next-match" placeholder="e.g. Matches on Thu" value="" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="card" id="preview-card" style="display:none">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+        <div class="card-title" style="margin-bottom:0">Preview</div>
+        <button class="btn btn-primary" id="download-btn">⬇️ Download Image</button>
+      </div>
+      <div id="preview-wrap">
+        <div id="lb-render"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://jrdjdqjepffdcjdfuarc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZGpkcWplcGZmZGNqZGZ1YXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTczMTcsImV4cCI6MjA5MTAzMzMxN30.nzriEXXYSau-2wBElzgWw-Gwhf1crzVA2lcvPexjq0M';
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    document.getElementById('btn-leaderboard').addEventListener('click', generateLeaderboard);
+    document.getElementById('download-btn').addEventListener('click', downloadImage);
+
+    async function generateLeaderboard() {
+      const status = document.getElementById('gen-status');
+      status.textContent = 'Loading data...';
+
+      try {
+        // Get all players
+        const { data: players } = await db.from('players').select('id, name, slug, is_eliminated, total_goals_prediction');
+
+        // Get all picks with results
+        const { data: picks } = await db
+          .from('picks')
+          .select('player_id, team_id, multiplier, round_id, rounds(round_type, sort_order), pick_results(points_earned, match_result, base_points), teams(name, flag_emoji)');
+
+        // Get current round picks (no result yet)
+        const { data: currentPicks } = await db
+          .from('picks')
+          .select('player_id, team_id, multiplier, teams(name, flag_emoji, is_longshot)')
+          .is('pick_results.points_earned', null);
+
+        // Build stats per player
+        const statsMap = {};
+        players.forEach(p => {
+          statsMap[p.id] = {
+            id: p.id,
+            name: p.name,
+            slug: p.slug,
+            isOut: p.is_eliminated,
+            goalsPredict: p.total_goals_prediction || 0,
+            totalPoints: 0,
+            koPoints: 0,
+            gd: 0,
+            pld: 0,
+            form: [],
+            furthestRound: 0,
+            teamsUsed: 0,
+            currentTeams: []
+          };
+        });
+
+        (picks || []).forEach(pick => {
+          const s = statsMap[pick.player_id];
+          if (!s) return;
+          const res = pick.pick_results && pick.pick_results.length > 0 ? pick.pick_results[0] : null;
+          s.teamsUsed++;
+
+          if (res) {
+            s.totalPoints += res.points_earned || 0;
+            s.pld++;
+            if (pick.rounds && pick.rounds.round_type === 'knockout') {
+              s.koPoints += res.points_earned || 0;
+            }
+            // Track furthest round
+            if (pick.rounds && pick.rounds.sort_order > s.furthestRound) {
+              s.furthestRound = pick.rounds.sort_order;
+            }
+            // GD - we don't have match GD stored yet, skip for now
+            // Form
+            s.form.push(res.match_result === 'win' ? 'W' : res.match_result === 'draw' ? 'D' : 'L');
+          }
+        });
+
+        // Sort: pts desc, ko pts, furthest round (LMS), gd, goals
+        const allStats = Object.values(statsMap);
+        // Store previous positions (for now same as current - no history yet)
+        const sorted = [...allStats].sort((a, b) => {
+          if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+          if (b.koPoints !== a.koPoints) return b.koPoints - a.koPoints;
+          if (b.furthestRound !== a.furthestRound) return b.furthestRound - a.furthestRound;
+          if (b.gd !== a.gd) return b.gd - a.gd;
+          return a.goalsPredict - b.goalsPredict;
+        });
+
+        // Round label mapping
+        const roundLabels = { 0:'—', 1:'GP1', 2:'GP2', 3:'GP3', 4:'L32', 5:'L16', 6:'QF', 7:'SF', 8:'F' };
+
+        // Build HTML
+        const compLabel = document.getElementById('comp-label').value || "WC '26 LMS";
+        const roundLabel = document.getElementById('round-label').value || 'RND 1';
+        const nextMatch = document.getElementById('next-match').value;
+
+        let html = '<div class="lb-title">' + compLabel + ' – ' + roundLabel + '</div>';
+        html += '<table class="lb-table">';
+        html += '<thead><tr>' +
+          '<th style="width:30px">Pos</th>' +
+          '<th style="width:36px">Prior</th>' +
+          '<th style="width:16px"></th>' +
+          '<th class="name-col" style="min-width:100px">Name</th>' +
+          '<th style="width:28px">Pld</th>' +
+          '<th style="width:32px">Pts</th>' +
+          '<th style="width:32px">GD</th>' +
+          '<th style="width:40px">Tie<br>break</th>' +
+          '<th colspan="4" class="tb-section-header" style="background:#707070">▶ Tie Breaks ▶</th>' +
+          '<th style="width:70px">FORM</th>' +
+          '<th style="width:50px">Teams<br>left</th>' +
+          '</tr>' +
+          '<tr>' +
+          '<th></th><th></th><th></th><th class="name-col"></th>' +
+          '<th></th><th></th><th></th><th></th>' +
+          '<th style="width:30px">LMS</th>' +
+          '<th style="width:28px">KO</th>' +
+          '<th style="width:28px">GD</th>' +
+          '<th style="width:50px">Goals</th>' +
+          '<th></th><th></th>' +
+          '</tr></thead><tbody>';
+
+        sorted.forEach((p, i) => {
+          const pos = i + 1;
+          const teamsLeft = 48 - p.teamsUsed;
+          const rowClass = p.isOut ? 'row-out' : pos <= 3 ? 'row-top3' : '';
+
+          // Form string - last 8
+          const formStr = p.form.slice(-8).map(f =>
+            '<span class="form-' + f + '">' + f + '</span>'
+          ).join('');
+
+          const lmsLabel = roundLabels[p.furthestRound] || '—';
+          const gdStr = p.gd > 0 ? '+' + p.gd : p.gd === 0 ? '0' : p.gd;
+
+          html += '<tr class="' + rowClass + '">' +
+            '<td>' + pos + '</td>' +
+            '<td style="color:#666;font-size:10px">[' + pos + ']</td>' +
+            '<td><span class="arrow-eq">=</span></td>' +
+            '<td class="name-col">' + p.name + '</td>' +
+            '<td>' + p.pld + '</td>' +
+            '<td class="pts-col">' + p.totalPoints + '</td>' +
+            '<td>' + gdStr + '</td>' +
+            '<td style="font-style:italic;font-size:10px">' + pos + ordinal(pos) + '</td>' +
+            '<td style="font-size:10px">' + lmsLabel + '</td>' +
+            '<td>' + p.koPoints + '</td>' +
+            '<td>' + gdStr + '</td>' +
+            '<td style="font-size:10px;color:#555">' + (p.goalsPredict ? p.goalsPredict + ' diff' : '—') + '</td>' +
+            '<td class="form-str">' + (formStr || '—') + '</td>' +
+            '<td>' + (p.isOut ? '<span class="out-badge">OUT!</span>' : teamsLeft) + '</td>' +
+            '</tr>';
+        });
+
+        html += '</tbody></table>';
+
+        if (nextMatch) {
+          html += '<div style="text-align:center;padding:6px;font-size:11px;border:1px solid #aac;background:#e8eeff;color:#334;margin:4px">' + nextMatch + '</div>';
+        }
+
+        document.getElementById('lb-render').innerHTML = html;
+        document.getElementById('preview-card').style.display = 'block';
+        status.textContent = '✅ Generated. Preview below — download when ready.';
+
+      } catch(err) {
+        console.error(err);
+        status.textContent = '❌ Error: ' + err.message;
+      }
+    }
+
+    async function downloadImage() {
+      const btn = document.getElementById('download-btn');
+      btn.textContent = 'Generating...';
+      btn.disabled = true;
+
+      try {
+        const el = document.getElementById('lb-render');
+        const canvas = await html2canvas(el, {
+          scale: 2,
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          logging: false
+        });
+
+        const link = document.createElement('a');
+        const compLabel = document.getElementById('comp-label').value.replace(/\s+/g, '_');
+        const roundLabel = document.getElementById('round-label').value.replace(/\s+/g, '_');
+        link.download = 'LMS2026_' + compLabel + '_' + roundLabel + '.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+      } catch(err) {
+        console.error(err);
+        alert('Download failed: ' + err.message);
+      }
+
+      btn.textContent = '⬇️ Download Image';
+      btn.disabled = false;
+    }
+
+    function ordinal(n) {
+      const s = ['th','st','nd','rd'];
+      const v = n % 100;
+      return s[(v-20)%10] || s[v] || s[0];
+    }
+  </script>
+</body>
+</html>

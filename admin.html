@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — LMS 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .tab-bar { display:flex; gap:4px; margin-bottom:20px; flex-wrap:wrap; }
+    .tab { padding:8px 16px; border-radius:8px; cursor:pointer; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); font-size:13px; font-weight:600; }
+    .tab.active { background:var(--accent); color:white; border-color:var(--accent); }
+    .tab-content { display:none; }
+    .tab-content.active { display:block; }
+    .admin-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:600px) { .admin-grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="/">⚽ LMS 2026</a>
+    <div class="nav-links">
+      <a href="/leaderboard">Leaderboard</a>
+      <a href="/match-centre">Match Centre</a>
+      <a href="/admin" class="active">Admin</a>
+      <a href="/rules">Rules</a>
+    </div>
+  </nav>
+
+  <!-- LOGIN GATE -->
+  <div id="login-screen" style="max-width:400px; margin:80px auto; padding:0 16px">
+    <div class="card">
+      <div class="card-title">🔒 Admin Login</div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="admin-password" placeholder="Enter admin password" autocomplete="off" />
+      </div>
+      <button class="btn btn-primary" id="login-btn" style="width:100%">Login</button>
+      <div id="login-error" class="alert alert-danger" style="display:none; margin-top:12px">Incorrect password.</div>
+    </div>
+  </div>
+
+  <!-- ADMIN PANEL -->
+  <main id="admin-panel" style="display:none; max-width:1000px">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+      <h1 style="font-size:20px; font-weight:800">⚙️ Admin Panel</h1>
+      <button class="btn btn-secondary" id="logout-btn">Logout</button>
+    </div>
+
+    <div class="tab-bar">
+      <div class="tab active" data-tab="players">👥 Players</div>
+      <div class="tab" data-tab="results">⚽ Results</div>
+      <div class="tab" data-tab="matches">📅 Matches</div>
+      <div class="tab" data-tab="teams">🏳️ Teams</div>
+    </div>
+
+    <!-- PLAYERS TAB -->
+    <div class="tab-content active" id="tab-players">
+      <div class="admin-grid">
+        <div class="card">
+          <div class="card-title">Add Player</div>
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="new-player-name" placeholder="e.g. Henry" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>URL Slug</label>
+            <input type="text" id="new-player-slug" placeholder="e.g. henry-42" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label>Goals Prediction (tiebreaker)</label>
+            <input type="number" id="new-player-goals" placeholder="e.g. 142" />
+          </div>
+          <button class="btn btn-primary" id="add-player-btn">Add Player</button>
+          <div id="add-player-msg" style="margin-top:8px; font-size:12px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Player Links</div>
+          <div id="players-list"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS TAB -->
+    <div class="tab-content" id="tab-results">
+      <div class="card">
+        <div class="card-title">Enter Match Result</div>
+        <div class="form-group">
+          <label>Match</label>
+          <select id="result-match-select"><option value="">Loading matches...</option></select>
+        </div>
+        <div class="admin-grid">
+          <div class="form-group">
+            <label>Home Score</label>
+            <input type="number" id="result-home-score" min="0" placeholder="0" />
+          </div>
+          <div class="form-group">
+            <label>Away Score</label>
+            <input type="number" id="result-away-score" min="0" placeholder="0" />
+          </div>
+        </div>
+        <button class="btn btn-primary" id="submit-result-btn">Save Result & Calculate Points</button>
+        <div id="result-msg" style="margin-top:8px; font-size:12px"></div>
+      </div>
+    </div>
+
+    <!-- MATCHES TAB -->
+    <div class="tab-content" id="tab-matches">
+      <div class="card">
+        <div class="card-title">Add Match</div>
+        <div class="admin-grid">
+          <div class="form-group">
+            <label>Round</label>
+            <select id="match-round-select"><option value="">Loading...</option></select>
+          </div>
+          <div class="form-group">
+            <label>Kickoff (local time)</label>
+            <input type="datetime-local" id="match-kickoff" />
+          </div>
+          <div class="form-group">
+            <label>Home Team</label>
+            <select id="match-home-select"><option value="">Loading...</option></select>
+          </div>
+          <div class="form-group">
+            <label>Away Team</label>
+            <select id="match-away-select"><option value="">Loading...</option></select>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="add-match-btn">Add Match</button>
+        <div id="match-msg" style="margin-top:8px; font-size:12px"></div>
+      </div>
+    </div>
+
+    <!-- TEAMS TAB -->
+    <div class="tab-content" id="tab-teams">
+      <div class="card">
+        <div class="card-title">Longshot Override</div>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">Toggle which teams get the +1 bonus point for a win.</p>
+        <div id="teams-longshot-list"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://jrdjdqjepffdcjdfuarc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZGpkcWplcGZmZGNqZGZ1YXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTczMTcsImV4cCI6MjA5MTAzMzMxN30.nzriEXXYSau-2wBElzgWw-Gwhf1crzVA2lcvPexjq0M';
+    const ADMIN_PASSWORD = 'lms2026admin';
+
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    function showAdmin() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-panel').style.display = 'block';
+      initAdmin();
+    }
+
+    function checkPassword() {
+      const pw = document.getElementById('admin-password').value;
+      if (pw === ADMIN_PASSWORD) {
+        sessionStorage.setItem('lms_admin', '1');
+        showAdmin();
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+      }
+    }
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      document.querySelector('[data-tab="' + name + '"]').classList.add('active');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Auto-login
+      if (sessionStorage.getItem('lms_admin')) {
+        showAdmin();
+      }
+
+      document.getElementById('login-btn').addEventListener('click', checkPassword);
+      document.getElementById('admin-password').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') checkPassword();
+      });
+      document.getElementById('logout-btn').addEventListener('click', function() {
+        sessionStorage.removeItem('lms_admin');
+        location.reload();
+      });
+
+      // Tab switching
+      document.querySelectorAll('.tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+          switchTab(this.dataset.tab);
+        });
+      });
+
+      // Button events
+      document.getElementById('add-player-btn').addEventListener('click', addPlayer);
+      document.getElementById('submit-result-btn').addEventListener('click', submitResult);
+      document.getElementById('add-match-btn').addEventListener('click', addMatch);
+    });
+
+    async function initAdmin() {
+      loadPlayers();
+      loadMatchesForResult();
+      loadRoundsAndTeamsForMatchForm();
+      loadTeamsLongshot();
+    }
+
+    // --- PLAYERS ---
+    async function loadPlayers() {
+      const { data } = await db.from('players').select('*').order('name');
+      const el = document.getElementById('players-list');
+      if (!data || data.length === 0) {
+        el.innerHTML = '<p style="color:var(--text-muted)">No players yet.</p>';
+        return;
+      }
+      el.innerHTML = data.map(function(p) {
+        return '<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border)">' +
+          '<div><div style="font-weight:600">' + p.name + '</div>' +
+          '<div style="font-size:11px; color:var(--text-muted)">/' + p.slug + '</div></div>' +
+          '<a href="/' + p.slug + '" target="_blank" class="btn btn-secondary" style="padding:4px 10px; font-size:11px">View</a>' +
+          '</div>';
+      }).join('');
+    }
+
+    async function addPlayer() {
+      const name = document.getElementById('new-player-name').value.trim();
+      const slug = document.getElementById('new-player-slug').value.trim().toLowerCase().replace(/\s+/g, '-');
+      const goals = parseInt(document.getElementById('new-player-goals').value);
+      const msg = document.getElementById('add-player-msg');
+
+      if (!name || !slug) { msg.style.color = 'var(--red)'; msg.textContent = 'Name and slug required.'; return; }
+
+      const { error } = await db.from('players').insert({ name: name, slug: slug, total_goals_prediction: goals || null });
+      if (error) {
+        msg.style.color = 'var(--red)';
+        msg.textContent = error.message;
+      } else {
+        msg.style.color = 'var(--green)';
+        msg.textContent = '✅ ' + name + ' added. Link: lucky-pastelito-0b63aa.netlify.app/' + slug;
+        document.getElementById('new-player-name').value = '';
+        document.getElementById('new-player-slug').value = '';
+        document.getElementById('new-player-goals').value = '';
+        loadPlayers();
+      }
+    }
+
+    // --- RESULTS ---
+    async function loadMatchesForResult() {
+      const { data } = await db
+        .from('matches')
+        .select('id, kickoff, rounds(name), home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)')
+        .neq('status', 'complete')
+        .order('kickoff');
+
+      const sel = document.getElementById('result-match-select');
+      if (!data || data.length === 0) {
+        sel.innerHTML = '<option>No pending matches</option>';
+        return;
+      }
+      sel.innerHTML = data.map(function(m) {
+        const d = new Date(m.kickoff).toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+        return '<option value="' + m.id + '">' + m.home_team.name + ' vs ' + m.away_team.name + ' (' + m.rounds.name + ', ' + d + ')</option>';
+      }).join('');
+    }
+
+    async function submitResult() {
+      const matchId = document.getElementById('result-match-select').value;
+      const homeScore = parseInt(document.getElementById('result-home-score').value);
+      const awayScore = parseInt(document.getElementById('result-away-score').value);
+      const msg = document.getElementById('result-msg');
+
+      if (!matchId || isNaN(homeScore) || isNaN(awayScore)) {
+        msg.style.color = 'var(--red)'; msg.textContent = 'Fill in all fields.'; return;
+      }
+
+      const { error } = await db.from('matches').update({ home_score: homeScore, away_score: awayScore, status: 'complete' }).eq('id', matchId);
+      if (error) { msg.style.color = 'var(--red)'; msg.textContent = error.message; return; }
+
+      await calculatePickResults(matchId, homeScore, awayScore);
+      msg.style.color = 'var(--green)';
+      msg.textContent = '✅ Result saved and points calculated.';
+      loadMatchesForResult();
+    }
+
+    async function calculatePickResults(matchId, homeScore, awayScore) {
+      const { data: match } = await db
+        .from('matches')
+        .select('home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, is_longshot), away_team:teams!matches_away_team_id_fkey(id, is_longshot)')
+        .eq('id', matchId)
+        .single();
+
+      if (!match) return;
+
+      const homeResult = homeScore > awayScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
+      const awayResult = awayScore > homeScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
+
+      const { data: picks } = await db.from('picks').select('*').in('team_id', [match.home_team_id, match.away_team_id]);
+      if (!picks || picks.length === 0) return;
+
+      for (const pick of picks) {
+        const isHome = pick.team_id === match.home_team_id;
+        const team = isHome ? match.home_team : match.away_team;
+        const result = isHome ? homeResult : awayResult;
+        const basePoints = result === 'win' ? 2 : result === 'draw' ? 1 : 0;
+        const longshotBonus = (result === 'win' && team.is_longshot) ? 1 : 0;
+        let pointsEarned = basePoints === 0 ? 0 : Math.min((basePoints + longshotBonus) * pick.multiplier, 4);
+
+        await db.from('pick_results').upsert({
+          pick_id: pick.id, match_id: matchId,
+          base_points: basePoints, longshot_bonus: longshotBonus,
+          multiplier_applied: pick.multiplier, points_earned: pointsEarned,
+          match_result: result
+        }, { onConflict: 'pick_id,match_id' });
+      }
+    }
+
+    // --- MATCHES ---
+    async function loadRoundsAndTeamsForMatchForm() {
+      const { data: rounds } = await db.from('rounds').select('*').order('sort_order');
+      const { data: teams } = await db.from('teams').select('*').order('odds_rank');
+
+      if (rounds) {
+        document.getElementById('match-round-select').innerHTML = rounds.map(function(r) {
+          return '<option value="' + r.id + '">' + r.name + '</option>';
+        }).join('');
+      }
+
+      if (teams) {
+        const opts = teams.map(function(t) {
+          return '<option value="' + t.id + '">' + t.flag_emoji + ' ' + t.name + '</option>';
+        }).join('');
+        document.getElementById('match-home-select').innerHTML = opts;
+        document.getElementById('match-away-select').innerHTML = opts;
+      }
+    }
+
+    async function addMatch() {
+      const roundId = document.getElementById('match-round-select').value;
+      const homeId = document.getElementById('match-home-select').value;
+      const awayId = document.getElementById('match-away-select').value;
+      const kickoff = document.getElementById('match-kickoff').value;
+      const msg = document.getElementById('match-msg');
+
+      if (!roundId || !homeId || !awayId || !kickoff) { msg.style.color = 'var(--red)'; msg.textContent = 'All fields required.'; return; }
+      if (homeId === awayId) { msg.style.color = 'var(--red)'; msg.textContent = 'Home and away must be different.'; return; }
+
+      const { error } = await db.from('matches').insert({ round_id: roundId, home_team_id: homeId, away_team_id: awayId, kickoff: new Date(kickoff).toISOString() });
+      if (error) { msg.style.color = 'var(--red)'; msg.textContent = error.message; }
+      else { msg.style.color = 'var(--green)'; msg.textContent = '✅ Match added.'; loadMatchesForResult(); }
+    }
+
+    // --- TEAMS LONGSHOT ---
+    async function loadTeamsLongshot() {
+      const { data: teams } = await db.from('teams').select('*').order('odds_rank');
+      const el = document.getElementById('teams-longshot-list');
+      if (!teams) return;
+
+      let html = '<div class="table-wrap"><table><thead><tr><th>Team</th><th>Odds Rank</th><th>Longshot (+1 bonus)</th></tr></thead><tbody>';
+      teams.forEach(function(t) {
+        html += '<tr><td>' + t.flag_emoji + ' ' + t.name + '</td><td style="color:var(--text-muted)">#' + t.odds_rank + '</td>' +
+          '<td><input type="checkbox" ' + (t.is_longshot ? 'checked' : '') + ' data-team-id="' + t.id + '" class="longshot-toggle" style="width:auto; cursor:pointer; accent-color:var(--accent)" /></td></tr>';
+      });
+      html += '</tbody></table></div>';
+      el.innerHTML = html;
+
+      el.querySelectorAll('.longshot-toggle').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+          db.from('teams').update({ is_longshot: this.checked }).eq('id', this.dataset.teamId);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
