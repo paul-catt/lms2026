@@ -39,7 +39,23 @@
     }
     thead th { white-space:nowrap; font-size:11px; color:var(--text-muted); }
     td { font-size:13px; }
+
+    /* Portrait mobile */
     @media(max-width:600px) { .hide-mobile { display:none; } }
+
+    /* Landscape mobile — show extra columns */
+    @media(max-width:900px) and (orientation:landscape) {
+      .hide-mobile { display:table-cell; }
+      .hide-landscape { display:none; }
+    }
+
+    /* Flag borders for pick value */
+    .flag-inline {
+      font-size:15px; margin-left:5px; vertical-align:middle;
+      display:inline-block; border-radius:4px; padding:1px 2px;
+    }
+    .flag-3pt { box-shadow: 0 0 0 2px #f59e0b; }
+    .flag-2pt { box-shadow: 0 0 0 2px #94a3b8; }
   </style>
 </head>
 <body>
@@ -69,16 +85,16 @@
           <thead>
             <tr>
               <th class="pos">#</th>
-              <th class="prior hide-mobile">Prior</th>
+              <th class="prior">Prior</th>
               <th class="medal"></th>
               <th>Player</th>
-              <th class="hide-mobile">Pld</th>
+              <th>Pld</th>
               <th>Pts</th>
-              <th class="hide-mobile">GD</th>
+              <th>GD</th>
               <th class="hide-mobile">Tie<br>break</th>
               <th class="hide-mobile">Form</th>
               <th class="hide-mobile">Left</th>
-              <th>Status</th>
+              <th class="hide-mobile" id="status-col-header">Status</th>
             </tr>
           </thead>
           <tbody id="leaderboard-body"></tbody>
@@ -87,9 +103,11 @@
 
       <div style="margin-top:14px; font-size:11px; color:var(--text-muted); display:flex; gap:16px; flex-wrap:wrap">
         <span>🔵 Playing today</span>
-        <span>🟢 Alive</span>
-        <span>🔴 Eliminated</span>
-        <span>⭐ Longshot pick</span>
+        <span class="hide-mobile">🟢 Alive</span>
+        <span class="hide-mobile">🔴 Eliminated</span>
+        <span class="hide-mobile">⭐ Longshot pick</span>
+        <span><span style="display:inline-block;width:16px;height:16px;border-radius:3px;box-shadow:0 0 0 2px #f59e0b;vertical-align:middle;margin-right:3px"></span>3pt pick</span>
+        <span><span style="display:inline-block;width:16px;height:16px;border-radius:3px;box-shadow:0 0 0 2px #94a3b8;vertical-align:middle;margin-right:3px"></span>2pt pick</span>
       </div>
     </div>
   </main>
@@ -137,7 +155,7 @@
           db.from('player_gd').select('*'),
           db.from('player_furthest_round').select('*'),
           db.from('player_teams_used').select('player_id, match_result'),
-          db.from('todays_match_picks').select('player_slug, flag_emoji, pick_is_longshot').is('points_earned', null),
+          db.from('todays_match_picks').select('player_slug, flag_emoji, pick_is_longshot, multiplier').is('points_earned', null),
           db.from('rounds').select('name, round_type, sort_order, is_complete').order('sort_order')
         ]);
 
@@ -165,7 +183,7 @@
         const todayMap = {};
         (todayPicks || []).forEach(r => {
           if (!todayMap[r.player_slug]) {
-            todayMap[r.player_slug] = { flag: r.flag_emoji, isLongshot: r.pick_is_longshot };
+            todayMap[r.player_slug] = { flag: r.flag_emoji, isLongshot: r.pick_is_longshot, multiplier: r.multiplier };
           }
         });
 
@@ -184,6 +202,12 @@
         // Sort — tiebreaker order
         // Is the competition currently in knockout stage?
         const isKnockout = currentRound && currentRound.round_type === 'knockout';
+
+        // Hide status column in group stage — everyone stays in
+        const statusDisplay = isKnockout ? '' : 'none';
+        document.querySelectorAll('#status-col-header, .status-col').forEach(el => {
+          el.style.display = statusDisplay;
+        });
 
         const sorted = (scores || []).sort((a, b) => {
           // 1. Total points (always)
@@ -247,9 +271,12 @@
               ? '<span class="gd-neg">' + gd + '</span>'
               : '<span class="gd-zero">0</span>';
 
-          // Flag next to name if playing today
+          // Flag next to name if playing today — border colour indicates pick value
+          const flagBorder = isPlayingToday
+            ? (todayInfo.multiplier === 3 ? ' flag-3pt' : ' flag-2pt')
+            : '';
           const flagHtml = isPlayingToday
-            ? '<span class="flag-inline">' + todayInfo.flag + (todayInfo.isLongshot ? '⭐' : '') + '</span>'
+            ? '<span class="flag-inline' + flagBorder + '">' + todayInfo.flag + (todayInfo.isLongshot ? '⭐' : '') + '</span>'
             : '';
 
           const row = document.createElement('tr');
@@ -258,16 +285,16 @@
 
           row.innerHTML =
             '<td class="pos">' + pos + '</td>' +
-            '<td class="prior hide-mobile">' + arrowHtml + '</td>' +
+            '<td class="prior">' + arrowHtml + '</td>' +
             '<td class="medal">' + medal + '</td>' +
             '<td class="player-name"><a href="/' + p.slug + '">' + p.name + '</a>' + flagHtml + '</td>' +
-            '<td class="hide-mobile" style="color:var(--text-muted)">' + (p.rounds_played || 0) + '</td>' +
+            '<td style="color:var(--text-muted)">' + (p.rounds_played || 0) + '</td>' +
             '<td class="points">' + (p.total_points || 0) + '</td>' +
-            '<td class="hide-mobile">' + gdHtml + '</td>' +
+            '<td>' + gdHtml + '</td>' +
             '<td class="hide-mobile tiebreak-val">' + ordinal(pos) + '</td>' +
             '<td class="hide-mobile">' + formHtml + '</td>' +
             '<td class="hide-mobile" style="color:var(--text-muted)">' + teamsLeft + '</td>' +
-            '<td>' + (p.is_eliminated
+            '<td class="hide-mobile status-col">' + (p.is_eliminated
               ? '<span class="badge badge-red">OUT</span>'
               : isPlayingToday
                 ? '<span class="badge badge-blue">Playing</span>'
