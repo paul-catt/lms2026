@@ -181,26 +181,34 @@
           }
         });
 
-        // Sort — fixed tiebreaker order
+        // Sort — tiebreaker order
+        // Is the competition currently in knockout stage?
+        const isKnockout = currentRound && currentRound.round_type === 'knockout';
+
         const sorted = (scores || []).sort((a, b) => {
-          // 1. Total points
+          // 1. Total points (always)
           if (b.total_points !== a.total_points) return b.total_points - a.total_points;
-          // 2. Furthest round (longest in competition)
-          const afr = furthestMap[a.player_id] || 0;
-          const bfr = furthestMap[b.player_id] || 0;
-          if (bfr !== afr) return bfr - afr;
-          // 3. KO points
-          if (b.knockout_points !== a.knockout_points) return b.knockout_points - a.knockout_points;
-          // 4. GD — higher is better
+
+          // 2. Furthest round — knockout stage only
+          if (isKnockout) {
+            const afr = furthestMap[a.player_id] || 0;
+            const bfr = furthestMap[b.player_id] || 0;
+            if (bfr !== afr) return bfr - afr;
+          }
+
+          // 3. GD — higher is better
           const agd = gdMap[a.player_id] || 0;
           const bgd = gdMap[b.player_id] || 0;
           if (bgd !== agd) return bgd - agd;
-          // 5. Goals prediction — lower number wins (closest to actual)
+
+          // 4. Goals prediction — lower number wins
           const ag = a.total_goals_prediction || 999;
           const bg = b.total_goals_prediction || 999;
           if (ag !== bg) return ag - bg;
-          // 6. Alpha
-          return a.name.localeCompare(b.name);
+
+          // 5. Alpha — group stage only (ties allowed in knockouts)
+          if (!isKnockout) return a.name.localeCompare(b.name);
+          return 0;
         });
 
         const prevPos = getPrevPositions();
