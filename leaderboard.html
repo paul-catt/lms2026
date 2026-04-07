@@ -1,1 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard — LMS 2026</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .pos { font-weight:700; color:var(--text-muted); width:32px; }
+    .prior { width:36px; text-align:center; }
+    .medal { width:24px; text-align:center; }
+    .player-name { font-weight:600; }
+    .player-name a { color:var(--text); text-decoration:none; }
+    .player-name a:hover { color:var(--accent); }
+    .points { font-size:16px; font-weight:700; }
+    .out-row { opacity:0.45; }
 
+    /* Blue highlight for playing today - full row */
+    .playing-row { background:rgba(59,130,246,0.12) !important; }
+    .playing-row:hover { background:rgba(59,130,246,0.18) !important; }
+
+    .form-pip {
+      display:inline-block; width:10px; height:10px;
+      border-radius:50%; margin:0 1px;
+    }
+    .form-W { background:var(--green); }
+    .form-D { background:var(--gold); }
+    .form-L { background:var(--red); }
+    .form-blank { background:var(--border); }
+
+    .arrow-up { color:var(--green); font-size:11px; font-weight:700; }
+    .arrow-dn { color:var(--red); font-size:11px; font-weight:700; }
+    .arrow-eq { color:var(--text-muted); font-size:11px; }
+
+    .flag-inline { font-size:16px; margin-left:5px; vertical-align:middle; }
+
+    .gd-pos { color:var(--green); font-weight:600; }
+    .gd-neg { color:var(--red); font-weight:600; }
+    .gd-zero { color:var(--text-muted); }
+
+    .tiebreak-val { color:var(--text-muted); font-size:12px; }
+
+    thead th { white-space:nowrap; font-size:11px; color:var(--text-muted); }
+
+    @media(max-width:600px) {
+      .hide-mobile { display:none; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a class="nav-logo" href="/">⚽ LMS 2026</a>
+    <div class="nav-links">
+      <a href="/leaderboard" class="active">Leaderboard</a>
+      <a href="/match-centre">Match Centre</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px">
+        <div class="card-title" style="margin-bottom:0">📊 Leaderboard</div>
+        <span id="last-updated" style="font-size:11px; color:var(--text-muted)"></span>
+      </div>
+
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        Loading standings...
+      </div>
+
+      <div id="leaderboard-wrap" class="table-wrap" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th class="pos">#</th>
+              <th class="prior hide-mobile">Prior</th>
+              <th class="medal"></th>
+              <th>Player</th>
+              <th class="hide-mobile">Pld</th>
+              <th>Pts</th>
+              <th class="hide-mobile">GD</th>
+              <th class="hide-mobile">Tie<br>break</th>
+              <th class="hide-mobile">Form</th>
+              <th class="hide-mobile">Left</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body"></tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:14px; font-size:11px; color:var(--text-muted); display:flex; gap:16px; flex-wrap:wrap">
+        <span>🔵 Playing today</span>
+        <span>🟢 Alive</span>
+        <span>🔴 Eliminated</span>
+        <span>⭐ Longshot pick</span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL = 'https://jrdjdqjepffdcjdfuarc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZGpkcWplcGZmZGNqZGZ1YXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTczMTcsImV4cCI6MjA5MTAzMzMxN30.nzriEXXYSau-2wBElzgWw-Gwhf1crzVA2lcvPexjq0M';
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Store previous positions in localStorage so we can show movement arrows
+    // Key: 'lb_positions_YYYY-MM-DD' → JSON array of {id, pos}
+    function getPreviousPositions() {
+      try {
+        const stored = localStorage.getItem('lb_prev_positions');
+        return stored ? JSON.parse(stored) : {};
+      } catch { return {}; }
+    }
+
+    function saveCurrentPositions(sortedPlayers) {
+      try {
+        const map = {};
+        sortedPlayers.forEach((p, i) => { map[p.id] = i + 1; });
+        // Only update stored positions once per hour to avoid overwriting on refresh
+        const lastSaved = localStorage.getItem('lb_positions_saved_at');
+        const now = Date.now();
+        if (!lastSaved || now - parseInt(lastSaved) > 3600000) {
+          localStorage.setItem('lb_prev_positions', JSON.stringify(map));
+          localStorage.setItem('lb_positions_saved_at', now.toString());
+        }
+      } catch {}
+    }
+
+    async function loadLeaderboard() {
+      try {
+        // Get all players
+        const { data: players, error } = await db
+          .from('players')
+          .select('id, name, slug, is_eliminated, total_goals_prediction');
+        if (error) throw error;
+
+        // Get all picks with results and match scores for GD
+        const { data: picks } = await db
+          .from('picks')
+          .select(`
+            player_id, multiplier, team_id,
+            rounds(round_type, sort_order),
+            teams(name, flag_emoji, is_longshot),
+            pick_results(points_earned, match_result),
+            matches(home_score, away_score, home_team_id, away_team_id, kickoff)
+          `);
+
+        // Get today's matches to flag who is playing
+        const today = new Date().toISOString().split('T')[0];
+        const { data: todayMatches } = await db
+          .from('matches')
+          .select('home_team_id, away_team_id')
+          .gte('kickoff', today + 'T00:00:00')
+          .lte('kickoff', today + 'T23:59:59');
+
+        const todayTeamIds = new Set();
+        (todayMatches || []).forEach(m => {
+          todayTeamIds.add(m.home_team_id);
+          todayTeamIds.add(m.away_team_id);
+        });
+
+        // Build player stats
+        const statsMap = {};
+        players.forEach(p => {
+          statsMap[p.id] = {
+            ...p,
+            totalPoints: 0,
+            koPoints: 0,
+            pld: 0,
+            teamsUsed: 0,
+            gd: 0,
+            furthestRound: 0,
+            form: [],
+            isPlayingToday: false,
+            todayFlag: null,
+            currentTeamFlag: null,
+            isLongshot: false
+          };
+        });
+
+        (picks || []).forEach(pick => {
+          const s = statsMap[pick.player_id];
+          if (!s) return;
+          s.teamsUsed++;
+
+          const res = pick.pick_results && pick.pick_results.length > 0 ? pick.pick_results[0] : null;
+
+          if (res) {
+            s.pld++;
+            s.totalPoints += res.points_earned || 0;
+
+            // KO points
+            if (pick.rounds && pick.rounds.round_type === 'knockout') {
+              s.koPoints += res.points_earned || 0;
+            }
+
+            // Furthest round (tiebreaker 1 - longest in competition)
+            if (pick.rounds && pick.rounds.sort_order > s.furthestRound) {
+              s.furthestRound = pick.rounds.sort_order;
+            }
+
+            // GD - work out from match scores
+            if (pick.matches) {
+              const m = pick.matches;
+              if (m.home_score !== null && m.away_score !== null) {
+                const isHome = m.home_team_id === pick.team_id;
+                const goalsFor = isHome ? m.home_score : m.away_score;
+                const goalsAgainst = isHome ? m.away_score : m.home_score;
+                s.gd += (goalsFor - goalsAgainst);
+              }
+            }
+
+            // Form
+            s.form.push(
+              res.match_result === 'win' ? 'W' :
+              res.match_result === 'draw' ? 'D' : 'L'
+            );
+          }
+
+          // Playing today flag
+          if (todayTeamIds.has(pick.team_id) && !res) {
+            s.isPlayingToday = true;
+            if (pick.teams) {
+              s.todayFlag = pick.teams.flag_emoji;
+              s.isLongshot = pick.teams.is_longshot;
+            }
+          }
+        });
+
+        // Sort by tiebreak rules:
+        // 1. Total points (desc)
+        // 2. Furthest round / longest in competition (desc)
+        // 3. KO points (desc)
+        // 4. GD (desc)
+        // 5. Goals prediction (asc — lower = more accurate? or as submitted)
+        // 6. Name (alpha)
+        const sorted = Object.values(statsMap).sort((a, b) => {
+          if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+          if (b.furthestRound !== a.furthestRound) return b.furthestRound - a.furthestRound;
+          if (b.koPoints !== a.koPoints) return b.koPoints - a.koPoints;
+          if (b.gd !== a.gd) return b.gd - a.gd;
+          if (a.total_goals_prediction !== b.total_goals_prediction) {
+            return (a.total_goals_prediction || 999) - (b.total_goals_prediction || 999);
+          }
+          return a.name.localeCompare(b.name);
+        });
+
+        // Get previous positions for movement arrows
+        const prevPositions = getPreviousPositions();
+        saveCurrentPositions(sorted);
+
+        const tbody = document.getElementById('leaderboard-body');
+        tbody.innerHTML = '';
+
+        sorted.forEach((p, i) => {
+          const pos = i + 1;
+          const teamsLeft = 48 - p.teamsUsed;
+          const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
+
+          // Movement arrow
+          let arrowHtml = '<span class="arrow-eq">—</span>';
+          if (prevPositions[p.id]) {
+            const prev = prevPositions[p.id];
+            if (pos < prev) {
+              arrowHtml = '<span class="arrow-up">▲' + (prev - pos) + '</span>';
+            } else if (pos > prev) {
+              arrowHtml = '<span class="arrow-dn">▼' + (pos - prev) + '</span>';
+            } else {
+              arrowHtml = '<span class="arrow-eq">—</span>';
+            }
+          }
+
+          // Form pips — last 5
+          const recentForm = p.form.slice(-5);
+          while (recentForm.length < 5) recentForm.unshift('blank');
+          const formHtml = recentForm.map(f =>
+            '<span class="form-pip form-' + f + '" title="' + (f === 'blank' ? '—' : f) + '"></span>'
+          ).join('');
+
+          // GD display
+          const gdHtml = p.gd > 0
+            ? '<span class="gd-pos">+' + p.gd + '</span>'
+            : p.gd < 0
+              ? '<span class="gd-neg">' + p.gd + '</span>'
+              : '<span class="gd-zero">0</span>';
+
+          // Tie break display — show position within tied group
+          // Simple: show their sorted index as ordinal
+          const tbOrdinal = pos + (pos === 1 ? 'st' : pos === 2 ? 'nd' : pos === 3 ? 'rd' : 'th');
+
+          // Player name + flag if playing today
+          const flagHtml = p.isPlayingToday && p.todayFlag
+            ? '<span class="flag-inline">' + p.todayFlag + (p.isLongshot ? '⭐' : '') + '</span>'
+            : '';
+
+          const row = document.createElement('tr');
+          if (p.is_eliminated) row.classList.add('out-row');
+          if (p.isPlayingToday && !p.is_eliminated) row.classList.add('playing-row');
+
+          row.innerHTML =
+            '<td class="pos">' + pos + '</td>' +
+            '<td class="prior hide-mobile">' + arrowHtml + '</td>' +
+            '<td class="medal">' + medal + '</td>' +
+            '<td class="player-name">' +
+              '<a href="/' + p.slug + '">' + p.name + '</a>' + flagHtml +
+            '</td>' +
+            '<td class="hide-mobile" style="color:var(--text-muted)">' + p.pld + '</td>' +
+            '<td class="points">' + p.totalPoints + '</td>' +
+            '<td class="hide-mobile">' + gdHtml + '</td>' +
+            '<td class="hide-mobile tiebreak-val">' + tbOrdinal + '</td>' +
+            '<td class="hide-mobile">' + formHtml + '</td>' +
+            '<td class="hide-mobile" style="color:var(--text-muted)">' + teamsLeft + '</td>' +
+            '<td>' + (p.is_eliminated
+              ? '<span class="badge badge-red">OUT</span>'
+              : p.isPlayingToday
+                ? '<span class="badge badge-blue">Playing</span>'
+                : '<span class="badge badge-green">Alive</span>'
+            ) + '</td>';
+
+          tbody.appendChild(row);
+        });
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('leaderboard-wrap').style.display = 'block';
+        document.getElementById('last-updated').textContent =
+          'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+
+      } catch(err) {
+        console.error(err);
+        document.getElementById('loading').innerHTML =
+          '<p style="color:var(--red)">Failed to load. Check console.</p>';
+      }
+    }
+
+    loadLeaderboard();
+    setInterval(loadLeaderboard, 60000);
+  </script>
+</body>
+</html>
