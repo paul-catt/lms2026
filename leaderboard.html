@@ -103,8 +103,8 @@
 
       <div style="margin-top:14px; font-size:11px; color:var(--text-muted); display:flex; gap:16px; flex-wrap:wrap">
         <span>🔵 Playing today</span>
-        <span class="hide-mobile">🟢 Alive</span>
-        <span class="hide-mobile">🔴 Eliminated</span>
+        <span class="hide-mobile knockout-only">🟢 Alive</span>
+        <span class="hide-mobile knockout-only">🔴 Eliminated</span>
         <span class="hide-mobile">⭐ Longshot pick</span>
         <span><span style="display:inline-block;width:16px;height:16px;border-radius:3px;box-shadow:0 0 0 2px #f59e0b;vertical-align:middle;margin-right:3px"></span>3pt pick</span>
         <span><span style="display:inline-block;width:16px;height:16px;border-radius:3px;box-shadow:0 0 0 2px #94a3b8;vertical-align:middle;margin-right:3px"></span>2pt pick</span>
@@ -155,7 +155,7 @@
           db.from('player_gd').select('*'),
           db.from('player_furthest_round').select('*'),
           db.from('player_teams_used').select('player_id, match_result'),
-          db.from('todays_match_picks').select('player_slug, flag_emoji, pick_is_longshot, multiplier').is('points_earned', null),
+          db.from('todays_match_picks').select('player_slug, home_flag, away_flag, picked_side, pick_is_longshot, multiplier').is('points_earned', null),
           db.from('rounds').select('name, round_type, sort_order, is_complete').order('sort_order')
         ]);
 
@@ -183,7 +183,8 @@
         const todayMap = {};
         (todayPicks || []).forEach(r => {
           if (!todayMap[r.player_slug]) {
-            todayMap[r.player_slug] = { flag: r.flag_emoji, isLongshot: r.pick_is_longshot, multiplier: r.multiplier };
+            const flag = r.picked_side === 'home' ? r.home_flag : r.away_flag;
+            todayMap[r.player_slug] = { flag: flag, isLongshot: r.pick_is_longshot, multiplier: r.multiplier };
           }
         });
 
@@ -203,9 +204,9 @@
         // Is the competition currently in knockout stage?
         const isKnockout = currentRound && currentRound.round_type === 'knockout';
 
-        // Hide status column in group stage — everyone stays in
+        // Hide status column and knockout-only legend items in group stage
         const statusDisplay = isKnockout ? '' : 'none';
-        document.querySelectorAll('#status-col-header, .status-col').forEach(el => {
+        document.querySelectorAll('#status-col-header, .status-col, .knockout-only').forEach(el => {
           el.style.display = statusDisplay;
         });
 
