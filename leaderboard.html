@@ -46,7 +46,6 @@
     /* Landscape mobile — show extra columns */
     @media(max-width:900px) and (orientation:landscape) {
       .hide-mobile { display:table-cell; }
-      .hide-landscape { display:none; }
     }
 
     /* Flag underlines for pick value */
@@ -104,8 +103,8 @@
               <th>GD</th>
               <th class="hide-mobile">Tie<br>break</th>
               <th class="hide-mobile">Form</th>
-              <th class="hide-mobile knockout-only" id="left-col-header">Left</th>
-              <th class="hide-mobile knockout-only" id="status-col-header">Status</th>
+              <th class="hide-mobile" id="left-col-header" style="display:none">Left</th>
+              <th class="hide-mobile" id="status-col-header" style="display:none">Status</th>
             </tr>
           </thead>
           <tbody id="leaderboard-body"></tbody>
@@ -114,12 +113,20 @@
 
       <div style="margin-top:14px; font-size:11px; color:var(--text-muted); display:flex; gap:16px; flex-wrap:wrap">
         <span>🔵 Playing today</span>
-        <span class="knockout-only">🟢 Alive</span>
-        <span class="knockout-only">🔴 Eliminated</span>
-        <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:2px solid #f59e0b;margin-right:3px;vertical-align:middle"></span>3pts pick</span>
-        <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:2px solid #94a3b8;margin-right:3px;vertical-align:middle"></span>2pts pick</span>
-        <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:4px double #f59e0b;margin-right:3px;vertical-align:middle"></span>Longshot (4pts)</span>
-        <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:4px double #94a3b8;margin-right:3px;vertical-align:middle"></span>Longshot (3pts)</span>
+        <span class="knockout-only" style="display:none">🟢 Alive</span>
+        <span class="knockout-only" style="display:none">🔴 Eliminated</span>
+        <span class="group-only">
+          <span style="display:inline-block;width:18px;border-bottom:2px solid #f59e0b;margin-right:3px;vertical-align:middle"></span>3pts pick
+        </span>
+        <span class="group-only">
+          <span style="display:inline-block;width:18px;border-bottom:2px solid #94a3b8;margin-right:3px;vertical-align:middle"></span>2pts pick
+        </span>
+        <span class="group-only">
+          <span style="display:inline-block;width:18px;border-bottom:4px double #f59e0b;margin-right:3px;vertical-align:middle"></span>Longshot (4pts)
+        </span>
+        <span class="group-only">
+          <span style="display:inline-block;width:18px;border-bottom:4px double #94a3b8;margin-right:3px;vertical-align:middle"></span>Longshot (3pts)
+        </span>
       </div>
       <div class="rotate-hint">↔ Rotate phone for full table</div>
     </div>
@@ -131,19 +138,29 @@
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    function getPrevPositions() {
-      try { return JSON.parse(localStorage.getItem('lb_prev_pos') || '{}'); }
-      catch { return {}; }
+    // Prior positions — keyed by the last COMPLETED round's sort_order
+    // Snapshot is taken once per round completion and held until next round completes
+    function getPrevPositions(lastCompletedSortOrder) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('lb_prior_data') || '{}');
+        // If the saved snapshot is from the same completed round, use it
+        if (saved.round === lastCompletedSortOrder) return saved.positions || {};
+        return {};
+      } catch { return {}; }
     }
 
-    function saveCurrPositions(sorted) {
+    function savePriorPositions(sorted, lastCompletedSortOrder) {
       try {
-        const lastSaved = parseInt(localStorage.getItem('lb_pos_saved_at') || '0');
-        if (Date.now() - lastSaved > 3600000) {
-          const map = {};
-          sorted.forEach((p, i) => { map[p.player_id] = i + 1; });
-          localStorage.setItem('lb_prev_pos', JSON.stringify(map));
-          localStorage.setItem('lb_pos_saved_at', Date.now().toString());
+        const saved = JSON.parse(localStorage.getItem('lb_prior_data') || '{}');
+        // Only snapshot when a new round has just completed (round changed)
+        // This preserves the snapshot for the entire duration of the new round
+        if (saved.round !== lastCompletedSortOrder) {
+          const positions = {};
+          sorted.forEach((p, i) => { positions[p.player_id] = i + 1; });
+          localStorage.setItem('lb_prior_data', JSON.stringify({
+            round: lastCompletedSortOrder,
+            positions
+          }));
         }
       } catch {}
     }
@@ -171,23 +188,25 @@
           db.from('player_teams_used').select('player_id, match_result'),
           db.from('todays_match_picks').select('player_slug, home_flag, away_flag, picked_side, pick_is_longshot, multiplier').is('points_earned', null),
           db.from('rounds').select('id, name, round_type, sort_order, is_complete').order('sort_order'),
-          // Earliest kickoff in each round — for day counter
           db.from('matches').select('round_id, kickoff').order('kickoff')
         ]);
 
         if (error) throw error;
 
-        // Work out current round
         const currentRound = (rounds || []).find(r => !r.is_complete);
+        const isKnockout = currentRound && currentRound.round_type === 'knockout';
 
-        // Day counter — days since first match kickoff in current round
+        // Last completed round — prior positions are locked to end of this round
+        const completedRounds = (rounds || []).filter(r => r.is_complete).sort((a,b) => b.sort_order - a.sort_order);
+        const lastCompletedSortOrder = completedRounds.length > 0 ? completedRounds[0].sort_order : null;
+
+        // Day counter
         let dayLabel = '';
         if (currentRound && firstMatchData) {
           const roundMatches = firstMatchData.filter(m => m.round_id === currentRound.id);
           if (roundMatches.length > 0) {
             const firstKickoff = new Date(roundMatches[0].kickoff);
             const now = new Date();
-            // Day 1 = date of first match, Day 2 = next day, etc.
             const msPerDay = 24 * 60 * 60 * 1000;
             const dayNum = Math.floor((now - firstKickoff) / msPerDay) + 1;
             if (dayNum >= 1) dayLabel = ' · Day ' + dayNum;
@@ -211,41 +230,35 @@
 
         const todayMap = {};
         (todayPicks || []).forEach(r => {
-          if (!todayMap[r.player_slug]) todayMap[r.player_slug] = [];
+          if (!todayMap[r.player_slug]) {
+            todayMap[r.player_slug] = [];
+            todayMap[r.player_slug]._keys = new Set();
+          }
           const flag = r.picked_side === 'home' ? r.home_flag : r.away_flag;
-          // Dedupe: don't add same flag+multiplier combo twice
           const key = flag + '|' + r.multiplier + '|' + r.pick_is_longshot;
-          if (!todayMap[r.player_slug]._keys) todayMap[r.player_slug]._keys = new Set();
           if (!todayMap[r.player_slug]._keys.has(key)) {
             todayMap[r.player_slug]._keys.add(key);
-            todayMap[r.player_slug].push({ flag: flag, isLongshot: r.pick_is_longshot, multiplier: r.multiplier });
+            todayMap[r.player_slug].push({ flag, isLongshot: r.pick_is_longshot, multiplier: r.multiplier });
           }
         });
 
-        // Form — chronological order (oldest first = left, newest = right)
         const formMap = {};
         (teamsUsed || []).forEach(r => {
           if (!formMap[r.player_id]) formMap[r.player_id] = [];
           if (r.match_result) {
             formMap[r.player_id].push(
-              r.match_result === 'win' ? 'W' :
-              r.match_result === 'draw' ? 'D' : 'L'
+              r.match_result === 'win' ? 'W' : r.match_result === 'draw' ? 'D' : 'L'
             );
           }
         });
 
-        // Is the competition currently in knockout stage?
-        const isKnockout = currentRound && currentRound.round_type === 'knockout';
-
-        // Show/hide columns and legend based on stage
+        // Show/hide knockout-only elements
         const koDisplay = isKnockout ? '' : 'none';
         const groupDisplay = isKnockout ? 'none' : '';
-        document.querySelectorAll('.knockout-only').forEach(el => {
-          el.style.display = koDisplay;
-        });
-        document.querySelectorAll('.group-only').forEach(el => {
-          el.style.display = groupDisplay;
-        });
+        document.getElementById('left-col-header').style.display = isKnockout ? '' : 'none';
+        document.getElementById('status-col-header').style.display = isKnockout ? '' : 'none';
+        document.querySelectorAll('.knockout-only').forEach(el => el.style.display = koDisplay);
+        document.querySelectorAll('.group-only').forEach(el => el.style.display = groupDisplay);
 
         const sorted = (scores || []).sort((a, b) => {
           if (b.total_points !== a.total_points) return b.total_points - a.total_points;
@@ -264,8 +277,9 @@
           return 0;
         });
 
-        const prevPos = getPrevPositions();
-        saveCurrPositions(sorted);
+        // Prior position — locked to end of last completed round
+        const prevPos = getPrevPositions(lastCompletedSortOrder);
+        savePriorPositions(sorted, lastCompletedSortOrder);
 
         const tbody = document.getElementById('leaderboard-body');
         tbody.innerHTML = '';
@@ -279,37 +293,33 @@
           const todayPicks_p = todayMap[p.slug] || [];
           const isPlayingToday = todayPicks_p.length > 0;
 
-          // Movement arrow
+          // Movement arrow vs end of last completed round
           let arrowHtml = '<span class="arrow-eq">—</span>';
-          if (prevPos[p.player_id]) {
+          if (lastCompletedSortOrder !== null && prevPos[p.player_id]) {
             const prev = prevPos[p.player_id];
             if (pos < prev) arrowHtml = '<span class="arrow-up">▲' + (prev - pos) + '</span>';
             else if (pos > prev) arrowHtml = '<span class="arrow-dn">▼' + (pos - prev) + '</span>';
           }
 
-          // Form pips — last 5
           const recentForm = form.slice(-5);
           const formHtml = recentForm.map(f =>
             '<span class="form-pip form-' + f + '" title="' + f + '"></span>'
           ).join('');
 
-          // GD
           const gdHtml = gd > 0
             ? '<span class="gd-pos">+' + gd + '</span>'
-            : gd < 0
-              ? '<span class="gd-neg">' + gd + '</span>'
-              : '<span class="gd-zero">0</span>';
+            : gd < 0 ? '<span class="gd-neg">' + gd + '</span>'
+            : '<span class="gd-zero">0</span>';
 
-          // Flags
           const flagHtml = todayPicks_p.map(function(pick) {
-            let cls = '';
-            if (pick.multiplier === 3) {
-              cls = pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt';
-            } else {
-              cls = pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt';
-            }
+            let cls = pick.multiplier === 3
+              ? (pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt')
+              : (pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt');
             return '<span class="flag-inline' + cls + '">' + pick.flag + '</span>';
           }).join('');
+
+          // Knockout-only TD cells — inline style toggled to match header visibility
+          const koStyle = isKnockout ? '' : 'display:none;';
 
           const row = document.createElement('tr');
           if (p.is_eliminated) row.classList.add('out-row');
@@ -325,8 +335,8 @@
             '<td>' + gdHtml + '</td>' +
             '<td class="hide-mobile tiebreak-val">' + ordinal(pos) + '</td>' +
             '<td class="hide-mobile">' + formHtml + '</td>' +
-            '<td class="hide-mobile knockout-only" style="color:var(--text-muted)">' + teamsLeft + '</td>' +
-            '<td class="hide-mobile knockout-only">' + (p.is_eliminated
+            '<td class="hide-mobile" style="' + koStyle + 'color:var(--text-muted)">' + teamsLeft + '</td>' +
+            '<td class="hide-mobile" style="' + koStyle + '">' + (p.is_eliminated
               ? '<span class="badge badge-red">OUT</span>'
               : isPlayingToday
                 ? '<span class="badge badge-blue">Playing</span>'
