@@ -99,13 +99,6 @@
             <input type="number" id="result-away-score" min="0" placeholder="0" />
           </div>
         </div>
-
-        <!-- Points preview -->
-        <div id="points-preview" style="display:none; margin:12px 0; padding:12px; background:var(--surface2); border-radius:8px; font-size:13px">
-          <div style="font-weight:600; margin-bottom:8px">Points preview:</div>
-          <div id="points-preview-body"></div>
-        </div>
-
         <button class="btn btn-primary" id="submit-result-btn">Save Result & Calculate Points</button>
         <div id="result-msg" style="margin-top:8px; font-size:12px"></div>
       </div>
@@ -180,7 +173,10 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-      if (sessionStorage.getItem('lms_admin')) showAdmin();
+      // Auto-login
+      if (sessionStorage.getItem('lms_admin')) {
+        showAdmin();
+      }
 
       document.getElementById('login-btn').addEventListener('click', checkPassword);
       document.getElementById('admin-password').addEventListener('keydown', function(e) {
@@ -191,18 +187,17 @@
         location.reload();
       });
 
+      // Tab switching
       document.querySelectorAll('.tab').forEach(function(tab) {
-        tab.addEventListener('click', function() { switchTab(this.dataset.tab); });
+        tab.addEventListener('click', function() {
+          switchTab(this.dataset.tab);
+        });
       });
 
+      // Button events
       document.getElementById('add-player-btn').addEventListener('click', addPlayer);
       document.getElementById('submit-result-btn').addEventListener('click', submitResult);
       document.getElementById('add-match-btn').addEventListener('click', addMatch);
-
-      // Live points preview when scores change
-      document.getElementById('result-home-score').addEventListener('input', updatePointsPreview);
-      document.getElementById('result-away-score').addEventListener('input', updatePointsPreview);
-      document.getElementById('result-match-select').addEventListener('change', updatePointsPreview);
     });
 
     async function initAdmin() {
@@ -237,13 +232,13 @@
 
       if (!name || !slug) { msg.style.color = 'var(--red)'; msg.textContent = 'Name and slug required.'; return; }
 
-      const { error } = await db.from('players').insert({ name, slug, total_goals_prediction: goals || null });
+      const { error } = await db.from('players').insert({ name: name, slug: slug, total_goals_prediction: goals || null });
       if (error) {
         msg.style.color = 'var(--red)';
         msg.textContent = error.message;
       } else {
         msg.style.color = 'var(--green)';
-        msg.textContent = '✅ ' + name + ' added. Link: lms2026.netlify.app/' + slug;
+        msg.textContent = '✅ ' + name + ' added. Link: lucky-pastelito-0b63aa.netlify.app/' + slug;
         document.getElementById('new-player-name').value = '';
         document.getElementById('new-player-slug').value = '';
         document.getElementById('new-player-goals').value = '';
@@ -264,72 +259,10 @@
         sel.innerHTML = '<option>No pending matches</option>';
         return;
       }
-      sel.innerHTML = '<option value="">Select a match...</option>' + data.map(function(m) {
+      sel.innerHTML = data.map(function(m) {
         const d = new Date(m.kickoff).toLocaleDateString('en-GB', {day:'numeric', month:'short'});
         return '<option value="' + m.id + '">' + m.home_team.name + ' vs ' + m.away_team.name + ' (' + m.rounds.name + ', ' + d + ')</option>';
       }).join('');
-    }
-
-    // Points preview — shows what points each player will get before saving
-    async function updatePointsPreview() {
-      const matchId = document.getElementById('result-match-select').value;
-      const homeScore = parseInt(document.getElementById('result-home-score').value);
-      const awayScore = parseInt(document.getElementById('result-away-score').value);
-      const preview = document.getElementById('points-preview');
-      const body = document.getElementById('points-preview-body');
-
-      if (!matchId || isNaN(homeScore) || isNaN(awayScore)) {
-        preview.style.display = 'none';
-        return;
-      }
-
-      const { data: match } = await db
-        .from('matches')
-        .select('home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
-        .eq('id', matchId)
-        .single();
-
-      if (!match) return;
-
-      const homeResult = homeScore > awayScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
-      const awayResult = awayScore > homeScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
-
-      const { data: picks } = await db
-        .from('picks')
-        .select('*, players(name)')
-        .in('team_id', [match.home_team_id, match.away_team_id]);
-
-      if (!picks || picks.length === 0) {
-        body.innerHTML = '<span style="color:var(--text-muted)">No picks for this match.</span>';
-        preview.style.display = 'block';
-        return;
-      }
-
-      body.innerHTML = picks.map(function(pick) {
-        const isHome = pick.team_id === match.home_team_id;
-        const team = isHome ? match.home_team : match.away_team;
-        const result = isHome ? homeResult : awayResult;
-        const pts = calcPoints(result, pick.multiplier, team.is_longshot);
-        const colour = pts > 0 ? 'var(--green)' : result === 'draw' ? 'var(--gold)' : 'var(--red)';
-        const longshot = team.is_longshot && result === 'win' ? ' ⭐+1' : '';
-        return '<div style="display:flex; justify-content:space-between; padding:3px 0">' +
-          '<span>' + pick.players.name + ' — ' + team.flag_emoji + ' ' + team.name + ' (' + pick.multiplier + 'pt pick)</span>' +
-          '<span style="font-weight:700; color:' + colour + '">' + pts + 'pts' + longshot + '</span>' +
-          '</div>';
-      }).join('');
-
-      preview.style.display = 'block';
-    }
-
-    // Core points calculation — single source of truth
-    function calcPoints(result, pickValue, isLongshot) {
-      // pickValue is 2 or 3 — this is the points awarded for a WIN
-      // Draw always = 1pt regardless of pick value
-      // Loss always = 0pts
-      // Longshot bonus: +1 if win and team is longshot
-      if (result === 'loss') return 0;
-      if (result === 'draw') return 1;
-      return pickValue + (isLongshot ? 1 : 0);
     }
 
     async function submitResult() {
@@ -342,19 +275,12 @@
         msg.style.color = 'var(--red)'; msg.textContent = 'Fill in all fields.'; return;
       }
 
-      msg.textContent = 'Saving...';
-
-      const { error } = await db.from('matches')
-        .update({ home_score: homeScore, away_score: awayScore, status: 'complete' })
-        .eq('id', matchId);
-
+      const { error } = await db.from('matches').update({ home_score: homeScore, away_score: awayScore, status: 'complete' }).eq('id', matchId);
       if (error) { msg.style.color = 'var(--red)'; msg.textContent = error.message; return; }
 
       await calculatePickResults(matchId, homeScore, awayScore);
-
       msg.style.color = 'var(--green)';
       msg.textContent = '✅ Result saved and points calculated.';
-      document.getElementById('points-preview').style.display = 'none';
       loadMatchesForResult();
     }
 
@@ -377,19 +303,14 @@
         const isHome = pick.team_id === match.home_team_id;
         const team = isHome ? match.home_team : match.away_team;
         const result = isHome ? homeResult : awayResult;
+        const basePoints = result === 'win' ? 2 : result === 'draw' ? 1 : 0;
         const longshotBonus = (result === 'win' && team.is_longshot) ? 1 : 0;
-        const pointsEarned = calcPoints(result, pick.multiplier, team.is_longshot);
-
-        // base_points = points before longshot bonus
-        const basePoints = result === 'loss' ? 0 : result === 'draw' ? 1 : pick.multiplier;
+        let pointsEarned = basePoints === 0 ? 0 : Math.min((basePoints + longshotBonus) * pick.multiplier, 4);
 
         await db.from('pick_results').upsert({
-          pick_id: pick.id,
-          match_id: matchId,
-          base_points: basePoints,
-          longshot_bonus: longshotBonus,
-          multiplier_applied: 1,
-          points_earned: pointsEarned,
+          pick_id: pick.id, match_id: matchId,
+          base_points: basePoints, longshot_bonus: longshotBonus,
+          multiplier_applied: pick.multiplier, points_earned: pointsEarned,
           match_result: result
         }, { onConflict: 'pick_id,match_id' });
       }
@@ -425,11 +346,7 @@
       if (!roundId || !homeId || !awayId || !kickoff) { msg.style.color = 'var(--red)'; msg.textContent = 'All fields required.'; return; }
       if (homeId === awayId) { msg.style.color = 'var(--red)'; msg.textContent = 'Home and away must be different.'; return; }
 
-      const { error } = await db.from('matches').insert({
-        round_id: roundId, home_team_id: homeId, away_team_id: awayId,
-        kickoff: new Date(kickoff).toISOString()
-      });
-
+      const { error } = await db.from('matches').insert({ round_id: roundId, home_team_id: homeId, away_team_id: awayId, kickoff: new Date(kickoff).toISOString() });
       if (error) { msg.style.color = 'var(--red)'; msg.textContent = error.message; }
       else { msg.style.color = 'var(--green)'; msg.textContent = '✅ Match added.'; loadMatchesForResult(); }
     }
