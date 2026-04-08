@@ -7,87 +7,32 @@
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    .match-card {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 12px;
-      background: var(--surface);
-    }
-    .match-card.live { border-color: var(--blue); }
-    .match-card.complete { border-color: var(--border); opacity: 0.85; }
-    .match-teams {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin: 10px 0;
-      font-size: 16px;
-      font-weight: 700;
-    }
-    .match-score {
-      font-size: 22px;
-      font-weight: 800;
-      color: var(--text);
-      min-width: 60px;
-      text-align: center;
-    }
-    .match-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
-    .picks-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 10px;
-      padding-top: 10px;
-      border-top: 1px solid var(--border);
-    }
-    .pick-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      background: var(--surface2);
-      border-radius: 20px;
-      padding: 4px 10px;
-      font-size: 12px;
-    }
-    .pick-chip.win { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); }
-    .pick-chip.draw { background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); }
-    .pick-chip.loss { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); }
-    .odds-row {
-      display: flex;
-      gap: 8px;
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 6px;
-      flex-wrap: wrap;
-    }
-    .odds-pill {
-      background: var(--surface2);
-      border-radius: 6px;
-      padding: 2px 8px;
-      font-size: 11px;
-    }
-    .round-header {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin: 20px 0 8px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid var(--border);
-    }
-    .no-picks { color: var(--text-muted); font-size: 12px; font-style: italic; }
+    .match-card { border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:12px; background:var(--surface); }
+    .match-card.live { border-color:var(--blue); }
+    .match-card.complete { border-color:var(--border); opacity:0.85; }
+    .match-teams { display:flex; align-items:center; justify-content:center; gap:12px; margin:10px 0; font-size:16px; font-weight:700; }
+    .match-score { font-size:22px; font-weight:800; color:var(--text); min-width:60px; text-align:center; }
+    .match-meta { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text-muted); margin-bottom:10px; }
+    .picks-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
+    .pick-chip { display:inline-flex; align-items:center; gap:5px; background:var(--surface2); border-radius:20px; padding:4px 10px; font-size:12px; }
+    .pick-chip.win { background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); }
+    .pick-chip.draw { background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); }
+    .pick-chip.loss { background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); }
+    .odds-row { display:flex; gap:8px; font-size:11px; color:var(--text-muted); margin-top:6px; flex-wrap:wrap; }
+    .odds-pill { background:var(--surface2); border-radius:6px; padding:2px 8px; font-size:11px; }
+    .round-header { font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin:20px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+    .no-picks { color:var(--text-muted); font-size:12px; font-style:italic; }
+    .test-date-banner { background:#7c3aed; color:#fff; text-align:center; padding:8px 16px; font-size:13px; font-weight:600; }
+    .test-date-banner a { color:#e9d5ff; text-decoration:underline; cursor:pointer; margin-left:12px; font-weight:400; }
   </style>
 </head>
 <body>
+
+  <div class="test-date-banner" id="test-date-banner" style="display:none">
+    🧪 Test mode — date overridden to <span id="banner-date"></span>
+    <a href="/admin">Change in Admin</a>
+  </div>
+
   <nav>
     <a class="nav-logo" href="/">⚽ LMS 2026</a>
     <div class="nav-links">
@@ -98,7 +43,6 @@
   </nav>
 
   <main>
-    <!-- TODAY -->
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
         <div class="card-title" style="margin-bottom:0">⚽ Today's Matches</div>
@@ -108,7 +52,6 @@
       <div id="today-content"></div>
     </div>
 
-    <!-- ALL RESULTS -->
     <div class="card">
       <div class="card-title">📅 Results Archive</div>
       <div id="results-loading" class="loading"><div class="spinner"></div>Loading...</div>
@@ -122,7 +65,26 @@
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
+    // ── Test date override ────────────────────────────────────
+    const LS_KEY = 'lms2026_test_date';
+    function getEffectiveDate() {
+      const override = localStorage.getItem(LS_KEY);
+      return override ? new Date(override) : new Date();
+    }
+    (function initBanner() {
+      const override = localStorage.getItem(LS_KEY);
+      if (override) {
+        const d = new Date(override);
+        document.getElementById('banner-date').textContent =
+          d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) +
+          ' ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+        document.getElementById('test-date-banner').style.display = 'block';
+      }
+    })();
+
+    // Set today date label using effective date
+    const now = getEffectiveDate();
+    document.getElementById('today-date').textContent = now.toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
 
     function matchCard(match, picks, allPlayers) {
       const kickoff = new Date(match.kickoff).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
@@ -130,7 +92,6 @@
       const isComplete = match.status === 'complete';
       const isLive = match.status === 'live';
 
-      // Find picks for this match
       const homePicks = picks.filter(p => p.team_id === match.home_team_id);
       const awayPicks = picks.filter(p => p.team_id === match.away_team_id);
       const allMatchPicks = [...homePicks, ...awayPicks];
@@ -143,7 +104,6 @@
             const result = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
             const chipClass = result ? result.match_result : '';
             const pts = result ? '+' + result.points_earned : '';
-            const side = p.team_id === match.home_team_id ? match.home_team.name : match.away_team.name;
             const flag = p.team_id === match.home_team_id ? match.home_team.flag_emoji : match.away_team.flag_emoji;
             const isLongshot = p.team_id === match.home_team_id ? match.home_team.is_longshot : match.away_team.is_longshot;
             return '<div class="pick-chip ' + chipClass + '">' +
@@ -183,21 +143,24 @@
 
     async function loadAll() {
       try {
-        // All players
         const { data: players } = await db.from('players').select('id, name, slug');
+        const { data: picks } = await db.from('picks').select('player_id, team_id, multiplier, pick_results(points_earned, match_result)');
 
-        // All picks with results
-        const { data: picks } = await db
-          .from('picks')
-          .select('player_id, team_id, multiplier, pick_results(points_earned, match_result)');
+        // Use effective date for "today" window
+        const effectiveNow = getEffectiveDate();
+        const todayStr = effectiveNow.toISOString().split('T')[0];
 
-        // Today's matches
-        const today = new Date().toISOString().split('T')[0];
+        // Today window: 3pm UK previous day → 8am UK next day (covers USA late kickoffs)
+        // For simplicity use full UTC day of the effective date ± 1 day buffer
+        const windowStart = todayStr + 'T00:00:00';
+        const windowEnd   = todayStr + 'T23:59:59';
+
         const { data: todayMatches } = await db
           .from('matches')
           .select('id, kickoff, status, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, rounds(name), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)')
-          .gte('kickoff', today + 'T00:00:00')
-          .lte('kickoff', today + 'T23:59:59')
+          .gte('kickoff', windowStart)
+          .lte('kickoff', windowEnd)
+          .not('home_team_id', 'is', null)
           .order('kickoff');
 
         document.getElementById('today-loading').style.display = 'none';
@@ -209,7 +172,6 @@
           todayContent.innerHTML = todayMatches.map(m => matchCard(m, picks || [], players || [])).join('');
         }
 
-        // All completed matches grouped by round
         const { data: allMatches } = await db
           .from('matches')
           .select('id, kickoff, status, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, rounds(name, sort_order), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)')
@@ -224,7 +186,6 @@
           return;
         }
 
-        // Group by round
         const byRound = {};
         allMatches.forEach(m => {
           const rname = m.rounds.name;

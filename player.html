@@ -7,116 +7,33 @@
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    .team-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 8px;
-      margin-top: 10px;
-      max-height: 320px;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
-    .team-btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--text);
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      transition: all 0.15s;
-      text-align: left;
-    }
-    .team-btn:hover:not(:disabled) {
-      border-color: var(--accent);
-      background: rgba(59,130,246,0.1);
-    }
-    .team-btn.selected-3 {
-      border-color: var(--gold);
-      background: rgba(245,158,11,0.15);
-      color: var(--gold);
-      font-weight: 700;
-    }
-    .team-btn.selected-2 {
-      border-color: var(--accent);
-      background: rgba(59,130,246,0.15);
-      color: var(--accent);
-      font-weight: 700;
-    }
-    .team-btn:disabled {
-      opacity: 0.35;
-      cursor: not-allowed;
-    }
-    .team-btn.used {
-      opacity: 0.25;
-      cursor: not-allowed;
-      text-decoration: line-through;
-    }
-    .deadline-bar {
-      background: rgba(245,158,11,0.1);
-      border: 1px solid rgba(245,158,11,0.3);
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 13px;
-      color: var(--gold);
-      margin-bottom: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .deadline-bar.locked {
-      background: rgba(239,68,68,0.1);
-      border-color: rgba(239,68,68,0.3);
-      color: var(--red);
-    }
-    .pick-summary {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-    .pick-slot {
-      flex: 1;
-      min-width: 140px;
-      background: var(--surface2);
-      border: 2px dashed var(--border);
-      border-radius: 8px;
-      padding: 12px;
-      text-align: center;
-    }
-    .pick-slot.filled-3 {
-      border-color: var(--gold);
-      background: rgba(245,158,11,0.08);
-    }
-    .pick-slot.filled-2 {
-      border-color: var(--accent);
-      background: rgba(59,130,246,0.08);
-    }
-    .pick-slot-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 4px;
-    }
-    .pick-slot-value {
-      font-size: 15px;
-      font-weight: 700;
-    }
-    .longshot-tag {
-      font-size: 10px;
-      color: var(--gold);
-      margin-top: 2px;
-    }
+    .team-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; margin-top:10px; max-height:320px; overflow-y:auto; padding-right:4px; }
+    .team-btn { display:flex; align-items:center; gap:6px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; font-size:13px; font-weight:500; transition:all 0.15s; text-align:left; }
+    .team-btn:hover:not(:disabled) { border-color:var(--accent); background:rgba(59,130,246,0.1); }
+    .team-btn.selected-3 { border-color:var(--gold); background:rgba(245,158,11,0.15); color:var(--gold); font-weight:700; }
+    .team-btn.selected-2 { border-color:var(--accent); background:rgba(59,130,246,0.15); color:var(--accent); font-weight:700; }
+    .team-btn:disabled { opacity:0.35; cursor:not-allowed; }
+    .team-btn.used { opacity:0.25; cursor:not-allowed; text-decoration:line-through; }
+    .deadline-bar { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--gold); margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; }
+    .deadline-bar.locked { background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3); color:var(--red); }
+    .pick-summary { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+    .pick-slot { flex:1; min-width:140px; background:var(--surface2); border:2px dashed var(--border); border-radius:8px; padding:12px; text-align:center; }
+    .pick-slot.filled-3 { border-color:var(--gold); background:rgba(245,158,11,0.08); }
+    .pick-slot.filled-2 { border-color:var(--accent); background:rgba(59,130,246,0.08); }
+    .pick-slot-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; }
+    .pick-slot-value { font-size:15px; font-weight:700; }
+    .longshot-tag { font-size:10px; color:var(--gold); margin-top:2px; }
+    .test-date-banner { background:#7c3aed; color:#fff; text-align:center; padding:8px 16px; font-size:13px; font-weight:600; }
+    .test-date-banner a { color:#e9d5ff; text-decoration:underline; cursor:pointer; margin-left:12px; font-weight:400; }
   </style>
 </head>
 <body>
+
+  <div class="test-date-banner" id="test-date-banner" style="display:none">
+    🧪 Test mode — date overridden to <span id="banner-date"></span>
+    <a href="/admin">Change in Admin</a>
+  </div>
+
   <nav>
     <a class="nav-logo" href="/">⚽ LMS 2026</a>
     <div class="nav-links">
@@ -127,11 +44,7 @@
   </nav>
 
   <main>
-    <div id="loading" class="loading">
-      <div class="spinner"></div>
-      Loading your dashboard...
-    </div>
-
+    <div id="loading" class="loading"><div class="spinner"></div>Loading your dashboard...</div>
     <div id="not-found" style="display:none; text-align:center; padding:48px">
       <div style="font-size:48px; margin-bottom:16px">🤷</div>
       <h2>Player not found</h2>
@@ -140,61 +53,34 @@
     </div>
 
     <div id="dashboard" style="display:none">
-
-      <!-- Header -->
       <div class="card" style="text-align:center; padding:20px">
         <div style="font-size:32px; margin-bottom:6px">👤</div>
         <h1 id="player-name" style="font-size:22px; font-weight:800"></h1>
         <div id="player-status" style="margin-top:6px"></div>
       </div>
 
-      <!-- Stats -->
       <div class="stats-row">
-        <div class="stat-block">
-          <div class="stat-value" id="stat-points">0</div>
-          <div class="stat-label">Total Points</div>
-        </div>
-        <div class="stat-block">
-          <div class="stat-value" id="stat-position">—</div>
-          <div class="stat-label">Position</div>
-        </div>
-        <div class="stat-block">
-          <div class="stat-value" id="stat-teams-left">48</div>
-          <div class="stat-label">Teams Left</div>
-        </div>
-        <div class="stat-block">
-          <div class="stat-value" id="stat-ko-points">0</div>
-          <div class="stat-label">KO Points</div>
-        </div>
+        <div class="stat-block"><div class="stat-value" id="stat-points">0</div><div class="stat-label">Total Points</div></div>
+        <div class="stat-block"><div class="stat-value" id="stat-position">—</div><div class="stat-label">Position</div></div>
+        <div class="stat-block"><div class="stat-value" id="stat-teams-left">48</div><div class="stat-label">Teams Left</div></div>
+        <div class="stat-block"><div class="stat-value" id="stat-ko-points">0</div><div class="stat-label">KO Points</div></div>
       </div>
 
-      <!-- Warning -->
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
 
-      <!-- PICK SUBMISSION -->
       <div id="pick-section" style="display:none">
         <div class="card">
           <div class="card-title">🎯 Submit Your Pick</div>
-
           <div id="deadline-bar" class="deadline-bar"></div>
-
-          <!-- Current selection display -->
           <div class="pick-summary" id="pick-summary"></div>
-
-          <!-- Team grid -->
           <div id="pick-form-inner"></div>
-
-          <!-- Submit button -->
           <div style="margin-top:14px">
-            <button class="btn btn-primary" id="submit-pick-btn" style="width:100%" disabled>
-              Select your team(s) above
-            </button>
+            <button class="btn btn-primary" id="submit-pick-btn" style="width:100%" disabled>Select your team(s) above</button>
             <div id="pick-msg" style="margin-top:8px; font-size:12px; text-align:center"></div>
           </div>
         </div>
       </div>
 
-      <!-- No round open -->
       <div id="no-round" style="display:none">
         <div class="card" style="text-align:center; padding:24px; color:var(--text-muted)">
           <div style="font-size:32px; margin-bottom:8px">⏳</div>
@@ -202,26 +88,16 @@
         </div>
       </div>
 
-      <!-- Pick history -->
       <div class="card">
         <div class="card-title">📋 Pick History</div>
         <div class="table-wrap">
           <table>
-            <thead>
-              <tr>
-                <th>Round</th>
-                <th>Team</th>
-                <th>Pts</th>
-                <th>Result</th>
-                <th>Earned</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Round</th><th>Team</th><th>Pts</th><th>Result</th><th>Earned</th></tr></thead>
             <tbody id="history-body"></tbody>
           </table>
         </div>
       </div>
-
-    </div><!-- /dashboard -->
+    </div>
   </main>
 
   <script>
@@ -230,40 +106,48 @@
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // ── Test date override ────────────────────────────────────
+    const LS_KEY = 'lms2026_test_date';
+    function getEffectiveDate() {
+      const override = localStorage.getItem(LS_KEY);
+      return override ? new Date(override) : new Date();
+    }
+    (function initBanner() {
+      const override = localStorage.getItem(LS_KEY);
+      if (override) {
+        const d = new Date(override);
+        document.getElementById('banner-date').textContent =
+          d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) +
+          ' ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+        document.getElementById('test-date-banner').style.display = 'block';
+      }
+    })();
+
     const slug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
 
     let player = null;
     let currentRound = null;
     let usedTeamIds = new Set();
     let allTeams = [];
-    let pick3 = null; // team object for 3pt pick
-    let pick2 = null; // team object for 2pt pick
-    let pickSingle = null; // for knockout rounds
+    let pick3 = null;
+    let pick2 = null;
+    let pickSingle = null;
     let isLocked = false;
-    let existingPicks = []; // picks already submitted this round
+    let existingPicks = [];
 
     function ordinal(n) {
-      const s = ['th','st','nd','rd'];
-      const v = n % 100;
+      const s = ['th','st','nd','rd'], v = n % 100;
       return s[(v-20)%10] || s[v] || s[0];
     }
 
     async function loadDashboard() {
       try {
-        // 1. Get player
-        const { data: players, error } = await db
-          .from('players')
+        const { data: players, error } = await db.from('players')
           .select('id, name, slug, is_eliminated, total_goals_prediction')
-          .eq('slug', slug)
-          .limit(1);
-
+          .eq('slug', slug).limit(1);
         if (error) throw error;
         document.getElementById('loading').style.display = 'none';
-
-        if (!players || players.length === 0) {
-          document.getElementById('not-found').style.display = 'block';
-          return;
-        }
+        if (!players || players.length === 0) { document.getElementById('not-found').style.display = 'block'; return; }
 
         player = players[0];
         document.getElementById('dashboard').style.display = 'block';
@@ -273,19 +157,14 @@
           ? '<span class="badge badge-red">❌ Eliminated</span>'
           : '<span class="badge badge-green">✅ Still In</span>';
 
-        // 2. Get all picks for this player
-        const { data: picks } = await db
-          .from('picks')
+        const { data: picks } = await db.from('picks')
           .select('id, multiplier, team_id, round_id, rounds(id, name, round_type, deadline), teams(id, name, flag_emoji, is_longshot), pick_results(points_earned, match_result)')
           .eq('player_id', player.id)
           .order('created_at', { ascending: true });
 
-        // Teams already used
         usedTeamIds = new Set((picks || []).map(p => p.team_id));
-        const teamsUsed = usedTeamIds.size;
-        const teamsLeft = 48 - teamsUsed;
+        const teamsLeft = 48 - usedTeamIds.size;
 
-        // Points
         let totalPoints = 0, koPoints = 0;
         (picks || []).forEach(function(p) {
           const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
@@ -298,12 +177,8 @@
         document.getElementById('stat-points').textContent = totalPoints;
         document.getElementById('stat-ko-points').textContent = koPoints;
         document.getElementById('stat-teams-left').textContent = teamsLeft;
+        document.getElementById('stat-position').textContent = '—';
 
-        // Position
-        const { data: allPlayers } = await db.from('players').select('id');
-        document.getElementById('stat-position').textContent = '—'; // full ranking done on leaderboard
-
-        // Warning
         const roundsLeft = 5;
         if (teamsLeft <= roundsLeft + 2 && !player.is_eliminated) {
           const warn = document.getElementById('teams-warning');
@@ -311,7 +186,6 @@
           warn.textContent = '⚠️ You have ' + teamsLeft + ' teams left. Pick carefully.';
         }
 
-        // Pick history table
         const tbody = document.getElementById('history-body');
         if (!picks || picks.length === 0) {
           tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:20px">No picks yet.</td></tr>';
@@ -319,19 +193,18 @@
           tbody.innerHTML = picks.map(function(p) {
             const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
             const resultBadge = res
-              ? '<span class="badge badge-' + (res.match_result === 'win' ? 'green' : res.match_result === 'draw' ? 'gold' : 'red') + '">' + res.match_result.toUpperCase() + '</span>'
+              ? '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + res.match_result.toUpperCase() + '</span>'
               : '<span class="badge badge-grey">Pending</span>';
             return '<tr>' +
               '<td style="font-size:12px">' + (p.rounds ? p.rounds.name : '—') + '</td>' +
               '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
-              '<td><span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '">' + p.multiplier + 'pt</span></td>' +
+              '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
               '<td>' + resultBadge + '</td>' +
               '<td style="font-weight:600">' + (res ? res.points_earned : '—') + '</td>' +
               '</tr>';
           }).join('');
         }
 
-        // 3. Find current open round
         await loadPickSection(picks || []);
 
       } catch(err) {
@@ -344,35 +217,24 @@
     async function loadPickSection(existingPicksAll) {
       if (player.is_eliminated) return;
 
-      const now = new Date();
+      const now = getEffectiveDate(); // uses test date if set
 
-      // Get rounds with deadline in the future OR most recently passed
-      const { data: rounds } = await db
-        .from('rounds')
-        .select('*')
-        .eq('is_complete', false)
-        .order('sort_order', { ascending: true })
-        .limit(1);
+      const { data: rounds } = await db.from('rounds')
+        .select('*').eq('is_complete', false).order('sort_order', { ascending: true }).limit(1);
 
-      if (!rounds || rounds.length === 0) {
-        document.getElementById('no-round').style.display = 'block';
-        return;
-      }
+      if (!rounds || rounds.length === 0) { document.getElementById('no-round').style.display = 'block'; return; }
 
       currentRound = rounds[0];
       const deadline = new Date(currentRound.deadline);
       isLocked = now >= deadline;
 
-      // Check if player already has picks for this round
       existingPicks = existingPicksAll.filter(p => p.round_id === currentRound.id);
 
-      // Get all teams
       const { data: teams } = await db.from('teams').select('*').order('odds_rank');
       allTeams = teams || [];
 
       document.getElementById('pick-section').style.display = 'block';
 
-      // Deadline bar
       const deadlineBar = document.getElementById('deadline-bar');
       if (isLocked) {
         deadlineBar.className = 'deadline-bar locked';
@@ -383,26 +245,19 @@
         deadlineBar.innerHTML = '<span>⏰ ' + currentRound.name + ' deadline</span><strong>' + timeLeft + '</strong>';
       }
 
-      // If already submitted picks for this round, show them locked
-      if (existingPicks.length > 0) {
-        showSubmittedPicks();
-        return;
-      }
-
+      if (existingPicks.length > 0) { showSubmittedPicks(); return; }
       if (isLocked) {
         document.getElementById('pick-form-inner').innerHTML =
           '<p style="color:var(--text-muted);text-align:center;padding:16px">Deadline has passed. Picks are locked.</p>';
         return;
       }
 
-      // Build pick form
       renderPickForm();
     }
 
     function showSubmittedPicks() {
       const isGroup = currentRound.round_type === 'group';
       let html = '<div style="text-align:center; padding:8px 0 16px; color:var(--green); font-weight:600">✅ Picks submitted for ' + currentRound.name + '</div>';
-
       if (isGroup) {
         const pick3submitted = existingPicks.find(p => p.multiplier === 3);
         const pick2submitted = existingPicks.find(p => p.multiplier === 2);
@@ -410,45 +265,37 @@
         if (pick3submitted) {
           html += '<div class="pick-slot filled-3"><div class="pick-slot-label">3-Pointer</div>' +
             '<div class="pick-slot-value">' + (pick3submitted.teams ? pick3submitted.teams.flag_emoji + ' ' + pick3submitted.teams.name : '—') + '</div>' +
-            (pick3submitted.teams && pick3submitted.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') +
-            '</div>';
+            (pick3submitted.teams && pick3submitted.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
         }
         if (pick2submitted) {
           html += '<div class="pick-slot filled-2"><div class="pick-slot-label">2-Pointer</div>' +
             '<div class="pick-slot-value">' + (pick2submitted.teams ? pick2submitted.teams.flag_emoji + ' ' + pick2submitted.teams.name : '—') + '</div>' +
-            (pick2submitted.teams && pick2submitted.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') +
-            '</div>';
+            (pick2submitted.teams && pick2submitted.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
         }
         html += '</div>';
       } else {
         const singlePick = existingPicks[0];
         if (singlePick) {
           html += '<div class="pick-slot filled-2" style="max-width:200px;margin:0 auto"><div class="pick-slot-label">Your Pick</div>' +
-            '<div class="pick-slot-value">' + (singlePick.teams ? singlePick.teams.flag_emoji + ' ' + singlePick.teams.name : '—') + '</div>' +
-            '</div>';
+            '<div class="pick-slot-value">' + (singlePick.teams ? singlePick.teams.flag_emoji + ' ' + singlePick.teams.name : '—') + '</div></div>';
         }
       }
-
       if (!isLocked) {
         html += '<div style="margin-top:12px;text-align:center"><button class="btn btn-secondary" onclick="allowResubmit()">Change pick</button></div>';
       }
-
       document.getElementById('pick-form-inner').innerHTML = html;
       document.getElementById('pick-summary').innerHTML = '';
       document.getElementById('submit-pick-btn').style.display = 'none';
     }
 
     function allowResubmit() {
-      existingPicks = [];
-      pick2 = null; pick3 = null; pickSingle = null;
+      existingPicks = []; pick2 = null; pick3 = null; pickSingle = null;
       renderPickForm();
       document.getElementById('submit-pick-btn').style.display = 'block';
     }
 
     function renderPickForm() {
       const isGroup = currentRound.round_type === 'group';
-
-      // Pick summary slots
       const summaryEl = document.getElementById('pick-summary');
       if (isGroup) {
         summaryEl.innerHTML =
@@ -458,30 +305,17 @@
         summaryEl.innerHTML =
           '<div class="pick-slot" id="slot-single"><div class="pick-slot-label">Your Pick</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div></div>';
       }
-
-      // Instructions
-      let instrHtml = '';
-      if (isGroup) {
-        instrHtml = '<p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Select your <span style="color:var(--gold);font-weight:700">3-pointer</span> first, then your <span style="color:var(--accent);font-weight:700">2-pointer</span>. Teams you\'ve already used are greyed out.</p>';
-      } else {
-        instrHtml = '<p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Select one team. Teams you\'ve already used are greyed out.</p>';
-      }
-
-      // Team grid
+      const instrHtml = isGroup
+        ? '<p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Select your <span style="color:var(--gold);font-weight:700">3-pointer</span> first, then your <span style="color:var(--accent);font-weight:700">2-pointer</span>. Teams you\'ve already used are greyed out.</p>'
+        : '<p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Select one team. Teams you\'ve already used are greyed out.</p>';
       const gridHtml = '<div class="team-grid">' +
         allTeams.map(function(t) {
           const isUsed = usedTeamIds.has(t.id);
-          return '<button class="team-btn' + (isUsed ? ' used' : '') + '" ' +
-            (isUsed ? 'disabled' : '') +
+          return '<button class="team-btn' + (isUsed ? ' used' : '') + '" ' + (isUsed ? 'disabled' : '') +
             ' data-team-id="' + t.id + '" onclick="selectTeam(\'' + t.id + '\')">' +
-            t.flag_emoji + ' ' + t.name +
-            (t.is_longshot ? ' ⭐' : '') +
-            '</button>';
-        }).join('') +
-        '</div>';
-
+            t.flag_emoji + ' ' + t.name + (t.is_longshot ? ' ⭐' : '') + '</button>';
+        }).join('') + '</div>';
       document.getElementById('pick-form-inner').innerHTML = instrHtml + gridHtml;
-
       updateSubmitButton();
     }
 
@@ -489,27 +323,13 @@
       const team = allTeams.find(t => t.id === teamId);
       if (!team) return;
       const isGroup = currentRound.round_type === 'group';
-
       if (isGroup) {
-        if (!pick3) {
-          // First pick = 3 pointer
-          pick3 = team;
-        } else if (pick3.id === teamId) {
-          // Deselect 3pt
-          pick3 = null;
-        } else if (!pick2) {
-          // Second pick = 2 pointer
-          if (pick3 && pick3.id === teamId) return; // can't pick same team
-          pick2 = team;
-        } else if (pick2.id === teamId) {
-          // Deselect 2pt
-          pick2 = null;
-        } else {
-          // Replace 2pt pick
-          pick2 = team;
-        }
+        if (!pick3) { pick3 = team; }
+        else if (pick3.id === teamId) { pick3 = null; }
+        else if (!pick2) { if (pick3 && pick3.id === teamId) return; pick2 = team; }
+        else if (pick2.id === teamId) { pick2 = null; }
+        else { pick2 = team; }
 
-        // Update slot 3
         const slot3 = document.getElementById('slot-3');
         if (pick3) {
           slot3.className = 'pick-slot filled-3';
@@ -519,8 +339,6 @@
           slot3.className = 'pick-slot';
           slot3.innerHTML = '<div class="pick-slot-label">3-Pointer (max 4pts)</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>';
         }
-
-        // Update slot 2
         const slot2 = document.getElementById('slot-2');
         if (pick2) {
           slot2.className = 'pick-slot filled-2';
@@ -530,9 +348,7 @@
           slot2.className = 'pick-slot';
           slot2.innerHTML = '<div class="pick-slot-label">2-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>';
         }
-
       } else {
-        // Knockout - single pick
         pickSingle = pickSingle && pickSingle.id === teamId ? null : team;
         const slot = document.getElementById('slot-single');
         if (pickSingle) {
@@ -543,8 +359,6 @@
           slot.innerHTML = '<div class="pick-slot-label">Your Pick</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>';
         }
       }
-
-      // Update button states
       document.querySelectorAll('.team-btn').forEach(function(btn) {
         const id = btn.dataset.teamId;
         btn.classList.remove('selected-3', 'selected-2');
@@ -552,7 +366,6 @@
         if (pick2 && pick2.id === id) btn.classList.add('selected-2');
         if (pickSingle && pickSingle.id === id) btn.classList.add('selected-2');
       });
-
       updateSubmitButton();
     }
 
@@ -562,11 +375,7 @@
       const ready = isGroup ? (pick3 && pick2) : pickSingle;
       btn.disabled = !ready;
       if (ready) {
-        if (isGroup) {
-          btn.textContent = 'Submit: ' + pick3.name + ' (3pt) + ' + pick2.name + ' (2pt)';
-        } else {
-          btn.textContent = 'Submit: ' + pickSingle.name;
-        }
+        btn.textContent = isGroup ? 'Submit: ' + pick3.name + ' (3pt) + ' + pick2.name + ' (2pt)' : 'Submit: ' + pickSingle.name;
       } else {
         btn.textContent = isGroup ? 'Select your 3pt and 2pt picks above' : 'Select a team above';
       }
@@ -577,27 +386,22 @@
       const msg = document.getElementById('pick-msg');
       const isGroup = currentRound.round_type === 'group';
 
-      // Re-check deadline
-      if (new Date() >= new Date(currentRound.deadline)) {
+      // Re-check deadline using effective date
+      if (getEffectiveDate() >= new Date(currentRound.deadline)) {
         msg.style.color = 'var(--red)';
         msg.textContent = '❌ Deadline has passed. Picks locked.';
         return;
       }
 
-      // Confirm
       const confirmText = isGroup
         ? '3pt: ' + pick3.name + '\n2pt: ' + pick2.name + '\n\nConfirm these picks?'
         : 'Pick: ' + pickSingle.name + '\n\nConfirm?';
       if (!confirm(confirmText)) return;
 
-      btn.disabled = true;
-      btn.textContent = 'Submitting...';
-      msg.textContent = '';
+      btn.disabled = true; btn.textContent = 'Submitting...'; msg.textContent = '';
 
       try {
-        // Delete any existing picks for this round (resubmit)
         await db.from('picks').delete().eq('player_id', player.id).eq('round_id', currentRound.id);
-
         const inserts = [];
         if (isGroup) {
           inserts.push({ player_id: player.id, round_id: currentRound.id, team_id: pick3.id, multiplier: 3 });
@@ -605,27 +409,19 @@
         } else {
           inserts.push({ player_id: player.id, round_id: currentRound.id, team_id: pickSingle.id, multiplier: 2 });
         }
-
         const { error } = await db.from('picks').insert(inserts);
         if (error) throw error;
-
-        msg.style.color = 'var(--green)';
-        msg.textContent = '✅ Picks submitted!';
-
-        // Refresh dashboard
+        msg.style.color = 'var(--green)'; msg.textContent = '✅ Picks submitted!';
         setTimeout(function() { location.reload(); }, 1000);
-
       } catch(err) {
         console.error(err);
-        msg.style.color = 'var(--red)';
-        msg.textContent = '❌ Error: ' + err.message;
-        btn.disabled = false;
-        updateSubmitButton();
+        msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message;
+        btn.disabled = false; updateSubmitButton();
       }
     }
 
     function getTimeLeft(deadline) {
-      const diff = deadline - new Date();
+      const diff = deadline - getEffectiveDate(); // uses test date if set
       if (diff <= 0) return 'Deadline passed';
       const days = Math.floor(diff / 86400000);
       const hours = Math.floor((diff % 86400000) / 3600000);

@@ -43,7 +43,9 @@
     .render-table tr:nth-child(even) { background:#f5f5f5; }
     .render-table tr:nth-child(odd)  { background:#ffffff; }
     .render-table tr.row-top3 { background:#e8f5e9 !important; }
+    .render-table tr.row-top3 td { color:#000 !important; }
     .render-table tr.row-out td { color:#cc0000; }
+    .render-table td { color:#000; }
 
     /* ── Leaderboard ── */
     #lb-render { width:820px; padding:0; }
@@ -239,16 +241,18 @@
           opponentLookup[m.round_id + '|' + m.away_team_id] = m.home_team ? m.home_team.name : '?';
         });
 
-        const pendingPicks   = picks.filter(p => !p.pick_results || p.pick_results.length === 0);
         const completedPicks = picks.filter(p =>  p.pick_results && p.pick_results.length > 0);
 
-        // Current round = highest sort_order among pending picks
+        // Current round = highest sort_order that has any picks at all
         let currentRoundSortOrder = 0;
-        pendingPicks.forEach(p => {
+        picks.forEach(p => {
           if (p.rounds && p.rounds.sort_order > currentRoundSortOrder)
             currentRoundSortOrder = p.rounds.sort_order;
         });
-        const currentPicks = pendingPicks.filter(p => p.rounds && p.rounds.sort_order === currentRoundSortOrder);
+        // All picks for current round (pending OR with results)
+        const currentPicks = picks.filter(p => p.rounds && p.rounds.sort_order === currentRoundSortOrder);
+        // Completed picks = only those NOT in current round (for leaderboard stats)
+        const priorCompletedPicks = picks.filter(p => p.pick_results && p.pick_results.length > 0 && p.rounds && p.rounds.sort_order < currentRoundSortOrder);
 
         // Team metadata for current round
         const teamCounts    = {};
@@ -287,7 +291,7 @@
           };
         });
 
-        completedPicks.forEach(pick => {
+        priorCompletedPicks.forEach(pick => {
           const s = statsMap[pick.player_id];
           if (!s) return;
           const res = pick.pick_results[0];
