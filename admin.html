@@ -178,6 +178,16 @@
       </div>
     </div>
 
+    <!-- RESET CARD -->
+    <div class="card section-block" id="reset-card" style="border:1px solid var(--red); margin-top:16px; display:none">
+      <div class="card-title" style="color:var(--red)">⚠️ Danger Zone</div>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">
+        Clears all pick results and resets all match statuses back to scheduled. Does <strong>not</strong> delete players, picks, teams or fixtures.
+      </p>
+      <button class="btn btn-danger" id="btn-reset-all">🗑️ Reset All Results</button>
+      <div id="reset-msg" style="margin-top:8px; font-size:12px"></div>
+    </div>
+
     <!-- MATCHES TAB -->
     <div class="tab-content" id="tab-matches">
       <div class="card">
@@ -672,7 +682,12 @@
         .select('home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, is_longshot), away_team:teams!matches_away_team_id_fkey(id, is_longshot)')
         .eq('id', matchId).single();
       if (!match) return;
-      const { data: picks } = await db.from('picks').select('*').in('team_id', [match.home_team_id, match.away_team_id]);
+      // Also fetch round_id from the match so we only process picks for this round
+      const { data: matchFull } = await db.from('matches').select('round_id').eq('id', matchId).single();
+      const roundId = matchFull ? matchFull.round_id : null;
+      let picksQuery = db.from('picks').select('*').in('team_id', [match.home_team_id, match.away_team_id]);
+      if (roundId) picksQuery = picksQuery.eq('round_id', roundId);
+      const { data: picks } = await picksQuery;
       if (!picks || picks.length === 0) return;
       for (const pick of picks) {
         const isHome = pick.team_id === match.home_team_id;
@@ -774,6 +789,50 @@
         });
       });
     }
+
+    // ── Show/hide reset card ──────────────────────────────────
+    // Show reset card when Results tab is clicked
+    document.querySelector('[data-tab="results"]').addEventListener('click', () => {
+      document.getElementById('reset-card').style.display = 'block';
+    });
+    // Hide when leaving results tab
+    document.querySelectorAll('.tab').forEach(tab => {
+      if (tab.dataset.tab !== 'results') {
+        tab.addEventListener('click', () => {
+          document.getElementById('reset-card').style.display = 'none';
+        });
+      }
+    });
+
+    // ── Reset all results ─────────────────────────────────────
+    document.getElementById('btn-reset-all').addEventListener('click', async () => {
+      const msg = document.getElementById('reset-msg');
+      const confirmed1 = confirm('WARNING: This will delete ALL pick results and reset ALL match statuses to scheduled.\n\nPlayers, picks, teams and fixtures are NOT affected.\n\nAre you sure?');
+      if (!confirmed1) return;
+      const confirmed2 = confirm('Are you ABSOLUTELY sure? This cannot be undone.');
+      if (!confirmed2) return;
+
+      msg.style.color = 'var(--text-muted)';
+      msg.textContent = 'Resetting...';
+
+      try {
+        // Delete all pick_results
+        const { error: e1 } = await db.from('pick_results').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (e1) throw e1;
+
+        // Reset all match statuses to scheduled
+        const { error: e2 } = await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+        if (e2) throw e2;
+
+        msg.style.color = 'var(--green)';
+        msg.textContent = '✅ All results cleared. Matches reset to scheduled.';
+        loadMatchesForResult();
+
+      } catch(err) {
+        msg.style.color = 'var(--red)';
+        msg.textContent = '❌ Error: ' + err.message;
+      }
+    });
   </script>
 </body>
 </html>
