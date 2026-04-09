@@ -23,24 +23,35 @@
       color: var(--text-muted);
       line-height: 1.7;
     }
-    .rules-section ul {
-      padding-left: 18px;
-    }
-    .rules-section li {
-      margin-bottom: 6px;
-    }
-    .highlight {
-      color: var(--text);
-      font-weight: 600;
-    }
-    .gold { color: var(--gold); font-weight: 700; }
-    .blue { color: var(--accent); font-weight: 700; }
-    .green { color: var(--green); font-weight: 700; }
-    .red { color: var(--red); font-weight: 700; }
+    .rules-section ul { padding-left: 18px; }
+    .rules-section li { margin-bottom: 6px; }
+    .highlight { color: var(--text); font-weight: 600; }
+    .gold  { color: var(--gold);   font-weight: 700; }
+    .blue  { color: var(--accent); font-weight: 700; }
+    .green { color: var(--green);  font-weight: 700; }
+    .red   { color: var(--red);    font-weight: 700; }
 
+    /* Quick reference at top */
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .qr-block {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .qr-block strong { color: var(--text); display: block; margin-bottom: 2px; font-size: 13px; }
+
+    /* Scoring table */
     .scoring-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
       gap: 10px;
       margin-top: 12px;
     }
@@ -51,7 +62,7 @@
       text-align: center;
     }
     .scoring-block .val {
-      font-size: 26px;
+      font-size: 28px;
       font-weight: 800;
       line-height: 1;
       margin-bottom: 4px;
@@ -63,26 +74,32 @@
       letter-spacing: 0.04em;
     }
 
-    .default-pool {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
+    /* Phase table */
+    .phase-table {
+      width: 100%;
+      border-collapse: collapse;
       margin-top: 10px;
+      font-size: 13px;
     }
-    .pool-team {
+    .phase-table th {
       background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .pool-team span {
       color: var(--text-muted);
-      font-weight: 400;
-      margin-right: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
     }
+    .phase-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .phase-table tr:last-child td { border-bottom: none; }
 
+    /* Tiebreaker list */
     .tiebreaker-list {
       counter-reset: tb;
       list-style: none;
@@ -113,29 +130,22 @@
       margin-top: 1px;
     }
 
-    .phase-table {
-      width: 100%;
-      border-collapse: collapse;
+    /* Default pool */
+    .default-pool {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
       margin-top: 10px;
-      font-size: 13px;
     }
-    .phase-table th {
+    .pool-team {
       background: var(--surface2);
-      color: var(--text-muted);
-      font-size: 11px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      padding: 8px 12px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
     }
-    .phase-table td {
-      padding: 8px 12px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
-    }
-    .phase-table tr:last-child td { border-bottom: none; }
+    .pool-team span { color: var(--text-muted); font-weight: 400; margin-right: 4px; }
   </style>
 </head>
 <body>
@@ -156,116 +166,110 @@
       <p style="color:var(--text-muted); font-size:13px">World Cup 2026 Last Man Standing</p>
     </div>
 
+    <!-- QUICK REFERENCE — top -->
+    <div class="card">
+      <div class="rules-section" style="margin-bottom:0">
+        <h2>📌 At a Glance</h2>
+        <div class="qr-grid">
+          <div class="qr-block">
+            <strong>Group stages</strong>
+            Pick a <span class="gold">3-point</span> and a <span class="blue">2-point</span> team each phase. Win earns that many points.
+          </div>
+          <div class="qr-block">
+            <strong>Knockout stages</strong>
+            One pick per round. Win at 90 mins = <span class="green">2pts</span>. Win/loss via ET or pens = <span class="gold">1pt</span>. Loss at 90 mins = <span class="red">0pts</span>.
+          </div>
+          <div class="qr-block">
+            <strong>Longshot bonus ⭐</strong>
+            Pick a longshot team and they win (including ET/pens) = <span class="gold">+1 bonus point</span> on top.
+          </div>
+          <div class="qr-block">
+            <strong>One team, once</strong>
+            Each team can only be used <span class="highlight">once</span>. You have 11 picks in total across the competition.
+          </div>
+          <div class="qr-block">
+            <strong>Your link</strong>
+            You have a unique personal link to submit picks and track your score. Bookmark it.
+          </div>
+          <div class="qr-block">
+            <strong>Pick ahead</strong>
+            You can submit picks for future rounds in advance and change them up to the deadline.
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
     <!-- HOW IT WORKS -->
     <div class="card">
       <div class="rules-section">
         <h2>🏆 How It Works</h2>
-        <p>Each player picks teams each round and earns points based on their results. The player with the most points at the end wins. Pick wisely — each team can only be used <span class="highlight">once across the entire competition</span>.</p>
+        <p>Each player picks teams each round and earns points based on their results. The player with the most points at the end of the tournament wins. Pick wisely — each team can only be used <span class="highlight">once across the entire competition</span>. With 3 group phases (2 picks each) and 5 knockout rounds (1 pick each), you have <span class="highlight">11 picks in total</span>.</p>
+        <p style="margin-top:8px">You have a <span class="highlight">unique personal link</span> to access your dashboard, submit picks, and track your score. The <span class="highlight">live leaderboard</span> and <span class="highlight">match centre</span> are available to everyone — no login needed.</p>
       </div>
 
       <!-- SCORING -->
       <div class="rules-section">
         <h2>⚽ Scoring</h2>
+        <p>Points are simple and flat — just the value of your pick:</p>
         <div class="scoring-grid">
           <div class="scoring-block">
-            <div class="val" style="color:var(--green)">2</div>
-            <div class="lbl">Win</div>
+            <div class="val" style="color:var(--gold)">3</div>
+            <div class="lbl">3-point pick wins</div>
+          </div>
+          <div class="scoring-block">
+            <div class="val" style="color:var(--accent)">2</div>
+            <div class="lbl">2-point pick wins</div>
           </div>
           <div class="scoring-block">
             <div class="val" style="color:var(--gold)">1</div>
-            <div class="lbl">Draw</div>
+            <div class="lbl">Any pick draws</div>
           </div>
           <div class="scoring-block">
             <div class="val" style="color:var(--red)">0</div>
-            <div class="lbl">Loss</div>
+            <div class="lbl">Any pick loses</div>
           </div>
           <div class="scoring-block">
             <div class="val" style="color:var(--gold)">+1</div>
-            <div class="lbl">Longshot bonus (win only)</div>
-          </div>
-          <div class="scoring-block">
-            <div class="val" style="color:var(--accent)">×2</div>
-            <div class="lbl">2-pointer multiplier</div>
-          </div>
-          <div class="scoring-block">
-            <div class="val" style="color:var(--gold)">×3</div>
-            <div class="lbl">3-pointer multiplier</div>
+            <div class="lbl">Longshot ⭐ bonus</div>
           </div>
         </div>
-        <div class="alert alert-warning" style="margin-top:14px">
-          ⚠️ Maximum <strong>4 points</strong> from a single pick (e.g. 3-pointer + longshot bonus win = 3×(2+1) would be 9, capped at 4)
-        </div>
+        <p style="margin-top:12px">A <span class="gold">3-point pick</span> on a longshot that wins earns <span class="highlight">4 points</span>. A <span class="blue">2-point pick</span> on a longshot that wins earns <span class="highlight">3 points</span>.</p>
       </div>
 
       <!-- GROUP STAGES -->
       <div class="rules-section">
         <h2>🔵 Group Stages</h2>
-        <table class="phase-table">
-          <thead>
-            <tr>
-              <th>Phase</th>
-              <th>Picks Required</th>
-              <th>Multipliers Available</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Group Phase 1</td>
-              <td>2 teams</td>
-              <td><span class="gold">3-pointer</span> + <span class="blue">2-pointer</span></td>
-            </tr>
-            <tr>
-              <td>Group Phase 2</td>
-              <td>2 teams</td>
-              <td><span class="gold">3-pointer</span> + <span class="blue">2-pointer</span></td>
-            </tr>
-            <tr>
-              <td>Group Phase 3</td>
-              <td>2 teams</td>
-              <td><span class="gold">3-pointer</span> + <span class="blue">2-pointer</span></td>
-            </tr>
-          </tbody>
-        </table>
-        <p style="margin-top:10px">The <span class="gold">3-pointer multiplier</span> is only available in group stages. Points = (base + longshot bonus) × multiplier, capped at 4.</p>
+        <p>There are three group phases. Each phase you pick <span class="highlight">two teams</span>: one as your <span class="gold">3-point pick</span> and one as your <span class="blue">2-point pick</span>. A win earns those points, a draw earns <span class="highlight">1pt</span> regardless of pick type, a loss earns <span class="red">0</span>. The 3-point pick is only available in group stages.</p>
       </div>
 
       <!-- KNOCKOUT -->
       <div class="rules-section">
         <h2>🔴 Knockout Stages</h2>
-        <table class="phase-table">
-          <thead>
-            <tr>
-              <th>Round</th>
-              <th>Picks Required</th>
-              <th>Multiplier</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Round of 32</td><td>1 team</td><td><span class="blue">2-pointer</span></td></tr>
-            <tr><td>Round of 16</td><td>1 team</td><td><span class="blue">2-pointer</span></td></tr>
-            <tr><td>Quarter Finals</td><td>1 team</td><td><span class="blue">2-pointer</span></td></tr>
-            <tr><td>Semi Finals</td><td>1 team</td><td><span class="blue">2-pointer</span></td></tr>
-            <tr><td>Final</td><td>1 team</td><td><span class="blue">2-pointer</span></td></tr>
-          </tbody>
-        </table>
-        <p style="margin-top:10px">One pick per knockout round. No 3-pointer available. Longshot bonus still applies.</p>
+        <p>From the Round of 32 through to the Final, you pick <span class="highlight">one team per round</span>. All knockout picks are worth <span class="blue">2 points</span> for a win. Scoring for each outcome:</p>
+        <ul style="margin-top:8px">
+          <li><span class="highlight">Win at 90 mins</span> — <span class="green">2pts</span> (+ longshot bonus if applicable)</li>
+          <li><span class="highlight">Win via ET / penalties</span> — <span class="green">1pt</span> (+ longshot bonus if applicable)</li>
+          <li><span class="highlight">Loss via ET / penalties</span> — <span class="gold">1pt</span>, and you're out of the competition</li>
+          <li><span class="highlight">Loss at 90 mins</span> — <span class="red">0pts</span>, and you're out of the competition</li>
+        </ul>
       </div>
 
-      <!-- LONGSHOT BONUS -->
+      <!-- LONGSHOT -->
       <div class="rules-section">
         <h2>⭐ Longshot Bonus</h2>
-        <p>The <span class="highlight">bottom 24 teams by tournament odds</span> are designated as longshots. If a longshot team <strong>wins</strong> their match, the player who picked them earns an extra <span class="gold">+1 point</span> (before the multiplier is applied).</p>
-        <p style="margin-top:8px">Longshot teams are marked with ⭐ in the pick form. The list is set before the tournament and can be adjusted by the admin if odds change significantly.</p>
-        <p style="margin-top:8px">Longshot bonus applies in <strong>both group and knockout stages</strong>.</p>
+        <p>The <span class="highlight">bottom 24 teams by tournament odds</span> are designated as longshots, marked with ⭐ in the pick form. If a longshot team wins — including via ET or penalties in knockout rounds — the player who picked them earns an extra <span class="gold">+1 point</span>. The bonus applies in both group and knockout stages.</p>
       </div>
     </div>
 
-    <!-- DEADLINES & DEFAULTS -->
+    <!-- DEADLINES -->
     <div class="card">
       <div class="rules-section">
-        <h2>⏰ Deadlines</h2>
+        <h2>⏰ Deadlines &amp; Advance Picks</h2>
         <p>Each round has a pick deadline — typically the morning before the first game of that round. <span class="red">Picks lock automatically at the deadline.</span> No exceptions.</p>
-        <p style="margin-top:8px">If you miss the deadline, you will be <span class="highlight">auto-assigned a team</span> from the default pool in priority order:</p>
+        <p style="margin-top:8px">You can submit picks for <span class="highlight">future rounds in advance</span> at any time, and change them freely up until that round's deadline. Your personal dashboard shows all open rounds with a dropdown to switch between them.</p>
+        <p style="margin-top:8px">If you miss a deadline, you will be <span class="highlight">auto-assigned teams</span> from the default pool in priority order — two teams for group phases, one for knockout rounds. The first available teams from this list that you haven't already used will be assigned:</p>
 
         <div class="default-pool" style="margin-top:12px">
           <div class="pool-team"><span>1.</span>🇲🇽 Mexico</div>
@@ -279,64 +283,38 @@
           <div class="pool-team"><span>9.</span>🇦🇹 Austria</div>
           <div class="pool-team"><span>10.</span>🇲🇦 Morocco</div>
         </div>
-
-        <p style="margin-top:12px">The first available team from this list that you haven't already used will be assigned. If all default pool teams are exhausted, the next available team from 40/1+ odds will be used.</p>
-        <p style="margin-top:8px">In group phases, a missed deadline means you get <span class="highlight">one auto-assigned team as your 2-pointer only</span>.</p>
       </div>
 
-      <div class="rules-section">
+      <div class="rules-section" style="margin-bottom:0">
         <h2>💀 Elimination</h2>
-        <p>If you <span class="red">run out of teams</span> — i.e. you have used all 48 teams — your score is frozen and you are out of the competition. Your final position is locked at that point.</p>
+        <p>You are eliminated if your team loses in the knockout phase. You are also out if you cannot pick a team — because every team remaining has already been used by you in a previous round. In either case, your score is frozen and your final position is locked at that point.</p>
       </div>
     </div>
 
     <!-- TIEBREAKERS -->
     <div class="card">
-      <div class="rules-section">
+      <div class="rules-section" style="margin-bottom:0">
         <h2>🔢 Tiebreakers</h2>
-        <p style="margin-bottom:12px">If players are level on points, the following tiebreakers apply in order:</p>
+        <p style="margin-bottom:12px">If players are level on points at any stage, the following tiebreakers apply in order:</p>
         <ul class="tiebreaker-list">
           <li>
             <div>
-              <div class="highlight">Longest in competition</div>
-              <div style="font-size:12px; margin-top:2px">The player who has been in the competition longest (furthest round reached) ranks higher.</div>
-            </div>
-          </li>
-          <li>
-            <div>
-              <div class="highlight">Most knockout points</div>
-              <div style="font-size:12px; margin-top:2px">Points earned in knockout rounds only.</div>
+              <div class="highlight">LMS — furthest round reached</div>
+              <div style="font-size:12px; margin-top:2px">The player who has survived to the furthest knockout round ranks higher.</div>
             </div>
           </li>
           <li>
             <div>
               <div class="highlight">Goal difference from picked games</div>
-              <div style="font-size:12px; margin-top:2px">Cumulative goal difference from all matches involving your picked teams.</div>
+              <div style="font-size:12px; margin-top:2px">Cumulative goal difference from all matches involving your picked teams. Higher is better.</div>
             </div>
           </li>
           <li>
             <div>
               <div class="highlight">Total goals prediction</div>
-              <div style="font-size:12px; margin-top:2px">Closest to the actual total goals scored in the tournament. Submitted at the start of the competition.</div>
+              <div style="font-size:12px; margin-top:2px">Closest to the actual total goals scored in the tournament. Submitted at the start of the competition. Lower difference wins.</div>
             </div>
           </li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- QUICK REFERENCE -->
-    <div class="card">
-      <div class="rules-section" style="margin-bottom:0">
-        <h2>📌 Quick Reference</h2>
-        <ul>
-          <li>Each team can only be used <span class="highlight">once</span> across the whole competition</li>
-          <li>Group stages: pick a <span class="gold">3-pointer</span> and a <span class="blue">2-pointer</span> each phase</li>
-          <li>Knockout stages: one pick per round, always a <span class="blue">2-pointer</span></li>
-          <li>Longshot ⭐ teams get <span class="gold">+1 bonus</span> if they win (applies everywhere)</li>
-          <li>Maximum <span class="highlight">4 points</span> from any single pick</li>
-          <li>Miss the deadline = auto-assigned from default pool</li>
-          <li>Run out of teams = score frozen, eliminated</li>
-          <li>Your personal link is yours — bookmark it</li>
         </ul>
       </div>
     </div>
