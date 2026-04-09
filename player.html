@@ -7,6 +7,45 @@
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* ── Round progress strip ── */
+    .round-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 0;
+    }
+    .round-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .round-pill {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .round-pill:hover { border-color: var(--accent); color: var(--text); }
+    .round-pill.complete { color: var(--text); font-weight: 700; background: var(--surface2); }
+    .round-pill.has-pick { border-color: var(--green); color: var(--green); }
+    .round-pill.has-pick.complete { border-color: var(--green); color: var(--text); }
+    .round-pill.active { border-color: var(--accent); background: rgba(59,130,246,0.12); color: var(--accent); }
+    .round-pill.future { opacity: 0.45; cursor: default; }
+    .round-pill .tick { font-size: 10px; }
+
+    /* ── Pick form ── */
     .team-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; margin-top:10px; max-height:320px; overflow-y:auto; padding-right:4px; }
     .team-btn { display:flex; align-items:center; gap:6px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; font-size:13px; font-weight:500; transition:all 0.15s; text-align:left; }
     .team-btn:hover:not(:disabled) { border-color:var(--accent); background:rgba(59,130,246,0.1); }
@@ -16,6 +55,7 @@
     .team-btn.used { opacity:0.25; cursor:not-allowed; text-decoration:line-through; }
     .deadline-bar { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--gold); margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; }
     .deadline-bar.locked { background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3); color:var(--red); }
+    .deadline-bar.future { background:rgba(59,130,246,0.07); border-color:rgba(59,130,246,0.25); color:var(--accent); }
     .pick-summary { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
     .pick-slot { flex:1; min-width:140px; background:var(--surface2); border:2px dashed var(--border); border-radius:8px; padding:12px; text-align:center; }
     .pick-slot.filled-3 { border-color:var(--gold); background:rgba(245,158,11,0.08); }
@@ -23,6 +63,13 @@
     .pick-slot-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; }
     .pick-slot-value { font-size:15px; font-weight:700; }
     .longshot-tag { font-size:10px; color:var(--gold); margin-top:2px; }
+
+    /* ── Round selector ── */
+    .round-selector-wrap { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+    .round-selector-wrap label { font-size:13px; font-weight:600; color:var(--text-muted); white-space:nowrap; }
+    .round-selector-wrap select { flex:1; }
+
+    /* ── Test date banner ── */
     .test-date-banner { background:#7c3aed; color:#fff; text-align:center; padding:8px 16px; font-size:13px; font-weight:600; }
     .test-date-banner a { color:#e9d5ff; text-decoration:underline; cursor:pointer; margin-left:12px; font-weight:400; }
   </style>
@@ -53,29 +100,43 @@
     </div>
 
     <div id="dashboard" style="display:none">
-      <div class="card" style="text-align:center; padding:20px">
-        <div style="font-size:32px; margin-bottom:6px">👤</div>
-        <h1 id="player-name" style="font-size:22px; font-weight:800"></h1>
-        <div id="player-status" style="margin-top:6px"></div>
+
+      <!-- Name + round strip -->
+      <div class="card">
+        <div class="round-strip">
+          <div>
+            <h1 id="player-name" style="font-size:22px; font-weight:800; margin:0"></h1>
+            <div id="player-status" style="margin-top:4px"></div>
+          </div>
+          <div class="round-pills" id="round-pills"></div>
+        </div>
       </div>
 
+      <!-- 3 stats -->
       <div class="stats-row">
         <div class="stat-block"><div class="stat-value" id="stat-points">0</div><div class="stat-label">Total Points</div></div>
         <div class="stat-block"><div class="stat-value" id="stat-position">—</div><div class="stat-label">Position</div></div>
         <div class="stat-block"><div class="stat-value" id="stat-teams-left">48</div><div class="stat-label">Teams Left</div></div>
-        <div class="stat-block"><div class="stat-value" id="stat-ko-points">0</div><div class="stat-label">KO Points</div></div>
       </div>
 
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
 
+      <!-- Pick section -->
       <div id="pick-section" style="display:none">
         <div class="card">
           <div class="card-title">🎯 Submit Your Pick</div>
+
+          <!-- Round dropdown -->
+          <div class="round-selector-wrap">
+            <label>Pick for round:</label>
+            <select id="round-select"></select>
+          </div>
+
           <div id="deadline-bar" class="deadline-bar"></div>
           <div class="pick-summary" id="pick-summary"></div>
           <div id="pick-form-inner"></div>
           <div style="margin-top:14px">
-            <button class="btn btn-primary" id="submit-pick-btn" style="width:100%" disabled>Select your team(s) above</button>
+            <button class="btn btn-primary" id="submit-pick-btn" style="width:100%; display:none" disabled>Select your team(s) above</button>
             <div id="pick-msg" style="margin-top:8px; font-size:12px; text-align:center"></div>
           </div>
         </div>
@@ -84,10 +145,11 @@
       <div id="no-round" style="display:none">
         <div class="card" style="text-align:center; padding:24px; color:var(--text-muted)">
           <div style="font-size:32px; margin-bottom:8px">⏳</div>
-          <div>No round currently open for picks.</div>
+          <div>No rounds currently open for picks.</div>
         </div>
       </div>
 
+      <!-- Pick history -->
       <div class="card">
         <div class="card-title">📋 Pick History</div>
         <div class="table-wrap">
@@ -126,28 +188,47 @@
     const slug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
 
     let player = null;
-    let currentRound = null;
-    let usedTeamIds = new Set();
+    let allRounds = [];        // all rounds from DB
+    let openRounds = [];       // rounds not yet complete (can pick)
     let allTeams = [];
+    let allPicks = [];         // all this player's picks across all rounds
+    let usedTeamIdsGlobal = new Set(); // teams used across ALL rounds
+
+    // Per-selected-round state
+    let selectedRoundId = null;
     let pick3 = null;
     let pick2 = null;
     let pickSingle = null;
-    let isLocked = false;
-    let existingPicks = [];
 
     function ordinal(n) {
       const s = ['th','st','nd','rd'], v = n % 100;
       return s[(v-20)%10] || s[v] || s[0];
     }
 
+    function getTimeLeft(deadline) {
+      const diff = deadline - getEffectiveDate();
+      if (diff <= 0) return 'Deadline passed';
+      const days = Math.floor(diff / 86400000);
+      const hours = Math.floor((diff % 86400000) / 3600000);
+      const mins = Math.floor((diff % 3600000) / 60000);
+      if (days > 0) return days + 'd ' + hours + 'h remaining';
+      if (hours > 0) return hours + 'h ' + mins + 'm remaining';
+      return mins + 'm remaining';
+    }
+
+    // ── Main load ─────────────────────────────────────────────
     async function loadDashboard() {
       try {
         const { data: players, error } = await db.from('players')
           .select('id, name, slug, is_eliminated, total_goals_prediction')
           .eq('slug', slug).limit(1);
         if (error) throw error;
+
         document.getElementById('loading').style.display = 'none';
-        if (!players || players.length === 0) { document.getElementById('not-found').style.display = 'block'; return; }
+        if (!players || players.length === 0) {
+          document.getElementById('not-found').style.display = 'block';
+          return;
+        }
 
         player = players[0];
         document.getElementById('dashboard').style.display = 'block';
@@ -157,55 +238,74 @@
           ? '<span class="badge badge-red">❌ Eliminated</span>'
           : '<span class="badge badge-green">✅ Still In</span>';
 
-        const { data: picks } = await db.from('picks')
-          .select('id, multiplier, team_id, round_id, rounds(id, name, round_type, deadline), teams(id, name, flag_emoji, is_longshot), pick_results(points_earned, match_result)')
-          .eq('player_id', player.id)
-          .order('created_at', { ascending: true });
+        // Load everything in parallel
+        const [
+          { data: picks },
+          { data: rounds },
+          { data: teams },
+          { data: allScores }
+        ] = await Promise.all([
+          db.from('picks')
+            .select('id, multiplier, team_id, round_id, rounds(id, name, round_type, deadline, sort_order, is_complete), teams(id, name, flag_emoji, is_longshot), pick_results(points_earned, match_result)')
+            .eq('player_id', player.id)
+            .order('created_at', { ascending: true }),
+          db.from('rounds').select('*').order('sort_order'),
+          db.from('teams').select('*').order('odds_rank'),
+          db.from('player_scores').select('player_id, total_points').order('total_points', { ascending: false })
+        ]);
 
-        usedTeamIds = new Set((picks || []).map(p => p.team_id));
-        const teamsLeft = 48 - usedTeamIds.size;
+        allPicks = picks || [];
+        allRounds = rounds || [];
+        allTeams = teams || [];
 
-        let totalPoints = 0, koPoints = 0;
-        (picks || []).forEach(function(p) {
+        // Global used teams (all rounds, all picks)
+        usedTeamIdsGlobal = new Set(allPicks.map(p => p.team_id));
+        const teamsLeft = 48 - usedTeamIdsGlobal.size;
+
+        // Points
+        let totalPoints = 0;
+        allPicks.forEach(p => {
           const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
-          if (res) {
-            totalPoints += res.points_earned || 0;
-            if (p.rounds && p.rounds.round_type === 'knockout') koPoints += res.points_earned || 0;
-          }
+          if (res) totalPoints += res.points_earned || 0;
         });
 
-        document.getElementById('stat-points').textContent = totalPoints;
-        document.getElementById('stat-ko-points').textContent = koPoints;
-        document.getElementById('stat-teams-left').textContent = teamsLeft;
-        document.getElementById('stat-position').textContent = '—';
+        // Position
+        let position = '—';
+        if (allScores && allScores.length > 0) {
+          const idx = allScores.findIndex(s => s.player_id === player.id);
+          if (idx !== -1) position = ordinal(idx + 1) + ' / ' + allScores.length;
+        }
 
-        const roundsLeft = 5;
-        if (teamsLeft <= roundsLeft + 2 && !player.is_eliminated) {
+        document.getElementById('stat-points').textContent = totalPoints;
+        document.getElementById('stat-position').textContent = position;
+        document.getElementById('stat-teams-left').textContent = teamsLeft;
+
+        // Teams left warning
+        const roundsRemaining = allRounds.filter(r => !r.is_complete).length;
+        if (teamsLeft <= roundsRemaining + 2 && !player.is_eliminated) {
           const warn = document.getElementById('teams-warning');
           warn.style.display = 'block';
           warn.textContent = '⚠️ You have ' + teamsLeft + ' teams left. Pick carefully.';
         }
 
-        const tbody = document.getElementById('history-body');
-        if (!picks || picks.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:20px">No picks yet.</td></tr>';
-        } else {
-          tbody.innerHTML = picks.map(function(p) {
-            const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
-            const resultBadge = res
-              ? '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + res.match_result.toUpperCase() + '</span>'
-              : '<span class="badge badge-grey">Pending</span>';
-            return '<tr>' +
-              '<td style="font-size:12px">' + (p.rounds ? p.rounds.name : '—') + '</td>' +
-              '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
-              '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
-              '<td>' + resultBadge + '</td>' +
-              '<td style="font-weight:600">' + (res ? res.points_earned : '—') + '</td>' +
-              '</tr>';
-          }).join('');
+        // Pick history
+        renderHistory();
+
+        // Round strip + pick section
+        openRounds = allRounds.filter(r => !r.is_complete);
+        renderRoundStrip();
+
+        if (player.is_eliminated || openRounds.length === 0) {
+          document.getElementById('no-round').style.display = 'block';
+          return;
         }
 
-        await loadPickSection(picks || []);
+        // Build dropdown
+        buildRoundDropdown();
+        document.getElementById('pick-section').style.display = 'block';
+
+        // Default to first open round
+        selectRound(openRounds[0].id);
 
       } catch(err) {
         console.error(err);
@@ -214,88 +314,180 @@
       }
     }
 
-    async function loadPickSection(existingPicksAll) {
-      if (player.is_eliminated) return;
+    // ── Round strip ───────────────────────────────────────────
+    function renderRoundStrip() {
+      const container = document.getElementById('round-pills');
+      container.innerHTML = '';
 
-      const now = getEffectiveDate(); // uses test date if set
+      // Picks by round_id for quick lookup
+      const picksByRound = {};
+      allPicks.forEach(p => {
+        if (!picksByRound[p.round_id]) picksByRound[p.round_id] = [];
+        picksByRound[p.round_id].push(p);
+      });
 
-      const { data: rounds } = await db.from('rounds')
-        .select('*').eq('is_complete', false).order('sort_order', { ascending: true }).limit(1);
+      allRounds.forEach(r => {
+        const hasPick = !!(picksByRound[r.id] && picksByRound[r.id].length > 0);
+        const isComplete = r.is_complete;
+        const isOpen = !isComplete;
 
-      if (!rounds || rounds.length === 0) { document.getElementById('no-round').style.display = 'block'; return; }
+        const pill = document.createElement('div');
+        pill.className = 'round-pill' +
+          (isComplete ? ' complete' : '') +
+          (hasPick ? ' has-pick' : '') +
+          (!isComplete && !openRounds.find(o => o.id === r.id) ? ' future' : '');
 
-      currentRound = rounds[0];
-      const deadline = new Date(currentRound.deadline);
-      isLocked = now >= deadline;
+        // Short label
+        const shortLabel = r.round_type === 'group'
+          ? 'GP' + r.sort_order
+          : r.name;
 
-      existingPicks = existingPicksAll.filter(p => p.round_id === currentRound.id);
+        pill.innerHTML = shortLabel + (hasPick ? ' <span class="tick">✓</span>' : '');
+        pill.title = r.name + (hasPick ? ' — picks submitted' : isComplete ? ' — completed' : ' — open');
 
-      const { data: teams } = await db.from('teams').select('*').order('odds_rank');
-      allTeams = teams || [];
+        if (isOpen) {
+          pill.addEventListener('click', () => {
+            selectRound(r.id);
+            // scroll to pick section
+            document.getElementById('pick-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
+        }
 
-      document.getElementById('pick-section').style.display = 'block';
+        container.appendChild(pill);
+      });
+    }
 
+    // ── Round dropdown ────────────────────────────────────────
+    function buildRoundDropdown() {
+      const sel = document.getElementById('round-select');
+      sel.innerHTML = '';
+      openRounds.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.id;
+        opt.textContent = r.name;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', () => selectRound(sel.value));
+    }
+
+    function selectRound(roundId) {
+      selectedRoundId = roundId;
+      pick3 = null; pick2 = null; pickSingle = null;
+
+      // Sync dropdown
+      document.getElementById('round-select').value = roundId;
+
+      // Sync strip highlight
+      document.querySelectorAll('.round-pill').forEach(p => p.classList.remove('active'));
+      const round = allRounds.find(r => r.id === roundId);
+      if (!round) return;
+
+      // Highlight active pill
+      const pills = document.querySelectorAll('.round-pill');
+      allRounds.forEach((r, i) => {
+        if (r.id === roundId && pills[i]) pills[i].classList.add('active');
+      });
+
+      renderPickSection(round);
+    }
+
+    // ── Pick section for selected round ──────────────────────
+    function renderPickSection(round) {
+      const now = getEffectiveDate();
+      const deadline = new Date(round.deadline);
+      const isLocked = now >= deadline;
+      const isFuture = deadline > now && now < new Date(round.deadline);
+
+      // Picks already submitted for this round
+      const roundPicks = allPicks.filter(p => p.round_id === round.id);
+      const hasSubmitted = roundPicks.length > 0;
+
+      // Deadline bar
       const deadlineBar = document.getElementById('deadline-bar');
       if (isLocked) {
         deadlineBar.className = 'deadline-bar locked';
-        deadlineBar.innerHTML = '🔒 Picks locked for ' + currentRound.name;
+        deadlineBar.innerHTML = '🔒 Picks locked — ' + round.name;
       } else {
-        const timeLeft = getTimeLeft(deadline);
         deadlineBar.className = 'deadline-bar';
-        deadlineBar.innerHTML = '<span>⏰ ' + currentRound.name + ' deadline</span><strong>' + timeLeft + '</strong>';
+        deadlineBar.innerHTML = '<span>⏰ ' + round.name + ' deadline</span><strong>' + getTimeLeft(deadline) + '</strong>';
       }
 
-      if (existingPicks.length > 0) { showSubmittedPicks(); return; }
-      if (isLocked) {
-        document.getElementById('pick-form-inner').innerHTML =
-          '<p style="color:var(--text-muted);text-align:center;padding:16px">Deadline has passed. Picks are locked.</p>';
+      document.getElementById('pick-msg').textContent = '';
+
+      if (hasSubmitted) {
+        showSubmittedPicks(round, roundPicks, isLocked);
         return;
       }
 
-      renderPickForm();
+      if (isLocked) {
+        document.getElementById('pick-summary').innerHTML = '';
+        document.getElementById('pick-form-inner').innerHTML =
+          '<p style="color:var(--text-muted);text-align:center;padding:16px">Deadline has passed. No pick was submitted for this round.</p>';
+        document.getElementById('submit-pick-btn').style.display = 'none';
+        return;
+      }
+
+      renderPickForm(round);
     }
 
-    function showSubmittedPicks() {
-      const isGroup = currentRound.round_type === 'group';
-      let html = '<div style="text-align:center; padding:8px 0 16px; color:var(--green); font-weight:600">✅ Picks submitted for ' + currentRound.name + '</div>';
+    // ── Show submitted picks ──────────────────────────────────
+    function showSubmittedPicks(round, roundPicks, isLocked) {
+      const isGroup = round.round_type === 'group';
+      let html = '<div style="text-align:center; padding:8px 0 16px; color:var(--green); font-weight:600">✅ Picks submitted for ' + round.name + '</div>';
+
       if (isGroup) {
-        const pick3submitted = existingPicks.find(p => p.multiplier === 3);
-        const pick2submitted = existingPicks.find(p => p.multiplier === 2);
+        const pick3s = roundPicks.find(p => p.multiplier === 3);
+        const pick2s = roundPicks.find(p => p.multiplier === 2);
         html += '<div class="pick-summary">';
-        if (pick3submitted) {
+        if (pick3s) {
           html += '<div class="pick-slot filled-3"><div class="pick-slot-label">3-Pointer</div>' +
-            '<div class="pick-slot-value">' + (pick3submitted.teams ? pick3submitted.teams.flag_emoji + ' ' + pick3submitted.teams.name : '—') + '</div>' +
-            (pick3submitted.teams && pick3submitted.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
+            '<div class="pick-slot-value">' + (pick3s.teams ? pick3s.teams.flag_emoji + ' ' + pick3s.teams.name : '—') + '</div>' +
+            (pick3s.teams && pick3s.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
         }
-        if (pick2submitted) {
+        if (pick2s) {
           html += '<div class="pick-slot filled-2"><div class="pick-slot-label">2-Pointer</div>' +
-            '<div class="pick-slot-value">' + (pick2submitted.teams ? pick2submitted.teams.flag_emoji + ' ' + pick2submitted.teams.name : '—') + '</div>' +
-            (pick2submitted.teams && pick2submitted.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
+            '<div class="pick-slot-value">' + (pick2s.teams ? pick2s.teams.flag_emoji + ' ' + pick2s.teams.name : '—') + '</div>' +
+            (pick2s.teams && pick2s.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
         }
         html += '</div>';
       } else {
-        const singlePick = existingPicks[0];
-        if (singlePick) {
-          html += '<div class="pick-slot filled-2" style="max-width:200px;margin:0 auto"><div class="pick-slot-label">Your Pick</div>' +
-            '<div class="pick-slot-value">' + (singlePick.teams ? singlePick.teams.flag_emoji + ' ' + singlePick.teams.name : '—') + '</div></div>';
+        const single = roundPicks[0];
+        if (single) {
+          html += '<div style="display:flex; justify-content:center"><div class="pick-slot filled-2" style="max-width:200px"><div class="pick-slot-label">Your Pick</div>' +
+            '<div class="pick-slot-value">' + (single.teams ? single.teams.flag_emoji + ' ' + single.teams.name : '—') + '</div></div></div>';
         }
       }
+
       if (!isLocked) {
         html += '<div style="margin-top:12px;text-align:center"><button class="btn btn-secondary" onclick="allowResubmit()">Change pick</button></div>';
       }
-      document.getElementById('pick-form-inner').innerHTML = html;
+
       document.getElementById('pick-summary').innerHTML = '';
+      document.getElementById('pick-form-inner').innerHTML = html;
       document.getElementById('submit-pick-btn').style.display = 'none';
     }
 
+    // ── Allow resubmit ────────────────────────────────────────
     function allowResubmit() {
-      existingPicks = []; pick2 = null; pick3 = null; pickSingle = null;
-      renderPickForm();
+      pick3 = null; pick2 = null; pickSingle = null;
+      const round = allRounds.find(r => r.id === selectedRoundId);
+      if (round) renderPickForm(round);
       document.getElementById('submit-pick-btn').style.display = 'block';
     }
 
-    function renderPickForm() {
-      const isGroup = currentRound.round_type === 'group';
+    // ── Render pick form ──────────────────────────────────────
+    function renderPickForm(round) {
+      const isGroup = round.round_type === 'group';
+
+      // ── BUG FIX: exclude current round's own picks from usedTeams ──
+      // So players can re-select teams they already picked this round when changing
+      const currentRoundPickTeamIds = new Set(
+        allPicks.filter(p => p.round_id === round.id).map(p => p.team_id)
+      );
+      const usedExcludingThisRound = new Set(
+        [...usedTeamIdsGlobal].filter(id => !currentRoundPickTeamIds.has(id))
+      );
+
       const summaryEl = document.getElementById('pick-summary');
       if (isGroup) {
         summaryEl.innerHTML =
@@ -305,30 +497,45 @@
         summaryEl.innerHTML =
           '<div class="pick-slot" id="slot-single"><div class="pick-slot-label">Your Pick</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div></div>';
       }
+
       const instrHtml = isGroup
         ? '<p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Select your <span style="color:var(--gold);font-weight:700">3-pointer</span> first, then your <span style="color:var(--accent);font-weight:700">2-pointer</span>. Teams you\'ve already used are greyed out.</p>'
         : '<p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Select one team. Teams you\'ve already used are greyed out.</p>';
+
       const gridHtml = '<div class="team-grid">' +
-        allTeams.map(function(t) {
-          const isUsed = usedTeamIds.has(t.id);
-          return '<button class="team-btn' + (isUsed ? ' used' : '') + '" ' + (isUsed ? 'disabled' : '') +
+        allTeams.map(t => {
+          const isUsed = usedExcludingThisRound.has(t.id);
+          return '<button class="team-btn' + (isUsed ? ' used' : '') + '" ' +
+            (isUsed ? 'disabled' : '') +
             ' data-team-id="' + t.id + '" onclick="selectTeam(\'' + t.id + '\')">' +
             t.flag_emoji + ' ' + t.name + (t.is_longshot ? ' ⭐' : '') + '</button>';
         }).join('') + '</div>';
+
       document.getElementById('pick-form-inner').innerHTML = instrHtml + gridHtml;
-      updateSubmitButton();
+      document.getElementById('submit-pick-btn').style.display = 'block';
+      updateSubmitButton(isGroup);
     }
 
+    // ── Team selection ────────────────────────────────────────
     function selectTeam(teamId) {
+      const round = allRounds.find(r => r.id === selectedRoundId);
+      if (!round) return;
       const team = allTeams.find(t => t.id === teamId);
       if (!team) return;
-      const isGroup = currentRound.round_type === 'group';
+      const isGroup = round.round_type === 'group';
+
       if (isGroup) {
-        if (!pick3) { pick3 = team; }
-        else if (pick3.id === teamId) { pick3 = null; }
-        else if (!pick2) { if (pick3 && pick3.id === teamId) return; pick2 = team; }
-        else if (pick2.id === teamId) { pick2 = null; }
-        else { pick2 = team; }
+        if (!pick3) {
+          pick3 = team;
+        } else if (pick3.id === teamId) {
+          pick3 = null;
+        } else if (!pick2) {
+          if (pick3.id !== teamId) pick2 = team;
+        } else if (pick2.id === teamId) {
+          pick2 = null;
+        } else {
+          pick2 = team;
+        }
 
         const slot3 = document.getElementById('slot-3');
         if (pick3) {
@@ -339,6 +546,7 @@
           slot3.className = 'pick-slot';
           slot3.innerHTML = '<div class="pick-slot-label">3-Pointer (max 4pts)</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>';
         }
+
         const slot2 = document.getElementById('slot-2');
         if (pick2) {
           slot2.className = 'pick-slot filled-2';
@@ -349,7 +557,7 @@
           slot2.innerHTML = '<div class="pick-slot-label">2-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>';
         }
       } else {
-        pickSingle = pickSingle && pickSingle.id === teamId ? null : team;
+        pickSingle = (pickSingle && pickSingle.id === teamId) ? null : team;
         const slot = document.getElementById('slot-single');
         if (pickSingle) {
           slot.className = 'pick-slot filled-2';
@@ -359,35 +567,40 @@
           slot.innerHTML = '<div class="pick-slot-label">Your Pick</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>';
         }
       }
-      document.querySelectorAll('.team-btn').forEach(function(btn) {
+
+      document.querySelectorAll('.team-btn').forEach(btn => {
         const id = btn.dataset.teamId;
         btn.classList.remove('selected-3', 'selected-2');
         if (pick3 && pick3.id === id) btn.classList.add('selected-3');
         if (pick2 && pick2.id === id) btn.classList.add('selected-2');
         if (pickSingle && pickSingle.id === id) btn.classList.add('selected-2');
       });
-      updateSubmitButton();
+
+      updateSubmitButton(isGroup);
     }
 
-    function updateSubmitButton() {
+    function updateSubmitButton(isGroup) {
       const btn = document.getElementById('submit-pick-btn');
-      const isGroup = currentRound && currentRound.round_type === 'group';
       const ready = isGroup ? (pick3 && pick2) : pickSingle;
       btn.disabled = !ready;
       if (ready) {
-        btn.textContent = isGroup ? 'Submit: ' + pick3.name + ' (3pt) + ' + pick2.name + ' (2pt)' : 'Submit: ' + pickSingle.name;
+        btn.textContent = isGroup
+          ? 'Submit: ' + pick3.name + ' (3pt) + ' + pick2.name + ' (2pt)'
+          : 'Submit: ' + pickSingle.name;
       } else {
         btn.textContent = isGroup ? 'Select your 3pt and 2pt picks above' : 'Select a team above';
       }
     }
 
+    // ── Submit ────────────────────────────────────────────────
     async function submitPick() {
       const btn = document.getElementById('submit-pick-btn');
       const msg = document.getElementById('pick-msg');
-      const isGroup = currentRound.round_type === 'group';
+      const round = allRounds.find(r => r.id === selectedRoundId);
+      if (!round) return;
+      const isGroup = round.round_type === 'group';
 
-      // Re-check deadline using effective date
-      if (getEffectiveDate() >= new Date(currentRound.deadline)) {
+      if (getEffectiveDate() >= new Date(round.deadline)) {
         msg.style.color = 'var(--red)';
         msg.textContent = '❌ Deadline has passed. Picks locked.';
         return;
@@ -398,39 +611,57 @@
         : 'Pick: ' + pickSingle.name + '\n\nConfirm?';
       if (!confirm(confirmText)) return;
 
-      btn.disabled = true; btn.textContent = 'Submitting...'; msg.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+      msg.textContent = '';
 
       try {
-        await db.from('picks').delete().eq('player_id', player.id).eq('round_id', currentRound.id);
+        await db.from('picks').delete().eq('player_id', player.id).eq('round_id', round.id);
         const inserts = [];
         if (isGroup) {
-          inserts.push({ player_id: player.id, round_id: currentRound.id, team_id: pick3.id, multiplier: 3 });
-          inserts.push({ player_id: player.id, round_id: currentRound.id, team_id: pick2.id, multiplier: 2 });
+          inserts.push({ player_id: player.id, round_id: round.id, team_id: pick3.id, multiplier: 3 });
+          inserts.push({ player_id: player.id, round_id: round.id, team_id: pick2.id, multiplier: 2 });
         } else {
-          inserts.push({ player_id: player.id, round_id: currentRound.id, team_id: pickSingle.id, multiplier: 2 });
+          inserts.push({ player_id: player.id, round_id: round.id, team_id: pickSingle.id, multiplier: 2 });
         }
         const { error } = await db.from('picks').insert(inserts);
         if (error) throw error;
-        msg.style.color = 'var(--green)'; msg.textContent = '✅ Picks submitted!';
-        setTimeout(function() { location.reload(); }, 1000);
+
+        msg.style.color = 'var(--green)';
+        msg.textContent = '✅ Picks submitted!';
+        setTimeout(() => location.reload(), 1000);
       } catch(err) {
         console.error(err);
-        msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message;
-        btn.disabled = false; updateSubmitButton();
+        msg.style.color = 'var(--red)';
+        msg.textContent = '❌ Error: ' + err.message;
+        btn.disabled = false;
+        updateSubmitButton(isGroup);
       }
     }
 
-    function getTimeLeft(deadline) {
-      const diff = deadline - getEffectiveDate(); // uses test date if set
-      if (diff <= 0) return 'Deadline passed';
-      const days = Math.floor(diff / 86400000);
-      const hours = Math.floor((diff % 86400000) / 3600000);
-      const mins = Math.floor((diff % 3600000) / 60000);
-      if (days > 0) return days + 'd ' + hours + 'h remaining';
-      if (hours > 0) return hours + 'h ' + mins + 'm remaining';
-      return mins + 'm remaining';
+    // ── Pick history ──────────────────────────────────────────
+    function renderHistory() {
+      const tbody = document.getElementById('history-body');
+      if (!allPicks || allPicks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:20px">No picks yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = allPicks.map(p => {
+        const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
+        const resultBadge = res
+          ? '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + res.match_result.toUpperCase() + '</span>'
+          : '<span class="badge badge-grey">Pending</span>';
+        return '<tr>' +
+          '<td style="font-size:12px">' + (p.rounds ? p.rounds.name : '—') + '</td>' +
+          '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
+          '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
+          '<td>' + resultBadge + '</td>' +
+          '<td style="font-weight:600">' + (res ? res.points_earned : '—') + '</td>' +
+          '</tr>';
+      }).join('');
     }
 
+    // ── Init ──────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('submit-pick-btn').addEventListener('click', submitPick);
       loadDashboard();

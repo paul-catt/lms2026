@@ -8,91 +8,196 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
+    /* ── Page chrome ── */
     .section-block { margin-bottom: 32px; }
     .section-header {
       display: flex; justify-content: space-between; align-items: center;
       margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
     }
     .preview-wrap {
-      overflow-x: auto; background: #888; padding: 16px;
-      border-radius: 8px; margin-bottom: 8px;
+      overflow-x: auto; background: #1a1a2e; padding: 20px;
+      border-radius: 10px; margin-bottom: 8px;
     }
     .preview-wrap > div { display: inline-block; }
     .status-msg { font-size: 12px; color: var(--text-muted,#666); margin-top:6px; min-height:18px; }
-
-    /* ── Shared render ── */
-    .render-root {
-      background:#fff; font-family:Arial,sans-serif; font-size:12px;
-      color:#000; border:1px solid #ccc;
-    }
-    .render-title {
-      background:#404040; color:#fff; text-align:center; font-size:15px;
-      font-weight:bold; padding:8px 12px; letter-spacing:0.5px;
-    }
-    .render-table { width:100%; border-collapse:collapse; }
-    .render-table th {
-      background:#606060; color:#fff; font-size:10px; font-weight:bold;
-      padding:4px 6px; text-align:center; border:1px solid #888; white-space:nowrap;
-    }
-    .render-table th.left { text-align:left; }
-    .render-table td {
-      padding:3px 6px; border:1px solid #ddd; text-align:center;
-      font-size:11px; vertical-align:middle;
-    }
-    .render-table td.left { text-align:left; }
-    .render-table tr:nth-child(even) { background:#f5f5f5; }
-    .render-table tr:nth-child(odd)  { background:#ffffff; }
-    .render-table tr.row-top3 { background:#e8f5e9 !important; }
-    .render-table tr.row-top3 td { color:#000 !important; }
-    .render-table tr.row-out td { color:#cc0000; }
-    .render-table td { color:#000; }
-
-    /* ── Leaderboard ── */
-    #lb-render { width:820px; padding:0; }
-    .pts-col { font-weight:bold; font-size:13px; }
-    .form-str { font-family:monospace; font-size:10px; letter-spacing:1px; }
-    .form-W { color:#007700; font-weight:bold; }
-    .form-D { color:#cc6600; }
-    .form-L { color:#cc0000; }
-    .out-badge { color:#cc0000; font-weight:bold; font-style:italic; font-size:11px; }
-    .arrow-up { color:#007700; font-weight:bold; }
-    .arrow-dn { color:#cc0000; font-weight:bold; }
-    .arrow-eq { color:#888; }
-
-    /* ── Picks by name ── */
-    #pn-render { width:680px; padding:0; }
-
-    /* ── Teams Picked ── */
-    #tp-render { width:500px; padding:0; }
-    .bar-cell { padding:3px 6px; min-width:120px; }
-    .bar-outer { display:flex; align-items:center; gap:6px; }
-    .bar-track { flex:1; height:14px; background:#e8e8e8; border-radius:2px; overflow:hidden; }
-    .bar-fill { height:100%; background:linear-gradient(90deg,#5b8fd4,#8ab4e8); border-radius:2px; }
-    .bar-label { font-size:10px; font-weight:bold; min-width:28px; text-align:right; color:#333; }
-    .count-badge {
-      display:inline-block; min-width:22px; text-align:center; font-weight:bold;
-      font-size:12px; padding:1px 5px; border-radius:3px; background:#c0392b; color:#fff;
-    }
-    .count-badge.warm { background:#e67e22; }
-    .count-badge.cool { background:#7f8c8d; }
-
-    /* ── Combinations ── */
-    #cb-render { width:560px; padding:0; }
-    .dot { display:inline-block; width:12px; height:12px; border-radius:50%; margin:0 2px; vertical-align:middle; }
-    .dot-win  { background:#22a822; }
-    .dot-draw { background:#e6a020; }
-    .dot-loss { background:#cc0000; }
-    .dot-none { background:transparent; border:1.5px solid #aaa; }
-
-    /* ── Odds input ── */
     .odds-input-table { width:100%; border-collapse:collapse; font-size:13px; }
     .odds-input-table th { background:#f0f0f0; padding:6px 10px; text-align:left; border-bottom:2px solid #ccc; font-weight:bold; }
     .odds-input-table td { padding:5px 10px; border-bottom:1px solid #eee; vertical-align:middle; }
     .odds-input-table input[type=number] { width:80px; padding:4px 6px; border:1px solid #ccc; border-radius:4px; font-size:13px; }
     .odds-input-table input[type=number]:focus { outline:none; border-color:#5b8fd4; }
+
+    /* ══════════════════════════════════════════
+       RENDER STYLES — these go into the PNGs
+       ══════════════════════════════════════════ */
+
+    /* shared shell */
+    .render-root {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px;
+      color: #1a1a2e;
+      background: #ffffff;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+      min-width: 420px;
+    }
+
+    /* header bar */
+    .r-header {
+      background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+      color: #fff;
+      padding: 12px 16px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .r-header-top {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #7ecfff;
+      opacity: 0.85;
+    }
+    .r-header-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      line-height: 1.15;
+    }
+    .r-header-sub {
+      font-size: 10px;
+      color: rgba(255,255,255,0.55);
+      margin-top: 2px;
+    }
+
+    /* table base */
+    .r-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .r-table thead th {
+      background: #eef2f7;
+      color: #4a5568;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 6px 8px;
+      text-align: center;
+      border-bottom: 1px solid #d1dbe8;
+      white-space: nowrap;
+    }
+    .r-table thead th.left { text-align: left; }
+    .r-table tbody td {
+      padding: 6px 8px;
+      font-size: 12px;
+      text-align: center;
+      border-bottom: 1px solid #edf0f5;
+      vertical-align: middle;
+      color: #1a1a2e;
+    }
+    .r-table tbody td.left { text-align: left; }
+    .r-table tbody tr:last-child td { border-bottom: none; }
+    .r-table tbody tr:nth-child(even) td { background: #f8fafc; }
+    .r-table tbody tr:nth-child(odd) td { background: #ffffff; }
+
+    /* top 3 highlight */
+    .r-table tbody tr.top3 td {
+      background: #fff8e1 !important;
+    }
+    .r-table tbody tr.top3:nth-child(even) td {
+      background: #fff3cd !important;
+    }
+
+    /* eliminated */
+    .r-table tbody tr.elim td {
+      color: #c53030 !important;
+      opacity: 0.7;
+    }
+
+    /* footer strip */
+    .r-footer {
+      background: #f0f4f8;
+      border-top: 1px solid #d1dbe8;
+      padding: 5px 12px;
+      font-size: 9px;
+      color: #718096;
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    /* pos number */
+    .r-pos { font-weight: 700; color: #718096; font-size: 11px; }
+    .r-pos.gold   { color: #d4a017; }
+    .r-pos.silver { color: #8e9eab; }
+    .r-pos.bronze { color: #a0522d; }
+
+    /* points pill */
+    .r-pts {
+      display: inline-block;
+      background: #1a365d;
+      color: #fff;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 1px 7px;
+      border-radius: 4px;
+      min-width: 24px;
+      text-align: center;
+    }
+
+    /* form dots */
+    .r-form { display: flex; gap: 3px; align-items: center; justify-content: center; }
+    .r-dot {
+      width: 9px; height: 9px; border-radius: 50%; display: inline-block;
+    }
+    .r-dot.W { background: #38a169; }
+    .r-dot.D { background: #d69e2e; }
+    .r-dot.L { background: #e53e3e; }
+    .r-dot.none { background: transparent; border: 1.5px solid #cbd5e0; }
+
+    /* result dots for combos */
+    .res-dots { display: flex; gap: 4px; align-items: center; justify-content: center; }
+
+    /* count badge */
+    .r-badge {
+      display: inline-block;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      min-width: 20px;
+      text-align: center;
+    }
+    .r-badge.hi  { background: #2b6cb0; color: #fff; }
+    .r-badge.mid { background: #744210; color: #fefcbf; }
+    .r-badge.lo  { background: #e2e8f0; color: #4a5568; }
+
+    /* odds bar */
+    .r-bar-wrap { display: flex; align-items: center; gap: 6px; min-width: 90px; }
+    .r-bar-track { flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+    .r-bar-fill  { height: 100%; background: linear-gradient(90deg, #2b6cb0, #63b3ed); border-radius: 4px; }
+    .r-bar-val   { font-size: 10px; font-weight: 700; color: #2d3748; min-width: 28px; text-align: right; }
+
+    /* pick type split badges (2pt / 3pt) */
+    .r-split { display: flex; gap: 3px; justify-content: center; align-items: center; }
+    .r-split-2 { background: #ebf8ff; color: #2b6cb0; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; }
+    .r-split-3 { background: #fffbeb; color: #b7791f; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; }
+
+    /* team pick name */
+    .r-pick-name { font-style: italic; color: #2d3748; font-size: 11px; }
+
+    /* arrow */
+    .r-arrow-up { color: #38a169; font-weight: 700; font-size: 10px; }
+    .r-arrow-dn { color: #e53e3e; font-weight: 700; font-size: 10px; }
+    .r-arrow-eq { color: #a0aec0; font-size: 10px; }
+
+    /* player name */
+    .r-name { font-weight: 700; font-size: 12px; color: #1a202c; }
   </style>
 </head>
 <body>
+
   <nav>
     <a class="nav-logo" href="/">⚽ LMS 2026</a>
     <div class="nav-links">
@@ -114,14 +219,6 @@
       <div class="card-title">Round Settings</div>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; align-items:end">
         <div class="form-group" style="margin:0">
-          <label>Competition</label>
-          <input type="text" id="comp-label" value="WC '26 LMS" />
-        </div>
-        <div class="form-group" style="margin:0">
-          <label>Round Label</label>
-          <input type="text" id="round-label" placeholder="e.g. RND 3 [GP3]" />
-        </div>
-        <div class="form-group" style="margin:0">
           <label>Next Match Info</label>
           <input type="text" id="next-match" placeholder="e.g. Matches from Thu 3pm" />
         </div>
@@ -132,7 +229,7 @@
       <div class="status-msg" id="load-status"></div>
     </div>
 
-    <!-- Odds input (shown after load) -->
+    <!-- Odds input -->
     <div class="card section-block" id="odds-card" style="display:none">
       <div class="card-title">Odds Input</div>
       <p style="font-size:13px; color:#555; margin-bottom:10px">Enter decimal odds for each team picked this round. Combinations update automatically.</p>
@@ -210,76 +307,128 @@
     document.getElementById('btn-dl-cb').addEventListener('click', () => downloadRender('cb-render', 'Combinations'));
     document.getElementById('btn-dl-lb').addEventListener('click', () => downloadRender('lb-render', 'Leaderboard'));
 
+    // ── Helpers ───────────────────────────────────────────
+    function val(id) { return document.getElementById(id).value.trim(); }
+    function setStatus(id, msg) { document.getElementById(id).textContent = msg; }
+    function ordinal(n) {
+      const s = ['th','st','nd','rd'], v = n % 100;
+      return n + (s[(v-20)%10] || s[v] || s[0]);
+    }
+    function comboOdds(key) {
+      const [tidA, tidB] = key.split('|');
+      const a = parseFloat(oddsMap[tidA]);
+      const b = parseFloat(oddsMap[tidB]);
+      if (isNaN(a)||isNaN(b)||a<=0||b<=0) return 0;
+      return Math.round(a * b * 10) / 10;
+    }
+
+    // Build round label automatically from rounds data
+    function buildRoundLabel(rounds, currentRoundSortOrder) {
+      const currentRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
+      if (!currentRound) return 'Round ' + currentRoundSortOrder;
+      if (currentRound.round_type === 'group') {
+        return 'Group Stage · Round ' + currentRound.sort_order;
+      }
+      return currentRound.name;
+    }
+
+    // Build day label
+    function buildDayLabel(rounds, currentRoundSortOrder, firstMatchData) {
+      const currentRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
+      if (!currentRound || !firstMatchData) return '';
+      const roundMatches = firstMatchData.filter(m => m.round_id === currentRound.id);
+      if (!roundMatches.length) return '';
+      const firstKickoff = new Date(roundMatches[0].kickoff);
+      const now = new Date();
+      const dayNum = Math.floor((now - firstKickoff) / (24 * 60 * 60 * 1000)) + 1;
+      return dayNum >= 1 ? ' · Day ' + dayNum : '';
+    }
+
     // ── Load ─────────────────────────────────────────────
     async function loadAll() {
       setStatus('load-status', '⏳ Loading...');
       try {
-        const { data: players, error: pErr } = await db
-          .from('players')
-          .select('id, name, slug, is_eliminated, total_goals_prediction');
-        if (pErr) throw pErr;
-
-        const { data: picks, error: pkErr } = await db
-          .from('picks')
-          .select(`
+        const [
+          { data: players, error: pErr },
+          { data: picks, error: pkErr },
+          { data: matches, error: mErr },
+          { data: rounds, error: rErr },
+          { data: firstMatchData }
+        ] = await Promise.all([
+          db.from('players').select('id, name, slug, is_eliminated, total_goals_prediction'),
+          db.from('picks').select(`
             id, player_id, team_id, multiplier, round_id,
             rounds(id, name, round_type, sort_order),
             pick_results(points_earned, match_result, base_points),
             teams(id, name, flag_emoji, is_longshot)
-          `);
-        if (pkErr) throw pkErr;
+          `),
+          db.from('matches').select('id, round_id, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)'),
+          db.from('rounds').select('id, name, round_type, sort_order, is_complete').order('sort_order'),
+          db.from('matches').select('round_id, kickoff').order('kickoff')
+        ]);
 
-        const { data: matches, error: mErr } = await db
-          .from('matches')
-          .select('id, round_id, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)');
+        if (pErr) throw pErr;
+        if (pkErr) throw pkErr;
         if (mErr) throw mErr;
 
-        // Opponent lookup: roundId|teamId -> opponent name
+        // Opponent lookup
         const opponentLookup = {};
         (matches || []).forEach(m => {
           opponentLookup[m.round_id + '|' + m.home_team_id] = m.away_team ? m.away_team.name : '?';
           opponentLookup[m.round_id + '|' + m.away_team_id] = m.home_team ? m.home_team.name : '?';
         });
 
-        const completedPicks = picks.filter(p =>  p.pick_results && p.pick_results.length > 0);
-
-        // Current round = highest sort_order that has any picks at all
+        // Current round = highest sort_order with any picks
         let currentRoundSortOrder = 0;
         picks.forEach(p => {
           if (p.rounds && p.rounds.sort_order > currentRoundSortOrder)
             currentRoundSortOrder = p.rounds.sort_order;
         });
-        // All picks for current round (pending OR with results)
-        const currentPicks = picks.filter(p => p.rounds && p.rounds.sort_order === currentRoundSortOrder);
-        // Completed picks = only those NOT in current round (for leaderboard stats)
-        const priorCompletedPicks = picks.filter(p => p.pick_results && p.pick_results.length > 0 && p.rounds && p.rounds.sort_order < currentRoundSortOrder);
+
+        const currentPicks = picks.filter(p =>
+          p.rounds && p.rounds.sort_order === currentRoundSortOrder
+        );
+
+        // ── FIX: all completed picks regardless of round ──
+        const completedPicksAll = picks.filter(p =>
+          p.pick_results && p.pick_results.length > 0
+        );
 
         // Team metadata for current round
-        const teamCounts    = {};
-        const teamNames     = {};
-        const teamFlags     = {};
+        const teamCounts = {};   // tid -> total count
+        const teamCounts2 = {};  // tid -> 2pt count
+        const teamCounts3 = {};  // tid -> 3pt count
+        const teamNames = {};
+        const teamFlags = {};
         const teamOpponents = {};
+        const teamIsLongshot = {};
 
         currentPicks.forEach(pick => {
           const tid = pick.team_id;
           teamCounts[tid] = (teamCounts[tid] || 0) + 1;
+          if (pick.multiplier === 2) teamCounts2[tid] = (teamCounts2[tid] || 0) + 1;
+          if (pick.multiplier === 3) teamCounts3[tid] = (teamCounts3[tid] || 0) + 1;
           if (pick.teams) {
             teamNames[tid] = pick.teams.name;
             teamFlags[tid] = pick.teams.flag_emoji || '';
+            teamIsLongshot[tid] = pick.teams.is_longshot;
           }
           if (!teamOpponents[tid]) {
             teamOpponents[tid] = opponentLookup[pick.round_id + '|' + tid] || '?';
           }
         });
 
-        // Player picks for current round: playerId -> [picks]
+        // Detect if group (2 picks per player)
+        const isGroupRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder)?.round_type === 'group';
+
+        // Player current picks map
         const playerCurrentPicks = {};
         currentPicks.forEach(pick => {
           if (!playerCurrentPicks[pick.player_id]) playerCurrentPicks[pick.player_id] = [];
           playerCurrentPicks[pick.player_id].push(pick);
         });
 
-        // Player stats from completed picks
+        // Player stats — built from ALL completed picks (the fix)
         const statsMap = {};
         players.forEach(p => {
           statsMap[p.id] = {
@@ -291,11 +440,10 @@
           };
         });
 
-        priorCompletedPicks.forEach(pick => {
+        completedPicksAll.forEach(pick => {
           const s = statsMap[pick.player_id];
           if (!s) return;
           const res = pick.pick_results[0];
-          s.teamsUsed++;
           s.totalPoints += res.points_earned || 0;
           s.pld++;
           if (pick.rounds?.round_type === 'knockout') s.koPoints += res.points_earned || 0;
@@ -303,29 +451,35 @@
           s.form.push(res.match_result === 'win' ? 'W' : res.match_result === 'draw' ? 'D' : 'L');
         });
 
-        currentPicks.forEach(pick => {
+        // teamsUsed = all picks (no double-count, one per pick row)
+        picks.forEach(pick => {
           const s = statsMap[pick.player_id];
           if (s) s.teamsUsed++;
         });
 
-        // Sort players by points for rank
         const sortedPlayers = Object.values(statsMap).sort((a, b) => {
           if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
           if (b.koPoints !== a.koPoints) return b.koPoints - a.koPoints;
           if (b.furthestRound !== a.furthestRound) return b.furthestRound - a.furthestRound;
-          return a.goalsPredict - b.goalsPredict;
+          return (a.goalsPredict || 999) - (b.goalsPredict || 999);
         });
+
         const rankMap = {};
         sortedPlayers.forEach((p, i) => { rankMap[p.id] = i + 1; });
 
+        const roundLabel = buildRoundLabel(rounds, currentRoundSortOrder);
+        const dayLabel   = buildDayLabel(rounds, currentRoundSortOrder, firstMatchData);
+        const fullRoundLabel = roundLabel + dayLabel;
+
         roundData = {
-          players, picks, completedPicks, currentPicks,
+          players, picks, completedPicksAll, currentPicks,
           playerCurrentPicks, statsMap, sortedPlayers, rankMap,
-          teamCounts, teamNames, teamFlags, teamOpponents,
-          currentRoundSortOrder
+          teamCounts, teamCounts2, teamCounts3,
+          teamNames, teamFlags, teamOpponents, teamIsLongshot,
+          currentRoundSortOrder, isGroupRound,
+          roundLabel, dayLabel, fullRoundLabel
         };
 
-        // Init oddsMap
         Object.keys(teamCounts).forEach(tid => {
           if (!oddsMap[tid]) oddsMap[tid] = '';
         });
@@ -336,7 +490,7 @@
         renderCombinations();
         renderLeaderboard();
 
-        setStatus('load-status', `✅ Loaded. ${currentPicks.length} picks in current round.`);
+        setStatus('load-status', `✅ Loaded — ${currentPicks.length} picks in current round · ${completedPicksAll.length} results recorded.`);
 
       } catch(err) {
         console.error(err);
@@ -357,11 +511,9 @@
           <td style="color:#888">${i+1}</td>
           <td class="left"><strong>${teamFlags[tid]||''} ${teamNames[tid]||tid}</strong></td>
           <td style="color:#888">vs ${teamOpponents[tid]||'?'}</td>
-          <td>
-            <input type="number" min="1" max="100" step="0.01"
-              value="${oddsMap[tid]||''}" data-tid="${tid}" placeholder="e.g. 1.5"
-              oninput="oddsMap[this.dataset.tid]=parseFloat(this.value)||''" />
-          </td>`;
+          <td><input type="number" min="1" max="100" step="0.01"
+            value="${oddsMap[tid]||''}" data-tid="${tid}" placeholder="e.g. 1.5"
+            oninput="oddsMap[this.dataset.tid]=parseFloat(this.value)||''" /></td>`;
         tbody.appendChild(tr);
       });
       document.getElementById('odds-card').style.display = 'block';
@@ -372,51 +524,89 @@
       renderCombinations();
     }
 
+    // ── Shared header builder ─────────────────────────────
+    function makeHeader(superLabel, title, sub) {
+      return `<div class="r-header">
+        <div class="r-header-top">${superLabel}</div>
+        <div class="r-header-title">${title}</div>
+        ${sub ? `<div class="r-header-sub">${sub}</div>` : ''}
+      </div>`;
+    }
+
+    // ── Form dots ─────────────────────────────────────────
+    function formDots(formArr, n) {
+      return '<div class="r-form">' +
+        formArr.slice(-n).map(f => `<span class="r-dot ${f}"></span>`).join('') +
+        '</div>';
+    }
+
     // ── 1. Picks by Name ──────────────────────────────────
     function renderPicksByName() {
       if (!roundData) return;
-      const { sortedPlayers, rankMap, playerCurrentPicks, teamNames, teamFlags } = roundData;
-      const compLabel = val('comp-label');
-      const roundLabel = val('round-label');
+      const { sortedPlayers, playerCurrentPicks, teamNames, teamFlags, isGroupRound, fullRoundLabel } = roundData;
+      const nextMatch = val('next-match');
 
-      // Is this a group round? (2 picks per player)
-      const isGroup = Object.values(playerCurrentPicks).some(pp => pp.length >= 2);
+      function teamCell(pick) {
+        if (!pick) return '<span style="color:#a0aec0">—</span>';
+        return `<span class="r-pick-name">${teamFlags[pick.team_id]||''} ${teamNames[pick.team_id]||'?'}</span>`;
+      }
 
-      let html = `<div class="render-title">${compLabel} PICKS – ${roundLabel}</div>`;
-      html += `<table class="render-table"><thead><tr>
-        <th style="width:28px"></th>
-        <th class="left" style="min-width:90px">NAME</th>
-        <th style="min-width:120px">PICK 1</th>
-        ${isGroup ? `<th style="min-width:120px">PICK 2</th>` : ''}
-        <th style="width:45px">Pts/Pos</th>
-        <th style="width:60px">Form</th>
-      </tr></thead><tbody>`;
+      let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
 
-      sortedPlayers.forEach((p, i) => {
-        const pos = i + 1;
-        const pPicks = playerCurrentPicks[p.id] || [];
-        // Sort: pick1 = multiplier 3 (or highest), pick2 = multiplier 2
-        const sorted = [...pPicks].sort((a,b) => (b.multiplier||0) - (a.multiplier||0));
-        const pick1 = sorted[0];
-        const pick2 = sorted[1];
+      if (isGroupRound) {
+        html += `<table class="r-table"><thead><tr>
+          <th style="width:28px">#</th>
+          <th class="left" style="min-width:90px">Player</th>
+          <th style="min-width:110px">3pt Pick</th>
+          <th style="min-width:110px">2pt Pick</th>
+          <th style="width:42px">Pts</th>
+          <th style="width:52px">Form</th>
+        </tr></thead><tbody>`;
 
-        const pick1Name = pick1 ? `${teamFlags[pick1.team_id]||''} ${teamNames[pick1.team_id]||'?'}` : '—';
-        const pick2Name = pick2 ? `${teamFlags[pick2.team_id]||''} ${teamNames[pick2.team_id]||'?'}` : '—';
+        sortedPlayers.forEach((p, i) => {
+          const pos = i + 1;
+          const pPicks = playerCurrentPicks[p.id] || [];
+          const pick3 = pPicks.find(pk => pk.multiplier === 3) || pPicks.find(pk => (pk.multiplier||0) >= 3);
+          const pick2 = pPicks.find(pk => pk.multiplier === 2) || pPicks.find(pk => pk !== pick3);
+          const posClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
+          const rowClass = p.isOut ? 'elim' : pos <= 3 ? 'top3' : '';
+          html += `<tr class="${rowClass}">
+            <td><span class="r-pos ${posClass}">${pos}</span></td>
+            <td class="left"><span class="r-name">${p.name}</span></td>
+            <td>${teamCell(pick3)}</td>
+            <td>${teamCell(pick2)}</td>
+            <td><span class="r-pts">${p.totalPoints}</span></td>
+            <td>${formDots(p.form, 5)}</td>
+          </tr>`;
+        });
+      } else {
+        html += `<table class="r-table"><thead><tr>
+          <th style="width:28px">#</th>
+          <th class="left" style="min-width:90px">Player</th>
+          <th style="min-width:140px">Pick</th>
+          <th style="width:42px">Pts</th>
+          <th style="width:52px">Form</th>
+        </tr></thead><tbody>`;
 
-        const formStr = p.form.slice(-4).map(f => `<span class="form-${f}">${f}</span>`).join('');
-        const rowClass = p.isOut ? 'row-out' : pos <= 3 ? 'row-top3' : '';
-
-        html += `<tr class="${rowClass}">
-          <td style="color:#888">${pos}.</td>
-          <td class="left" style="font-weight:bold;padding-left:6px">${p.name}</td>
-          <td style="font-style:italic">${pick1Name}</td>
-          ${isGroup ? `<td style="font-style:italic">${pick2Name}</td>` : ''}
-          <td style="font-weight:bold">${p.totalPoints} / <span style="font-style:italic;font-weight:normal">${pos}${ordinal(pos)}</span></td>
-          <td class="form-str">${formStr||'—'}</td>
-        </tr>`;
-      });
+        sortedPlayers.forEach((p, i) => {
+          const pos = i + 1;
+          const pPicks = playerCurrentPicks[p.id] || [];
+          const pick = pPicks[0] || null;
+          const posClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
+          const rowClass = p.isOut ? 'elim' : pos <= 3 ? 'top3' : '';
+          html += `<tr class="${rowClass}">
+            <td><span class="r-pos ${posClass}">${pos}</span></td>
+            <td class="left"><span class="r-name">${p.name}</span></td>
+            <td>${teamCell(pick)}</td>
+            <td><span class="r-pts">${p.totalPoints}</span></td>
+            <td>${formDots(p.form, 5)}</td>
+          </tr>`;
+        });
+      }
 
       html += `</tbody></table>`;
+      if (nextMatch) html += `<div class="r-footer">📅 ${nextMatch}</div>`;
+
       document.getElementById('pn-render').innerHTML = html;
       document.getElementById('pn-preview-wrap').style.display = 'block';
       document.getElementById('btn-dl-pn').style.display = 'inline-block';
@@ -426,8 +616,8 @@
     // ── 2. Teams Picked ───────────────────────────────────
     function renderTeamsPicked() {
       if (!roundData) return;
-      const { teamCounts, teamNames, teamFlags, teamOpponents } = roundData;
-      const roundLabel = val('round-label');
+      const { teamCounts, teamCounts2, teamCounts3, teamNames, teamFlags, teamOpponents, teamIsLongshot, isGroupRound, fullRoundLabel } = roundData;
+      const nextMatch = val('next-match');
 
       const sorted = Object.keys(teamCounts).sort((a,b) => {
         const cd = teamCounts[b] - teamCounts[a];
@@ -439,33 +629,73 @@
       const oddsVals = sorted.map(t => parseFloat(oddsMap[t])).filter(o => !isNaN(o) && o > 0);
       const maxOdds  = oddsVals.length ? Math.max(...oddsVals) : 10;
 
-      let html = `<div class="render-title">TEAMS PICKED: ${roundLabel}</div>`;
-      html += `<table class="render-table"><thead><tr>
-        <th style="width:28px">#</th>
-        <th class="left" style="min-width:160px">Team</th>
-        <th style="width:130px">Odds</th>
-        <th style="width:40px">#</th>
-      </tr></thead><tbody>`;
+      let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
 
-      sorted.forEach((tid, i) => {
-        const count = teamCounts[tid];
-        const odds  = parseFloat(oddsMap[tid]);
-        const hasOdds = !isNaN(odds) && odds > 0;
-        const barPct  = hasOdds ? Math.round((odds / maxOdds) * 100) : 0;
-        let badgeClass = count >= maxCount*0.7 ? '' : count >= maxCount*0.35 ? 'warm' : 'cool';
+      // Group stage: show 2pt/3pt split columns
+      if (isGroupRound) {
+        html += `<table class="r-table"><thead><tr>
+          <th style="width:28px">#</th>
+          <th class="left">Team &amp; Opponent</th>
+          <th style="width:80px">Odds</th>
+          <th style="width:32px">2pt</th>
+          <th style="width:32px">3pt</th>
+          <th style="width:40px">Total</th>
+        </tr></thead><tbody>`;
 
-        html += `<tr>
-          <td style="color:#888">${i+1}</td>
-          <td class="left"><strong>${teamFlags[tid]||''} ${teamNames[tid]||'?'}</strong>
-            <span style="color:#888;font-size:10px"> v ${teamOpponents[tid]||'?'}</span></td>
-          <td class="bar-cell">${hasOdds
-            ? `<div class="bar-outer"><div class="bar-track"><div class="bar-fill" style="width:${barPct}%"></div></div><span class="bar-label">${odds.toFixed(1)}</span></div>`
-            : '<span style="color:#bbb;font-size:10px">—</span>'}</td>
-          <td><span class="count-badge ${badgeClass}">${count}</span></td>
-        </tr>`;
-      });
+        sorted.forEach((tid, i) => {
+          const count  = teamCounts[tid];
+          const count2 = teamCounts2[tid] || 0;
+          const count3 = teamCounts3[tid] || 0;
+          const odds   = parseFloat(oddsMap[tid]);
+          const hasOdds = !isNaN(odds) && odds > 0;
+          const barPct  = hasOdds ? Math.round((odds / maxOdds) * 100) : 0;
+          const badgeCls = count >= maxCount*0.7 ? 'hi' : count >= maxCount*0.35 ? 'mid' : 'lo';
+          const lsTag = teamIsLongshot[tid] ? ' ⭐' : '';
+
+          html += `<tr>
+            <td class="r-pos">${i+1}</td>
+            <td class="left"><strong>${teamFlags[tid]||''} ${teamNames[tid]||'?'}${lsTag}</strong>
+              <span style="color:#718096;font-size:10px"> v ${teamOpponents[tid]||'?'}</span></td>
+            <td>${hasOdds
+              ? `<div class="r-bar-wrap"><div class="r-bar-track"><div class="r-bar-fill" style="width:${barPct}%"></div></div><span class="r-bar-val">${odds.toFixed(1)}</span></div>`
+              : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+            <td>${count2 ? `<span class="r-split-2">${count2}</span>` : '<span style="color:#cbd5e0">—</span>'}</td>
+            <td>${count3 ? `<span class="r-split-3">${count3}</span>` : '<span style="color:#cbd5e0">—</span>'}</td>
+            <td><span class="r-badge ${badgeCls}">${count}</span></td>
+          </tr>`;
+        });
+      } else {
+        // Knockout: just total
+        html += `<table class="r-table"><thead><tr>
+          <th style="width:28px">#</th>
+          <th class="left">Team &amp; Opponent</th>
+          <th style="width:100px">Odds</th>
+          <th style="width:44px">Picks</th>
+        </tr></thead><tbody>`;
+
+        sorted.forEach((tid, i) => {
+          const count  = teamCounts[tid];
+          const odds   = parseFloat(oddsMap[tid]);
+          const hasOdds = !isNaN(odds) && odds > 0;
+          const barPct  = hasOdds ? Math.round((odds / maxOdds) * 100) : 0;
+          const badgeCls = count >= maxCount*0.7 ? 'hi' : count >= maxCount*0.35 ? 'mid' : 'lo';
+          const lsTag = teamIsLongshot[tid] ? ' ⭐' : '';
+
+          html += `<tr>
+            <td class="r-pos">${i+1}</td>
+            <td class="left"><strong>${teamFlags[tid]||''} ${teamNames[tid]||'?'}${lsTag}</strong>
+              <span style="color:#718096;font-size:10px"> v ${teamOpponents[tid]||'?'}</span></td>
+            <td>${hasOdds
+              ? `<div class="r-bar-wrap"><div class="r-bar-track"><div class="r-bar-fill" style="width:${barPct}%"></div></div><span class="r-bar-val">${odds.toFixed(1)}</span></div>`
+              : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+            <td><span class="r-badge ${badgeCls}">${count}</span></td>
+          </tr>`;
+        });
+      }
 
       html += `</tbody></table>`;
+      if (nextMatch) html += `<div class="r-footer">📅 ${nextMatch}</div>`;
+
       document.getElementById('tp-render').innerHTML = html;
       document.getElementById('tp-preview-wrap').style.display = 'block';
       document.getElementById('btn-dl-tp').style.display = 'inline-block';
@@ -475,11 +705,11 @@
     // ── 3. Combinations ───────────────────────────────────
     function renderCombinations() {
       if (!roundData) return;
-      const { playerCurrentPicks, teamNames, teamFlags } = roundData;
-      const roundLabel = val('round-label');
+      const { playerCurrentPicks, teamNames, teamFlags, fullRoundLabel } = roundData;
+      const nextMatch = val('next-match');
 
       const comboCounts  = {};
-      const comboPickMap = {}; // key -> { tidA, tidB }
+      const comboPickMap = {};
 
       Object.values(playerCurrentPicks).forEach(pPicks => {
         if (pPicks.length < 2) return;
@@ -508,13 +738,13 @@
       const oddsVals = sortedCombos.map(k => comboOdds(k)).filter(o => o > 0);
       const maxOdds  = oddsVals.length ? Math.max(...oddsVals) : 10;
 
-      let html = `<div class="render-title">TOP COMBINATIONS: ${roundLabel}</div>`;
-      html += `<table class="render-table"><thead><tr>
+      let html = makeHeader('LMS WORLD CUP 2026', 'Top Combinations', fullRoundLabel);
+      html += `<table class="r-table"><thead><tr>
         <th style="width:28px">#</th>
         <th class="left" style="min-width:200px">Teams</th>
-        <th style="width:100px">Odds</th>
-        <th style="width:36px">#</th>
-        <th style="width:52px">Result</th>
+        <th style="width:100px">Combo Odds</th>
+        <th style="width:40px">Picks</th>
+        <th style="width:56px">Result</th>
       </tr></thead><tbody>`;
 
       sortedCombos.forEach((key, i) => {
@@ -525,98 +755,84 @@
         const odds  = comboOdds(key);
         const hasOdds = odds > 0;
         const barPct  = hasOdds ? Math.round((odds / maxOdds) * 100) : 0;
-        let badgeClass = count >= maxCount*0.7 ? '' : count >= maxCount*0.35 ? 'warm' : 'cool';
-
-        // Result dots — both pending until we have results
-        // Dots are always 'none' (unplayed) at pick time; will update when results land
+        const badgeCls = count >= maxCount*0.7 ? 'hi' : count >= maxCount*0.35 ? 'mid' : 'lo';
         const dotA = resultDot(tidA);
         const dotB = resultDot(tidB);
 
         html += `<tr>
-          <td style="color:#888">${i+1}</td>
-          <td class="left"><strong>${nameA} &amp; ${nameB}</strong></td>
-          <td class="bar-cell">${hasOdds
-            ? `<div class="bar-outer"><div class="bar-track"><div class="bar-fill" style="width:${barPct}%"></div></div><span class="bar-label">${odds.toFixed(1)}</span></div>`
-            : '<span style="color:#bbb;font-size:10px">—</span>'}</td>
-          <td><span class="count-badge ${badgeClass}">${count}</span></td>
-          <td style="white-space:nowrap">${dotA}${dotB}</td>
+          <td class="r-pos">${i+1}</td>
+          <td class="left"><strong>${nameA}</strong> <span style="color:#a0aec0;font-size:10px">&amp;</span> <strong>${nameB}</strong></td>
+          <td>${hasOdds
+            ? `<div class="r-bar-wrap"><div class="r-bar-track"><div class="r-bar-fill" style="width:${barPct}%"></div></div><span class="r-bar-val">${odds.toFixed(1)}</span></div>`
+            : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+          <td><span class="r-badge ${badgeCls}">${count}</span></td>
+          <td><div class="res-dots">${dotA}${dotB}</div></td>
         </tr>`;
       });
 
       html += `</tbody></table>`;
+      if (nextMatch) html += `<div class="r-footer">📅 ${nextMatch}</div>`;
+
       document.getElementById('cb-render').innerHTML = html;
       document.getElementById('cb-preview-wrap').style.display = 'block';
       document.getElementById('btn-dl-cb').style.display = 'inline-block';
       setStatus('cb-status', `${sortedCombos.length} combinations.`);
     }
 
-    // Result dot: check if this team's pick in the current round has a result
     function resultDot(tid) {
       if (!roundData) return dot('none');
       const pick = roundData.currentPicks.find(p => p.team_id === tid);
       if (!pick) return dot('none');
       const res = pick.pick_results && pick.pick_results[0];
       if (!res) return dot('none');
-      if (res.match_result === 'win')  return dot('win');
-      if (res.match_result === 'draw') return dot('draw');
-      if (res.match_result === 'loss') return dot('loss');
+      if (res.match_result === 'win')  return dot('W');
+      if (res.match_result === 'draw') return dot('D');
+      if (res.match_result === 'loss') return dot('L');
       return dot('none');
     }
-
     function dot(type) {
-      return `<span class="dot dot-${type}" title="${type}"></span>`;
+      return `<span class="r-dot ${type}" title="${type}"></span>`;
     }
 
     // ── 4. Leaderboard ────────────────────────────────────
     function renderLeaderboard() {
       if (!roundData) return;
-      const { sortedPlayers } = roundData;
-      const compLabel  = val('comp-label');
-      const roundLabel = val('round-label');
-      const nextMatch  = val('next-match');
-      const roundLabels = { 0:'—',1:'GP1',2:'GP2',3:'GP3',4:'L32',5:'L16',6:'QF',7:'SF',8:'F' };
+      const { sortedPlayers, fullRoundLabel } = roundData;
+      const nextMatch = val('next-match');
 
-      let html = `<div class="render-title">${compLabel} – ${roundLabel}</div>`;
-      html += `<table class="render-table"><thead><tr>
-        <th style="width:30px">Pos</th>
-        <th style="width:36px">Prior</th>
-        <th style="width:16px"></th>
-        <th class="left" style="min-width:110px">Name</th>
-        <th style="width:28px">Pld</th>
-        <th style="width:36px">Pts</th>
-        <th style="width:40px">LMS</th>
-        <th style="width:28px">KO</th>
-        <th style="width:55px">Goals</th>
-        <th style="width:80px">Form</th>
-        <th style="width:50px">Teams<br>left</th>
+      let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
+      html += `<table class="r-table"><thead><tr>
+        <th style="width:30px">#</th>
+        <th style="width:32px">Mv</th>
+        <th class="left" style="min-width:100px">Player</th>
+        <th style="width:30px">Pld</th>
+        <th style="width:42px">Pts</th>
+        <th style="width:50px">Teams left</th>
+        <th style="width:64px">Form</th>
       </tr></thead><tbody>`;
 
       sortedPlayers.forEach((p, i) => {
         const pos = i + 1;
         const teamsLeft = 48 - p.teamsUsed;
-        const rowClass = p.isOut ? 'row-out' : pos <= 3 ? 'row-top3' : '';
-        const lmsLabel = roundLabels[p.furthestRound] || '—';
-        const formStr  = p.form.slice(-8).map(f => `<span class="form-${f}">${f}</span>`).join('');
+        const rowClass = p.isOut ? 'elim' : pos <= 3 ? 'top3' : '';
+        const posClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
+
+        // Arrow placeholder — prior positions not stored here, show neutral
+        const arrowHtml = `<span class="r-arrow-eq">—</span>`;
 
         html += `<tr class="${rowClass}">
-          <td>${pos}</td>
-          <td style="color:#888;font-size:10px">[${pos}]</td>
-          <td><span class="arrow-eq">=</span></td>
-          <td class="left" style="font-weight:bold;font-size:12px;padding-left:8px">${p.name}</td>
-          <td>${p.pld}</td>
-          <td class="pts-col">${p.totalPoints}</td>
-          <td style="font-size:10px">${lmsLabel}</td>
-          <td>${p.koPoints}</td>
-          <td style="font-size:10px;color:#555">${p.goalsPredict ? p.goalsPredict+' diff' : '—'}</td>
-          <td class="form-str">${formStr||'—'}</td>
-          <td>${p.isOut ? '<span class="out-badge">OUT!</span>' : teamsLeft}</td>
+          <td><span class="r-pos ${posClass}">${pos}</span></td>
+          <td>${arrowHtml}</td>
+          <td class="left"><span class="r-name">${p.name}</span></td>
+          <td style="color:#718096">${p.pld}</td>
+          <td><span class="r-pts">${p.totalPoints}</span></td>
+          <td style="color:#718096">${p.isOut ? '<span style="color:#e53e3e;font-weight:700">OUT</span>' : teamsLeft}</td>
+          <td>${formDots(p.form, 5)}</td>
         </tr>`;
       });
 
       html += `</tbody></table>`;
-      if (nextMatch) {
-        html += `<div style="text-align:center;padding:6px;font-size:11px;border-top:1px solid #aac;background:#e8eeff;color:#334">${nextMatch}</div>`;
-      }
+      if (nextMatch) html += `<div class="r-footer">📅 ${nextMatch}</div>`;
 
       document.getElementById('lb-render').innerHTML = html;
       document.getElementById('lb-preview-wrap').style.display = 'block';
@@ -633,29 +849,13 @@
         const el = document.getElementById(elId);
         const canvas = await html2canvas(el, { scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false });
         const link = document.createElement('a');
-        const comp = val('comp-label').replace(/\s+/g,'_');
-        const rnd  = val('round-label').replace(/\s+/g,'_');
-        link.download = `LMS2026_${comp}_${rnd}_${label}.png`;
+        const rnd  = (roundData?.fullRoundLabel || 'Round').replace(/[\s·]+/g,'_');
+        link.download = `LMS2026_${rnd}_${label}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
       } catch(err) { alert('Download failed: ' + err.message); }
       btn.textContent = '⬇️ Download';
       btn.disabled = false;
-    }
-
-    // ── Helpers ───────────────────────────────────────────
-    function comboOdds(key) {
-      const [tidA, tidB] = key.split('|');
-      const a = parseFloat(oddsMap[tidA]);
-      const b = parseFloat(oddsMap[tidB]);
-      if (isNaN(a)||isNaN(b)||a<=0||b<=0) return 0;
-      return Math.round(a * b * 10) / 10;
-    }
-    function val(id) { return document.getElementById(id).value.trim(); }
-    function setStatus(id, msg) { document.getElementById(id).textContent = msg; }
-    function ordinal(n) {
-      const s = ['th','st','nd','rd'], v = n%100;
-      return s[(v-20)%10]||s[v]||s[0];
     }
   </script>
 </body>
