@@ -254,7 +254,7 @@
           Fetch current tournament winner odds from The Odds API. Each fetch is stored with a timestamp so you can track how odds change over time. Use this sparingly — you have a limited API quota.
         </p>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px">
-          <button class="btn btn-primary" id="btn-fetch-odds">🔄 Fetch Latest Odds</button>
+          <button class="btn btn-primary" id="btn-fetch-odds">🔄 Fetch All Odds</button>
           <span id="odds-fetch-msg" style="font-size:12px"></span>
         </div>
         <div id="odds-remaining" style="font-size:12px; color:var(--text-muted); margin-bottom:16px"></div>
@@ -941,41 +941,145 @@
     const ODDS_API_KEY = '2127711d84fd2872a7f18d242347028c';
     const ODDS_API_BASE = 'https://api.the-odds-api.com/v4';
 
-    async function fetchOutrightOdds() {
+    // Name mapping: API name (lowercase) → DB name (lowercase)
+    // Add entries here if new mismatches appear
+    const TEAM_NAME_MAP = {
+      'czech republic':        'czechia',
+      'bosnia & herzegovina':  'bosnia',
+      'dr congo':              'dr congo',
+      'ivory coast':           'ivory coast',
+      "cote d'ivoire":         'ivory coast',
+      'curaçao':               'curaçao',
+      'curacao':               'curaçao',
+      'cape verde':            'cape verde',
+      'new zealand':           'new zealand',
+      'south korea':           'south korea',
+      'korea republic':        'south korea',
+      'usa':                   'united states',
+      'united states':         'united states',
+    };
+
+    function normaliseTeamName(raw) {
+      const lower = raw.toLowerCase().trim();
+      return TEAM_NAME_MAP[lower] || lower;
+    }
+
+    async function fetchAllOdds() {
       const btn = document.getElementById('btn-fetch-odds');
       const msg = document.getElementById('odds-fetch-msg');
+      const remainingEl = document.getElementById('odds-remaining');
       btn.disabled = true; btn.textContent = 'Fetching...'; msg.textContent = '';
+
+      let quotaInfo = '';
+
       try {
-        const url = `${ODDS_API_BASE}/sports/soccer_world_cup_winner/odds/?apiKey=${ODDS_API_KEY}&regions=uk&markets=outrights&bookmakers=paddypower&oddsFormat=decimal`;
-        const resp = await fetch(url);
-        const remaining = resp.headers.get('x-requests-remaining');
-        const used = resp.headers.get('x-requests-used');
-        if (remaining !== null) {
-          document.getElementById('odds-remaining').textContent = `API quota: ${used} used · ${remaining} remaining`;
-        }
-        if (!resp.ok) throw new Error('API error: ' + resp.status);
-        const data = await resp.json();
-        const outcomes = data?.[0]?.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
-        if (outcomes.length === 0) throw new Error('No outcomes returned — check sport key or bookmaker');
-        const fetchedAt = new Date().toISOString();
+        // ── 1. Outright winner odds ────────────────────────────
+        msg.style.color = 'var(--text-muted)';
+        msg.textContent = 'Fetching outright odds...';
+
+        const outrightUrl = `${ODDS_API_BASE}/sports/soccer_fifa_world_cup_winner/odds/?apiKey=${ODDS_API_KEY}&regions=uk&markets=outrights&bookmakers=paddypower&oddsFormat=decimal`;
+        const outrightResp = await fetch(outrightUrl);
+        const rem1 = outrightResp.headers.get('x-requests-remaining');
+        const used1 = outrightResp.headers.get('x-requests-used');
+        if (rem1) quotaInfo = `API quota: ${used1} used · ${rem1} remaining`;
+
+        if (!outrightResp.ok) throw new Error('Outright API error: ' + outrightResp.status);
+        const outrightData = await outrightResp.json();
+        const outcomes = outrightData?.[0]?.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
+
         const { data: teams } = await db.from('teams').select('id, name');
         const teamMap = {};
         (teams||[]).forEach(t => { teamMap[t.name.toLowerCase()] = t.id; });
-        const inserts = outcomes.map(o => ({
-          team_id: teamMap[o.name.toLowerCase()] || null,
-          team_name_raw: o.name,
-          odds_decimal: o.price,
-          fetched_at: fetchedAt
-        }));
-        const { error } = await db.from('team_odds').insert(inserts);
-        if (error) throw error;
-        msg.style.color='var(--green)';
-        msg.textContent = `✅ ${inserts.length} teams updated at ${new Date(fetchedAt).toLocaleTimeString('en-GB')}`;
+
+        const fetchedAt = new Date().toISOString();
+        let outrightCount = 0;
+
+        if (outcomes.length > 0) {
+          const inserts = outcomes.map(o => ({
+            team_id: teamMap[normaliseTeamName(o.name)] || null,
+            team_name_raw: o.name,
+            odds_decimal: o.price,
+            fetched_at: fetchedAt
+          }));
+          const { error } = await db.from('team_odds').insert(inserts);
+          if (error) throw new Error('Outright insert error: ' + error.message);
+          outrightCount = inserts.length;
+        }
+
+        // ── 2. Match h2h odds ──────────────────────────────────
+        msg.textContent = 'Fetching match odds...';
+
+        const matchUrl = `${ODDS_API_BASE}/sports/soccer_fifa_world_cup/odds/?apiKey=${ODDS_API_KEY}&regions=uk&markets=h2h&bookmakers=paddypower&oddsFormat=decimal`;
+        const matchResp = await fetch(matchUrl);
+        const rem2 = matchResp.headers.get('x-requests-remaining');
+        const used2 = matchResp.headers.get('x-requests-used');
+        if (rem2) quotaInfo = `API quota: ${used2} used · ${rem2} remaining`;
+
+        if (!matchResp.ok) throw new Error('Match API error: ' + matchResp.status);
+        const matchData = await matchResp.json();
+
+        // Load all matches from DB for matching
+        const { data: dbMatches } = await db.from('matches')
+          .select('id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)')
+          .not('home_team_id', 'is', null)
+          .not('away_team_id', 'is', null);
+
+        let matchedCount = 0, unmatchedCount = 0;
+        const unmatchedGames = [];
+
+        for (const apiMatch of matchData) {
+          const bookmaker = apiMatch.bookmakers?.[0];
+          if (!bookmaker) continue;
+          const market = bookmaker.markets?.[0];
+          if (!market) continue;
+
+          // Find home/draw/away prices
+          const homeOutcome = market.outcomes.find(o => normaliseTeamName(o.name) === normaliseTeamName(apiMatch.home_team));
+          const awayOutcome = market.outcomes.find(o => normaliseTeamName(o.name) === normaliseTeamName(apiMatch.away_team));
+          const drawOutcome = market.outcomes.find(o => o.name === 'Draw');
+
+          // Match to DB by kickoff time (within 1 hour) + home team name
+          const apiKickoff = new Date(apiMatch.commence_time);
+          const dbMatch = (dbMatches||[]).find(m => {
+            const dbKickoff = new Date(m.kickoff);
+            const diffMs = Math.abs(apiKickoff - dbKickoff);
+            const diffHours = diffMs / (1000 * 60 * 60);
+            const homeMatch = m.home_team && normaliseTeamName(m.home_team.name) === normaliseTeamName(apiMatch.home_team);
+            return diffHours <= 1 && homeMatch;
+          });
+
+          if (dbMatch && homeOutcome && awayOutcome) {
+            const { error } = await db.from('matches').update({
+              odds_home: homeOutcome.price,
+              odds_away: awayOutcome.price,
+              odds_draw: drawOutcome ? drawOutcome.price : null
+            }).eq('id', dbMatch.id);
+            if (!error) matchedCount++;
+            else console.error('Match odds update error:', error);
+          } else {
+            unmatchedCount++;
+            unmatchedGames.push(`${apiMatch.home_team} vs ${apiMatch.away_team}`);
+          }
+        }
+
+        remainingEl.textContent = quotaInfo;
+        msg.style.color = 'var(--green)';
+        msg.textContent = `✅ Outrights: ${outrightCount} teams · Match odds: ${matchedCount} matched`;
+        if (unmatchedCount > 0) {
+          msg.textContent += ` · ${unmatchedCount} unmatched`;
+          console.warn('Unmatched games:', unmatchedGames);
+        }
+
         loadOddsTable();
+
       } catch(err) {
-        msg.style.color='var(--red)'; msg.textContent='❌ '+err.message; console.error(err);
+        msg.style.color = 'var(--red)';
+        msg.textContent = '❌ ' + err.message;
+        console.error(err);
       }
-      btn.disabled=false; btn.textContent='🔄 Fetch Latest Odds';
+
+      btn.disabled = false;
+      btn.textContent = '🔄 Fetch All Odds';
     }
 
     async function loadOddsTable() {
@@ -991,7 +1095,7 @@
         .eq('fetched_at', latestTime).order('odds_decimal',{ascending:true});
       if (!odds||odds.length===0) { wrap.innerHTML='<p>No data.</p>'; return; }
       const fetchTime = new Date(latestTime).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-      let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Last fetched: ${fetchTime} · ${odds.length} teams</div>`;
+      let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Outrights last fetched: ${fetchTime} · ${odds.length} teams</div>`;
       html += '<div class="table-wrap"><table><thead><tr><th>Team</th><th>Decimal</th><th>Fractional</th><th>Matched</th></tr></thead><tbody>';
       odds.forEach(o => {
         const flag = o.teams?.flag_emoji||'';
@@ -1012,7 +1116,7 @@
     }
     function gcd(a,b) { return b===0?a:gcd(b,a%b); }
 
-    document.getElementById('btn-fetch-odds').addEventListener('click', fetchOutrightOdds);
+    document.getElementById('btn-fetch-odds').addEventListener('click', fetchAllOdds);
   </script>
 </body>
 </html>
