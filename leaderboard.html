@@ -33,7 +33,6 @@
     thead th { white-space:nowrap; font-size:11px; color:var(--text-muted); }
     td { font-size:13px; }
     @media(max-width:600px) { .hide-mobile { display:none; } }
-    @media(max-width:900px) and (orientation:landscape) { .hide-mobile { display:table-cell; } }
     .flag-3pt { border-bottom: 2px solid #f59e0b; }
     .flag-2pt { border-bottom: 2px solid #94a3b8; }
     .flag-3pt-longshot { border-bottom: 4px double #f59e0b; }
@@ -44,6 +43,10 @@
     .test-date-banner { background:#7c3aed; color:#fff; text-align:center; padding:8px 16px; font-size:13px; font-weight:600; }
     .test-date-banner a { color:#e9d5ff; text-decoration:underline; cursor:pointer; margin-left:12px; font-weight:400; }
     .proj-goals { font-size:11px; color:var(--text-muted); margin-top:4px; }
+    .goals-diff { font-weight:700; font-size:13px; }
+    .goals-diff-close { color:var(--green); }
+    .goals-diff-mid { color:var(--gold); }
+    .goals-diff-far { color:var(--red); }
   </style>
 </head>
 <body>
@@ -81,7 +84,7 @@
               <th>Pld</th>
               <th>Pts</th>
               <th>GD</th>
-              <th class="hide-mobile">Goals<br>pred</th>
+              <th class="hide-mobile">Diff from<br>proj.</th>
               <th class="hide-mobile">Form</th>
               <th class="hide-mobile" id="left-col-header" style="display:none">Left</th>
               <th class="hide-mobile" id="status-col-header" style="display:none">Status</th>
@@ -109,7 +112,7 @@
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const TOTAL_MATCHES = 104; // 72 group + 16 + 8 + 4 + 2 + 1 + 1 (incl. 3rd place)
+    const TOTAL_MATCHES = 104;
 
     // ── Test date override ────────────────────────────────────
     const LS_KEY = 'lms2026_test_date';
@@ -128,65 +131,77 @@
       }
     })();
 
-    function ordinal(n) {
-      const s = ['th','st','nd','rd'], v = n % 100;
-      return n + (s[(v-20)%10] || s[v] || s[0]);
+    // ── Game day window ───────────────────────────────────────
+    function getGameDayWindow(effectiveDate) {
+      const d = new Date(effectiveDate);
+      const utcHour = d.getUTCHours();
+      let windowStart;
+      if (utcHour < 10) {
+        windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 14, 0, 0));
+      } else {
+        windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 14, 0, 0));
+      }
+      const windowEnd = new Date(windowStart.getTime() + 20 * 60 * 60 * 1000);
+      return { windowStart, windowEnd };
     }
 
     async function loadLeaderboard() {
       try {
         const now = getEffectiveDate();
+        const { windowStart, windowEnd } = getGameDayWindow(now);
 
         const [
           { data: scores, error },
           { data: gdData },
           { data: furthestData },
           { data: teamsUsed },
-          { data: todayPicks },
           { data: rounds },
           { data: firstMatchData },
           { data: snapshots },
-          { data: completedMatches }
+          { data: completedMatches },
+          { data: todayMatchRows },
+          { data: allPicks }
         ] = await Promise.all([
           db.from('player_scores').select('*'),
           db.from('player_gd').select('*'),
           db.from('player_furthest_round').select('*'),
           db.from('player_teams_used').select('player_id, match_result'),
-          db.from('todays_match_picks').select('player_slug, home_flag, away_flag, picked_side, pick_is_longshot, multiplier').is('points_earned', null),
           db.from('rounds').select('id, name, round_type, sort_order, is_complete').order('sort_order'),
           db.from('matches').select('round_id, kickoff').order('kickoff'),
           db.from('leaderboard_snapshots').select('player_id, position, round_id'),
-          // Get goals and match counts for expected goals calculation
           db.from('matches')
-            .select('home_score, away_score, is_third_place')
+            .select('home_score, away_score')
             .eq('status', 'complete')
-            .not('home_score', 'is', null)
+            .not('home_score', 'is', null),
+          db.from('matches')
+            .select('home_team_id, away_team_id, round_id')
+            .gte('kickoff', windowStart.toISOString())
+            .lte('kickoff', windowEnd.toISOString())
+            .not('home_team_id', 'is', null),
+          db.from('picks').select('player_id, team_id, multiplier, round_id, teams(flag_emoji, is_longshot), players(slug)')
         ]);
 
         if (error) throw error;
 
-        // ── Expected goals calculation ─────────────────────────
-        let goalsScored = 0;
-        let matchesPlayed = 0;
+        // ── Projected goals ────────────────────────────────────
+        let goalsScored = 0, matchesPlayed = 0;
         (completedMatches || []).forEach(m => {
-          // Only 90-minute goals — stored as home_score/away_score (after 90 mins)
-          goalsScored += (m.home_score || 0) + (m.away_score || 0);
+          goalsScored  += (m.home_score || 0) + (m.away_score || 0);
           matchesPlayed++;
         });
         const projectedTotal = matchesPlayed > 0
-          ? Math.round((goalsScored / matchesPlayed) * TOTAL_MATCHES * 10) / 10
+          ? (goalsScored / matchesPlayed) * TOTAL_MATCHES
           : null;
 
-        // Show projected total label
         const projLabel = document.getElementById('proj-goals-label');
         if (projectedTotal !== null) {
-          projLabel.textContent = `⚽ Projected tournament goals: ${projectedTotal.toFixed(1)} (${goalsScored} goals in ${matchesPlayed} matches)`;
+          projLabel.textContent = `⚽ Projected tournament goals: ${Math.round(projectedTotal)} (${goalsScored} goals in ${matchesPlayed} matches)`;
         }
 
         // ── Round context ──────────────────────────────────────
-        const currentRound = (rounds || []).find(r => !r.is_complete);
-        const isKnockout = currentRound && currentRound.round_type === 'knockout';
-        const completedRounds = (rounds || []).filter(r => r.is_complete).sort((a,b) => b.sort_order - a.sort_order);
+        const currentRound       = (rounds || []).find(r => !r.is_complete);
+        const isKnockout         = currentRound && currentRound.round_type === 'knockout';
+        const completedRounds    = (rounds || []).filter(r => r.is_complete).sort((a,b) => b.sort_order - a.sort_order);
         const lastCompletedRound = completedRounds.length > 0 ? completedRounds[0] : null;
 
         // ── Day counter ────────────────────────────────────────
@@ -195,8 +210,7 @@
           const roundMatches = firstMatchData.filter(m => m.round_id === currentRound.id);
           if (roundMatches.length > 0) {
             const firstKickoff = new Date(roundMatches[0].kickoff);
-            const msPerDay = 24 * 60 * 60 * 1000;
-            const dayNum = Math.floor((now - firstKickoff) / msPerDay) + 1;
+            const dayNum = Math.floor((now - firstKickoff) / (24 * 60 * 60 * 1000)) + 1;
             if (dayNum >= 1) dayLabel = ' · Day ' + dayNum;
           }
         }
@@ -214,7 +228,6 @@
         const furthestMap = {};
         (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
 
-        // Prior positions from server-side snapshot of last completed round
         const priorPosMap = {};
         if (lastCompletedRound && snapshots) {
           snapshots
@@ -222,30 +235,46 @@
             .forEach(s => { priorPosMap[s.player_id] = s.position; });
         }
 
-        const todayMap = {};
-        (todayPicks || []).forEach(r => {
-          if (!todayMap[r.player_slug]) { todayMap[r.player_slug] = []; todayMap[r.player_slug]._keys = new Set(); }
-          const flag = r.picked_side === 'home' ? r.home_flag : r.away_flag;
-          const key = flag + '|' + r.multiplier + '|' + r.pick_is_longshot;
-          if (!todayMap[r.player_slug]._keys.has(key)) {
-            todayMap[r.player_slug]._keys.add(key);
-            todayMap[r.player_slug].push({ flag, isLongshot: r.pick_is_longshot, multiplier: r.multiplier });
-          }
-        });
-
         const formMap = {};
         (teamsUsed || []).forEach(r => {
           if (!formMap[r.player_id]) formMap[r.player_id] = [];
           if (r.match_result) formMap[r.player_id].push(r.match_result === 'win' ? 'W' : r.match_result === 'draw' ? 'D' : 'L');
         });
 
+        // ── Today's picks ──────────────────────────────────────
+        const todayTeamRoundPairs = new Set();
+        (todayMatchRows || []).forEach(m => {
+          todayTeamRoundPairs.add(m.home_team_id + '|' + m.round_id);
+          todayTeamRoundPairs.add(m.away_team_id + '|' + m.round_id);
+        });
+
+        const playerTodayMap = {};
+        (allPicks || []).forEach(pick => {
+          const pairKey = pick.team_id + '|' + pick.round_id;
+          if (todayTeamRoundPairs.has(pairKey) && pick.teams) {
+            if (!playerTodayMap[pick.player_id]) {
+              playerTodayMap[pick.player_id] = { picks: [], keys: new Set() };
+            }
+            const flag  = pick.teams.flag_emoji;
+            const dedup = flag + '|' + pick.multiplier + '|' + pick.teams.is_longshot;
+            if (!playerTodayMap[pick.player_id].keys.has(dedup)) {
+              playerTodayMap[pick.player_id].keys.add(dedup);
+              playerTodayMap[pick.player_id].picks.push({
+                flag,
+                isLongshot: pick.teams.is_longshot,
+                multiplier: pick.multiplier
+              });
+            }
+          }
+        });
+
         const koDisplay = isKnockout ? '' : 'none';
-        document.getElementById('left-col-header').style.display = isKnockout ? '' : 'none';
+        document.getElementById('left-col-header').style.display   = isKnockout ? '' : 'none';
         document.getElementById('status-col-header').style.display = isKnockout ? '' : 'none';
         document.querySelectorAll('.knockout-only').forEach(el => el.style.display = koDisplay);
         document.querySelectorAll('.group-only').forEach(el => el.style.display = isKnockout ? 'none' : '');
 
-        // ── Sort — using projected total for goals prediction tiebreak ──
+        // ── Sort ───────────────────────────────────────────────
         const sorted = (scores || []).sort((a, b) => {
           if (b.total_points !== a.total_points) return b.total_points - a.total_points;
           if (isKnockout) {
@@ -254,7 +283,6 @@
           }
           const agd = gdMap[a.player_id] || 0, bgd = gdMap[b.player_id] || 0;
           if (bgd !== agd) return bgd - agd;
-          // Goals prediction tiebreak — closest to projected total
           if (projectedTotal !== null) {
             const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
             const bDiff = Math.abs((b.total_goals_prediction || 0) - projectedTotal);
@@ -268,36 +296,39 @@
         tbody.innerHTML = '';
 
         sorted.forEach((p, i) => {
-          const pos = i + 1;
-          const teamsLeft = 48 - (p.teams_used || 0);
-          const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
-          const gd = gdMap[p.player_id] || 0;
-          const form = formMap[p.player_id] || [];
-          const todayPicks_p = todayMap[p.slug] || [];
-          const isPlayingToday = todayPicks_p.length > 0;
+          const pos            = i + 1;
+          const teamsLeft      = 48 - (p.teams_used || 0);
+          const medal          = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
+          const gd             = gdMap[p.player_id] || 0;
+          const form           = formMap[p.player_id] || [];
+          const todayData      = playerTodayMap[p.player_id];
+          const isPlayingToday = !!todayData;
+          const todayPicks_p   = todayData ? todayData.picks : [];
 
-          // Arrow from server-side snapshot
           let arrowHtml = '<span class="arrow-eq">—</span>';
           if (priorPosMap[p.player_id]) {
             const prev = priorPosMap[p.player_id];
-            if (pos < prev) arrowHtml = '<span class="arrow-up">▲' + (prev - pos) + '</span>';
+            if (pos < prev)      arrowHtml = '<span class="arrow-up">▲' + (prev - pos) + '</span>';
             else if (pos > prev) arrowHtml = '<span class="arrow-dn">▼' + (pos - prev) + '</span>';
           }
 
           const recentForm = form.slice(-5);
-          const formHtml = recentForm.map(f => '<span class="form-pip form-' + f + '" title="' + f + '"></span>').join('');
-          const gdHtml = gd > 0 ? '<span class="gd-pos">+' + gd + '</span>' : gd < 0 ? '<span class="gd-neg">' + gd + '</span>' : '<span class="gd-zero">0</span>';
-          const flagHtml = todayPicks_p.map(function(pick) {
-            let cls = pick.multiplier === 3 ? (pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt') : (pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt');
+          const formHtml   = recentForm.map(f => '<span class="form-pip form-' + f + '" title="' + f + '"></span>').join('');
+          const gdHtml     = gd > 0 ? '<span class="gd-pos">+' + gd + '</span>' : gd < 0 ? '<span class="gd-neg">' + gd + '</span>' : '<span class="gd-zero">0</span>';
+          const flagHtml   = todayPicks_p.map(pick => {
+            const cls = pick.multiplier === 3 ? (pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt') : (pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt');
             return '<span class="flag-inline' + cls + '">' + pick.flag + '</span>';
           }).join('');
 
-          // Goals prediction display — diff from projected
-          let goalsPredDisplay = p.total_goals_prediction || '—';
-          if (projectedTotal !== null && p.total_goals_prediction) {
-            const diff = Math.round((p.total_goals_prediction - projectedTotal) * 10) / 10;
-            const diffStr = diff > 0 ? '+' + diff : '' + diff;
-            goalsPredDisplay = p.total_goals_prediction + ' <span style="font-size:10px;color:var(--text-muted)">(' + diffStr + ')</span>';
+          // ── Goals diff column ──────────────────────────────
+          let goalsDiffHtml = '<span style="color:var(--text-muted)">—</span>';
+          if (projectedTotal !== null && p.total_goals_prediction !== null && p.total_goals_prediction !== undefined) {
+            const diff    = Math.round(p.total_goals_prediction - projectedTotal);
+            const absDiff = Math.abs(diff);
+            const sign    = diff >= 0 ? '+' : '-';
+            const cls = diff >= 0 ? 'goals-diff-close' : 'goals-diff-far';
+
+            goalsDiffHtml = `<span class="goals-diff ${cls}">${sign}${absDiff}</span>`;
           }
 
           const koStyle = isKnockout ? '' : 'display:none;';
@@ -313,7 +344,7 @@
             '<td style="color:var(--text-muted)">' + (p.rounds_played || 0) + '</td>' +
             '<td class="points">' + (p.total_points || 0) + '</td>' +
             '<td>' + gdHtml + '</td>' +
-            '<td class="hide-mobile tiebreak-val">' + goalsPredDisplay + '</td>' +
+            '<td class="hide-mobile tiebreak-val">' + goalsDiffHtml + '</td>' +
             '<td class="hide-mobile">' + formHtml + '</td>' +
             '<td class="hide-mobile" style="' + koStyle + 'color:var(--text-muted)">' + teamsLeft + '</td>' +
             '<td class="hide-mobile" style="' + koStyle + '">' + (p.is_eliminated

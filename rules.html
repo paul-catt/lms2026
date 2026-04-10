@@ -31,7 +31,6 @@
     .green { color: var(--green);  font-weight: 700; }
     .red   { color: var(--red);    font-weight: 700; }
 
-    /* Quick reference at top */
     .qr-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -48,7 +47,6 @@
     }
     .qr-block strong { color: var(--text); display: block; margin-bottom: 2px; font-size: 13px; }
 
-    /* Scoring table */
     .scoring-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
@@ -74,7 +72,6 @@
       letter-spacing: 0.04em;
     }
 
-    /* Phase table */
     .phase-table {
       width: 100%;
       border-collapse: collapse;
@@ -99,7 +96,6 @@
     }
     .phase-table tr:last-child td { border-bottom: none; }
 
-    /* Tiebreaker list */
     .tiebreaker-list {
       counter-reset: tb;
       list-style: none;
@@ -130,7 +126,6 @@
       margin-top: 1px;
     }
 
-    /* Default pool */
     .default-pool {
       display: flex;
       flex-wrap: wrap;
@@ -166,7 +161,7 @@
       <p style="color:var(--text-muted); font-size:13px">World Cup 2026 Last Man Standing</p>
     </div>
 
-    <!-- QUICK REFERENCE — top -->
+    <!-- QUICK REFERENCE -->
     <div class="card">
       <div class="rules-section" style="margin-bottom:0">
         <h2>📌 At a Glance</h2>
@@ -177,7 +172,7 @@
           </div>
           <div class="qr-block">
             <strong>Knockout stages</strong>
-            One pick per round. Win at 90 mins = <span class="green">2pts</span>. Win/loss via ET or pens = <span class="gold">1pt</span>. Loss at 90 mins = <span class="red">0pts</span>.
+            One pick per round. Win at 90 mins = <span class="green">2pts</span>. Win/loss in Extra Time or on Penalties = <span class="gold">1pt</span>. Loss at 90 mins = <span class="red">0pts</span>.
           </div>
           <div class="qr-block">
             <strong>Longshot bonus ⭐</strong>
@@ -199,20 +194,18 @@
       </div>
     </div>
 
-
-
     <!-- HOW IT WORKS -->
     <div class="card">
       <div class="rules-section">
         <h2>🏆 How It Works</h2>
-        <p>Each player picks teams each round and earns points based on their results. The player with the most points at the end of the tournament wins. Pick wisely — each team can only be used <span class="highlight">once across the entire competition</span>. With 3 group phases (2 picks each) and 5 knockout rounds (1 pick each), you have <span class="highlight">11 picks in total</span>.</p>
+        <p>Each player picks teams each round and earns points based on their results. The player with the most points at the end of the tournament wins. Pick wisely — each team can only be used <span class="highlight">once across the entire competition</span>.</p>
         <p style="margin-top:8px">You have a <span class="highlight">unique personal link</span> to access your dashboard, submit picks, and track your score. The <span class="highlight">live leaderboard</span> and <span class="highlight">match centre</span> are available to everyone — no login needed.</p>
       </div>
 
       <!-- SCORING -->
       <div class="rules-section">
         <h2>⚽ Scoring</h2>
-        <p>Points are simple and flat — just the value of your pick:</p>
+        <p>Points are won as follows:</p>
         <div class="scoring-grid">
           <div class="scoring-block">
             <div class="val" style="color:var(--gold)">3</div>
@@ -235,7 +228,7 @@
             <div class="lbl">Longshot ⭐ bonus</div>
           </div>
         </div>
-        <p style="margin-top:12px">A <span class="gold">3-point pick</span> on a longshot that wins earns <span class="highlight">4 points</span>. A <span class="blue">2-point pick</span> on a longshot that wins earns <span class="highlight">3 points</span>.</p>
+
       </div>
 
       <!-- GROUP STAGES -->
@@ -250,8 +243,8 @@
         <p>From the Round of 32 through to the Final, you pick <span class="highlight">one team per round</span>. All knockout picks are worth <span class="blue">2 points</span> for a win. Scoring for each outcome:</p>
         <ul style="margin-top:8px">
           <li><span class="highlight">Win at 90 mins</span> — <span class="green">2pts</span> (+ longshot bonus if applicable)</li>
-          <li><span class="highlight">Win via ET / penalties</span> — <span class="green">1pt</span> (+ longshot bonus if applicable)</li>
-          <li><span class="highlight">Loss via ET / penalties</span> — <span class="gold">1pt</span>, and you're out of the competition</li>
+          <li><span class="highlight">Win in Extra Time or on Penalties</span> — <span class="green">1pt</span> (+ longshot bonus if applicable)</li>
+          <li><span class="highlight">Loss in Extra Time or on Penalties</span> — <span class="gold">1pt</span>, and you're out of the competition</li>
           <li><span class="highlight">Loss at 90 mins</span> — <span class="red">0pts</span>, and you're out of the competition</li>
         </ul>
       </div>
@@ -259,7 +252,7 @@
       <!-- LONGSHOT -->
       <div class="rules-section">
         <h2>⭐ Longshot Bonus</h2>
-        <p>The <span class="highlight">bottom 24 teams by tournament odds</span> are designated as longshots, marked with ⭐ in the pick form. If a longshot team wins — including via ET or penalties in knockout rounds — the player who picked them earns an extra <span class="gold">+1 point</span>. The bonus applies in both group and knockout stages.</p>
+        <p>The <span class="highlight">bottom 24 teams by tournament odds</span> are designated as longshots, marked with ⭐ in the pick form. If a longshot team wins — including in Extra Time or on Penalties in knockout rounds — the player who picked them earns an extra <span class="gold">+1 point</span> on top. The bonus applies in both group and knockout stages.</p>
       </div>
     </div>
 
@@ -269,25 +262,37 @@
         <h2>⏰ Deadlines &amp; Advance Picks</h2>
         <p>Each round has a pick deadline — typically the morning before the first game of that round. <span class="red">Picks lock automatically at the deadline.</span> No exceptions.</p>
         <p style="margin-top:8px">You can submit picks for <span class="highlight">future rounds in advance</span> at any time, and change them freely up until that round's deadline. Your personal dashboard shows all open rounds with a dropdown to switch between them.</p>
-        <p style="margin-top:8px">If you miss a deadline, you will be <span class="highlight">auto-assigned teams</span> from the default pool in priority order — two teams for group phases, one for knockout rounds. The first available teams from this list that you haven't already used will be assigned:</p>
+        <p style="margin-top:8px">If you miss a deadline, you will be <span class="highlight">auto-assigned teams</span> from the default pool in alphabetical priority order — two teams for group phases (3-point first, then 2-point), one for knockout rounds. Only teams still alive in the tournament and not already used by you are eligible. The pool teams are:</p>
 
-        <div class="default-pool" style="margin-top:12px">
-          <div class="pool-team"><span>1.</span>🇲🇽 Mexico</div>
-          <div class="pool-team"><span>2.</span>🇺🇾 Uruguay</div>
-          <div class="pool-team"><span>3.</span>🇺🇸 USA</div>
-          <div class="pool-team"><span>4.</span>🇯🇵 Japan</div>
-          <div class="pool-team"><span>5.</span>🇭🇷 Croatia</div>
+        <div class="default-pool">
+          <div class="pool-team"><span>1.</span>🇦🇹 Austria</div>
+          <div class="pool-team"><span>2.</span>🇧🇦 Bosnia &amp; Herzeg.</div>
+          <div class="pool-team"><span>3.</span>🇨🇦 Canada</div>
+          <div class="pool-team"><span>4.</span>🇭🇷 Croatia</div>
+          <div class="pool-team"><span>5.</span>🇨🇿 Czech Rep</div>
           <div class="pool-team"><span>6.</span>🇪🇨 Ecuador</div>
-          <div class="pool-team"><span>7.</span>🇸🇳 Senegal</div>
-          <div class="pool-team"><span>8.</span>🇸🇪 Sweden</div>
-          <div class="pool-team"><span>9.</span>🇦🇹 Austria</div>
-          <div class="pool-team"><span>10.</span>🇲🇦 Morocco</div>
+          <div class="pool-team"><span>7.</span>🇪🇬 Egypt</div>
+          <div class="pool-team"><span>8.</span>🇬🇭 Ghana</div>
+          <div class="pool-team"><span>9.</span>🇨🇮 Ivory Coast</div>
+          <div class="pool-team"><span>10.</span>🇵🇾 Paraguay</div>
+          <div class="pool-team"><span>11.</span>🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scotland</div>
+          <div class="pool-team"><span>12.</span>🇸🇳 Senegal</div>
+          <div class="pool-team"><span>13.</span>🇰🇷 South Korea</div>
+          <div class="pool-team"><span>14.</span>🇸🇪 Sweden</div>
+          <div class="pool-team"><span>15.</span>🇨🇭 Switzerland</div>
+          <div class="pool-team"><span>16.</span>🇹🇷 Turkey</div>
         </div>
       </div>
 
       <div class="rules-section" style="margin-bottom:0">
         <h2>💀 Elimination</h2>
-        <p>You are eliminated if your team loses in the knockout phase. You are also out if you cannot pick a team — because every team remaining has already been used by you in a previous round. In either case, your score is frozen and your final position is locked at that point.</p>
+        <p>You are eliminated in any of the following situations:</p>
+        <ul style="margin-top:8px">
+          <li>Your picked team <span class="highlight">loses in the knockout phase</span> (at 90 mins, or in extra time or on penalties)</li>
+          <li>You have <span class="highlight">used all remaining teams</span> and cannot make any more picks</li>
+          <li>You <span class="highlight">miss a knockout deadline</span> and there are no default pool teams left that are eligible for you</li>
+        </ul>
+        <p style="margin-top:8px">In all cases, your score is frozen at the point where your final pick was used.</p>
       </div>
     </div>
 

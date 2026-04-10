@@ -723,60 +723,75 @@
       }
     }
 
-    // ── Goals prediction ──────────────────────────────────────
-    function initGoalsPrediction() {
-      // Find Group Phase 1 — sort_order === 1 and round_type === 'group'
-      const gp1 = allRounds.find(r => r.round_type === 'group' && r.sort_order === 1);
-      if (!gp1) return;
+    // REPLACE the entire initGoalsPrediction() function in player.html with this:
 
-      const card = document.getElementById('goals-prediction-card');
-      const input = document.getElementById('goals-prediction-input');
-      const btn = document.getElementById('goals-prediction-btn');
-      const msg = document.getElementById('goals-prediction-msg');
-      const lockedMsg = document.getElementById('goals-prediction-locked');
+function initGoalsPrediction() {
+  const gp1 = allRounds.find(r => r.round_type === 'group' && r.sort_order === 1);
+  if (!gp1) return;
 
-      card.style.display = 'block';
+  const card      = document.getElementById('goals-prediction-card');
+  const input     = document.getElementById('goals-prediction-input');
+  const btn       = document.getElementById('goals-prediction-btn');
+  const msg       = document.getElementById('goals-prediction-msg');
+  const lockedMsg = document.getElementById('goals-prediction-locked');
 
-      // Pre-populate if already set
-      if (player.total_goals_prediction) {
-        input.value = player.total_goals_prediction;
-      }
+  const deadline   = new Date(gp1.deadline);
+  const now        = getEffectiveDate();
+  const isLocked   = now >= deadline;
+  const hasEntered = player.total_goals_prediction !== null && player.total_goals_prediction !== undefined;
 
-      const deadline = new Date(gp1.deadline);
-      const isLocked = getEffectiveDate() >= deadline;
+  // Already entered AND locked: hide the card entirely — nothing to do
+  if (hasEntered && isLocked) return;
 
-      if (isLocked) {
-        input.disabled = true;
-        btn.style.display = 'none';
-        lockedMsg.style.display = 'block';
-        return;
-      }
+  card.style.display = 'block';
 
-      btn.addEventListener('click', async () => {
-        const val = parseInt(input.value);
-        if (isNaN(val) || val < 0 || val > 500) {
-          msg.style.color = 'var(--red)';
-          msg.textContent = 'Enter a number between 0 and 500.';
-          return;
-        }
-        btn.disabled = true;
-        btn.textContent = 'Saving...';
-        msg.textContent = '';
-        const { error } = await db.from('players')
-          .update({ total_goals_prediction: val })
-          .eq('id', player.id);
-        if (error) {
-          msg.style.color = 'var(--red)';
-          msg.textContent = '❌ ' + error.message;
-        } else {
-          player.total_goals_prediction = val;
-          msg.style.color = 'var(--green)';
-          msg.textContent = '✅ Saved!';
-        }
-        btn.disabled = false;
-        btn.textContent = 'Save Prediction';
-      });
+  if (isLocked && !hasEntered) {
+    input.disabled = true;
+    btn.style.display = 'none';
+    lockedMsg.innerHTML = '⚠️ Deadline has passed. No prediction was entered — this tiebreaker won\'t apply to you.';
+    lockedMsg.style.color = 'var(--red)';
+    lockedMsg.style.display = 'block';
+    return;
+  }
+
+  if (hasEntered) {
+    // Show current value, allow editing until deadline
+    input.value = player.total_goals_prediction;
+    card.querySelector('p').innerHTML =
+      '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> total goals. You can change this up until the Group Phase 1 deadline.';
+  } else {
+    // Not entered — warn if deadline is within 24h
+    const hoursLeft = (deadline - now) / (1000 * 60 * 60);
+    if (hoursLeft < 24) {
+      const minsLeft = Math.round(hoursLeft * 60);
+      const timeStr  = hoursLeft >= 1 ? Math.floor(hoursLeft) + 'h ' + (minsLeft % 60) + 'm' : minsLeft + ' minutes';
+      const reminder = document.createElement('div');
+      reminder.className = 'alert alert-warning';
+      reminder.style.cssText = 'margin-bottom:10px;font-size:13px';
+      reminder.textContent = '⏰ Deadline in ' + timeStr + ' — don\'t forget to enter your prediction!';
+      card.insertBefore(reminder, btn.closest('div'));
     }
+  }
+
+  btn.addEventListener('click', async () => {
+    const val = parseInt(input.value);
+    if (isNaN(val) || val < 0 || val > 500) {
+      msg.style.color = 'var(--red)'; msg.textContent = 'Enter a number between 0 and 500.'; return;
+    }
+    btn.disabled = true; btn.textContent = 'Saving...'; msg.textContent = '';
+    const { error } = await db.from('players').update({ total_goals_prediction: val }).eq('id', player.id);
+    if (error) {
+      msg.style.color = 'var(--red)'; msg.textContent = '❌ ' + error.message;
+    } else {
+      player.total_goals_prediction = val;
+      msg.style.color = 'var(--green)';
+      msg.textContent = '✅ Saved! You predicted ' + val + ' goals.';
+      card.querySelector('p').innerHTML =
+        '✅ You predicted <strong>' + val + '</strong> total goals. You can change this up until the Group Phase 1 deadline.';
+    }
+    btn.disabled = false; btn.textContent = 'Save Prediction';
+  });
+}
 
     // ── Pick history ──────────────────────────────────────────
     function renderHistory() {
