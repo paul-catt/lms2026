@@ -141,6 +141,20 @@
       font-weight: 600;
     }
     .pool-team span { color: var(--text-muted); font-weight: 400; margin-right: 4px; }
+
+    .prizes-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 13px;
+    }
+    .prizes-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .prizes-table tr:last-child td { border-bottom: none; }
+    .prizes-table .place { font-weight: 600; color: var(--text); }
+    .prizes-table .prize { font-weight: 700; color: var(--green); text-align: right; }
   </style>
 </head>
 <body>
@@ -168,11 +182,11 @@
         <div class="qr-grid">
           <div class="qr-block">
             <strong>Group stages</strong>
-            Pick a <span class="gold">3-point</span> and a <span class="blue">2-point</span> team each phase. Win earns that many points.
+            3 phases of 12 matches (11–17 Jun, 18–23 Jun &amp; 24–27 Jun). Pick a <span class="gold">3-point</span> and a <span class="blue">2-point</span> team each phase. Win earns that many points.
           </div>
           <div class="qr-block">
             <strong>Knockout stages</strong>
-            One pick per round. Win at 90 mins = <span class="green">2pts</span>. Win/loss in Extra Time or on Penalties = <span class="gold">1pt</span>. Loss at 90 mins = <span class="red">0pts</span>.
+            One pick per round. Win at full time = <span class="green">2pts</span>. Win or lose in Extra Time / Penalties = <span class="gold">1pt</span>. Lose at full time = <span class="red">0pts</span>. Lose and you're eliminated!
           </div>
           <div class="qr-block">
             <strong>Longshot bonus ⭐</strong>
@@ -228,13 +242,20 @@
             <div class="lbl">Longshot ⭐ bonus</div>
           </div>
         </div>
-
       </div>
 
       <!-- GROUP STAGES -->
       <div class="rules-section">
         <h2>🔵 Group Stages</h2>
-        <p>There are three group phases. Each phase you pick <span class="highlight">two teams</span>: one as your <span class="gold">3-point pick</span> and one as your <span class="blue">2-point pick</span>. A win earns those points, a draw earns <span class="highlight">1pt</span> regardless of pick type, a loss earns <span class="red">0</span>. The 3-point pick is only available in group stages.</p>
+        <p>There are three group phases across 11–27 June. Each phase you pick <span class="highlight">two teams</span>: one as your <span class="gold">3-point pick</span> and one as your <span class="blue">2-point pick</span>. A win earns those points, a draw earns <span class="highlight">1pt</span> regardless of pick type, a loss earns <span class="red">0</span>. The 3-point pick is only available in group stages.</p>
+        <table class="phase-table">
+          <thead><tr><th>Phase</th><th>Dates</th><th>Matches</th></tr></thead>
+          <tbody>
+            <tr><td>Group Phase 1</td><td>11–17 Jun</td><td>12 matches</td></tr>
+            <tr><td>Group Phase 2</td><td>18–23 Jun</td><td>12 matches</td></tr>
+            <tr><td>Group Phase 3</td><td>24–27 Jun</td><td>12 matches</td></tr>
+          </tbody>
+        </table>
       </div>
 
       <!-- KNOCKOUT -->
@@ -242,10 +263,10 @@
         <h2>🔴 Knockout Stages</h2>
         <p>From the Round of 32 through to the Final, you pick <span class="highlight">one team per round</span>. All knockout picks are worth <span class="blue">2 points</span> for a win. Scoring for each outcome:</p>
         <ul style="margin-top:8px">
-          <li><span class="highlight">Win at 90 mins</span> — <span class="green">2pts</span> (+ longshot bonus if applicable)</li>
-          <li><span class="highlight">Win in Extra Time or on Penalties</span> — <span class="green">1pt</span> (+ longshot bonus if applicable)</li>
-          <li><span class="highlight">Loss in Extra Time or on Penalties</span> — <span class="gold">1pt</span>, and you're out of the competition</li>
-          <li><span class="highlight">Loss at 90 mins</span> — <span class="red">0pts</span>, and you're out of the competition</li>
+          <li><span class="highlight">Your team wins</span> — <span class="green">2pts</span> (+ longshot bonus if applicable)</li>
+          <li><span class="highlight">Your team wins in Extra Time or on Penalties</span> — <span class="green">1pt</span> (+ longshot bonus if applicable) — you stay in</li>
+          <li><span class="highlight">Your team loses in Extra Time or on Penalties</span> — <span class="gold">1pt</span> — but you're eliminated</li>
+          <li><span class="highlight">Your team loses</span> — <span class="red">0pts</span> — and you're eliminated</li>
         </ul>
       </div>
 
@@ -288,11 +309,22 @@
         <h2>💀 Elimination</h2>
         <p>You are eliminated in any of the following situations:</p>
         <ul style="margin-top:8px">
-          <li>Your picked team <span class="highlight">loses in the knockout phase</span> (at 90 mins, or in extra time or on penalties)</li>
+          <li>Your picked team <span class="highlight">loses in the knockout phase</span> (including in extra time or on penalties)</li>
           <li>You have <span class="highlight">used all remaining teams</span> and cannot make any more picks</li>
           <li>You <span class="highlight">miss a knockout deadline</span> and there are no default pool teams left that are eligible for you</li>
         </ul>
         <p style="margin-top:8px">In all cases, your score is frozen at the point where your final pick was used.</p>
+        <p style="margin-top:8px; padding:10px 14px; background:var(--surface2); border-radius:8px; border-left:3px solid var(--accent)">
+          <strong>Example:</strong> Lee wins his semi-final pick, but has no eligible teams left for the final — he's eliminated after the semi-final and his score is frozen there. Hard luck, Lee.
+        </p>
+      </div>
+    </div>
+
+    <!-- GOALS PREDICTION -->
+    <div class="card">
+      <div class="rules-section" style="margin-bottom:0">
+        <h2>🎯 Goals Prediction</h2>
+        <p>At the start of the competition, each player submits a prediction for the <span class="highlight">total number of goals scored across all 104 matches</span>, including goals in extra time. This is used as a tiebreaker — the player closest to the actual total wins the tiebreak. You can set or update your prediction from your personal dashboard during Group Phase 1.</p>
       </div>
     </div>
 
@@ -317,10 +349,25 @@
           <li>
             <div>
               <div class="highlight">Total goals prediction</div>
-              <div style="font-size:12px; margin-top:2px">Closest to the actual total goals scored in the tournament. Submitted at the start of the competition. Lower difference wins.</div>
+              <div style="font-size:12px; margin-top:2px">Closest to the actual total goals scored in the tournament (including extra time). Submitted at the start of the competition. Lower difference wins.</div>
             </div>
           </li>
         </ul>
+      </div>
+    </div>
+
+    <!-- ENTRY & PRIZES -->
+    <div class="card">
+      <div class="rules-section" style="margin-bottom:0">
+        <h2>💰 Entry &amp; Prizes</h2>
+        <p>It costs <span class="highlight">£10 to enter</span>. Hand it over however you like — cash, bank transfer, carrier pigeon. Just make sure it arrives.</p>
+        <table class="prizes-table">
+          <tr><td class="place">🥇 1st place</td><td class="prize">£120</td></tr>
+          <tr><td class="place">🥈 2nd place</td><td class="prize">£60</td></tr>
+          <tr><td class="place">🥉 3rd place</td><td class="prize">£40</td></tr>
+          <tr><td class="place">4th place</td><td class="prize">£20</td></tr>
+          <tr><td class="place">🪦 Last place</td><td class="prize" style="color:var(--text-muted)">£10 <span style="font-size:11px; font-weight:400">(your tenner back — at least you've got that)</span></td></tr>
+        </table>
       </div>
     </div>
 

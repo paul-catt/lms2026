@@ -19,6 +19,7 @@
     }
     .preview-wrap > div { display: inline-block; }
     .status-msg { font-size: 12px; color: var(--text-muted,#666); margin-top:6px; min-height:18px; }
+    .copy-box { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px; font-size:13px; line-height:1.7; white-space:pre-wrap; font-family:monospace; margin-bottom:8px; }
 
     /* ══════════════════════════════════════════
        RENDER STYLES — go into the PNGs
@@ -75,7 +76,6 @@
     .r-bar-track { flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
     .r-bar-fill  { height: 100%; background: linear-gradient(90deg, #2b6cb0, #63b3ed); border-radius: 4px; }
     .r-bar-val   { font-size: 10px; font-weight: 700; color: #2d3748; min-width: 28px; text-align: right; }
-    .r-split { display: flex; gap: 3px; justify-content: center; align-items: center; }
     .r-split-2 { background: #ebf8ff; color: #2b6cb0; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; }
     .r-split-3 { background: #fffbeb; color: #b7791f; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; }
     .r-pick-name { font-style: italic; color: #2d3748; font-size: 11px; }
@@ -116,6 +116,36 @@
         </div>
       </div>
       <div class="status-msg" id="load-status"></div>
+    </div>
+
+    <!-- 0. UNPICKED REMINDER (new) -->
+    <div class="card section-block">
+      <div class="section-header">
+        <div>
+          <div class="card-title" style="margin-bottom:2px">📣 Pick Reminder Copy</div>
+          <div style="font-size:12px; color:var(--text-muted)">Pre-written WhatsApp message listing who hasn't picked yet. Copy and paste into the group chat.</div>
+        </div>
+        <button class="btn btn-primary" id="btn-copy-reminder" style="display:none">📋 Copy</button>
+      </div>
+      <div id="reminder-copy-wrap" style="display:none">
+        <div class="copy-box" id="reminder-copy-text"></div>
+      </div>
+      <div class="status-msg" id="reminder-status">Click "Load Round Data" to generate.</div>
+    </div>
+
+    <!-- 00. END OF ROUND SUMMARY (new) -->
+    <div class="card section-block">
+      <div class="section-header">
+        <div>
+          <div class="card-title" style="margin-bottom:2px">🏁 End of Round Summary</div>
+          <div style="font-size:12px; color:var(--text-muted)">Post-round WhatsApp message: top 3, movers, eliminations. Based on last completed round.</div>
+        </div>
+        <button class="btn btn-primary" id="btn-copy-summary" style="display:none">📋 Copy</button>
+      </div>
+      <div id="summary-copy-wrap" style="display:none">
+        <div class="copy-box" id="summary-copy-text"></div>
+      </div>
+      <div class="status-msg" id="summary-status">Click "Load Round Data" to generate.</div>
     </div>
 
     <!-- 1. Picks by Name -->
@@ -181,6 +211,22 @@
     document.getElementById('btn-dl-tp').addEventListener('click', () => downloadRender('tp-render', 'TeamsPicked'));
     document.getElementById('btn-dl-cb').addEventListener('click', () => downloadRender('cb-render', 'Combinations'));
     document.getElementById('btn-dl-lb').addEventListener('click', () => downloadRender('lb-render', 'Leaderboard'));
+    document.getElementById('btn-copy-reminder').addEventListener('click', () => {
+      const text = document.getElementById('reminder-copy-text').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('btn-copy-reminder');
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+      });
+    });
+    document.getElementById('btn-copy-summary').addEventListener('click', () => {
+      const text = document.getElementById('summary-copy-text').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('btn-copy-summary');
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+      });
+    });
 
     function val(id) { return document.getElementById(id).value.trim(); }
     function setStatus(id, msg) { document.getElementById(id).innerHTML = msg; }
@@ -219,7 +265,8 @@
           { data: picks, error: pkErr },
           { data: matches, error: mErr },
           { data: rounds },
-          { data: firstMatchData }
+          { data: firstMatchData },
+          { data: snapshots }
         ] = await Promise.all([
           db.from('players').select('id, name, slug, is_eliminated, total_goals_prediction'),
           db.from('picks').select(`
@@ -229,22 +276,21 @@
             teams(id, name, flag_emoji, is_longshot)
           `),
           db.from('matches').select('id, round_id, home_team_id, away_team_id, odds_home, odds_away, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)'),
-          db.from('rounds').select('id, name, round_type, sort_order, is_complete').order('sort_order'),
-          db.from('matches').select('round_id, kickoff').order('kickoff')
+          db.from('rounds').select('id, name, round_type, sort_order, is_complete, deadline').order('sort_order'),
+          db.from('matches').select('round_id, kickoff').order('kickoff'),
+          db.from('leaderboard_snapshots').select('player_id, position, round_id')
         ]);
 
         if (pErr) throw pErr;
         if (pkErr) throw pkErr;
         if (mErr) throw mErr;
 
-        // Opponent lookup
         const opponentLookup = {};
         (matches || []).forEach(m => {
           opponentLookup[m.round_id + '|' + m.home_team_id] = m.away_team ? m.away_team.name : '?';
           opponentLookup[m.round_id + '|' + m.away_team_id] = m.home_team ? m.home_team.name : '?';
         });
 
-        // Current round = highest sort_order with any picks
         let currentRoundSortOrder = 0;
         picks.forEach(p => {
           if (p.rounds && p.rounds.sort_order > currentRoundSortOrder)
@@ -254,7 +300,6 @@
         const currentPicks = picks.filter(p => p.rounds && p.rounds.sort_order === currentRoundSortOrder);
         const completedPicksAll = picks.filter(p => p.pick_results && p.pick_results.length > 0);
 
-        // Team metadata for current round
         const teamCounts = {}, teamCounts2 = {}, teamCounts3 = {};
         const teamNames = {}, teamFlags = {}, teamOpponents = {}, teamIsLongshot = {};
 
@@ -281,7 +326,6 @@
           playerCurrentPicks[pick.player_id].push(pick);
         });
 
-        // Player stats
         const statsMap = {};
         players.forEach(p => {
           statsMap[p.id] = {
@@ -312,32 +356,21 @@
         const rankMap = {};
         sortedPlayers.forEach((p, i) => { rankMap[p.id] = i + 1; });
 
-        const roundLabel    = buildRoundLabel(rounds, currentRoundSortOrder);
-        const dayLabel      = buildDayLabel(rounds, currentRoundSortOrder, firstMatchData);
+        const roundLabel     = buildRoundLabel(rounds, currentRoundSortOrder);
+        const dayLabel       = buildDayLabel(rounds, currentRoundSortOrder, firstMatchData);
         const fullRoundLabel = roundLabel + dayLabel;
 
-        // ── Auto-populate oddsMap from DB match odds ──────────────────
-        // Reset odds for teams in current round (keep manually entered values if fresh)
-        Object.keys(teamCounts).forEach(tid => {
-          if (!oddsMap[tid]) oddsMap[tid] = '';
-        });
+        Object.keys(teamCounts).forEach(tid => { if (!oddsMap[tid]) oddsMap[tid] = ''; });
 
         const currentRoundObj = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
         let missingOddsCount = 0;
 
         if (currentRoundObj) {
-          // Build odds from the matches data we already fetched
           (matches || []).forEach(m => {
             if (m.round_id !== currentRoundObj.id) return;
-            if (m.odds_home && teamCounts[m.home_team_id] && !oddsMap[m.home_team_id]) {
-              oddsMap[m.home_team_id] = m.odds_home;
-            }
-            if (m.odds_away && teamCounts[m.away_team_id] && !oddsMap[m.away_team_id]) {
-              oddsMap[m.away_team_id] = m.odds_away;
-            }
+            if (m.odds_home && teamCounts[m.home_team_id] && !oddsMap[m.home_team_id]) oddsMap[m.home_team_id] = m.odds_home;
+            if (m.odds_away && teamCounts[m.away_team_id] && !oddsMap[m.away_team_id]) oddsMap[m.away_team_id] = m.odds_away;
           });
-
-          // Count still-missing
           Object.keys(teamCounts).forEach(tid => { if (!oddsMap[tid]) missingOddsCount++; });
         }
 
@@ -347,13 +380,16 @@
           teamCounts, teamCounts2, teamCounts3,
           teamNames, teamFlags, teamOpponents, teamIsLongshot,
           currentRoundSortOrder, isGroupRound,
-          roundLabel, dayLabel, fullRoundLabel
+          roundLabel, dayLabel, fullRoundLabel,
+          rounds, snapshots: snapshots || []
         };
 
         renderPicksByName();
         renderTeamsPicked();
         renderCombinations();
         renderLeaderboard();
+        renderReminderCopy();
+        renderRoundSummary();
 
         let statusMsg = `✅ Loaded — ${currentPicks.length} picks in current round · ${completedPicksAll.length} results recorded.`;
         if (missingOddsCount > 0) {
@@ -367,6 +403,131 @@
         console.error(err);
         setStatus('load-status', '❌ Error: ' + err.message);
       }
+    }
+
+    // ── NEW: Pick Reminder Copy ───────────────────────────────
+    function renderReminderCopy() {
+      if (!roundData) return;
+      const { players, playerCurrentPicks, rounds, currentRoundSortOrder, roundLabel, isGroupRound } = roundData;
+
+      const currentRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
+      const deadline = currentRound ? new Date(currentRound.deadline) : null;
+
+      // Find who hasn't picked for the current round
+      const unpicked = players.filter(p => !p.is_eliminated && !playerCurrentPicks[p.id]);
+      const picked   = players.filter(p => !p.is_eliminated && playerCurrentPicks[p.id]);
+
+      let deadlineStr = '';
+      if (deadline) {
+        deadlineStr = deadline.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }) +
+          ' at ' + deadline.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+      }
+
+      let msg = '';
+      if (unpicked.length === 0) {
+        msg = `✅ Everyone has picked for ${roundLabel}!\n\nAll ${picked.length} players are locked in. Bring it on. 🏆`;
+      } else {
+        const unpickedNames = unpicked.map(p => `• ${p.name}`).join('\n');
+        const pickedNames   = picked.map(p => p.name).join(', ');
+        msg = `⏰ *LMS 2026 — ${roundLabel} Picks*\n\n`;
+        msg += `${picked.length}/${players.filter(p => !p.is_eliminated).length} players have picked`;
+        if (deadline) msg += ` · Deadline: ${deadlineStr}`;
+        msg += `\n\n`;
+        if (isGroupRound) {
+          msg += `Still need to pick (3pt + 2pt):\n${unpickedNames}\n\n`;
+        } else {
+          msg += `Still need to pick:\n${unpickedNames}\n\n`;
+        }
+        msg += `Use your personal link to submit before the deadline locks! 🔒`;
+      }
+
+      document.getElementById('reminder-copy-text').textContent = msg;
+      document.getElementById('reminder-copy-wrap').style.display = 'block';
+      document.getElementById('btn-copy-reminder').style.display = 'inline-block';
+      setStatus('reminder-status', unpicked.length === 0
+        ? '✅ Everyone has picked.'
+        : `⚠️ ${unpicked.length} player(s) haven't picked yet.`
+      );
+    }
+
+    // ── NEW: End of Round Summary ─────────────────────────────
+    function renderRoundSummary() {
+      if (!roundData) return;
+      const { sortedPlayers, rounds, snapshots, currentRoundSortOrder } = roundData;
+
+      // Find last completed round
+      const completedRounds = (rounds || []).filter(r => r.is_complete).sort((a,b) => b.sort_order - a.sort_order);
+      if (completedRounds.length === 0) {
+        setStatus('summary-status', 'No completed rounds yet.');
+        return;
+      }
+      const lastRound = completedRounds[0];
+      const prevRound = completedRounds[1] || null;
+
+      // Build position maps
+      const currentPosMap = {};
+      sortedPlayers.forEach((p, i) => { currentPosMap[p.id] = i + 1; });
+
+      const prevPosMap = {};
+      if (prevRound && snapshots.length > 0) {
+        snapshots.filter(s => s.round_id === prevRound.id).forEach(s => { prevPosMap[s.player_id] = s.position; });
+      }
+
+      // Eliminations this round
+      const eliminatedThisRound = sortedPlayers.filter(p => p.isOut);
+
+      // Top 3
+      const top3 = sortedPlayers.slice(0, 3);
+
+      // Biggest movers up/down
+      const movers = sortedPlayers
+        .filter(p => prevPosMap[p.id] !== undefined)
+        .map(p => ({ ...p, move: prevPosMap[p.id] - currentPosMap[p.id] }))
+        .filter(p => p.move !== 0)
+        .sort((a,b) => Math.abs(b.move) - Math.abs(a.move));
+
+      const biggestUp   = movers.find(p => p.move > 0);
+      const biggestDown = movers.find(p => p.move < 0);
+
+      let msg = `🏆 *LMS 2026 — ${lastRound.name} Round Up*\n\n`;
+
+      msg += `📊 *Leaderboard*\n`;
+      top3.forEach((p, i) => {
+        const medal = ['🥇','🥈','🥉'][i];
+        msg += `${medal} ${p.name} — ${p.totalPoints}pts\n`;
+      });
+      if (sortedPlayers.length > 3) {
+        msg += `... (${sortedPlayers.length - 3} more on the leaderboard)\n`;
+      }
+
+      if (biggestUp) {
+        msg += `\n📈 *Biggest mover up:* ${biggestUp.name} ▲${biggestUp.move} place${biggestUp.move !== 1 ? 's' : ''}`;
+      }
+      if (biggestDown) {
+        msg += `\n📉 *Biggest mover down:* ${biggestDown.name} ▼${Math.abs(biggestDown.move)} place${Math.abs(biggestDown.move) !== 1 ? 's' : ''}`;
+      }
+
+      if (eliminatedThisRound.length > 0) {
+        msg += `\n\n💀 *Eliminated:* ${eliminatedThisRound.map(p => p.name).join(', ')}`;
+      } else {
+        msg += `\n\n✅ No eliminations this round.`;
+      }
+
+      const alive = sortedPlayers.filter(p => !p.isOut).length;
+      msg += `\n\n👥 ${alive} player${alive !== 1 ? 's' : ''} still standing.`;
+
+      const nextOpenRound = (rounds || []).find(r => !r.is_complete);
+      if (nextOpenRound) {
+        const deadline = new Date(nextOpenRound.deadline);
+        const deadlineStr = deadline.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }) +
+          ' at ' + deadline.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+        msg += `\n\n⏰ *Next up: ${nextOpenRound.name}* — deadline ${deadlineStr}`;
+      }
+
+      document.getElementById('summary-copy-text').textContent = msg;
+      document.getElementById('summary-copy-wrap').style.display = 'block';
+      document.getElementById('btn-copy-summary').style.display = 'inline-block';
+      setStatus('summary-status', `Based on ${lastRound.name}.`);
     }
 
     function makeHeader(superLabel, title, sub) {
@@ -489,9 +650,7 @@
             <td class="r-pos">${i+1}</td>
             <td class="left"><strong>${teamFlags[tid]||''} ${teamNames[tid]||'?'}${lsTag}</strong>
               <span style="color:#718096;font-size:10px"> v ${teamOpponents[tid]||'?'}</span></td>
-            <td>${hasOdds
-              ? `<div class="r-bar-wrap"><div class="r-bar-track"><div class="r-bar-fill" style="width:${barPct}%"></div></div><span class="r-bar-val">${odds.toFixed(1)}</span></div>`
-              : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+            <td>${hasOdds ? `<div class="r-bar-wrap"><div class="r-bar-track"><div class="r-bar-fill" style="width:${barPct}%"></div></div><span class="r-bar-val">${odds.toFixed(1)}</span></div>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
             <td>${count2 ? `<span class="r-split-2">${count2}</span>` : '<span style="color:#cbd5e0">—</span>'}</td>
             <td>${count3 ? `<span class="r-split-3">${count3}</span>` : '<span style="color:#cbd5e0">—</span>'}</td>
             <td><span class="r-badge ${badgeCls}">${count}</span></td>
@@ -515,9 +674,7 @@
             <td class="r-pos">${i+1}</td>
             <td class="left"><strong>${teamFlags[tid]||''} ${teamNames[tid]||'?'}${lsTag}</strong>
               <span style="color:#718096;font-size:10px"> v ${teamOpponents[tid]||'?'}</span></td>
-            <td>${hasOdds
-              ? `<div class="r-bar-wrap"><div class="r-bar-track"><div class="r-bar-fill" style="width:${barPct}%"></div></div><span class="r-bar-val">${odds.toFixed(1)}</span></div>`
-              : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+            <td>${hasOdds ? `<div class="r-bar-wrap"><div class="r-bar-track"><div class="r-bar-fill" style="width:${barPct}%"></div></div><span class="r-bar-val">${odds.toFixed(1)}</span></div>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
             <td><span class="r-badge ${badgeCls}">${count}</span></td>
           </tr>`;
         });
@@ -585,9 +742,7 @@
         html += `<tr>
           <td class="r-pos">${i+1}</td>
           <td class="left"><strong>${nameA}</strong> <span style="color:#a0aec0;font-size:10px">&amp;</span> <strong>${nameB}</strong></td>
-          <td>${hasOdds
-            ? `<div class="r-bar-wrap"><div class="r-bar-track"><div class="r-bar-fill" style="width:${barPct}%"></div></div><span class="r-bar-val">${odds.toFixed(1)}</span></div>`
-            : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+          <td>${hasOdds ? `<div class="r-bar-wrap"><div class="r-bar-track"><div class="r-bar-fill" style="width:${barPct}%"></div></div><span class="r-bar-val">${odds.toFixed(1)}</span></div>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
           <td><span class="r-badge ${badgeCls}">${count}</span></td>
           <td><div class="res-dots">${resultDot(tidA)}${resultDot(tidB)}</div></td>
         </tr>`;

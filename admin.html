@@ -6,6 +6,12 @@
   <title>Admin — LMS 2026</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- PWA / Home screen icon -->
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LMS 2026">
   <style>
     .tab-bar { display:flex; gap:4px; margin-bottom:20px; flex-wrap:wrap; }
     .tab { padding:8px 16px; border-radius:8px; cursor:pointer; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); font-size:13px; font-weight:600; }
@@ -76,6 +82,11 @@
       color: var(--text-muted);
       margin-top: 4px;
     }
+
+    /* Paid badge */
+    .paid-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; cursor:pointer; border:none; }
+    .paid-yes { background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); }
+    .paid-no  { background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
   </style>
 </head>
 <body>
@@ -95,21 +106,8 @@
     </div>
   </nav>
 
-  <!-- LOGIN GATE -->
-  <div id="login-screen" style="max-width:400px; margin:80px auto; padding:0 16px">
-    <div class="card">
-      <div class="card-title">🔒 Admin Login</div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="admin-password" placeholder="Enter admin password" autocomplete="off" />
-      </div>
-      <button class="btn btn-primary" id="login-btn" style="width:100%">Login</button>
-      <div id="login-error" class="alert alert-danger" style="display:none; margin-top:12px">Incorrect password.</div>
-    </div>
-  </div>
-
-  <!-- ADMIN PANEL -->
-  <main id="admin-panel" style="display:none; max-width:1000px">
+  <!-- ADMIN PANEL — no login gate -->
+  <main id="admin-panel" style="max-width:1000px">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px">
       <h1 style="font-size:20px; font-weight:800">⚙️ Admin Panel</h1>
     </div>
@@ -136,11 +134,11 @@
         </div>
         <div class="admin-grid">
           <div class="form-group">
-            <label>Home Score <span style="color:var(--text-muted); font-size:11px">(after 90 mins)</span></label>
+            <label id="home-score-label">Home Score <span style="color:var(--text-muted); font-size:11px" id="home-score-hint"></span></label>
             <input type="number" id="result-home-score" min="0" placeholder="0" />
           </div>
           <div class="form-group">
-            <label>Away Score <span style="color:var(--text-muted); font-size:11px">(after 90 mins)</span></label>
+            <label id="away-score-label">Away Score <span style="color:var(--text-muted); font-size:11px" id="away-score-hint"></span></label>
             <input type="number" id="result-away-score" min="0" placeholder="0" />
           </div>
         </div>
@@ -153,7 +151,7 @@
             Match went to extra time / penalties
           </label>
           <div id="pens-winner-row" style="display:none; margin-top:10px">
-            <label style="font-size:13px; font-weight:600; margin-bottom:6px; display:block">Who won on penalties?</label>
+            <label style="font-size:13px; font-weight:600; margin-bottom:6px; display:block">Who won AET or on Penalties?</label>
             <select id="pens-winner-select" style="width:100%">
               <option value="">Select winner...</option>
             </select>
@@ -165,6 +163,63 @@
         </div>
         <button class="btn btn-primary" id="submit-result-btn" style="margin-top:16px">Save Result & Calculate Points</button>
         <div id="result-msg" style="margin-top:8px; font-size:12px"></div>
+      </div>
+
+
+      <!-- BULK RESULT ENTRY CARD -->
+      <div class="card" style="margin-top:16px; border:1px solid var(--accent)">
+        <div class="card-title" style="color:var(--accent)">⚡ Bulk Result Entry</div>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">
+          Enter scores for multiple matches at once — useful for busy group stage days. Select a round to see all pending matches for that day.
+        </p>
+        <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:12px">
+          <div class="form-group" style="margin:0; min-width:200px">
+            <label>Round</label>
+            <select id="bulk-round-select"><option value="">Select round...</option></select>
+          </div>
+          <button class="btn btn-secondary" id="btn-load-bulk">Load Matches</button>
+        </div>
+        <div id="bulk-matches-wrap"></div>
+        <div id="bulk-msg" style="margin-top:8px; font-size:12px"></div>
+      </div>
+
+      <!-- CORRECT A RESULT CARD -->
+      <div class="card" style="margin-top:16px; border:1px solid var(--gold)">
+        <div class="card-title" style="color:var(--gold)">✏️ Correct a Result</div>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">
+          Fix a wrong score or completely undo a result. <strong>Correction</strong> overwrites the score and recalculates points. <strong>Undo</strong> wipes the result entirely — the match returns to pending as if it never happened.
+        </p>
+        <div class="form-group">
+          <label>Match</label>
+          <select id="correct-match-select"><option value="">Loading completed matches...</option></select>
+        </div>
+        <div class="admin-grid" id="correct-score-fields">
+          <div class="form-group">
+            <label id="correct-home-label">Home Score <span style="color:var(--text-muted); font-size:11px" id="correct-home-hint"></span></label>
+            <input type="number" id="correct-home-score" min="0" placeholder="0" />
+          </div>
+          <div class="form-group">
+            <label id="correct-away-label">Away Score <span style="color:var(--text-muted); font-size:11px" id="correct-away-hint"></span></label>
+            <input type="number" id="correct-away-score" min="0" placeholder="0" />
+          </div>
+        </div>
+        <div class="pens-row" id="correct-pens-row" style="margin-bottom:12px">
+          <label>
+            <input type="checkbox" id="correct-pens-checkbox" />
+            Match went to extra time / penalties
+          </label>
+          <div id="correct-pens-winner-row" style="display:none; margin-top:10px">
+            <label style="font-size:13px; font-weight:600; margin-bottom:6px; display:block">Who won AET or on Penalties?</label>
+            <select id="correct-pens-winner-select" style="width:100%">
+              <option value="">Select winner...</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn btn-primary" id="btn-save-correction">💾 Save Correction & Recalculate</button>
+          <button class="btn btn-danger" id="btn-undo-result">↩️ Undo Result Completely</button>
+        </div>
+        <div id="correct-msg" style="margin-top:8px; font-size:12px"></div>
       </div>
 
       <!-- SNAPSHOT CARD -->
@@ -200,7 +255,7 @@
           <div class="formula-val" id="proj-goals-val">—</div>
           <div class="formula-sub" id="proj-goals-sub">Projected total goals (loading...)</div>
           <div style="font-size:11px; color:var(--text-muted); margin-top:8px">
-            Formula: (goals scored ÷ matches played) × 104 total matches
+            Formula: (goals scored ÷ matches played) × 104 total matches · Knockout goals include AET
           </div>
         </div>
         <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px">
@@ -229,6 +284,11 @@
         </div>
         <div class="card">
           <div class="card-title">Players</div>
+          <div id="payment-summary" style="display:flex; gap:20px; margin-bottom:12px; padding:10px 14px; background:var(--surface2); border-radius:8px; font-size:13px; flex-wrap:wrap; align-items:center">
+            <span>💰 <strong id="pay-paid" style="color:var(--green)">—</strong> paid</span>
+            <span>❌ <strong id="pay-unpaid" style="color:var(--red)">—</strong> unpaid</span>
+            <span style="color:var(--text-muted)">👥 <strong id="pay-total">—</strong> total &nbsp;·&nbsp; <strong id="pay-amount">£—</strong> collected</span>
+          </div>
           <div id="players-list"><div class="loading"><div class="spinner"></div></div></div>
         </div>
       </div>
@@ -296,8 +356,11 @@
     <!-- TEAMS TAB -->
     <div class="tab-content" id="tab-teams">
       <div class="card">
-        <div class="card-title">Longshot Override</div>
-        <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">Toggle which teams get the +1 bonus point for a win.</p>
+        <div class="card-title">🏳️ Teams</div>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">
+          <strong>Band</strong> — used on the leaderboard in knockout to show each player's remaining teams by quality tier.<br>
+          <strong>Longshot</strong> — teams that get the +1 bonus point for a win.
+        </p>
         <div id="teams-longshot-list"><div class="loading"><div class="spinner"></div></div></div>
       </div>
     </div>
@@ -356,7 +419,6 @@
   <script>
     const SUPABASE_URL = 'https://jrdjdqjepffdcjdfuarc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZGpkcWplcGZmZGNqZGZ1YXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTczMTcsImV4cCI6MjA5MTAzMzMxN30.nzriEXXYSau-2wBElzgWw-Gwhf1crzVA2lcvPexjq0M';
-    const ADMIN_PASSWORD = 'lms2026admin';
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -388,6 +450,7 @@
 
     const LS_KEY = 'lms2026_test_date';
     let matchCache = {};
+    let completedMatchCache = {};
     let picksCache = {};
     let roundsCache = [];
 
@@ -451,22 +514,6 @@
       });
     }
 
-    function showAdmin() {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('admin-panel').style.display = 'block';
-      initAdmin();
-    }
-
-    function checkPassword() {
-      const pw = document.getElementById('admin-password').value;
-      if (pw === ADMIN_PASSWORD) {
-        sessionStorage.setItem('lms_admin', '1');
-        showAdmin();
-      } else {
-        document.getElementById('login-error').style.display = 'block';
-      }
-    }
-
     function switchTab(name) {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -478,9 +525,9 @@
 
     document.addEventListener('DOMContentLoaded', function() {
       updateBanner();
-      if (sessionStorage.getItem('lms_admin')) showAdmin();
-      document.getElementById('login-btn').addEventListener('click', checkPassword);
-      document.getElementById('admin-password').addEventListener('keydown', e => { if (e.key === 'Enter') checkPassword(); });
+      // No login gate — go straight to admin
+      initAdmin();
+
       document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', function() { switchTab(this.dataset.tab); }));
       document.getElementById('add-player-btn').addEventListener('click', addPlayer);
       document.getElementById('submit-result-btn').addEventListener('click', submitResult);
@@ -493,6 +540,12 @@
       document.getElementById('match-kickoff').addEventListener('change', updateKickoffDayLabel);
       document.getElementById('match-round-select').addEventListener('change', updateKickoffDayLabel);
       document.getElementById('btn-auto-assign').addEventListener('click', autoAssignMissingPicks);
+
+      // Correct a result
+      document.getElementById('correct-match-select').addEventListener('change', onCorrectMatchSelected);
+      document.getElementById('correct-pens-checkbox').addEventListener('change', onCorrectPensToggle);
+      document.getElementById('btn-save-correction').addEventListener('click', saveCorrection);
+      document.getElementById('btn-undo-result').addEventListener('click', undoResult);
 
       document.getElementById('btn-set-test-date').addEventListener('click', () => {
         const val = document.getElementById('test-date-input').value;
@@ -512,11 +565,50 @@
     async function initAdmin() {
       loadPlayers();
       loadMatchesForResult();
+      loadCompletedMatchesForCorrection();
       loadRoundsAndTeamsForMatchForm();
       loadTeamsLongshot();
       loadSnapshotRounds();
       loadOddsTable();
       loadAssignRounds();
+      loadBulkRounds();
+    }
+
+    // ── Score label helper ────────────────────────────────────
+    function updateScoreLabels(matchId, homeHintId, awayHintId) {
+      const match = matchCache[matchId] || completedMatchCache[matchId];
+      if (!match) {
+        document.getElementById(homeHintId).textContent = '';
+        document.getElementById(awayHintId).textContent = '';
+        return;
+      }
+      const isKnockout = match.rounds && match.rounds.round_type === 'knockout';
+      const hint = isKnockout ? '(incl. AET if applicable)' : '';
+      document.getElementById(homeHintId).textContent = hint;
+      document.getElementById(awayHintId).textContent = hint;
+    }
+
+    // ── Day number helper ─────────────────────────────────────
+    function kickoffDayNumber(kickoffLocalValue, roundName) {
+      const startDateStr = ROUND_START_DATES[roundName];
+      if (!startDateStr) return null;
+      const roundWindowStartMs = Date.UTC(
+        parseInt(startDateStr.slice(0,4)),
+        parseInt(startDateStr.slice(5,7)) - 1,
+        parseInt(startDateStr.slice(8,10)),
+        14, 0, 0
+      );
+      const ko = new Date(kickoffLocalValue);
+      const koD = new Date(ko);
+      const koH = koD.getUTCHours();
+      let koWindowMs;
+      if (koH < 10) {
+        koWindowMs = Date.UTC(koD.getUTCFullYear(), koD.getUTCMonth(), koD.getUTCDate() - 1, 14, 0, 0);
+      } else {
+        koWindowMs = Date.UTC(koD.getUTCFullYear(), koD.getUTCMonth(), koD.getUTCDate(), 14, 0, 0);
+      }
+      const dayNum = Math.round((koWindowMs - roundWindowStartMs) / (20 * 60 * 60 * 1000)) + 1;
+      return dayNum >= 1 ? dayNum : null;
     }
 
     // ── Players ───────────────────────────────────────────────
@@ -524,13 +616,28 @@
       const { data } = await db.from('players').select('*').order('name');
       const el = document.getElementById('players-list');
       if (!data || data.length === 0) { el.innerHTML = '<p style="color:var(--text-muted)">No players yet.</p>'; return; }
-      el.innerHTML = data.map(p => `
+      // Payment summary
+      const paidCount   = data.filter(p => p.has_paid).length;
+      const unpaidCount = data.length - paidCount;
+      const ps = document.getElementById('pay-paid');
+      if (ps) {
+        document.getElementById('pay-paid').textContent   = paidCount;
+        document.getElementById('pay-unpaid').textContent = unpaidCount;
+        document.getElementById('pay-total').textContent  = data.length;
+        document.getElementById('pay-amount').textContent = '£' + (paidCount * 10);
+      }
+
+      el.innerHTML = data.map(p => {
+        const paidClass = p.has_paid ? 'paid-yes' : 'paid-no';
+        const paidLabel = p.has_paid ? '✅ Paid' : '❌ Unpaid';
+        return `
         <div class="player-row" id="player-row-${p.id}">
           <div>
             <div style="font-weight:600">${p.name}</div>
             <div style="font-size:11px; color:var(--text-muted)">/${p.slug} · Goals: ${p.total_goals_prediction || '—'}</div>
           </div>
-          <div style="display:flex; gap:6px; align-items:center">
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap">
+            <button class="paid-badge ${paidClass}" onclick="togglePaid('${p.id}', ${p.has_paid ? 'true' : 'false'})">${paidLabel}</button>
             <a href="/${p.slug}" target="_blank" class="btn btn-secondary btn-sm">View</a>
             <button class="btn btn-secondary btn-sm btn-edit" onclick="toggleEdit('${p.id}')">Edit</button>
             <button class="btn btn-danger btn-sm" onclick="deletePlayer('${p.id}', '${p.name}')">Delete</button>
@@ -555,7 +662,13 @@
           </div>
           <div id="edit-msg-${p.id}" style="margin-top:6px; font-size:12px"></div>
         </div>
-      `).join('');
+      `}).join('');
+    }
+
+    async function togglePaid(id, currentlyPaid) {
+      const newVal = !currentlyPaid;
+      const { error } = await db.from('players').update({ has_paid: newVal }).eq('id', id);
+      if (!error) loadPlayers();
     }
 
     function toggleEdit(id) { document.getElementById('edit-form-' + id).classList.toggle('open'); }
@@ -619,23 +732,19 @@
       detail.textContent = '';
 
       try {
-        // 1. Get all active, non-eliminated players
         const { data: players } = await db.from('players')
           .select('id, name')
           .eq('is_active', true)
           .eq('is_eliminated', false);
 
-        // 2. Get existing picks for this round
         const { data: existingPicks } = await db.from('picks')
           .select('player_id, multiplier')
           .eq('round_id', roundId);
 
-        // 3. Get default pool in priority order, with team info
         const { data: pool } = await db.from('default_pool')
           .select('priority_order, team_id, teams(id, name, flag_emoji)')
           .order('priority_order');
 
-        // 4. Get teams still alive — any team with a scheduled or live match
         const { data: aliveMatches } = await db.from('matches')
           .select('home_team_id, away_team_id')
           .in('status', ['scheduled', 'live']);
@@ -646,10 +755,8 @@
           aliveTeamIds.add(m.away_team_id);
         });
 
-        // Filter pool to alive teams only
         const alivePool = (pool || []).filter(p => aliveTeamIds.has(p.team_id));
 
-        // 5. Get all picks ever made across all rounds (to check teams used per player)
         const { data: allPicks } = await db.from('picks').select('player_id, team_id');
         const usedByPlayer = {};
         (allPicks || []).forEach(p => {
@@ -666,101 +773,49 @@
           const has3pt  = myPicks.some(p => p.multiplier === 3);
           const has2pt  = myPicks.some(p => p.multiplier === 2);
 
-          // Skip if fully picked for this round
           if (isGroup && has3pt && has2pt) continue;
           if (!isGroup && myPicks.length > 0) continue;
 
           const usedTeams = usedByPlayer[player.id] || new Set();
-
-          // Eligible pool = alive AND not already used by this player
-          const eligible = alivePool.filter(p => !usedTeams.has(p.team_id));
+          const eligible  = alivePool.filter(p => !usedTeams.has(p.team_id));
 
           if (isGroup) {
             const toAssign = [];
-
-            // 3pt slot — take first eligible
             if (!has3pt && eligible.length > 0) {
-              toAssign.push({
-                team_id: eligible[0].team_id,
-                multiplier: 3,
-                name: eligible[0].teams.name,
-                flag: eligible[0].teams.flag_emoji
-              });
+              toAssign.push({ team_id: eligible[0].team_id, multiplier: 3, name: eligible[0].teams.name, flag: eligible[0].teams.flag_emoji });
             }
-
-            // 2pt slot — take next eligible that isn't already in toAssign
             if (!has2pt) {
               for (const candidate of eligible) {
                 if (!toAssign.some(a => a.team_id === candidate.team_id)) {
-                  toAssign.push({
-                    team_id: candidate.team_id,
-                    multiplier: 2,
-                    name: candidate.teams.name,
-                    flag: candidate.teams.flag_emoji
-                  });
+                  toAssign.push({ team_id: candidate.team_id, multiplier: 2, name: candidate.teams.name, flag: candidate.teams.flag_emoji });
                   break;
                 }
               }
             }
-
-            if (toAssign.length === 0) {
-              log.push(`⚠️ ${player.name} — no eligible pool teams available`);
-              continue;
-            }
-
+            if (toAssign.length === 0) { log.push(`⚠️ ${player.name} — no eligible pool teams available`); continue; }
             for (const assignment of toAssign) {
-              const { error } = await db.from('picks').insert({
-                player_id:   player.id,
-                round_id:    roundId,
-                team_id:     assignment.team_id,
-                multiplier:  assignment.multiplier,
-                is_assigned: true
-              });
-              if (!error) {
-                assignCount++;
-                log.push(`✅ ${player.name} → ${assignment.flag} ${assignment.name} (${assignment.multiplier}pt)`);
-              } else {
-                log.push(`❌ ${player.name} → ${assignment.name} failed: ${error.message}`);
-              }
+              const { error } = await db.from('picks').insert({ player_id: player.id, round_id: roundId, team_id: assignment.team_id, multiplier: assignment.multiplier, is_assigned: true });
+              if (!error) { assignCount++; log.push(`✅ ${player.name} → ${assignment.flag} ${assignment.name} (${assignment.multiplier}pt)`); }
+              else { log.push(`❌ ${player.name} → ${assignment.name} failed: ${error.message}`); }
             }
-
           } else {
-            // Knockout — one pick
             if (eligible.length === 0) {
               log.push(`⚠️ ${player.name} — pool exhausted. Marking as eliminated.`);
-              await db.from('players').update({
-                is_eliminated: true,
-                eliminated_at: new Date().toISOString()
-              }).eq('id', player.id);
+              await db.from('players').update({ is_eliminated: true, eliminated_at: new Date().toISOString() }).eq('id', player.id);
               continue;
             }
-
             const assignment = eligible[0];
-            const { error } = await db.from('picks').insert({
-              player_id:   player.id,
-              round_id:    roundId,
-              team_id:     assignment.team_id,
-              multiplier:  2,
-              is_assigned: true
-            });
-            if (!error) {
-              assignCount++;
-              log.push(`✅ ${player.name} → ${assignment.teams.flag_emoji} ${assignment.teams.name} (2pt)`);
-            } else {
-              log.push(`❌ ${player.name} → ${assignment.teams.name} failed: ${error.message}`);
-            }
+            const { error } = await db.from('picks').insert({ player_id: player.id, round_id: roundId, team_id: assignment.team_id, multiplier: 2, is_assigned: true });
+            if (!error) { assignCount++; log.push(`✅ ${player.name} → ${assignment.teams.flag_emoji} ${assignment.teams.name} (2pt)`); }
+            else { log.push(`❌ ${player.name} → ${assignment.teams.name} failed: ${error.message}`); }
           }
         }
 
         msg.style.color  = assignCount > 0 ? 'var(--green)' : 'var(--text-muted)';
-        msg.textContent  = assignCount > 0
-          ? `✅ ${assignCount} pick(s) assigned.`
-          : 'No missing picks found — everyone has picked.';
+        msg.textContent  = assignCount > 0 ? `✅ ${assignCount} pick(s) assigned.` : 'No missing picks found — everyone has picked.';
         detail.innerHTML = log.join('<br>');
-
       } catch (err) {
         msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message;
-        console.error(err);
       }
 
       btn.disabled = false; btn.textContent = '🤖 Assign Unpicked Players';
@@ -771,14 +826,8 @@
       const wrap = document.getElementById('goals-table-wrap');
       wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
-      const [
-        { data: completedMatches },
-        { data: players }
-      ] = await Promise.all([
-        db.from('matches')
-          .select('home_score, away_score, is_third_place')
-          .eq('status', 'complete')
-          .not('home_score', 'is', null),
+      const [{ data: completedMatches }, { data: players }] = await Promise.all([
+        db.from('matches').select('home_score, away_score, is_third_place').eq('status', 'complete').not('home_score', 'is', null),
         db.from('players').select('id, name, total_goals_prediction').order('name')
       ]);
 
@@ -787,9 +836,7 @@
         goalsScored  += (m.home_score || 0) + (m.away_score || 0);
         matchesPlayed++;
       });
-      const projectedTotal = matchesPlayed > 0
-        ? Math.round((goalsScored / matchesPlayed) * TOTAL_MATCHES * 10) / 10
-        : null;
+      const projectedTotal = matchesPlayed > 0 ? Math.round((goalsScored / matchesPlayed) * TOTAL_MATCHES * 10) / 10 : null;
 
       const valEl = document.getElementById('proj-goals-val');
       const subEl = document.getElementById('proj-goals-sub');
@@ -803,28 +850,21 @@
 
       const rows = (players || []).map(p => {
         const pred = p.total_goals_prediction;
-        const diff = (projectedTotal !== null && pred !== null && pred !== undefined)
-          ? Math.round(pred - projectedTotal)
-          : null;
+        const diff = (projectedTotal !== null && pred !== null && pred !== undefined) ? Math.round(pred - projectedTotal) : null;
         return { ...p, pred, diff, absDiff: diff !== null ? Math.abs(diff) : Infinity };
       }).sort((a,b) => a.absDiff - b.absDiff);
 
-      let html = '<div class="table-wrap"><table><thead><tr><th>#</th><th>Player</th><th>Prediction</th><th>Diff from projection</th></tr></thead><tbody>';
+      let html = '<div class="table-wrap"><table><thead><tr><th>#</th><th style="min-width:120px">Player</th><th>Prediction</th><th>Diff from projection</th></tr></thead><tbody>';
       rows.forEach((p, i) => {
         const predStr = p.pred !== null && p.pred !== undefined ? p.pred : '—';
         let diffHtml;
-        if (p.diff === null) {
-          diffHtml = '<span class="goals-diff-na">not entered</span>';
-        } else if (p.diff > 0) {
-          diffHtml = '<span class="goals-diff-pos">+' + p.diff + '</span>';
-        } else if (p.diff < 0) {
-          diffHtml = '<span class="goals-diff-neg">' + p.diff + '</span>';
-        } else {
-          diffHtml = '<span class="goals-diff-zero">exact!</span>';
-        }
+        if (p.diff === null) diffHtml = '<span class="goals-diff-na">not entered</span>';
+        else if (p.diff > 0) diffHtml = '<span class="goals-diff-pos">+' + p.diff + '</span>';
+        else if (p.diff < 0) diffHtml = '<span class="goals-diff-neg">' + p.diff + '</span>';
+        else diffHtml = '<span class="goals-diff-zero">exact!</span>';
         html += '<tr>' +
           '<td style="color:var(--text-muted)">' + (i+1) + '</td>' +
-          '<td style="font-weight:600">' + p.name + '</td>' +
+          '<td style="font-weight:600; min-width:120px">' + p.name + '</td>' +
           '<td style="font-size:15px; font-weight:700">' + predStr + '</td>' +
           '<td>' + diffHtml + '</td>' +
           '</tr>';
@@ -849,13 +889,165 @@
       matchCache = {};
       data.forEach(m => { matchCache[m.id] = m; });
 
+      const roundFirstKickoffMap = {};
+      for (const m of data) {
+        if (!roundFirstKickoffMap[m.round_id]) {
+          const { data: firstMatch } = await db.from('matches').select('kickoff').eq('round_id', m.round_id).not('home_team_id', 'is', null).order('kickoff', { ascending: true }).limit(1);
+          roundFirstKickoffMap[m.round_id] = firstMatch && firstMatch.length > 0 ? firstMatch[0].kickoff : null;
+        }
+      }
+
+      function toWindowStartMs(isoStr) {
+        const d = new Date(isoStr);
+        const h = d.getUTCHours();
+        if (h < 10) return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 14, 0, 0);
+        return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 14, 0, 0);
+      }
+
       sel.innerHTML = '<option value="">Select a match...</option>' + data.map(m => {
-        const d = new Date(m.kickoff).toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+        const d          = new Date(m.kickoff).toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
+        const t          = new Date(m.kickoff).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
         const thirdLabel = m.is_third_place ? ' 🥉' : '';
-        return `<option value="${m.id}">${m.home_team.flag_emoji} ${m.home_team.name} vs ${m.away_team.flag_emoji} ${m.away_team.name} (${m.rounds.name}, ${d})${thirdLabel}</option>`;
+        const firstKo    = roundFirstKickoffMap[m.round_id];
+        let dayStr = '';
+        if (firstKo) {
+          const firstWindowMs = toWindowStartMs(firstKo);
+          const koWindowMs    = toWindowStartMs(m.kickoff);
+          const dayNum        = Math.round((koWindowMs - firstWindowMs) / (20 * 60 * 60 * 1000)) + 1;
+          if (dayNum >= 1) dayStr = ' Day ' + dayNum + ' ·';
+        }
+        return `<option value="${m.id}">${m.home_team.flag_emoji} ${m.home_team.name} vs ${m.away_team.flag_emoji} ${m.away_team.name} (${m.rounds.name} ·${dayStr} ${d}, ${t})${thirdLabel}</option>`;
       }).join('');
 
       await loadAllPicks(data.map(m => m.id), data);
+    }
+
+    // ── Completed matches for correction ──────────────────────
+    async function loadCompletedMatchesForCorrection() {
+      const { data } = await db
+        .from('matches')
+        .select('id, kickoff, round_id, home_score, away_score, pens_winner_id, is_third_place, rounds(id, name, round_type), home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
+        .eq('status', 'complete')
+        .not('home_team_id', 'is', null)
+        .order('kickoff', { ascending: false });
+
+      const sel = document.getElementById('correct-match-select');
+      if (!data || data.length === 0) { sel.innerHTML = '<option>No completed matches</option>'; return; }
+
+      completedMatchCache = {};
+      data.forEach(m => { completedMatchCache[m.id] = m; });
+
+      sel.innerHTML = '<option value="">Select a completed match...</option>' + data.map(m => {
+        const d = new Date(m.kickoff).toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
+        const score = m.home_score + '–' + m.away_score;
+        return `<option value="${m.id}">${m.home_team.flag_emoji} ${m.home_team.name} ${score} ${m.away_team.flag_emoji} ${m.away_team.name} (${m.rounds.name}, ${d})</option>`;
+      }).join('');
+    }
+
+    function onCorrectMatchSelected() {
+      const matchId = document.getElementById('correct-match-select').value;
+      const match   = matchId ? completedMatchCache[matchId] : null;
+      if (!match) return;
+
+      document.getElementById('correct-home-score').value = match.home_score ?? '';
+      document.getElementById('correct-away-score').value = match.away_score ?? '';
+
+      const isKnockout = match.rounds && match.rounds.round_type === 'knockout';
+      const hasPens    = !!match.pens_winner_id;
+
+      document.getElementById('correct-pens-row').style.display = isKnockout ? 'block' : 'none';
+      document.getElementById('correct-pens-checkbox').checked   = hasPens;
+
+      if (hasPens) {
+        document.getElementById('correct-pens-winner-row').style.display = 'block';
+        document.getElementById('correct-pens-winner-select').innerHTML =
+          '<option value="">Select winner...</option>' +
+          `<option value="${match.home_team_id}" ${match.pens_winner_id === match.home_team_id ? 'selected' : ''}>${match.home_team.flag_emoji} ${match.home_team.name}</option>` +
+          `<option value="${match.away_team_id}" ${match.pens_winner_id === match.away_team_id ? 'selected' : ''}>${match.away_team.flag_emoji} ${match.away_team.name}</option>`;
+      } else {
+        document.getElementById('correct-pens-winner-row').style.display = 'none';
+      }
+
+      updateScoreLabels(matchId, 'correct-home-hint', 'correct-away-hint');
+      document.getElementById('correct-msg').textContent = '';
+    }
+
+    function onCorrectPensToggle() {
+      const checked   = document.getElementById('correct-pens-checkbox').checked;
+      const matchId   = document.getElementById('correct-match-select').value;
+      const match     = completedMatchCache[matchId];
+      const winnerRow = document.getElementById('correct-pens-winner-row');
+      winnerRow.style.display = checked ? 'block' : 'none';
+      if (checked && match) {
+        document.getElementById('correct-pens-winner-select').innerHTML =
+          '<option value="">Select winner...</option>' +
+          `<option value="${match.home_team_id}">${match.home_team.flag_emoji} ${match.home_team.name}</option>` +
+          `<option value="${match.away_team_id}">${match.away_team.flag_emoji} ${match.away_team.name}</option>`;
+      }
+    }
+
+    async function saveCorrection() {
+      const matchId     = document.getElementById('correct-match-select').value;
+      const homeScore   = parseInt(document.getElementById('correct-home-score').value);
+      const awayScore   = parseInt(document.getElementById('correct-away-score').value);
+      const pensChecked = document.getElementById('correct-pens-checkbox').checked;
+      const pensWinner  = document.getElementById('correct-pens-winner-select').value;
+      const msg         = document.getElementById('correct-msg');
+
+      if (!matchId || isNaN(homeScore) || isNaN(awayScore)) { msg.style.color='var(--red)'; msg.textContent='Select a match and fill in scores.'; return; }
+      if (!confirm('Save correction and recalculate points for this match?')) return;
+
+      msg.style.color='var(--text-muted)'; msg.textContent='Saving...';
+
+      const match      = completedMatchCache[matchId];
+      const isKnockout = match && match.rounds.round_type === 'knockout';
+      const isThird    = match && match.is_third_place;
+      const isPens     = isKnockout && pensChecked && homeScore === awayScore;
+
+      // 1. Update match score
+      const { error } = await db.from('matches').update({
+        home_score: homeScore,
+        away_score: awayScore,
+        pens_winner_id: isPens && pensWinner ? pensWinner : null
+      }).eq('id', matchId);
+      if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; return; }
+
+      // 2. Delete existing pick_results for this match
+      await db.from('pick_results').delete().eq('match_id', matchId);
+
+      // 3. Recalculate
+      if (!isThird) {
+        await calculatePickResults(matchId, homeScore, awayScore, isKnockout, isPens, pensWinner);
+      }
+
+      msg.style.color='var(--green)'; msg.textContent='✅ Correction saved and points recalculated.';
+      loadCompletedMatchesForCorrection();
+    }
+
+    async function undoResult() {
+      const matchId = document.getElementById('correct-match-select').value;
+      const msg     = document.getElementById('correct-msg');
+      if (!matchId) { msg.style.color='var(--red)'; msg.textContent='Select a match first.'; return; }
+      if (!confirm('This will completely undo this result — the match goes back to pending and all points are wiped. Are you sure?')) return;
+
+      msg.style.color='var(--text-muted)'; msg.textContent='Undoing...';
+
+      // 1. Delete pick_results
+      await db.from('pick_results').delete().eq('match_id', matchId);
+
+      // 2. Reset match to scheduled
+      const { error } = await db.from('matches').update({
+        status: 'scheduled',
+        home_score: null,
+        away_score: null,
+        pens_winner_id: null
+      }).eq('id', matchId);
+
+      if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; return; }
+
+      msg.style.color='var(--green)'; msg.textContent='✅ Result undone. Match is back to pending.';
+      loadMatchesForResult();
+      loadCompletedMatchesForCorrection();
     }
 
     async function loadAllPicks(matchIds, matchData) {
@@ -880,6 +1072,7 @@
       const matchId = document.getElementById('result-match-select').value;
       const match   = matchId ? matchCache[matchId] : null;
       document.getElementById('third-place-notice').style.display = (match && match.is_third_place) ? 'block' : 'none';
+      updateScoreLabels(matchId, 'home-score-hint', 'away-score-hint');
     }
 
     function onPensToggle() {
@@ -900,14 +1093,14 @@
     }
 
     function updatePensRow() {
-      const matchId   = document.getElementById('result-match-select').value;
-      const match     = matchId ? matchCache[matchId] : null;
+      const matchId    = document.getElementById('result-match-select').value;
+      const match      = matchId ? matchCache[matchId] : null;
       const isKnockout = match && match.rounds.round_type === 'knockout';
-      const isThird   = match && match.is_third_place;
-      const homeScore = document.getElementById('result-home-score').value;
-      const awayScore = document.getElementById('result-away-score').value;
-      const isDraw    = homeScore !== '' && awayScore !== '' && parseInt(homeScore) === parseInt(awayScore);
-      const pensRow   = document.getElementById('pens-row');
+      const isThird    = match && match.is_third_place;
+      const homeScore  = document.getElementById('result-home-score').value;
+      const awayScore  = document.getElementById('result-away-score').value;
+      const isDraw     = homeScore !== '' && awayScore !== '' && parseInt(homeScore) === parseInt(awayScore);
+      const pensRow    = document.getElementById('pens-row');
       pensRow.style.display = (isKnockout && !isThird && isDraw) ? 'block' : 'none';
       if (!isKnockout || !isDraw || isThird) {
         document.getElementById('pens-checkbox').checked = false;
@@ -980,9 +1173,7 @@
         const side       = team.id === match.home_team_id ? 'Home' : 'Away';
         const lsTag      = team.is_longshot ? '<span class="longshot-star">⭐</span>' : '';
         const ptsClass   = outcome === 'win' || outcome === 'pens_win' ? 'pts-win' : outcome === 'loss' ? 'pts-loss' : 'pts-draw';
-        const ptsDisplay = pts !== null
-          ? `<span class="pick-pts ${ptsClass}">${pts}pts</span>`
-          : `<span class="pick-pts pts-none">—</span>`;
+        const ptsDisplay = pts !== null ? `<span class="pick-pts ${ptsClass}">${pts}pts</span>` : `<span class="pick-pts pts-none">—</span>`;
         return `<div class="pick-row">
           <div>
             <span class="pick-player">${pick.players.name}</span>
@@ -1017,19 +1208,31 @@
         msg.style.color='var(--red)'; msg.textContent='Select who won on penalties.'; return;
       }
 
-      const { error } = await db.from('matches')
-        .update({ home_score: homeScore, away_score: awayScore, status: 'complete' })
-        .eq('id', matchId);
+      const { error } = await db.from('matches').update({
+        home_score: homeScore, away_score: awayScore, status: 'complete',
+        pens_winner_id: (isKnockout && !isThird && pensChecked && homeScore === awayScore && pensWinner) ? pensWinner : null
+      }).eq('id', matchId);
       if (error) { msg.style.color='var(--red)'; msg.textContent=error.message; return; }
 
       if (!isThird) {
         await calculatePickResults(matchId, homeScore, awayScore, isKnockout, pensChecked && homeScore === awayScore, pensWinner);
       }
 
+      if (isKnockout && !isThird) {
+        const isPens = pensChecked && homeScore === awayScore;
+        let losingTeamId = null;
+        if (isPens) {
+          losingTeamId = pensWinner === match.home_team_id ? match.away_team_id : match.home_team_id;
+        } else {
+          losingTeamId = homeScore > awayScore ? match.away_team_id : match.home_team_id;
+        }
+        if (losingTeamId) {
+          await db.from('teams').update({ is_eliminated: true, eliminated_in_round_id: match.round_id }).eq('id', losingTeamId);
+        }
+      }
+
       msg.style.color='var(--green)';
-      msg.textContent = isThird
-        ? '✅ 3rd place result saved. Goals counted toward projected total.'
-        : '✅ Result saved and points calculated.';
+      msg.textContent = isThird ? '✅ 3rd place result saved.' : '✅ Result saved and points calculated.';
 
       document.getElementById('result-home-score').value='';
       document.getElementById('result-away-score').value='';
@@ -1039,6 +1242,7 @@
       document.getElementById('picks-preview').style.display='none';
       document.getElementById('third-place-notice').style.display='none';
       loadMatchesForResult();
+      loadCompletedMatchesForCorrection();
 
       if (!isThird && match && match.round_id) {
         await maybeAutoSnapshot(match.round_id, msg);
@@ -1046,26 +1250,15 @@
     }
 
     async function maybeAutoSnapshot(roundId, msgEl) {
-      const { data: roundMatches } = await db
-        .from('matches')
-        .select('id, status, is_third_place')
-        .eq('round_id', roundId)
-        .not('home_team_id', 'is', null);
-
+      const { data: roundMatches } = await db.from('matches').select('id, status, is_third_place').eq('round_id', roundId).not('home_team_id', 'is', null);
       if (!roundMatches) return;
-
       const playableMatches = roundMatches.filter(m => !m.is_third_place);
       const allComplete     = playableMatches.length > 0 && playableMatches.every(m => m.status === 'complete');
-
       if (!allComplete) return;
-
       const snapErr = await takeSnapshot(roundId);
-      if (snapErr) {
-        console.warn('Auto-snapshot failed:', snapErr.message);
-      } else {
-        if (msgEl) {
-          msgEl.textContent += ' 📸 Round complete — leaderboard snapshot taken automatically.';
-        }
+      if (snapErr) { console.warn('Auto-snapshot failed:', snapErr.message); }
+      else {
+        if (msgEl) msgEl.textContent += ' 📸 Round complete — leaderboard snapshot taken automatically.';
         await db.from('rounds').update({ is_complete: true }).eq('id', roundId);
       }
     }
@@ -1159,10 +1352,7 @@
       if (homeId === awayId) { msg.style.color='var(--red)'; msg.textContent='Home and away must be different.'; return; }
 
       const kickoffUTC = new Date(new Date(kickoffLocal).getTime() - 60*60*1000).toISOString();
-      const { error }  = await db.from('matches').insert({
-        round_id: roundId, home_team_id: homeId, away_team_id: awayId,
-        kickoff: kickoffUTC
-      });
+      const { error }  = await db.from('matches').insert({ round_id: roundId, home_team_id: homeId, away_team_id: awayId, kickoff: kickoffUTC });
       if (error) { msg.style.color='var(--red)'; msg.textContent=error.message; }
       else {
         msg.style.color='var(--green)'; msg.textContent='✅ Match added.';
@@ -1174,26 +1364,69 @@
       }
     }
 
-    // ── Teams longshot ────────────────────────────────────────
+    // ── Teams longshot + band ─────────────────────────────────
+    const BAND_OPTIONS = [
+      { value: '',            label: '— Unset —' },
+      { value: 'favourite',   label: '🔵 Favourite' },
+      { value: 'dark_horse',  label: '🟡 Dark Horse' },
+      { value: 'long_shot',   label: '🟠 Long Shot' },
+      { value: 'no_hoper',    label: '🔴 No Hoper' },
+    ];
+
+    const PRESET_BANDS = {
+      'Spain':'favourite','France':'favourite','England':'favourite','Brazil':'favourite','Argentina':'favourite','Portugal':'favourite','Germany':'favourite','Netherlands':'favourite',
+      'Norway':'dark_horse','Colombia':'dark_horse','Belgium':'dark_horse','Japan':'dark_horse','Morocco':'dark_horse','USA':'dark_horse','Uruguay':'dark_horse','Mexico':'dark_horse','Croatia':'dark_horse','Ecuador':'dark_horse','Switzerland':'dark_horse','Senegal':'dark_horse',
+      'Sweden':'long_shot','Turkey':'long_shot','Austria':'long_shot','Scotland':'long_shot','Paraguay':'long_shot','Canada':'long_shot','Ivory Coast':'long_shot','Czech Rep':'long_shot','Bosnia/Herzeg':'long_shot','South Korea':'long_shot','Egypt':'long_shot','Ghana':'long_shot','Algeria':'long_shot','Australia':'long_shot','Tunisia':'long_shot',
+      'Iran':'no_hoper','Jordan':'no_hoper','Uzbekistan':'no_hoper','New Zealand':'no_hoper','Qatar':'no_hoper','Saudi Arabia':'no_hoper','Cape Verde':'no_hoper','South Africa':'no_hoper','Curaçao':'no_hoper','Haiti':'no_hoper','Iraq':'no_hoper','Panama':'no_hoper','DR Congo':'no_hoper',
+    };
+
     async function loadTeamsLongshot() {
-      const { data: teams } = await db.from('teams').select('*').order('pot').order('name');
+      const [{ data: teams }, { data: rounds }] = await Promise.all([
+        db.from('teams').select('id, name, flag_emoji, pot, is_longshot, is_eliminated, band, eliminated_in_round_id').order('pot').order('name'),
+        db.from('rounds').select('id, name, sort_order').order('sort_order')
+      ]);
       const el = document.getElementById('teams-longshot-list');
       if (!teams) return;
-      let html = '<div class="table-wrap"><table><thead><tr><th>Team</th><th>Pot</th><th>Longshot (+1 bonus)</th></tr></thead><tbody>';
+
+      const roundMap = {};
+      (rounds || []).forEach(r => { roundMap[r.id] = r.name; });
+
+      const unpopulated = teams.filter(t => !t.band && PRESET_BANDS[t.name]);
+      if (unpopulated.length > 0) {
+        for (const t of unpopulated) { await db.from('teams').update({ band: PRESET_BANDS[t.name] }).eq('id', t.id); }
+        const { data: refreshed } = await db.from('teams').select('id, name, flag_emoji, pot, is_longshot, is_eliminated, band, eliminated_in_round_id').order('pot').order('name');
+        if (refreshed) teams.splice(0, teams.length, ...refreshed);
+      }
+
+      let html = `<div class="table-wrap"><table>
+        <thead><tr><th>Team</th><th>Pot</th><th>Band</th><th>Longshot (+1)</th><th>Eliminated</th><th>Round out</th></tr></thead><tbody>`;
+
       teams.forEach(t => {
-        html += `<tr>
-          <td>${t.flag_emoji} ${t.name}</td>
+        const bandSel  = BAND_OPTIONS.map(o => `<option value="${o.value}" ${t.band === o.value ? 'selected' : ''}>${o.label}</option>`).join('');
+        const roundSel = '<option value="">— Round —</option>' + (rounds || []).map(r => `<option value="${r.id}" ${t.eliminated_in_round_id === r.id ? 'selected' : ''}>${r.name}</option>`).join('');
+        const outLabel = t.is_eliminated ? ' <span style="font-size:10px;color:var(--red);font-weight:700">OUT' + (t.eliminated_in_round_id && roundMap[t.eliminated_in_round_id] ? ' (' + roundMap[t.eliminated_in_round_id] + ')' : '') + '</span>' : '';
+        html += `<tr style="${t.is_eliminated ? 'opacity:0.45' : ''}">
+          <td>${t.flag_emoji} ${t.name}${outLabel}</td>
           <td style="color:var(--text-muted)">${t.pot ? 'Pot '+t.pot : '—'}</td>
+          <td><select data-team-id="${t.id}" class="band-select" style="font-size:12px; padding:2px 6px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px">${bandSel}</select></td>
           <td><input type="checkbox" ${t.is_longshot?'checked':''} data-team-id="${t.id}" class="longshot-toggle" style="width:auto; cursor:pointer; accent-color:var(--accent)" /></td>
+          <td><input type="checkbox" ${t.is_eliminated?'checked':''} data-team-id="${t.id}" class="eliminated-toggle" style="width:auto; cursor:pointer; accent-color:var(--red)" /></td>
+          <td><select data-team-id="${t.id}" class="round-select" style="font-size:12px; padding:2px 6px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px">${roundSel}</select></td>
         </tr>`;
       });
       html += '</tbody></table></div>';
       el.innerHTML = html;
-      el.querySelectorAll('.longshot-toggle').forEach(cb => {
+
+      el.querySelectorAll('.longshot-toggle').forEach(cb => { cb.addEventListener('change', function() { db.from('teams').update({ is_longshot: this.checked }).eq('id', this.dataset.teamId); }); });
+      el.querySelectorAll('.eliminated-toggle').forEach(cb => {
         cb.addEventListener('change', function() {
-          db.from('teams').update({ is_longshot: this.checked }).eq('id', this.dataset.teamId);
+          const roundSel = el.querySelector(`.round-select[data-team-id="${this.dataset.teamId}"]`);
+          const roundId  = roundSel ? roundSel.value || null : null;
+          db.from('teams').update({ is_eliminated: this.checked, eliminated_in_round_id: this.checked ? roundId : null }).eq('id', this.dataset.teamId);
         });
       });
+      el.querySelectorAll('.round-select').forEach(sel => { sel.addEventListener('change', function() { db.from('teams').update({ eliminated_in_round_id: this.value || null }).eq('id', this.dataset.teamId); }); });
+      el.querySelectorAll('.band-select').forEach(sel => { sel.addEventListener('change', function() { db.from('teams').update({ band: this.value || null }).eq('id', this.dataset.teamId); }); });
     }
 
     // ── Snapshot ──────────────────────────────────────────────
@@ -1201,8 +1434,7 @@
       const sel = document.getElementById('snapshot-round-select');
       const { data: rounds } = await db.from('rounds').select('id, name, sort_order').order('sort_order');
       if (!rounds) return;
-      sel.innerHTML = '<option value="">Select round...</option>' +
-        rounds.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+      sel.innerHTML = '<option value="">Select round...</option>' + rounds.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
     }
 
     async function takeSnapshot(roundId) {
@@ -1218,15 +1450,10 @@
       const isKnockout = round && round.round_type === 'knockout';
       const sorted     = (scores||[]).sort((a,b) => {
         if (b.total_points !== a.total_points) return b.total_points - a.total_points;
-        if (isKnockout) {
-          const afr = furthestMap[a.player_id]||0, bfr = furthestMap[b.player_id]||0;
-          if (bfr !== afr) return bfr - afr;
-        }
+        if (isKnockout) { const afr = furthestMap[a.player_id]||0, bfr = furthestMap[b.player_id]||0; if (bfr !== afr) return bfr - afr; }
         return (gdMap[b.player_id]||0) - (gdMap[a.player_id]||0);
       });
-      const inserts = sorted.map((p,i) => ({
-        round_id: roundId, player_id: p.player_id, position: i+1, total_points: p.total_points
-      }));
+      const inserts = sorted.map((p,i) => ({ round_id: roundId, player_id: p.player_id, position: i+1, total_points: p.total_points }));
       const { error } = await db.from('leaderboard_snapshots').upsert(inserts, { onConflict: 'round_id,player_id' });
       return error;
     }
@@ -1241,7 +1468,6 @@
       else { msg.style.color='var(--green)'; msg.textContent='✅ Snapshot saved.'; }
     });
 
-    // ── Reset all results ─────────────────────────────────────
     document.getElementById('btn-reset-all').addEventListener('click', async () => {
       const msg = document.getElementById('reset-msg');
       if (!confirm('WARNING: This will delete ALL pick results and reset ALL match statuses to scheduled.\n\nPlayers, picks, teams and fixtures are NOT affected.\n\nAre you sure?')) return;
@@ -1254,9 +1480,8 @@
         if (e2) throw e2;
         msg.style.color = 'var(--green)'; msg.textContent = '✅ All results cleared.';
         loadMatchesForResult();
-      } catch(err) {
-        msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message;
-      }
+        loadCompletedMatchesForCorrection();
+      } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message; }
     });
 
     // ── Odds tab ──────────────────────────────────────────────
@@ -1264,40 +1489,18 @@
     const ODDS_API_BASE = 'https://api.the-odds-api.com/v4';
 
     const TEAM_NAME_MAP = {
-      'usa':                        'usa',
-      'united states':              'usa',
-      'united states of america':   'usa',
-      'us':                         'usa',
-      'south korea':                'south korea',
-      'korea republic':             'south korea',
-      'korea, republic of':         'south korea',
-      'republic of korea':          'south korea',
-      'bosnia & herzegovina':       'bosnia/herzeg',
-      'bosnia and herzegovina':     'bosnia/herzeg',
-      'bosnia-herzegovina':         'bosnia/herzeg',
-      'bosnia/herzeg':              'bosnia/herzeg',
-      'bosnia & herzeg':            'bosnia/herzeg',
-      'bosnia':                     'bosnia/herzeg',
-      'czech republic':             'czech rep',
-      'czechia':                    'czech rep',
-      'czech rep':                  'czech rep',
-      'ir iran':                    'iran',
-      'iran, islamic republic':     'iran',
-      'islamic republic of iran':   'iran',
-      "cote d'ivoire":              'ivory coast',
-      "côte d'ivoire":              'ivory coast',
-      'ivory coast':                'ivory coast',
-      'curaçao':                    'curaçao',
-      'curacao':                    'curaçao',
-      'cape verde':                 'cape verde',
-      'cabo verde':                 'cape verde',
-      'new zealand':                'new zealand',
-      'trinidad & tobago':          'trinidad and tobago',
-      'trinidad and tobago':        'trinidad and tobago',
-      'democratic republic of congo': 'dr congo',
-      'dr congo':                   'dr congo',
-      'turkey':                     'turkey',
-      'türkiye':                    'turkey',
+      'usa':'usa','united states':'usa','united states of america':'usa','us':'usa',
+      'south korea':'south korea','korea republic':'south korea','korea, republic of':'south korea','republic of korea':'south korea',
+      'bosnia & herzegovina':'bosnia/herzeg','bosnia and herzegovina':'bosnia/herzeg','bosnia-herzegovina':'bosnia/herzeg','bosnia/herzeg':'bosnia/herzeg','bosnia & herzeg':'bosnia/herzeg','bosnia':'bosnia/herzeg',
+      'czech republic':'czech rep','czechia':'czech rep','czech rep':'czech rep',
+      'ir iran':'iran','iran, islamic republic':'iran','islamic republic of iran':'iran',
+      "cote d'ivoire":'ivory coast',"côte d'ivoire":'ivory coast','ivory coast':'ivory coast',
+      'curaçao':'curaçao','curacao':'curaçao',
+      'cape verde':'cape verde','cabo verde':'cape verde',
+      'new zealand':'new zealand',
+      'trinidad & tobago':'trinidad and tobago','trinidad and tobago':'trinidad and tobago',
+      'democratic republic of congo':'dr congo','dr congo':'dr congo',
+      'turkey':'turkey','türkiye':'turkey',
     };
 
     function normaliseTeamName(raw) {
@@ -1313,15 +1516,12 @@
       let quotaInfo = '';
 
       try {
-        msg.style.color = 'var(--text-muted)';
-        msg.textContent = 'Fetching outright odds...';
-
+        msg.style.color = 'var(--text-muted)'; msg.textContent = 'Fetching outright odds...';
         const outrightUrl  = `${ODDS_API_BASE}/sports/soccer_fifa_world_cup_winner/odds/?apiKey=${ODDS_API_KEY}&regions=uk&markets=outrights&oddsFormat=decimal`;
         const outrightResp = await fetch(outrightUrl);
         const rem1  = outrightResp.headers.get('x-requests-remaining');
         const used1 = outrightResp.headers.get('x-requests-used');
         if (rem1) quotaInfo = `API quota: ${used1} used · ${rem1} remaining`;
-
         if (!outrightResp.ok) throw new Error('Outright API error: ' + outrightResp.status);
         const outrightData = await outrightResp.json();
         const outcomes     = outrightData?.[0]?.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
@@ -1334,42 +1534,19 @@
 
         if (outcomes.length > 0) {
           const fetchedAt = new Date().toISOString();
-          const { data: prevOdds } = await db.from('team_odds')
-            .select('team_id, odds_decimal, fetched_at')
-            .order('fetched_at', { ascending: false });
-
+          const { data: prevOdds } = await db.from('team_odds').select('team_id, odds_decimal, fetched_at').order('fetched_at', { ascending: false });
           const prevMap = {};
-          (prevOdds || []).forEach(r => {
-            if (!prevMap[r.team_id]) prevMap[r.team_id] = r.odds_decimal;
-          });
-
-          const matched = outcomes
-            .map(o => ({ team_id: teamMap[normaliseTeamName(o.name)] || null, odds_decimal: o.price }))
-            .filter(r => r.team_id !== null);
-
-          const toInsert = matched.filter(r => {
-            const prev = prevMap[r.team_id];
-            if (prev === undefined || prev === null) return true;
-            return Math.abs(parseFloat(prev) - parseFloat(r.odds_decimal)) > 0.01;
-          });
-
+          (prevOdds || []).forEach(r => { if (!prevMap[r.team_id]) prevMap[r.team_id] = r.odds_decimal; });
+          const matched  = outcomes.map(o => ({ team_id: teamMap[normaliseTeamName(o.name)] || null, odds_decimal: o.price })).filter(r => r.team_id !== null);
+          const toInsert = matched.filter(r => { const prev = prevMap[r.team_id]; if (prev === undefined || prev === null) return true; return Math.abs(parseFloat(prev) - parseFloat(r.odds_decimal)) > 0.01; });
           skippedCount  = matched.length - toInsert.length;
           outrightCount = matched.length;
-
           if (toInsert.length > 0) {
-            const inserts = toInsert.map(r => ({
-              team_id:         r.team_id,
-              odds_decimal:    r.odds_decimal,
-              odds_fractional: decimalToFractional(r.odds_decimal),
-              fetched_at:      fetchedAt
-            }));
+            const inserts = toInsert.map(r => ({ team_id: r.team_id, odds_decimal: r.odds_decimal, odds_fractional: decimalToFractional(r.odds_decimal), fetched_at: fetchedAt }));
             const { error } = await db.from('team_odds').insert(inserts);
             if (error) throw new Error('Outright insert error: ' + error.message);
             changedCount = toInsert.length;
           }
-
-          const unmatched = outcomes.length - matched.length;
-          if (unmatched > 0) console.warn(`${unmatched} outright teams not matched in DB`);
         }
 
         msg.textContent = 'Fetching match odds...';
@@ -1378,58 +1555,35 @@
         const rem2  = matchResp.headers.get('x-requests-remaining');
         const used2 = matchResp.headers.get('x-requests-used');
         if (rem2) quotaInfo = `API quota: ${used2} used · ${rem2} remaining`;
-
         if (!matchResp.ok) throw new Error('Match API error: ' + matchResp.status);
         const matchData = await matchResp.json();
-
-        const { data: dbMatches } = await db.from('matches')
-          .select('id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)')
-          .not('home_team_id', 'is', null)
-          .not('away_team_id', 'is', null);
+        const { data: dbMatches } = await db.from('matches').select('id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)').not('home_team_id', 'is', null).not('away_team_id', 'is', null);
 
         let matchedCount = 0, unmatchedCount = 0;
-
         for (const apiMatch of matchData) {
-          const bookmaker   = apiMatch.bookmakers?.[0];
-          if (!bookmaker) continue;
-          const market      = bookmaker.markets?.[0];
-          if (!market) continue;
+          const bookmaker   = apiMatch.bookmakers?.[0]; if (!bookmaker) continue;
+          const market      = bookmaker.markets?.[0];   if (!market) continue;
           const homeOutcome = market.outcomes.find(o => normaliseTeamName(o.name) === normaliseTeamName(apiMatch.home_team));
           const awayOutcome = market.outcomes.find(o => normaliseTeamName(o.name) === normaliseTeamName(apiMatch.away_team));
           const drawOutcome = market.outcomes.find(o => o.name === 'Draw');
           const apiKickoff  = new Date(apiMatch.commence_time);
-          const dbMatch     = (dbMatches||[]).find(m => {
-            const diffHours = Math.abs(apiKickoff - new Date(m.kickoff)) / (1000 * 60 * 60);
-            return diffHours <= 1 && m.home_team && normaliseTeamName(m.home_team.name) === normaliseTeamName(apiMatch.home_team);
-          });
+          const dbMatch     = (dbMatches||[]).find(m => { const diffHours = Math.abs(apiKickoff - new Date(m.kickoff)) / (1000 * 60 * 60); return diffHours <= 1 && m.home_team && normaliseTeamName(m.home_team.name) === normaliseTeamName(apiMatch.home_team); });
           if (dbMatch && homeOutcome && awayOutcome) {
-            const { error } = await db.from('matches').update({
-              odds_home: homeOutcome.price,
-              odds_away: awayOutcome.price,
-              odds_draw: drawOutcome ? drawOutcome.price : null
-            }).eq('id', dbMatch.id);
+            const { error } = await db.from('matches').update({ odds_home: homeOutcome.price, odds_away: awayOutcome.price, odds_draw: drawOutcome ? drawOutcome.price : null }).eq('id', dbMatch.id);
             if (!error) matchedCount++;
-          } else {
-            unmatchedCount++;
-          }
+          } else { unmatchedCount++; }
         }
 
         remainingEl.textContent = quotaInfo;
         msg.style.color = 'var(--green)';
-        if (outcomes.length === 0) {
-          msg.textContent = `⚠️ No outright odds returned yet (market not open in API) · Match odds: ${matchedCount} matched`;
-        } else {
+        if (outcomes.length === 0) { msg.textContent = `⚠️ No outright odds returned yet · Match odds: ${matchedCount} matched`; }
+        else {
           const changeStr = changedCount > 0 ? `${changedCount} changed` : 'no changes';
           msg.textContent = `✅ Outrights: ${outrightCount} teams (${changeStr}, ${skippedCount} unchanged) · Match odds: ${matchedCount} matched`;
         }
         if (unmatchedCount > 0) msg.textContent += ` · ${unmatchedCount} unmatched`;
-
         loadOddsTable();
-
-      } catch(err) {
-        msg.style.color = 'var(--red)'; msg.textContent = '❌ ' + err.message;
-        console.error(err);
-      }
+      } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ ' + err.message; }
 
       btn.disabled = false; btn.textContent = '🔄 Fetch Odds';
     }
@@ -1437,106 +1591,189 @@
     async function loadOddsTable() {
       const wrap = document.getElementById('odds-table-wrap');
       if (!wrap) return;
-
-      const { data: allOdds } = await db.from('team_odds')
-        .select('team_id, odds_decimal, odds_fractional, fetched_at, teams(flag_emoji, name)')
-        .order('fetched_at', { ascending: false });
-
-      if (!allOdds || allOdds.length === 0) {
-        wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No odds fetched yet. Click "Fetch Odds" above.</p>';
-        return;
-      }
+      const { data: allOdds } = await db.from('team_odds').select('team_id, odds_decimal, odds_fractional, fetched_at, teams(flag_emoji, name)').order('fetched_at', { ascending: false });
+      if (!allOdds || allOdds.length === 0) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No odds fetched yet.</p>'; return; }
 
       const byTeam = {};
       allOdds.forEach(r => {
-        if (!byTeam[r.team_id]) {
-          byTeam[r.team_id] = {
-            flag: r.teams?.flag_emoji || '',
-            name: r.teams?.name || '?',
-            current: parseFloat(r.odds_decimal),
-            currentFrac: r.odds_fractional || decimalToFractional(r.odds_decimal),
-            history: []
-          };
-        } else {
-          byTeam[r.team_id].history.push(parseFloat(r.odds_decimal));
-        }
+        if (!byTeam[r.team_id]) { byTeam[r.team_id] = { flag: r.teams?.flag_emoji || '', name: r.teams?.name || '?', current: parseFloat(r.odds_decimal), currentFrac: r.odds_fractional || decimalToFractional(r.odds_decimal), history: [] }; }
+        else { byTeam[r.team_id].history.push(parseFloat(r.odds_decimal)); }
       });
 
-      const sorted = Object.values(byTeam).sort((a,b) => a.current - b.current);
-
-      const latestTime    = allOdds[0].fetched_at;
-      const fetchTime     = latestTime
-        ? new Date(latestTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
-        : '—';
+      const sorted       = Object.values(byTeam).sort((a,b) => a.current - b.current);
+      const latestTime   = allOdds[0].fetched_at;
+      const fetchTime    = latestTime ? new Date(latestTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
       const distinctFetches = new Set(allOdds.map(r => r.fetched_at)).size;
 
-      let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
-        Last fetched: <strong>${fetchTime}</strong> · ${sorted.length} teams · ${distinctFetches} fetch${distinctFetches !== 1 ? 'es' : ''} recorded
-      </div>`;
-
+      let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Last fetched: <strong>${fetchTime}</strong> · ${sorted.length} teams · ${distinctFetches} fetch${distinctFetches !== 1?'es':''} recorded</div>`;
       const maxHistory = 3;
-      html += `<div class="table-wrap"><table>
-        <thead><tr>
-          <th class="left">Team</th>
-          <th>Current</th>`;
-      for (let i = 0; i < maxHistory; i++) {
-        html += `<th style="color:var(--text-muted);font-size:10px">-${i+1}</th>`;
-      }
-      html += `<th>Move</th><th style="color:var(--accent);font-size:10px">Original</th>
-        </tr></thead><tbody>`;
+      html += `<div class="table-wrap"><table><thead><tr><th class="left">Team</th><th>Current</th>`;
+      for (let i = 0; i < maxHistory; i++) html += `<th style="color:var(--text-muted);font-size:10px">-${i+1}</th>`;
+      html += `<th>Move</th><th style="color:var(--accent);font-size:10px">Original</th></tr></thead><tbody>`;
 
       sorted.forEach(t => {
-        const curr     = t.current;
-        const hist     = t.history;
+        const curr = t.current, hist = t.history;
         const original = hist.length > 0 ? hist[hist.length - 1] : null;
-
         let moveHtml = '<span style="color:var(--text-muted)">—</span>';
-        if (hist.length > 0) {
-          const prev = hist[0];
-          const diff = curr - prev;
-          if (Math.abs(diff) > 0.01) {
-            const isShortening = diff < 0;
-            moveHtml = isShortening
-              ? `<span style="color:var(--green)">▼ ${Math.abs(diff).toFixed(2)}</span>`
-              : `<span style="color:var(--red)">▲ ${diff.toFixed(2)}</span>`;
-          }
-        }
-
-        let origDisplay = '—';
-        let origStyle   = 'color:var(--text-muted)';
-        if (original !== null) {
-          const totalDiff = curr - original;
-          const sign      = totalDiff < 0 ? '▼ ' : totalDiff > 0.01 ? '▲ ' : '';
-          const col       = totalDiff < -0.01 ? 'var(--green)' : totalDiff > 0.01 ? 'var(--red)' : 'var(--text-muted)';
-          origStyle       = `color:${col};font-weight:600`;
-          origDisplay     = `${original.toFixed(2)} <span style="font-size:10px;color:${col}">${sign}${Math.abs(totalDiff).toFixed(2)}</span>`;
-        }
-
-        html += `<tr>
-          <td class="left">${t.flag} <strong>${t.name}</strong></td>
-          <td><strong>${curr.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${t.currentFrac}</span></td>`;
-
-        for (let i = 0; i < maxHistory; i++) {
-          const val = hist[i];
-          html += val !== undefined
-            ? `<td style="color:var(--text-muted);font-size:12px">${val.toFixed(2)}</td>`
-            : `<td style="color:var(--border);font-size:12px">—</td>`;
-        }
-
+        if (hist.length > 0) { const prev = hist[0], diff = curr - prev; if (Math.abs(diff) > 0.01) moveHtml = diff < 0 ? `<span style="color:var(--green)">▼ ${Math.abs(diff).toFixed(2)}</span>` : `<span style="color:var(--red)">▲ ${diff.toFixed(2)}</span>`; }
+        let origDisplay = '—', origStyle = 'color:var(--text-muted)';
+        if (original !== null) { const totalDiff = curr - original; const sign = totalDiff < 0 ? '▼ ' : totalDiff > 0.01 ? '▲ ' : ''; const col = totalDiff < -0.01 ? 'var(--green)' : totalDiff > 0.01 ? 'var(--red)' : 'var(--text-muted)'; origStyle = `color:${col};font-weight:600`; origDisplay = `${original.toFixed(2)} <span style="font-size:10px;color:${col}">${sign}${Math.abs(totalDiff).toFixed(2)}</span>`; }
+        html += `<tr><td class="left">${t.flag} <strong>${t.name}</strong></td><td><strong>${curr.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${t.currentFrac}</span></td>`;
+        for (let i = 0; i < maxHistory; i++) { const val = hist[i]; html += val !== undefined ? `<td style="color:var(--text-muted);font-size:12px">${val.toFixed(2)}</td>` : `<td style="color:var(--border);font-size:12px">—</td>`; }
         html += `<td>${moveHtml}</td><td style="${origStyle}">${origDisplay}</td></tr>`;
       });
-
       html += '</tbody></table></div>';
       wrap.innerHTML = html;
     }
 
-    function decimalToFractional(decimal) {
-      if (!decimal) return '—';
-      const num = Math.round((decimal-1)*100), den = 100;
-      const g = gcd(num,den);
-      return (num/g)+'/'+(den/g);
-    }
+    function decimalToFractional(decimal) { if (!decimal) return '—'; const num = Math.round((decimal-1)*100), den = 100; const g = gcd(num,den); return (num/g)+'/'+(den/g); }
     function gcd(a,b) { return b===0?a:gcd(b,a%b); }
+
+    // ── Bulk result entry ─────────────────────────────────────
+    async function loadBulkRounds() {
+      const { data: rounds } = await db.from('rounds').select('id, name, round_type, sort_order').order('sort_order');
+      const sel = document.getElementById('bulk-round-select');
+      if (!rounds) return;
+      sel.innerHTML = '<option value="">Select round...</option>' +
+        rounds.map(r => `<option value="${r.id}" data-type="${r.round_type}">${r.name}</option>`).join('');
+    }
+
+    document.getElementById('btn-load-bulk').addEventListener('click', loadBulkMatches);
+
+    async function loadBulkMatches() {
+      const roundId = document.getElementById('bulk-round-select').value;
+      const wrap    = document.getElementById('bulk-matches-wrap');
+      const msg     = document.getElementById('bulk-msg');
+      msg.textContent = '';
+
+      if (!roundId) { msg.style.color='var(--red)'; msg.textContent='Select a round first.'; return; }
+
+      wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      const roundOpt   = document.getElementById('bulk-round-select').options[document.getElementById('bulk-round-select').selectedIndex];
+      const isKnockout = roundOpt && roundOpt.dataset.type === 'knockout';
+
+      const { data: matches } = await db.from('matches')
+        .select('id, kickoff, is_third_place, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)')
+        .eq('round_id', roundId)
+        .neq('status', 'complete')
+        .not('home_team_id', 'is', null)
+        .order('kickoff');
+
+      if (!matches || matches.length === 0) {
+        wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:8px 0">No pending matches in this round.</p>';
+        return;
+      }
+
+      const scoreHint = isKnockout ? '(incl. AET)' : '';
+
+      let html = `<div class="table-wrap"><table style="font-size:13px">
+        <thead><tr>
+          <th class="left">Match</th>
+          <th style="width:90px">Home ${scoreHint}</th>
+          <th style="width:90px">Away ${scoreHint}</th>
+          ${isKnockout ? '<th style="width:120px">AET/Pens?</th>' : ''}
+        </tr></thead><tbody>`;
+
+      matches.forEach(m => {
+        const ko = new Date(m.kickoff).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+        const date = new Date(m.kickoff).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'});
+        const thirdTag = m.is_third_place ? ' 🥉' : '';
+        html += `<tr id="bulk-row-${m.id}">
+          <td class="left" style="font-size:12px">
+            <strong>${m.home_team.flag_emoji} ${m.home_team.name} vs ${m.away_team.flag_emoji} ${m.away_team.name}</strong>${thirdTag}
+            <div style="color:var(--text-muted);font-size:11px">${date} · ${ko}</div>
+          </td>
+          <td><input type="number" min="0" placeholder="—" id="bulk-home-${m.id}" style="width:70px;text-align:center" /></td>
+          <td><input type="number" min="0" placeholder="—" id="bulk-away-${m.id}" style="width:70px;text-align:center" /></td>
+          ${isKnockout ? `<td><input type="checkbox" id="bulk-pens-${m.id}" style="width:auto;accent-color:var(--accent)" title="Match went to AET/pens" /></td>` : ''}
+        </tr>`;
+      });
+
+      html += `</tbody></table></div>
+        <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="submitBulkResults('${roundId}', ${isKnockout})">💾 Save All Results & Calculate Points</button>
+          <span style="font-size:12px;color:var(--text-muted);align-self:center">Only rows with both scores filled will be saved.</span>
+        </div>`;
+
+      wrap.innerHTML = html;
+    }
+
+    async function submitBulkResults(roundId, isKnockout) {
+      const msg = document.getElementById('bulk-msg');
+      msg.style.color = 'var(--text-muted)';
+      msg.textContent = 'Saving...';
+
+      const rows = document.querySelectorAll('[id^="bulk-row-"]');
+      let saved = 0, skipped = 0, errors = 0;
+
+      for (const row of rows) {
+        const matchId   = row.id.replace('bulk-row-', '');
+        const homeInput = document.getElementById('bulk-home-' + matchId);
+        const awayInput = document.getElementById('bulk-away-' + matchId);
+        if (!homeInput || !awayInput) continue;
+
+        const homeScore = parseInt(homeInput.value);
+        const awayScore = parseInt(awayInput.value);
+        if (isNaN(homeScore) || isNaN(awayScore)) { skipped++; continue; }
+
+        const pensChecked = isKnockout && document.getElementById('bulk-pens-' + matchId)?.checked;
+        const isPens      = pensChecked && homeScore === awayScore;
+
+        // Save match result
+        const { error } = await db.from('matches').update({
+          home_score: homeScore, away_score: awayScore, status: 'complete',
+          pens_winner_id: null // pens winner not captured in bulk — use Correct a Result if needed
+        }).eq('id', matchId);
+
+        if (error) { errors++; continue; }
+
+        // Get match details for pick calculation
+        const { data: matchFull } = await db.from('matches')
+          .select('round_id, is_third_place, home_team_id, away_team_id, rounds(round_type), home_team:teams!matches_home_team_id_fkey(id,is_longshot), away_team:teams!matches_away_team_id_fkey(id,is_longshot)')
+          .eq('id', matchId).single();
+
+        if (matchFull && !matchFull.is_third_place) {
+          await calculatePickResults(matchId, homeScore, awayScore, matchFull.rounds?.round_type === 'knockout', false, null);
+
+          // Auto-eliminate loser in knockout
+          if (matchFull.rounds?.round_type === 'knockout') {
+            const losingTeamId = homeScore > awayScore ? matchFull.away_team_id : homeScore < awayScore ? matchFull.home_team_id : null;
+            if (losingTeamId) {
+              await db.from('teams').update({ is_eliminated: true, eliminated_in_round_id: matchFull.round_id }).eq('id', losingTeamId);
+            }
+          }
+        }
+
+        // Dim the saved row
+        row.style.opacity = '0.4';
+        row.querySelectorAll('input').forEach(i => i.disabled = true);
+        saved++;
+      }
+
+      msg.style.color = saved > 0 ? 'var(--green)' : 'var(--text-muted)';
+      msg.textContent = `✅ ${saved} result(s) saved${skipped > 0 ? ` · ${skipped} skipped (no score)` : ''}${errors > 0 ? ` · ${errors} error(s)` : ''}.`;
+
+      if (saved > 0) {
+        loadMatchesForResult();
+        loadCompletedMatchesForCorrection();
+        // Check for auto-snapshot
+        if (roundId) {
+          const { data: roundMatches } = await db.from('matches').select('id,status,is_third_place').eq('round_id', roundId).not('home_team_id','is',null);
+          if (roundMatches) {
+            const playable = roundMatches.filter(m => !m.is_third_place);
+            if (playable.length > 0 && playable.every(m => m.status === 'complete')) {
+              const snapErr = await takeSnapshot(roundId);
+              if (!snapErr) {
+                await db.from('rounds').update({ is_complete: true }).eq('id', roundId);
+                msg.textContent += ' 📸 Round complete — snapshot taken.';
+              }
+            }
+          }
+        }
+      }
+    }
+
 
     document.getElementById('btn-fetch-odds').addEventListener('click', fetchAllOdds);
   </script>

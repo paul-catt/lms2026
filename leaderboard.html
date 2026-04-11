@@ -47,6 +47,17 @@
     .goals-diff-close { color:var(--green); }
     .goals-diff-mid { color:var(--gold); }
     .goals-diff-far { color:var(--red); }
+    /* Projected / Longshot tabs */
+    .lb-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+    .lb-tab { padding:6px 14px; border-radius:20px; cursor:pointer; font-size:12px; font-weight:600; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); }
+    .lb-tab.active { background:var(--accent); color:white; border-color:var(--accent); }
+    .lb-view { display:none; }
+    .lb-view.active { display:block; }
+    .proj-badge { display:inline-block; font-size:11px; font-weight:700; padding:1px 6px; border-radius:4px; }
+    .proj-up   { background:rgba(16,185,129,0.15); color:var(--green); }
+    .proj-dn   { background:rgba(239,68,68,0.15); color:var(--red); }
+    .proj-eq   { background:var(--surface2); color:var(--text-muted); }
+    .ls-pts    { font-size:14px; font-weight:800; color:var(--gold); }
   </style>
 </head>
 <body>
@@ -61,6 +72,7 @@
     <div class="nav-links">
       <a href="/leaderboard" class="active">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
+      <a href="/admin">Admin</a>
     </div>
   </nav>
 
@@ -72,37 +84,60 @@
       </div>
       <div id="round-heading" class="round-heading"></div>
       <div id="proj-goals-label" class="proj-goals"></div>
+
+      <!-- View tabs -->
+      <div class="lb-tabs">
+        <div class="lb-tab active" data-view="main" onclick="switchView('main')">📊 Standings</div>
+        <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Longshot Table</div>
+      </div>
+
       <div id="loading" class="loading"><div class="spinner"></div>Loading standings...</div>
-      <div id="leaderboard-wrap" class="table-wrap" style="display:none">
-        <table>
-          <thead>
-            <tr>
-              <th class="pos">#</th>
-              <th class="prior">Prior</th>
-              <th class="medal"></th>
-              <th>Player</th>
-              <th>Pld</th>
-              <th>Pts</th>
-              <th>GD</th>
-              <th class="hide-mobile">Diff from<br>proj.</th>
-              <th class="hide-mobile">Form</th>
-              <th class="hide-mobile" id="left-col-header" style="display:none">Left</th>
-              <th class="hide-mobile" id="status-col-header" style="display:none">Status</th>
-            </tr>
-          </thead>
-          <tbody id="leaderboard-body"></tbody>
-        </table>
+
+      <!-- MAIN LEADERBOARD -->
+      <div class="lb-view active" id="view-main">
+        <div id="leaderboard-wrap" class="table-wrap" style="display:none">
+          <table>
+            <thead>
+              <tr>
+                <th class="pos">#</th>
+                <th class="prior">Prior</th>
+                <th class="medal"></th>
+                <th>Player</th>
+                <th>Pld</th>
+                <th>Pts</th>
+                <th>GD</th>
+                <th class="hide-mobile">Diff from<br>proj.</th>
+                <th class="hide-mobile">Form</th>
+                <th class="hide-mobile" id="left-col-header" style="display:none">Left</th>
+                <th class="hide-mobile" id="status-col-header" style="display:none">Status</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:14px; font-size:11px; color:var(--text-muted); display:flex; gap:16px; flex-wrap:wrap">
+          <span>🔵 Playing today</span>
+          <span class="knockout-only" style="display:none">🟢 Alive</span>
+          <span class="knockout-only" style="display:none">🔴 Eliminated</span>
+          <span class="knockout-only" style="display:none">· Pool remaining: 🔵 Favourite 🟡 Dark Horse 🟠 Long Shot 🔴 No Hoper</span>
+          <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:2px solid #f59e0b;margin-right:3px;vertical-align:middle"></span>3pts pick</span>
+          <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:2px solid #94a3b8;margin-right:3px;vertical-align:middle"></span>2pts pick</span>
+          <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:4px double #f59e0b;margin-right:3px;vertical-align:middle"></span>Longshot (4pts)</span>
+          <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:4px double #94a3b8;margin-right:3px;vertical-align:middle"></span>Longshot (3pts)</span>
+        </div>
+        <div class="rotate-hint">↔ Rotate phone for full table</div>
       </div>
-      <div style="margin-top:14px; font-size:11px; color:var(--text-muted); display:flex; gap:16px; flex-wrap:wrap">
-        <span>🔵 Playing today</span>
-        <span class="knockout-only" style="display:none">🟢 Alive</span>
-        <span class="knockout-only" style="display:none">🔴 Eliminated</span>
-        <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:2px solid #f59e0b;margin-right:3px;vertical-align:middle"></span>3pts pick</span>
-        <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:2px solid #94a3b8;margin-right:3px;vertical-align:middle"></span>2pts pick</span>
-        <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:4px double #f59e0b;margin-right:3px;vertical-align:middle"></span>Longshot (4pts)</span>
-        <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:4px double #94a3b8;margin-right:3px;vertical-align:middle"></span>Longshot (3pts)</span>
+
+      <!-- LONGSHOT LEADERBOARD -->
+      <div class="lb-view" id="view-longshot">
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px">
+          Tracks longshot bonus points earned across the tournament. ⭐ = longshot pick that won.
+        </p>
+        <div id="longshot-wrap" class="table-wrap">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
       </div>
-      <div class="rotate-hint">↔ Rotate phone for full table</div>
+
     </div>
   </main>
 
@@ -113,13 +148,13 @@
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const TOTAL_MATCHES = 104;
-
-    // ── Test date override ────────────────────────────────────
     const LS_KEY = 'lms2026_test_date';
+
     function getEffectiveDate() {
       const override = localStorage.getItem(LS_KEY);
       return override ? new Date(override) : new Date();
     }
+
     (function initBanner() {
       const override = localStorage.getItem(LS_KEY);
       if (override) {
@@ -131,24 +166,34 @@
       }
     })();
 
-    // ── Game day window ───────────────────────────────────────
+    function toWindowStartMs(isoStr) {
+      const d = new Date(isoStr);
+      const h = d.getUTCHours();
+      if (h < 10) return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 14, 0, 0);
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 14, 0, 0);
+    }
+
     function getGameDayWindow(effectiveDate) {
       const d = new Date(effectiveDate);
       const utcHour = d.getUTCHours();
       let windowStart;
-      if (utcHour < 10) {
-        windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 14, 0, 0));
-      } else {
-        windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 14, 0, 0));
-      }
-      const windowEnd = new Date(windowStart.getTime() + 20 * 60 * 60 * 1000);
-      return { windowStart, windowEnd };
+      if (utcHour < 10) windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 14, 0, 0));
+      else              windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 14, 0, 0));
+      return { windowStart, windowEnd: new Date(windowStart.getTime() + 20 * 60 * 60 * 1000) };
     }
+
+    // ── View switching ────────────────────────────────────────
+    function switchView(name) {
+      document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
+      document.querySelectorAll('.lb-view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+    }
+
+    // ── Shared data ───────────────────────────────────────────
+    let _leaderboardData = null;
 
     async function loadLeaderboard() {
       try {
         const now = getEffectiveDate();
-        const { windowStart, windowEnd } = getGameDayWindow(now);
 
         const [
           { data: scores, error },
@@ -160,7 +205,8 @@
           { data: snapshots },
           { data: completedMatches },
           { data: todayMatchRows },
-          { data: allPicks }
+          { data: allPicks },
+          { data: allTeams }
         ] = await Promise.all([
           db.from('player_scores').select('*'),
           db.from('player_gd').select('*'),
@@ -169,70 +215,49 @@
           db.from('rounds').select('id, name, round_type, sort_order, is_complete').order('sort_order'),
           db.from('matches').select('round_id, kickoff').order('kickoff'),
           db.from('leaderboard_snapshots').select('player_id, position, round_id'),
-          db.from('matches')
-            .select('home_score, away_score')
-            .eq('status', 'complete')
-            .not('home_score', 'is', null),
-          db.from('matches')
-            .select('home_team_id, away_team_id, round_id')
-            .gte('kickoff', windowStart.toISOString())
-            .lte('kickoff', windowEnd.toISOString())
-            .not('home_team_id', 'is', null),
-          db.from('picks').select('player_id, team_id, multiplier, round_id, teams(flag_emoji, is_longshot), players(slug)')
+          db.from('matches').select('home_score, away_score').eq('status', 'complete').not('home_score', 'is', null),
+          db.from('matches').select('home_team_id, away_team_id, round_id, kickoff, status, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)').not('home_team_id', 'is', null),
+          db.from('picks').select('player_id, team_id, multiplier, round_id, teams(flag_emoji, is_longshot), players(slug), pick_results(points_earned, longshot_bonus, match_result)'),
+          db.from('teams').select('id, name, flag_emoji, band, is_eliminated')
         ]);
 
         if (error) throw error;
 
-        // ── Projected goals ────────────────────────────────────
+        const { windowStart, windowEnd } = getGameDayWindow(now);
+
+        // Projected goals
         let goalsScored = 0, matchesPlayed = 0;
-        (completedMatches || []).forEach(m => {
-          goalsScored  += (m.home_score || 0) + (m.away_score || 0);
-          matchesPlayed++;
-        });
-        const projectedTotal = matchesPlayed > 0
-          ? (goalsScored / matchesPlayed) * TOTAL_MATCHES
-          : null;
+        (completedMatches || []).forEach(m => { goalsScored += (m.home_score || 0) + (m.away_score || 0); matchesPlayed++; });
+        const projectedTotal = matchesPlayed > 0 ? (goalsScored / matchesPlayed) * TOTAL_MATCHES : null;
 
         const projLabel = document.getElementById('proj-goals-label');
-        if (projectedTotal !== null) {
-          projLabel.textContent = `⚽ Projected tournament goals: ${Math.round(projectedTotal)} (${goalsScored} goals in ${matchesPlayed} matches)`;
-        }
+        if (projectedTotal !== null) projLabel.textContent = `⚽ Projected tournament goals: ${Math.round(projectedTotal)} (${goalsScored} goals in ${matchesPlayed} matches)`;
 
-        // ── Round context ──────────────────────────────────────
-        const currentRound       = (rounds || []).find(r => !r.is_complete);
-        const isKnockout         = currentRound && currentRound.round_type === 'knockout';
-        const completedRounds    = (rounds || []).filter(r => r.is_complete).sort((a,b) => b.sort_order - a.sort_order);
-        const lastCompletedRound = completedRounds.length > 0 ? completedRounds[0] : null;
+        // Round context
+        const currentRound    = (rounds || []).find(r => !r.is_complete);
+        const isKnockout      = currentRound && currentRound.round_type === 'knockout';
+        const completedRounds = (rounds || []).filter(r => r.is_complete).sort((a,b) => b.sort_order - a.sort_order);
+        const lastCompleted   = completedRounds.length > 0 ? completedRounds[0] : null;
 
-        // ── Day counter ────────────────────────────────────────
         let dayLabel = '';
         if (currentRound && firstMatchData) {
-          const roundMatches = firstMatchData.filter(m => m.round_id === currentRound.id);
+          const roundMatches = (firstMatchData || []).filter(m => m.round_id === currentRound.id);
           if (roundMatches.length > 0) {
-            const firstKickoff = new Date(roundMatches[0].kickoff);
-            const dayNum = Math.floor((now - firstKickoff) / (24 * 60 * 60 * 1000)) + 1;
+            const firstWindowMs = toWindowStartMs(roundMatches[0].kickoff);
+            const nowWindowMs   = toWindowStartMs(now.toISOString());
+            const dayNum = Math.round((nowWindowMs - firstWindowMs) / (20 * 60 * 60 * 1000)) + 1;
             if (dayNum >= 1) dayLabel = ' · Day ' + dayNum;
           }
         }
+        if (currentRound) document.getElementById('round-heading').textContent = currentRound.name + dayLabel;
 
-        if (currentRound) {
-          let label = currentRound.name;
-          if (currentRound.round_type === 'group') label = 'Group Stage · Round ' + currentRound.sort_order;
-          document.getElementById('round-heading').textContent = label + dayLabel;
-        }
-
-        // ── Build lookup maps ──────────────────────────────────
-        const gdMap = {};
-        (gdData || []).forEach(r => { gdMap[r.player_id] = r.gd; });
-
-        const furthestMap = {};
-        (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
+        // Lookup maps
+        const gdMap = {};      (gdData || []).forEach(r => { gdMap[r.player_id] = r.gd; });
+        const furthestMap = {}; (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
 
         const priorPosMap = {};
-        if (lastCompletedRound && snapshots) {
-          snapshots
-            .filter(s => s.round_id === lastCompletedRound.id)
-            .forEach(s => { priorPosMap[s.player_id] = s.position; });
+        if (lastCompleted && snapshots) {
+          snapshots.filter(s => s.round_id === lastCompleted.id).forEach(s => { priorPosMap[s.player_id] = s.position; });
         }
 
         const formMap = {};
@@ -241,47 +266,65 @@
           if (r.match_result) formMap[r.player_id].push(r.match_result === 'win' ? 'W' : r.match_result === 'draw' ? 'D' : 'L');
         });
 
-        // ── Today's picks ──────────────────────────────────────
+        // Today's picks
         const todayTeamRoundPairs = new Set();
         (todayMatchRows || []).forEach(m => {
-          todayTeamRoundPairs.add(m.home_team_id + '|' + m.round_id);
-          todayTeamRoundPairs.add(m.away_team_id + '|' + m.round_id);
+          const ko = new Date(m.kickoff);
+          if (ko >= windowStart && ko <= windowEnd) {
+            todayTeamRoundPairs.add(m.home_team_id + '|' + m.round_id);
+            todayTeamRoundPairs.add(m.away_team_id + '|' + m.round_id);
+          }
         });
-
         const playerTodayMap = {};
         (allPicks || []).forEach(pick => {
-          const pairKey = pick.team_id + '|' + pick.round_id;
-          if (todayTeamRoundPairs.has(pairKey) && pick.teams) {
-            if (!playerTodayMap[pick.player_id]) {
-              playerTodayMap[pick.player_id] = { picks: [], keys: new Set() };
-            }
-            const flag  = pick.teams.flag_emoji;
-            const dedup = flag + '|' + pick.multiplier + '|' + pick.teams.is_longshot;
+          if (todayTeamRoundPairs.has(pick.team_id + '|' + pick.round_id) && pick.teams) {
+            if (!playerTodayMap[pick.player_id]) playerTodayMap[pick.player_id] = { picks: [], keys: new Set() };
+            const dedup = pick.teams.flag_emoji + '|' + pick.multiplier + '|' + pick.teams.is_longshot;
             if (!playerTodayMap[pick.player_id].keys.has(dedup)) {
               playerTodayMap[pick.player_id].keys.add(dedup);
-              playerTodayMap[pick.player_id].picks.push({
-                flag,
-                isLongshot: pick.teams.is_longshot,
-                multiplier: pick.multiplier
-              });
+              playerTodayMap[pick.player_id].picks.push({ flag: pick.teams.flag_emoji, isLongshot: pick.teams.is_longshot, multiplier: pick.multiplier });
             }
           }
         });
 
+        // Band / remaining teams
+        const BAND_COLOUR = { favourite: { dot:'🔵', css:'#3b82f6' }, dark_horse: { dot:'🟡', css:'#eab308' }, long_shot: { dot:'🟠', css:'#f97316' }, no_hoper: { dot:'🔴', css:'#ef4444' } };
+        const BAND_ORDER  = { favourite:1, dark_horse:2, long_shot:3, no_hoper:4 };
+        const teamById    = {};
+        (allTeams || []).forEach(t => { teamById[t.id] = t; });
+        const alivePoolTeams = (allTeams || []).filter(t => !t.is_eliminated).sort((a,b) => (BAND_ORDER[a.band]||5) - (BAND_ORDER[b.band]||5));
+        const usedByPlayer  = {};
+        (allPicks || []).forEach(pick => {
+          if (!usedByPlayer[pick.player_id]) usedByPlayer[pick.player_id] = new Set();
+          usedByPlayer[pick.player_id].add(pick.team_id);
+        });
+        function getPlayerRemainingTeams(playerId) {
+          const used = usedByPlayer[playerId] || new Set();
+          return alivePoolTeams.filter(t => !used.has(t.id));
+        }
+        function remainingTeamsHtml(playerId, isQFOrLater) {
+          const remaining = getPlayerRemainingTeams(playerId);
+          if (remaining.length === 0) return '<span style="color:var(--text-muted);font-size:11px">none</span>';
+          if (isQFOrLater) return remaining.map(t => { const b = BAND_COLOUR[t.band] || { css:'#94a3b8' }; return `<span style="font-size:14px;border-bottom:2px solid ${b.css};margin-right:3px">${t.flag_emoji}</span>`; }).join('');
+          const bandCounts = { favourite:0, dark_horse:0, long_shot:0, no_hoper:0 };
+          remaining.forEach(t => { if (t.band && bandCounts[t.band] !== undefined) bandCounts[t.band]++; });
+          const dots = Object.entries(bandCounts).filter(([,n]) => n > 0).map(([band,n]) => { const b = BAND_COLOUR[band]; return `<span style="font-size:10px" title="${band.replace('_',' ')}: ${n}">${b.dot}${n}</span>`; }).join(' ');
+          return `<span style="font-size:12px;font-weight:600">${remaining.length}</span> <span style="font-size:11px">${dots}</span>`;
+        }
+        const isQFOrLater = currentRound && ['QF','SF','Final'].includes(currentRound.name);
+
+        // Show/hide columns
         const koDisplay = isKnockout ? '' : 'none';
         document.getElementById('left-col-header').style.display   = isKnockout ? '' : 'none';
         document.getElementById('status-col-header').style.display = isKnockout ? '' : 'none';
         document.querySelectorAll('.knockout-only').forEach(el => el.style.display = koDisplay);
         document.querySelectorAll('.group-only').forEach(el => el.style.display = isKnockout ? 'none' : '');
 
-        // ── Sort ───────────────────────────────────────────────
+        // Sort
         const sorted = (scores || []).sort((a, b) => {
           if (b.total_points !== a.total_points) return b.total_points - a.total_points;
-          if (isKnockout) {
-            const afr = furthestMap[a.player_id] || 0, bfr = furthestMap[b.player_id] || 0;
-            if (bfr !== afr) return bfr - afr;
-          }
-          const agd = gdMap[a.player_id] || 0, bgd = gdMap[b.player_id] || 0;
+          if (isKnockout) { const afr = furthestMap[a.player_id]||0, bfr = furthestMap[b.player_id]||0; if (bfr !== afr) return bfr - afr; }
+          const agd = gdMap[a.player_id]||0, bgd = gdMap[b.player_id]||0;
           if (bgd !== agd) return bgd - agd;
           if (projectedTotal !== null) {
             const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
@@ -292,16 +335,16 @@
           return 0;
         });
 
+        // ── Render main leaderboard ───────────────────────────
         const tbody = document.getElementById('leaderboard-body');
         tbody.innerHTML = '';
 
         sorted.forEach((p, i) => {
-          const pos            = i + 1;
-          const teamsLeft      = 48 - (p.teams_used || 0);
-          const medal          = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
-          const gd             = gdMap[p.player_id] || 0;
-          const form           = formMap[p.player_id] || [];
-          const todayData      = playerTodayMap[p.player_id];
+          const pos = i + 1;
+          const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
+          const gd    = gdMap[p.player_id] || 0;
+          const form  = formMap[p.player_id] || [];
+          const todayData = playerTodayMap[p.player_id];
           const isPlayingToday = !!todayData;
           const todayPicks_p   = todayData ? todayData.picks : [];
 
@@ -320,22 +363,18 @@
             return '<span class="flag-inline' + cls + '">' + pick.flag + '</span>';
           }).join('');
 
-          // ── Goals diff column ──────────────────────────────
           let goalsDiffHtml = '<span style="color:var(--text-muted)">—</span>';
           if (projectedTotal !== null && p.total_goals_prediction !== null && p.total_goals_prediction !== undefined) {
-            const diff    = Math.round(p.total_goals_prediction - projectedTotal);
-            const absDiff = Math.abs(diff);
-            const sign    = diff >= 0 ? '+' : '-';
-            const cls = diff >= 0 ? 'goals-diff-close' : 'goals-diff-far';
-
-            goalsDiffHtml = `<span class="goals-diff ${cls}">${sign}${absDiff}</span>`;
+            const diff = Math.round(p.total_goals_prediction - projectedTotal);
+            const sign = diff >= 0 ? '+' : '';
+            const cls  = Math.abs(diff) <= 10 ? 'goals-diff-close' : Math.abs(diff) <= 30 ? 'goals-diff-mid' : 'goals-diff-far';
+            goalsDiffHtml = `<span class="goals-diff ${cls}">${sign}${diff}</span>`;
           }
 
           const koStyle = isKnockout ? '' : 'display:none;';
           const row = document.createElement('tr');
           if (p.is_eliminated) row.classList.add('out-row');
           if (isPlayingToday && !p.is_eliminated) row.classList.add('playing-row');
-
           row.innerHTML =
             '<td class="pos">' + pos + '</td>' +
             '<td class="prior">' + arrowHtml + '</td>' +
@@ -346,24 +385,76 @@
             '<td>' + gdHtml + '</td>' +
             '<td class="hide-mobile tiebreak-val">' + goalsDiffHtml + '</td>' +
             '<td class="hide-mobile">' + formHtml + '</td>' +
-            '<td class="hide-mobile" style="' + koStyle + 'color:var(--text-muted)">' + teamsLeft + '</td>' +
-            '<td class="hide-mobile" style="' + koStyle + '">' + (p.is_eliminated
-              ? '<span class="badge badge-red">OUT</span>'
-              : isPlayingToday ? '<span class="badge badge-blue">Playing</span>'
-              : '<span class="badge badge-green">Alive</span>') + '</td>';
-
+            '<td class="hide-mobile" style="' + koStyle + '">' + (isKnockout ? remainingTeamsHtml(p.player_id, isQFOrLater) : '') + '</td>' +
+            '<td class="hide-mobile" style="' + koStyle + '">' + (p.is_eliminated ? '<span class="badge badge-red">OUT</span>' : isPlayingToday ? '<span class="badge badge-blue">Playing</span>' : '<span class="badge badge-green">Alive</span>') + '</td>';
           tbody.appendChild(row);
         });
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('leaderboard-wrap').style.display = 'block';
-        document.getElementById('last-updated').textContent =
-          'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+        document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+
+        // Save data for other views
+        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap };
+
+        renderLongshotView();
 
       } catch(err) {
         console.error(err);
         document.getElementById('loading').innerHTML = '<p style="color:var(--red)">Failed to load. Check console.</p>';
       }
+    }
+    // ── Longshot leaderboard ──────────────────────────────────
+    function renderLongshotView() {
+      const wrap = document.getElementById('longshot-wrap');
+      if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the main leaderboard first.</p>'; return; }
+
+      const { allPicks, sorted } = _leaderboardData;
+
+      // Tally longshot bonuses per player
+      const lsData = {};
+      sorted.forEach(p => {
+        lsData[p.player_id] = { name: p.name, slug: p.slug, bonusPoints: 0, longshotWins: [], longshotPicks: 0 };
+      });
+
+      (allPicks || []).forEach(pick => {
+        if (!pick.teams?.is_longshot) return;
+        const s = lsData[pick.player_id];
+        if (!s) return;
+        s.longshotPicks++;
+        const res = pick.pick_results && pick.pick_results[0];
+        if (res && res.longshot_bonus > 0) {
+          s.bonusPoints += res.longshot_bonus;
+          s.longshotWins.push(pick.teams.flag_emoji || '⭐');
+        }
+      });
+
+      const lsSorted = Object.values(lsData).sort((a, b) => {
+        if (b.bonusPoints !== a.bonusPoints) return b.bonusPoints - a.bonusPoints;
+        return b.longshotPicks - a.longshotPicks;
+      });
+
+      const hasAny = lsSorted.some(p => p.longshotPicks > 0);
+      if (!hasAny) {
+        wrap.innerHTML = '<p style="color:var(--text-muted);padding:16px 0">No longshot picks recorded yet.</p>';
+        return;
+      }
+
+      let html = '<table><thead><tr><th class="pos">#</th><th>Player</th><th>Longshot Picks</th><th>Wins ⭐</th><th>Bonus Pts</th></tr></thead><tbody>';
+
+      lsSorted.filter(p => p.longshotPicks > 0).forEach((p, i) => {
+        const winsStr = p.longshotWins.length > 0 ? p.longshotWins.join(' ') : '—';
+        html += `<tr>
+          <td class="pos">${i + 1}</td>
+          <td style="font-weight:600"><a href="/${p.slug}" style="color:var(--text);text-decoration:none">${p.name}</a></td>
+          <td style="color:var(--text-muted)">${p.longshotPicks}</td>
+          <td>${winsStr}</td>
+          <td class="ls-pts">${p.bonusPoints > 0 ? '+' + p.bonusPoints : '—'}</td>
+        </tr>`;
+      });
+
+      html += '</tbody></table>';
+      wrap.innerHTML = html;
     }
 
     loadLeaderboard();
