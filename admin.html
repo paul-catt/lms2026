@@ -6,7 +6,6 @@
   <title>Admin — LMS 2026</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- PWA / Home screen icon -->
   <link rel="apple-touch-icon" href="/icon-192.png">
   <link rel="manifest" href="/manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -58,32 +57,17 @@
       color: #e9d5ff; text-decoration: underline; cursor: pointer; margin-left: 12px; font-weight: 400;
     }
 
-    /* Goals predictor */
     .goals-diff-pos { color: var(--green); font-weight: 600; }
     .goals-diff-neg { color: var(--red); font-weight: 600; }
     .goals-diff-zero { color: var(--text-muted); }
     .goals-diff-na { color: var(--text-muted); font-style: italic; }
     .proj-formula-block {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 16px;
-      margin-bottom: 16px;
-      font-size: 13px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; font-size: 13px;
     }
-    .proj-formula-block .formula-val {
-      font-size: 28px;
-      font-weight: 800;
-      color: var(--accent);
-      line-height: 1.1;
-    }
-    .proj-formula-block .formula-sub {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
+    .proj-formula-block .formula-val { font-size: 28px; font-weight: 800; color: var(--accent); line-height: 1.1; }
+    .proj-formula-block .formula-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 
-    /* Paid badge */
     .paid-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; cursor:pointer; border:none; }
     .paid-yes { background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); }
     .paid-no  { background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
@@ -106,13 +90,11 @@
     </div>
   </nav>
 
-  <!-- ADMIN PANEL — no login gate -->
   <main id="admin-panel" style="max-width:1000px">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px">
       <h1 style="font-size:20px; font-weight:800">⚙️ Admin Panel</h1>
     </div>
 
-    <!-- TAB BAR -->
     <div class="tab-bar">
       <div class="tab active" data-tab="results">⚽ Results</div>
       <div class="tab" data-tab="goals">🎯 Goals</div>
@@ -152,9 +134,7 @@
           </label>
           <div id="pens-winner-row" style="display:none; margin-top:10px">
             <label style="font-size:13px; font-weight:600; margin-bottom:6px; display:block">Who won AET or on Penalties?</label>
-            <select id="pens-winner-select" style="width:100%">
-              <option value="">Select winner...</option>
-            </select>
+            <select id="pens-winner-select" style="width:100%"><option value="">Select winner...</option></select>
           </div>
         </div>
         <div id="picks-preview" class="picks-preview" style="display:none">
@@ -165,8 +145,7 @@
         <div id="result-msg" style="margin-top:8px; font-size:12px"></div>
       </div>
 
-
-      <!-- BULK RESULT ENTRY CARD -->
+      <!-- BULK RESULT ENTRY -->
       <div class="card" style="margin-top:16px; border:1px solid var(--accent)">
         <div class="card-title" style="color:var(--accent)">⚡ Bulk Result Entry</div>
         <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">
@@ -183,11 +162,11 @@
         <div id="bulk-msg" style="margin-top:8px; font-size:12px"></div>
       </div>
 
-      <!-- CORRECT A RESULT CARD -->
+      <!-- CORRECT A RESULT -->
       <div class="card" style="margin-top:16px; border:1px solid var(--gold)">
         <div class="card-title" style="color:var(--gold)">✏️ Correct a Result</div>
         <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">
-          Fix a wrong score or completely undo a result. <strong>Correction</strong> overwrites the score and recalculates points. <strong>Undo</strong> wipes the result entirely — the match returns to pending as if it never happened.
+          Fix a wrong score or completely undo a result. <strong>Correction</strong> overwrites the score and recalculates points. <strong>Undo</strong> wipes the result entirely.
         </p>
         <div class="form-group">
           <label>Match</label>
@@ -210,9 +189,7 @@
           </label>
           <div id="correct-pens-winner-row" style="display:none; margin-top:10px">
             <label style="font-size:13px; font-weight:600; margin-bottom:6px; display:block">Who won AET or on Penalties?</label>
-            <select id="correct-pens-winner-select" style="width:100%">
-              <option value="">Select winner...</option>
-            </select>
+            <select id="correct-pens-winner-select" style="width:100%"><option value="">Select winner...</option></select>
           </div>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap">
@@ -222,11 +199,11 @@
         <div id="correct-msg" style="margin-top:8px; font-size:12px"></div>
       </div>
 
-      <!-- SNAPSHOT CARD -->
+      <!-- SNAPSHOT -->
       <div class="card" style="margin-top:16px">
         <div class="card-title">📸 Leaderboard Snapshot</div>
         <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">
-          Snapshots are taken <strong>automatically</strong> when the last result of a round is saved. Use this only if you need to retake one — e.g. after correcting a result.
+          Snapshots are taken <strong>automatically</strong> when the last result of a round is saved. Use this only if you need to retake one.
         </p>
         <div class="form-group">
           <label>Round to snapshot</label>
@@ -239,11 +216,33 @@
       <!-- DANGER ZONE -->
       <div class="card" style="border:1px solid var(--red); margin-top:16px">
         <div class="card-title" style="color:var(--red)">⚠️ Danger Zone</div>
-        <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">
-          Clears all pick results and resets all match statuses back to scheduled. Does <strong>not</strong> delete players, picks, teams or fixtures.
-        </p>
-        <button class="btn btn-danger" id="btn-reset-all">🗑️ Reset All Results</button>
-        <div id="reset-msg" style="margin-top:8px; font-size:12px"></div>
+
+        <!-- Reset Results only -->
+        <div style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border)">
+          <p style="font-size:13px; color:var(--text-muted); margin-bottom:10px">
+            <strong>Reset Results:</strong> Clears all pick_results and resets all match statuses to scheduled. Does <em>not</em> delete players, picks, teams or fixtures.
+          </p>
+          <button class="btn btn-danger" id="btn-reset-all">🗑️ Reset All Results</button>
+          <div id="reset-msg" style="margin-top:8px; font-size:12px"></div>
+        </div>
+
+        <!-- Match Reset (keep group fixtures) -->
+        <div style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border)">
+          <p style="font-size:13px; color:var(--text-muted); margin-bottom:10px">
+            <strong>Match Reset:</strong> Clears all results, pick_results, eliminations, round snapshots, and round completion flags. Deletes all knockout matches (R32+). Keeps group stage fixtures intact. Resets all teams to not-eliminated.
+          </p>
+          <button class="btn btn-danger" id="btn-match-reset">🔄 Match Reset (Keep Group Fixtures)</button>
+          <div id="match-reset-msg" style="margin-top:8px; font-size:12px"></div>
+        </div>
+
+        <!-- Nuclear Reset (testing only) -->
+        <div>
+          <p style="font-size:13px; color:var(--text-muted); margin-bottom:10px">
+            <strong>☢️ Nuclear Reset (testing only):</strong> Wipes <em>everything</em> — results, pick_results, picks, goals predictions, eliminations, round snapshots, round completion flags. Deletes all knockout matches. Keeps group stage fixtures and player accounts. Use only during testing.
+          </p>
+          <button class="btn btn-danger" id="btn-nuclear-reset" style="background:#7c3aed">☢️ Nuclear Reset</button>
+          <div id="nuclear-reset-msg" style="margin-top:8px; font-size:12px"></div>
+        </div>
       </div>
     </div>
 
@@ -293,12 +292,10 @@
         </div>
       </div>
 
-      <!-- AUTO-ASSIGN CARD -->
       <div class="card" style="margin-top:16px">
         <div class="card-title">🤖 Auto-Assign Missing Picks</div>
         <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">
           After a deadline passes, run this to assign default pool teams to any player who hasn't picked.
-          Only assigns to players with no pick for the selected round. Skips teams already used by that player or eliminated from the tournament.
         </p>
         <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap">
           <div class="form-group" style="margin:0; min-width:220px">
@@ -342,13 +339,10 @@
       <div class="card" style="margin-top:16px; border:1px solid var(--border)">
         <div class="card-title">🥉 3rd Place Match</div>
         <p style="font-size:13px; color:var(--text-muted)">
-          The 3rd place match (Match 103 · Sat 18 Jul · Miami) should be added via the form above as a normal Final-round match, then flagged as 3rd place directly in Supabase:
-          <br><br>
+          Add via the form above as a Final-round match, then flag in Supabase:<br><br>
           <code style="font-size:12px; background:var(--surface2); padding:4px 8px; border-radius:4px; display:inline-block; margin-top:4px">
             UPDATE matches SET is_third_place = true WHERE &lt;match id&gt;;
           </code>
-          <br><br>
-          Goals from this match count toward the projected total but no picks or points are awarded.
         </p>
       </div>
     </div>
@@ -370,7 +364,7 @@
       <div class="card">
         <div class="card-title">📈 Tournament Outright Odds</div>
         <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
-          Fetch current tournament winner odds from The Odds API. Stored with a timestamp. Use sparingly — you have a limited API quota.
+          Fetch current tournament winner odds from The Odds API. Use sparingly — limited API quota.
         </p>
         <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px">
           <button class="btn btn-primary" id="btn-fetch-odds">🔄 Fetch Odds</button>
@@ -386,8 +380,7 @@
       <div class="card">
         <div class="card-title">🧪 Test Date Override</div>
         <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
-          Set a fake "today" date for testing. All date-dependent logic across the site will use this date instead of the real one.
-          <strong>Clear before going live in June.</strong>
+          Set a fake "today" date for testing. <strong>Clear before going live in June.</strong>
         </p>
         <div class="admin-grid" style="align-items:end">
           <div class="form-group" style="margin:0">
@@ -401,12 +394,10 @@
           </div>
         </div>
         <div id="test-date-msg" style="margin-top:12px; font-size:13px"></div>
-
         <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px">
           <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px">Quick Jump</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap" id="quick-jump-btns"></div>
         </div>
-
         <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:16px">
           <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px">Current Status</div>
           <div id="test-date-status" style="font-size:13px"></div>
@@ -424,6 +415,11 @@
 
     const TOTAL_MATCHES = 104;
 
+    // ── Day window constants ──────────────────────────────────
+    // Window: 11:00 UTC to 11:00 UTC (noon BST to noon BST)
+    const WINDOW_START_HOUR = 11; // UTC
+    const WINDOW_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+
     const ROUND_START_DATES = {
       'Group Phase 1': '2026-06-11',
       'Group Phase 2': '2026-06-18',
@@ -434,6 +430,9 @@
       'SF':            '2026-07-14',
       'Final':         '2026-07-19'
     };
+
+    // Group stage round IDs (populated on load, used for nuclear/match reset)
+    let groupRoundIds = [];
 
     const QUICK_JUMPS = [
       { label: 'GP1 Day 1',  date: '2026-06-11T15:00' },
@@ -457,6 +456,22 @@
     function getEffectiveDate() {
       const override = localStorage.getItem(LS_KEY);
       return override ? new Date(override) : new Date();
+    }
+
+    // ── Day window helpers ────────────────────────────────────
+    // Returns the UTC ms timestamp of the window start that contains this kickoff
+    function toWindowStartMs(isoStr) {
+      const d = new Date(isoStr);
+      const h = d.getUTCHours();
+      // If before WINDOW_START_HOUR UTC, it belongs to the previous day's window
+      if (h < WINDOW_START_HOUR) {
+        return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, WINDOW_START_HOUR, 0, 0);
+      }
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), WINDOW_START_HOUR, 0, 0);
+    }
+
+    function getDayNumber(kickoffIso, roundFirstKickoffIso) {
+      return Math.round((toWindowStartMs(kickoffIso) - toWindowStartMs(roundFirstKickoffIso)) / WINDOW_DURATION_MS) + 1;
     }
 
     function setTestDate(isoString) {
@@ -525,7 +540,6 @@
 
     document.addEventListener('DOMContentLoaded', function() {
       updateBanner();
-      // No login gate — go straight to admin
       initAdmin();
 
       document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', function() { switchTab(this.dataset.tab); }));
@@ -540,13 +554,10 @@
       document.getElementById('match-kickoff').addEventListener('change', updateKickoffDayLabel);
       document.getElementById('match-round-select').addEventListener('change', updateKickoffDayLabel);
       document.getElementById('btn-auto-assign').addEventListener('click', autoAssignMissingPicks);
-
-      // Correct a result
       document.getElementById('correct-match-select').addEventListener('change', onCorrectMatchSelected);
       document.getElementById('correct-pens-checkbox').addEventListener('change', onCorrectPensToggle);
       document.getElementById('btn-save-correction').addEventListener('click', saveCorrection);
       document.getElementById('btn-undo-result').addEventListener('click', undoResult);
-
       document.getElementById('btn-set-test-date').addEventListener('click', () => {
         const val = document.getElementById('test-date-input').value;
         if (!val) { document.getElementById('test-date-msg').innerHTML = '<span style="color:var(--red)">Pick a date first.</span>'; return; }
@@ -577,46 +588,19 @@
     // ── Score label helper ────────────────────────────────────
     function updateScoreLabels(matchId, homeHintId, awayHintId) {
       const match = matchCache[matchId] || completedMatchCache[matchId];
-      if (!match) {
-        document.getElementById(homeHintId).textContent = '';
-        document.getElementById(awayHintId).textContent = '';
-        return;
-      }
-      const isKnockout = match.rounds && match.rounds.round_type === 'knockout';
-      const hint = isKnockout ? '(incl. AET if applicable)' : '';
+      if (!match) { document.getElementById(homeHintId).textContent = ''; document.getElementById(awayHintId).textContent = ''; return; }
+      const hint = (match.rounds && match.rounds.round_type === 'knockout') ? '(incl. AET if applicable)' : '';
       document.getElementById(homeHintId).textContent = hint;
       document.getElementById(awayHintId).textContent = hint;
     }
 
-    // ── Day number helper ─────────────────────────────────────
-    function kickoffDayNumber(kickoffLocalValue, roundName) {
-      const startDateStr = ROUND_START_DATES[roundName];
-      if (!startDateStr) return null;
-      const roundWindowStartMs = Date.UTC(
-        parseInt(startDateStr.slice(0,4)),
-        parseInt(startDateStr.slice(5,7)) - 1,
-        parseInt(startDateStr.slice(8,10)),
-        14, 0, 0
-      );
-      const ko = new Date(kickoffLocalValue);
-      const koD = new Date(ko);
-      const koH = koD.getUTCHours();
-      let koWindowMs;
-      if (koH < 10) {
-        koWindowMs = Date.UTC(koD.getUTCFullYear(), koD.getUTCMonth(), koD.getUTCDate() - 1, 14, 0, 0);
-      } else {
-        koWindowMs = Date.UTC(koD.getUTCFullYear(), koD.getUTCMonth(), koD.getUTCDate(), 14, 0, 0);
-      }
-      const dayNum = Math.round((koWindowMs - roundWindowStartMs) / (20 * 60 * 60 * 1000)) + 1;
-      return dayNum >= 1 ? dayNum : null;
-    }
-
     // ── Players ───────────────────────────────────────────────
     async function loadPlayers() {
-      const { data } = await db.from('players').select('*').order('name');
+      const { data, error } = await db.from('players').select('*').order('name');
       const el = document.getElementById('players-list');
+      if (error) { el.innerHTML = `<p style="color:var(--red)">Error loading players: ${error.message}</p>`; return; }
       if (!data || data.length === 0) { el.innerHTML = '<p style="color:var(--text-muted)">No players yet.</p>'; return; }
-      // Payment summary
+
       const paidCount   = data.filter(p => p.has_paid).length;
       const unpaidCount = data.length - paidCount;
       const ps = document.getElementById('pay-paid');
@@ -640,7 +624,7 @@
             <button class="paid-badge ${paidClass}" onclick="togglePaid('${p.id}', ${p.has_paid ? 'true' : 'false'})">${paidLabel}</button>
             <a href="/${p.slug}" target="_blank" class="btn btn-secondary btn-sm">View</a>
             <button class="btn btn-secondary btn-sm btn-edit" onclick="toggleEdit('${p.id}')">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deletePlayer('${p.id}', '${p.name}')">Delete</button>
+            <button class="btn btn-danger btn-sm" onclick="deletePlayer('${p.id}', '${p.name.replace(/'/g,"\\'")}')">Delete</button>
           </div>
         </div>
         <div class="player-edit-form" id="edit-form-${p.id}">
@@ -666,8 +650,7 @@
     }
 
     async function togglePaid(id, currentlyPaid) {
-      const newVal = !currentlyPaid;
-      const { error } = await db.from('players').update({ has_paid: newVal }).eq('id', id);
+      const { error } = await db.from('players').update({ has_paid: !currentlyPaid }).eq('id', id);
       if (!error) loadPlayers();
     }
 
@@ -685,10 +668,22 @@
     }
 
     async function deletePlayer(id, name) {
-      if (!confirm('Delete ' + name + '? This cannot be undone.')) return;
+      if (!confirm('Delete ' + name + '? This will also delete all their picks and results. This cannot be undone.')) return;
+      // Delete dependent records first to avoid FK constraint errors
+      // picks -> pick_results (cascade should handle, but be explicit)
+      const { data: playerPicks } = await db.from('picks').select('id').eq('player_id', id);
+      if (playerPicks && playerPicks.length > 0) {
+        const pickIds = playerPicks.map(p => p.id);
+        await db.from('pick_results').delete().in('pick_id', pickIds);
+        await db.from('picks').delete().eq('player_id', id);
+      }
+      await db.from('leaderboard_snapshots').delete().eq('player_id', id);
       const { error } = await db.from('players').delete().eq('id', id);
-      if (error) { alert('Error: ' + error.message); }
-      else { loadPlayers(); }
+      if (error) {
+        alert('Error deleting player: ' + error.message + '\n\nIf this keeps failing, the player may need to be deleted directly in Supabase.');
+      } else {
+        loadPlayers();
+      }
     }
 
     async function addPlayer() {
@@ -717,107 +712,61 @@
     }
 
     async function autoAssignMissingPicks() {
-      const btn       = document.getElementById('btn-auto-assign');
-      const msg       = document.getElementById('assign-msg');
-      const detail    = document.getElementById('assign-detail');
-      const sel       = document.getElementById('assign-round-select');
-      const roundId   = sel.value;
-      const roundOpt  = sel.options[sel.selectedIndex];
+      const btn = document.getElementById('btn-auto-assign');
+      const msg = document.getElementById('assign-msg');
+      const detail = document.getElementById('assign-detail');
+      const sel = document.getElementById('assign-round-select');
+      const roundId = sel.value;
+      const roundOpt = sel.options[sel.selectedIndex];
       const roundType = roundOpt ? roundOpt.dataset.type : null;
-
       if (!roundId) { msg.style.color = 'var(--red)'; msg.textContent = 'Select a round first.'; return; }
-
       btn.disabled = true; btn.textContent = 'Assigning...';
       msg.style.color = 'var(--text-muted)'; msg.textContent = 'Checking picks...';
       detail.textContent = '';
-
       try {
-        const { data: players } = await db.from('players')
-          .select('id, name')
-          .eq('is_active', true)
-          .eq('is_eliminated', false);
-
-        const { data: existingPicks } = await db.from('picks')
-          .select('player_id, multiplier')
-          .eq('round_id', roundId);
-
-        const { data: pool } = await db.from('default_pool')
-          .select('priority_order, team_id, teams(id, name, flag_emoji)')
-          .order('priority_order');
-
-        const { data: aliveMatches } = await db.from('matches')
-          .select('home_team_id, away_team_id')
-          .in('status', ['scheduled', 'live']);
-
+        const { data: players } = await db.from('players').select('id, name').eq('is_active', true).eq('is_eliminated', false);
+        const { data: existingPicks } = await db.from('picks').select('player_id, multiplier').eq('round_id', roundId);
+        const { data: pool } = await db.from('default_pool').select('priority_order, team_id, teams(id, name, flag_emoji)').order('priority_order');
+        const { data: aliveMatches } = await db.from('matches').select('home_team_id, away_team_id').in('status', ['scheduled', 'live']);
         const aliveTeamIds = new Set();
-        (aliveMatches || []).forEach(m => {
-          aliveTeamIds.add(m.home_team_id);
-          aliveTeamIds.add(m.away_team_id);
-        });
-
+        (aliveMatches || []).forEach(m => { aliveTeamIds.add(m.home_team_id); aliveTeamIds.add(m.away_team_id); });
         const alivePool = (pool || []).filter(p => aliveTeamIds.has(p.team_id));
-
         const { data: allPicks } = await db.from('picks').select('player_id, team_id');
         const usedByPlayer = {};
-        (allPicks || []).forEach(p => {
-          if (!usedByPlayer[p.player_id]) usedByPlayer[p.player_id] = new Set();
-          usedByPlayer[p.player_id].add(p.team_id);
-        });
-
-        const isGroup   = roundType === 'group';
-        const log       = [];
+        (allPicks || []).forEach(p => { if (!usedByPlayer[p.player_id]) usedByPlayer[p.player_id] = new Set(); usedByPlayer[p.player_id].add(p.team_id); });
+        const isGroup = roundType === 'group';
+        const log = [];
         let assignCount = 0;
-
         for (const player of (players || [])) {
           const myPicks = (existingPicks || []).filter(p => p.player_id === player.id);
-          const has3pt  = myPicks.some(p => p.multiplier === 3);
-          const has2pt  = myPicks.some(p => p.multiplier === 2);
-
+          const has3pt = myPicks.some(p => p.multiplier === 3);
+          const has2pt = myPicks.some(p => p.multiplier === 2);
           if (isGroup && has3pt && has2pt) continue;
           if (!isGroup && myPicks.length > 0) continue;
-
           const usedTeams = usedByPlayer[player.id] || new Set();
-          const eligible  = alivePool.filter(p => !usedTeams.has(p.team_id));
-
+          const eligible = alivePool.filter(p => !usedTeams.has(p.team_id));
           if (isGroup) {
             const toAssign = [];
-            if (!has3pt && eligible.length > 0) {
-              toAssign.push({ team_id: eligible[0].team_id, multiplier: 3, name: eligible[0].teams.name, flag: eligible[0].teams.flag_emoji });
-            }
-            if (!has2pt) {
-              for (const candidate of eligible) {
-                if (!toAssign.some(a => a.team_id === candidate.team_id)) {
-                  toAssign.push({ team_id: candidate.team_id, multiplier: 2, name: candidate.teams.name, flag: candidate.teams.flag_emoji });
-                  break;
-                }
-              }
-            }
+            if (!has3pt && eligible.length > 0) toAssign.push({ team_id: eligible[0].team_id, multiplier: 3, name: eligible[0].teams.name, flag: eligible[0].teams.flag_emoji });
+            if (!has2pt) { for (const c of eligible) { if (!toAssign.some(a => a.team_id === c.team_id)) { toAssign.push({ team_id: c.team_id, multiplier: 2, name: c.teams.name, flag: c.teams.flag_emoji }); break; } } }
             if (toAssign.length === 0) { log.push(`⚠️ ${player.name} — no eligible pool teams available`); continue; }
-            for (const assignment of toAssign) {
-              const { error } = await db.from('picks').insert({ player_id: player.id, round_id: roundId, team_id: assignment.team_id, multiplier: assignment.multiplier, is_assigned: true });
-              if (!error) { assignCount++; log.push(`✅ ${player.name} → ${assignment.flag} ${assignment.name} (${assignment.multiplier}pt)`); }
-              else { log.push(`❌ ${player.name} → ${assignment.name} failed: ${error.message}`); }
+            for (const a of toAssign) {
+              const { error } = await db.from('picks').insert({ player_id: player.id, round_id: roundId, team_id: a.team_id, multiplier: a.multiplier, is_assigned: true });
+              if (!error) { assignCount++; log.push(`✅ ${player.name} → ${a.flag} ${a.name} (${a.multiplier}pt)`); }
+              else log.push(`❌ ${player.name} → ${a.name} failed: ${error.message}`);
             }
           } else {
-            if (eligible.length === 0) {
-              log.push(`⚠️ ${player.name} — pool exhausted. Marking as eliminated.`);
-              await db.from('players').update({ is_eliminated: true, eliminated_at: new Date().toISOString() }).eq('id', player.id);
-              continue;
-            }
-            const assignment = eligible[0];
-            const { error } = await db.from('picks').insert({ player_id: player.id, round_id: roundId, team_id: assignment.team_id, multiplier: 2, is_assigned: true });
-            if (!error) { assignCount++; log.push(`✅ ${player.name} → ${assignment.teams.flag_emoji} ${assignment.teams.name} (2pt)`); }
-            else { log.push(`❌ ${player.name} → ${assignment.teams.name} failed: ${error.message}`); }
+            if (eligible.length === 0) { log.push(`⚠️ ${player.name} — pool exhausted. Marking as eliminated.`); await db.from('players').update({ is_eliminated: true, eliminated_at: new Date().toISOString() }).eq('id', player.id); continue; }
+            const a = eligible[0];
+            const { error } = await db.from('picks').insert({ player_id: player.id, round_id: roundId, team_id: a.team_id, multiplier: 2, is_assigned: true });
+            if (!error) { assignCount++; log.push(`✅ ${player.name} → ${a.teams.flag_emoji} ${a.teams.name} (2pt)`); }
+            else log.push(`❌ ${player.name} → ${a.teams.name} failed: ${error.message}`);
           }
         }
-
-        msg.style.color  = assignCount > 0 ? 'var(--green)' : 'var(--text-muted)';
-        msg.textContent  = assignCount > 0 ? `✅ ${assignCount} pick(s) assigned.` : 'No missing picks found — everyone has picked.';
+        msg.style.color = assignCount > 0 ? 'var(--green)' : 'var(--text-muted)';
+        msg.textContent = assignCount > 0 ? `✅ ${assignCount} pick(s) assigned.` : 'No missing picks found.';
         detail.innerHTML = log.join('<br>');
-      } catch (err) {
-        msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message;
-      }
-
+      } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message; }
       btn.disabled = false; btn.textContent = '🤖 Assign Unpicked Players';
     }
 
@@ -825,35 +774,24 @@
     async function loadGoalsTab() {
       const wrap = document.getElementById('goals-table-wrap');
       wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-
       const [{ data: completedMatches }, { data: players }] = await Promise.all([
         db.from('matches').select('home_score, away_score, is_third_place').eq('status', 'complete').not('home_score', 'is', null),
         db.from('players').select('id, name, total_goals_prediction').order('name')
       ]);
-
       let goalsScored = 0, matchesPlayed = 0;
-      (completedMatches || []).forEach(m => {
-        goalsScored  += (m.home_score || 0) + (m.away_score || 0);
-        matchesPlayed++;
-      });
+      (completedMatches || []).forEach(m => { goalsScored += (m.home_score || 0) + (m.away_score || 0); matchesPlayed++; });
       const projectedTotal = matchesPlayed > 0 ? Math.round((goalsScored / matchesPlayed) * TOTAL_MATCHES * 10) / 10 : null;
-
       const valEl = document.getElementById('proj-goals-val');
       const subEl = document.getElementById('proj-goals-sub');
       if (projectedTotal !== null) {
         valEl.textContent = Math.round(projectedTotal);
         subEl.textContent = `Projected total goals · ${goalsScored} goals in ${matchesPlayed} matches · avg ${(goalsScored/matchesPlayed).toFixed(1)}/game`;
-      } else {
-        valEl.textContent = '—';
-        subEl.textContent = 'No completed matches yet';
-      }
-
+      } else { valEl.textContent = '—'; subEl.textContent = 'No completed matches yet'; }
       const rows = (players || []).map(p => {
         const pred = p.total_goals_prediction;
         const diff = (projectedTotal !== null && pred !== null && pred !== undefined) ? Math.round(pred - projectedTotal) : null;
         return { ...p, pred, diff, absDiff: diff !== null ? Math.abs(diff) : Infinity };
       }).sort((a,b) => a.absDiff - b.absDiff);
-
       let html = '<div class="table-wrap"><table><thead><tr><th>#</th><th style="min-width:120px">Player</th><th>Prediction</th><th>Diff from projection</th></tr></thead><tbody>';
       rows.forEach((p, i) => {
         const predStr = p.pred !== null && p.pred !== undefined ? p.pred : '—';
@@ -862,12 +800,7 @@
         else if (p.diff > 0) diffHtml = '<span class="goals-diff-pos">+' + p.diff + '</span>';
         else if (p.diff < 0) diffHtml = '<span class="goals-diff-neg">' + p.diff + '</span>';
         else diffHtml = '<span class="goals-diff-zero">exact!</span>';
-        html += '<tr>' +
-          '<td style="color:var(--text-muted)">' + (i+1) + '</td>' +
-          '<td style="font-weight:600; min-width:120px">' + p.name + '</td>' +
-          '<td style="font-size:15px; font-weight:700">' + predStr + '</td>' +
-          '<td>' + diffHtml + '</td>' +
-          '</tr>';
+        html += '<tr><td style="color:var(--text-muted)">' + (i+1) + '</td><td style="font-weight:600">' + p.name + '</td><td style="font-size:15px;font-weight:700">' + predStr + '</td><td>' + diffHtml + '</td></tr>';
       });
       html += '</tbody></table></div>';
       wrap.innerHTML = html;
@@ -885,7 +818,6 @@
 
       const sel = document.getElementById('result-match-select');
       if (!data || data.length === 0) { sel.innerHTML = '<option>No pending matches</option>'; return; }
-
       matchCache = {};
       data.forEach(m => { matchCache[m.id] = m; });
 
@@ -897,23 +829,14 @@
         }
       }
 
-      function toWindowStartMs(isoStr) {
-        const d = new Date(isoStr);
-        const h = d.getUTCHours();
-        if (h < 10) return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 14, 0, 0);
-        return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 14, 0, 0);
-      }
-
       sel.innerHTML = '<option value="">Select a match...</option>' + data.map(m => {
-        const d          = new Date(m.kickoff).toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
-        const t          = new Date(m.kickoff).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+        const d = new Date(m.kickoff).toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
+        const t = new Date(m.kickoff).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
         const thirdLabel = m.is_third_place ? ' 🥉' : '';
-        const firstKo    = roundFirstKickoffMap[m.round_id];
+        const firstKo = roundFirstKickoffMap[m.round_id];
         let dayStr = '';
         if (firstKo) {
-          const firstWindowMs = toWindowStartMs(firstKo);
-          const koWindowMs    = toWindowStartMs(m.kickoff);
-          const dayNum        = Math.round((koWindowMs - firstWindowMs) / (20 * 60 * 60 * 1000)) + 1;
+          const dayNum = getDayNumber(m.kickoff, firstKo);
           if (dayNum >= 1) dayStr = ' Day ' + dayNum + ' ·';
         }
         return `<option value="${m.id}">${m.home_team.flag_emoji} ${m.home_team.name} vs ${m.away_team.flag_emoji} ${m.away_team.name} (${m.rounds.name} ·${dayStr} ${d}, ${t})${thirdLabel}</option>`;
@@ -922,7 +845,6 @@
       await loadAllPicks(data.map(m => m.id), data);
     }
 
-    // ── Completed matches for correction ──────────────────────
     async function loadCompletedMatchesForCorrection() {
       const { data } = await db
         .from('matches')
@@ -933,10 +855,8 @@
 
       const sel = document.getElementById('correct-match-select');
       if (!data || data.length === 0) { sel.innerHTML = '<option>No completed matches</option>'; return; }
-
       completedMatchCache = {};
       data.forEach(m => { completedMatchCache[m.id] = m; });
-
       sel.innerHTML = '<option value="">Select a completed match...</option>' + data.map(m => {
         const d = new Date(m.kickoff).toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
         const score = m.home_score + '–' + m.away_score;
@@ -946,18 +866,14 @@
 
     function onCorrectMatchSelected() {
       const matchId = document.getElementById('correct-match-select').value;
-      const match   = matchId ? completedMatchCache[matchId] : null;
+      const match = matchId ? completedMatchCache[matchId] : null;
       if (!match) return;
-
       document.getElementById('correct-home-score').value = match.home_score ?? '';
       document.getElementById('correct-away-score').value = match.away_score ?? '';
-
       const isKnockout = match.rounds && match.rounds.round_type === 'knockout';
-      const hasPens    = !!match.pens_winner_id;
-
+      const hasPens = !!match.pens_winner_id;
       document.getElementById('correct-pens-row').style.display = isKnockout ? 'block' : 'none';
-      document.getElementById('correct-pens-checkbox').checked   = hasPens;
-
+      document.getElementById('correct-pens-checkbox').checked = hasPens;
       if (hasPens) {
         document.getElementById('correct-pens-winner-row').style.display = 'block';
         document.getElementById('correct-pens-winner-select').innerHTML =
@@ -967,17 +883,15 @@
       } else {
         document.getElementById('correct-pens-winner-row').style.display = 'none';
       }
-
       updateScoreLabels(matchId, 'correct-home-hint', 'correct-away-hint');
       document.getElementById('correct-msg').textContent = '';
     }
 
     function onCorrectPensToggle() {
-      const checked   = document.getElementById('correct-pens-checkbox').checked;
-      const matchId   = document.getElementById('correct-match-select').value;
-      const match     = completedMatchCache[matchId];
-      const winnerRow = document.getElementById('correct-pens-winner-row');
-      winnerRow.style.display = checked ? 'block' : 'none';
+      const checked = document.getElementById('correct-pens-checkbox').checked;
+      const matchId = document.getElementById('correct-match-select').value;
+      const match = completedMatchCache[matchId];
+      document.getElementById('correct-pens-winner-row').style.display = checked ? 'block' : 'none';
       if (checked && match) {
         document.getElementById('correct-pens-winner-select').innerHTML =
           '<option value="">Select winner...</option>' +
@@ -987,64 +901,36 @@
     }
 
     async function saveCorrection() {
-      const matchId     = document.getElementById('correct-match-select').value;
-      const homeScore   = parseInt(document.getElementById('correct-home-score').value);
-      const awayScore   = parseInt(document.getElementById('correct-away-score').value);
+      const matchId = document.getElementById('correct-match-select').value;
+      const homeScore = parseInt(document.getElementById('correct-home-score').value);
+      const awayScore = parseInt(document.getElementById('correct-away-score').value);
       const pensChecked = document.getElementById('correct-pens-checkbox').checked;
-      const pensWinner  = document.getElementById('correct-pens-winner-select').value;
-      const msg         = document.getElementById('correct-msg');
-
+      const pensWinner = document.getElementById('correct-pens-winner-select').value;
+      const msg = document.getElementById('correct-msg');
       if (!matchId || isNaN(homeScore) || isNaN(awayScore)) { msg.style.color='var(--red)'; msg.textContent='Select a match and fill in scores.'; return; }
       if (!confirm('Save correction and recalculate points for this match?')) return;
-
       msg.style.color='var(--text-muted)'; msg.textContent='Saving...';
-
-      const match      = completedMatchCache[matchId];
+      const match = completedMatchCache[matchId];
       const isKnockout = match && match.rounds.round_type === 'knockout';
-      const isThird    = match && match.is_third_place;
-      const isPens     = isKnockout && pensChecked && homeScore === awayScore;
-
-      // 1. Update match score
-      const { error } = await db.from('matches').update({
-        home_score: homeScore,
-        away_score: awayScore,
-        pens_winner_id: isPens && pensWinner ? pensWinner : null
-      }).eq('id', matchId);
+      const isThird = match && match.is_third_place;
+      const isPens = isKnockout && pensChecked && homeScore === awayScore;
+      const { error } = await db.from('matches').update({ home_score: homeScore, away_score: awayScore, pens_winner_id: isPens && pensWinner ? pensWinner : null }).eq('id', matchId);
       if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; return; }
-
-      // 2. Delete existing pick_results for this match
       await db.from('pick_results').delete().eq('match_id', matchId);
-
-      // 3. Recalculate
-      if (!isThird) {
-        await calculatePickResults(matchId, homeScore, awayScore, isKnockout, isPens, pensWinner);
-      }
-
+      if (!isThird) await calculatePickResults(matchId, homeScore, awayScore, isKnockout, isPens, pensWinner);
       msg.style.color='var(--green)'; msg.textContent='✅ Correction saved and points recalculated.';
       loadCompletedMatchesForCorrection();
     }
 
     async function undoResult() {
       const matchId = document.getElementById('correct-match-select').value;
-      const msg     = document.getElementById('correct-msg');
+      const msg = document.getElementById('correct-msg');
       if (!matchId) { msg.style.color='var(--red)'; msg.textContent='Select a match first.'; return; }
       if (!confirm('This will completely undo this result — the match goes back to pending and all points are wiped. Are you sure?')) return;
-
       msg.style.color='var(--text-muted)'; msg.textContent='Undoing...';
-
-      // 1. Delete pick_results
       await db.from('pick_results').delete().eq('match_id', matchId);
-
-      // 2. Reset match to scheduled
-      const { error } = await db.from('matches').update({
-        status: 'scheduled',
-        home_score: null,
-        away_score: null,
-        pens_winner_id: null
-      }).eq('id', matchId);
-
+      const { error } = await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null }).eq('id', matchId);
       if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; return; }
-
       msg.style.color='var(--green)'; msg.textContent='✅ Result undone. Match is back to pending.';
       loadMatchesForResult();
       loadCompletedMatchesForCorrection();
@@ -1067,21 +953,19 @@
       document.getElementById('pens-winner-row').style.display = 'none';
       document.getElementById('result-home-score').value = '';
       document.getElementById('result-away-score').value = '';
-      updatePensRow();
-      updatePreview();
+      updatePensRow(); updatePreview();
       const matchId = document.getElementById('result-match-select').value;
-      const match   = matchId ? matchCache[matchId] : null;
+      const match = matchId ? matchCache[matchId] : null;
       document.getElementById('third-place-notice').style.display = (match && match.is_third_place) ? 'block' : 'none';
       updateScoreLabels(matchId, 'home-score-hint', 'away-score-hint');
     }
 
     function onPensToggle() {
-      const checked   = document.getElementById('pens-checkbox').checked;
-      const winnerRow = document.getElementById('pens-winner-row');
-      winnerRow.style.display = checked ? 'block' : 'none';
+      const checked = document.getElementById('pens-checkbox').checked;
+      document.getElementById('pens-winner-row').style.display = checked ? 'block' : 'none';
       if (checked) {
         const matchId = document.getElementById('result-match-select').value;
-        const match   = matchCache[matchId];
+        const match = matchCache[matchId];
         if (match) {
           document.getElementById('pens-winner-select').innerHTML =
             '<option value="">Select winner...</option>' +
@@ -1093,15 +977,14 @@
     }
 
     function updatePensRow() {
-      const matchId    = document.getElementById('result-match-select').value;
-      const match      = matchId ? matchCache[matchId] : null;
+      const matchId = document.getElementById('result-match-select').value;
+      const match = matchId ? matchCache[matchId] : null;
       const isKnockout = match && match.rounds.round_type === 'knockout';
-      const isThird    = match && match.is_third_place;
-      const homeScore  = document.getElementById('result-home-score').value;
-      const awayScore  = document.getElementById('result-away-score').value;
-      const isDraw     = homeScore !== '' && awayScore !== '' && parseInt(homeScore) === parseInt(awayScore);
-      const pensRow    = document.getElementById('pens-row');
-      pensRow.style.display = (isKnockout && !isThird && isDraw) ? 'block' : 'none';
+      const isThird = match && match.is_third_place;
+      const homeScore = document.getElementById('result-home-score').value;
+      const awayScore = document.getElementById('result-away-score').value;
+      const isDraw = homeScore !== '' && awayScore !== '' && parseInt(homeScore) === parseInt(awayScore);
+      document.getElementById('pens-row').style.display = (isKnockout && !isThird && isDraw) ? 'block' : 'none';
       if (!isKnockout || !isDraw || isThird) {
         document.getElementById('pens-checkbox').checked = false;
         document.getElementById('pens-winner-row').style.display = 'none';
@@ -1110,42 +993,35 @@
 
     function updatePreview() {
       updatePensRow();
-      const matchId      = document.getElementById('result-match-select').value;
+      const matchId = document.getElementById('result-match-select').value;
       const homeScoreVal = document.getElementById('result-home-score').value;
       const awayScoreVal = document.getElementById('result-away-score').value;
-      const pensChecked  = document.getElementById('pens-checkbox').checked;
-      const pensWinner   = document.getElementById('pens-winner-select').value;
-      const previewEl    = document.getElementById('picks-preview');
-      const bodyEl       = document.getElementById('picks-preview-body');
-
+      const pensChecked = document.getElementById('pens-checkbox').checked;
+      const pensWinner = document.getElementById('pens-winner-select').value;
+      const previewEl = document.getElementById('picks-preview');
+      const bodyEl = document.getElementById('picks-preview-body');
       if (!matchId) { previewEl.style.display = 'none'; return; }
       const match = matchCache[matchId];
       if (!match) { previewEl.style.display = 'none'; return; }
-
       if (match.is_third_place) {
         previewEl.style.display = 'block';
         bodyEl.innerHTML = '<p style="color:var(--text-muted); font-size:13px">3rd place match — no player picks to display.</p>';
         return;
       }
-
       const isKnockout = match.rounds.round_type === 'knockout';
-      const homePicks  = (picksCache[match.home_team_id] || []).filter(p => p.round_id === match.round_id);
-      const awayPicks  = (picksCache[match.away_team_id] || []).filter(p => p.round_id === match.round_id);
-
+      const homePicks = (picksCache[match.home_team_id] || []).filter(p => p.round_id === match.round_id);
+      const awayPicks = (picksCache[match.away_team_id] || []).filter(p => p.round_id === match.round_id);
       if (homePicks.length === 0 && awayPicks.length === 0) {
         previewEl.style.display = 'block';
         bodyEl.innerHTML = '<p style="color:var(--text-muted); font-size:13px">No picks for this match.</p>';
         return;
       }
-
-      const hs  = parseInt(homeScoreVal);
-      const as_ = parseInt(awayScoreVal);
+      const hs = parseInt(homeScoreVal), as_ = parseInt(awayScoreVal);
       const hasScores = !isNaN(hs) && !isNaN(as_) && homeScoreVal !== '' && awayScoreVal !== '';
       let homeOutcome = null, awayOutcome = null;
-
       if (hasScores) {
         if (isKnockout && pensChecked && hs === as_) {
-          if (pensWinner === match.home_team_id)      { homeOutcome = 'pens_win'; awayOutcome = 'pens_loss'; }
+          if (pensWinner === match.home_team_id) { homeOutcome = 'pens_win'; awayOutcome = 'pens_loss'; }
           else if (pensWinner === match.away_team_id) { homeOutcome = 'pens_loss'; awayOutcome = 'pens_win'; }
           else { homeOutcome = 'pens_unknown'; awayOutcome = 'pens_unknown'; }
         } else {
@@ -1153,36 +1029,24 @@
           awayOutcome = as_ > hs ? 'win' : hs === as_ ? 'draw' : 'loss';
         }
       }
-
       function calcPoints(pick, team, outcome) {
         if (!outcome) return null;
-        if (outcome === 'win')       return pick.multiplier + (team.is_longshot ? 1 : 0);
-        if (outcome === 'draw')      return 1;
-        if (outcome === 'loss')      return 0;
-        if (outcome === 'pens_win')  return 1 + (team.is_longshot ? 1 : 0);
+        if (outcome === 'win') return pick.multiplier + (team.is_longshot ? 1 : 0);
+        if (outcome === 'draw') return 1;
+        if (outcome === 'loss') return 0;
+        if (outcome === 'pens_win') return 1 + (team.is_longshot ? 1 : 0);
         if (outcome === 'pens_loss') return 1;
         return null;
       }
-
-      function outcomeLabel(o) {
-        return { win:'Win', draw:'Draw', loss:'Loss', pens_win:'Win (pens)', pens_loss:'Loss (pens)' }[o] || '—';
-      }
-
+      function outcomeLabel(o) { return { win:'Win', draw:'Draw', loss:'Loss', pens_win:'Win (pens)', pens_loss:'Loss (pens)' }[o] || '—'; }
       function pickRowHtml(pick, team, outcome) {
-        const pts        = calcPoints(pick, team, outcome);
-        const side       = team.id === match.home_team_id ? 'Home' : 'Away';
-        const lsTag      = team.is_longshot ? '<span class="longshot-star">⭐</span>' : '';
-        const ptsClass   = outcome === 'win' || outcome === 'pens_win' ? 'pts-win' : outcome === 'loss' ? 'pts-loss' : 'pts-draw';
+        const pts = calcPoints(pick, team, outcome);
+        const side = team.id === match.home_team_id ? 'Home' : 'Away';
+        const lsTag = team.is_longshot ? '<span class="longshot-star">⭐</span>' : '';
+        const ptsClass = outcome === 'win' || outcome === 'pens_win' ? 'pts-win' : outcome === 'loss' ? 'pts-loss' : 'pts-draw';
         const ptsDisplay = pts !== null ? `<span class="pick-pts ${ptsClass}">${pts}pts</span>` : `<span class="pick-pts pts-none">—</span>`;
-        return `<div class="pick-row">
-          <div>
-            <span class="pick-player">${pick.players.name}</span>
-            <span class="pick-detail">${team.flag_emoji} ${team.name} (${side}, ${pick.multiplier}pt${lsTag})${outcome?' · '+outcomeLabel(outcome):''}</span>
-          </div>
-          ${ptsDisplay}
-        </div>`;
+        return `<div class="pick-row"><div><span class="pick-player">${pick.players.name}</span><span class="pick-detail">${team.flag_emoji} ${team.name} (${side}, ${pick.multiplier}pt${lsTag})${outcome?' · '+outcomeLabel(outcome):''}</span></div>${ptsDisplay}</div>`;
       }
-
       let html = '';
       homePicks.forEach(p => { html += pickRowHtml(p, match.home_team, homeOutcome); });
       awayPicks.forEach(p => { html += pickRowHtml(p, match.away_team, awayOutcome); });
@@ -1191,49 +1055,30 @@
     }
 
     async function submitResult() {
-      const matchId     = document.getElementById('result-match-select').value;
-      const homeScore   = parseInt(document.getElementById('result-home-score').value);
-      const awayScore   = parseInt(document.getElementById('result-away-score').value);
+      const matchId = document.getElementById('result-match-select').value;
+      const homeScore = parseInt(document.getElementById('result-home-score').value);
+      const awayScore = parseInt(document.getElementById('result-away-score').value);
       const pensChecked = document.getElementById('pens-checkbox').checked;
-      const pensWinner  = document.getElementById('pens-winner-select').value;
-      const msg         = document.getElementById('result-msg');
-
+      const pensWinner = document.getElementById('pens-winner-select').value;
+      const msg = document.getElementById('result-msg');
       if (!matchId || isNaN(homeScore) || isNaN(awayScore)) { msg.style.color='var(--red)'; msg.textContent='Fill in all fields.'; return; }
-
-      const match      = matchCache[matchId];
+      const match = matchCache[matchId];
       const isKnockout = match && match.rounds.round_type === 'knockout';
-      const isThird    = match && match.is_third_place;
-
-      if (isKnockout && !isThird && pensChecked && homeScore === awayScore && !pensWinner) {
-        msg.style.color='var(--red)'; msg.textContent='Select who won on penalties.'; return;
-      }
-
+      const isThird = match && match.is_third_place;
+      if (isKnockout && !isThird && pensChecked && homeScore === awayScore && !pensWinner) { msg.style.color='var(--red)'; msg.textContent='Select who won on penalties.'; return; }
       const { error } = await db.from('matches').update({
         home_score: homeScore, away_score: awayScore, status: 'complete',
         pens_winner_id: (isKnockout && !isThird && pensChecked && homeScore === awayScore && pensWinner) ? pensWinner : null
       }).eq('id', matchId);
       if (error) { msg.style.color='var(--red)'; msg.textContent=error.message; return; }
-
-      if (!isThird) {
-        await calculatePickResults(matchId, homeScore, awayScore, isKnockout, pensChecked && homeScore === awayScore, pensWinner);
-      }
-
+      if (!isThird) await calculatePickResults(matchId, homeScore, awayScore, isKnockout, pensChecked && homeScore === awayScore, pensWinner);
       if (isKnockout && !isThird) {
         const isPens = pensChecked && homeScore === awayScore;
-        let losingTeamId = null;
-        if (isPens) {
-          losingTeamId = pensWinner === match.home_team_id ? match.away_team_id : match.home_team_id;
-        } else {
-          losingTeamId = homeScore > awayScore ? match.away_team_id : match.home_team_id;
-        }
-        if (losingTeamId) {
-          await db.from('teams').update({ is_eliminated: true, eliminated_in_round_id: match.round_id }).eq('id', losingTeamId);
-        }
+        let losingTeamId = isPens ? (pensWinner === match.home_team_id ? match.away_team_id : match.home_team_id) : (homeScore > awayScore ? match.away_team_id : match.home_team_id);
+        if (losingTeamId) await db.from('teams').update({ is_eliminated: true, eliminated_in_round_id: match.round_id }).eq('id', losingTeamId);
       }
-
       msg.style.color='var(--green)';
       msg.textContent = isThird ? '✅ 3rd place result saved.' : '✅ Result saved and points calculated.';
-
       document.getElementById('result-home-score').value='';
       document.getElementById('result-away-score').value='';
       document.getElementById('pens-checkbox').checked=false;
@@ -1243,18 +1088,14 @@
       document.getElementById('third-place-notice').style.display='none';
       loadMatchesForResult();
       loadCompletedMatchesForCorrection();
-
-      if (!isThird && match && match.round_id) {
-        await maybeAutoSnapshot(match.round_id, msg);
-      }
+      if (!isThird && match && match.round_id) await maybeAutoSnapshot(match.round_id, msg);
     }
 
     async function maybeAutoSnapshot(roundId, msgEl) {
       const { data: roundMatches } = await db.from('matches').select('id, status, is_third_place').eq('round_id', roundId).not('home_team_id', 'is', null);
       if (!roundMatches) return;
-      const playableMatches = roundMatches.filter(m => !m.is_third_place);
-      const allComplete     = playableMatches.length > 0 && playableMatches.every(m => m.status === 'complete');
-      if (!allComplete) return;
+      const playable = roundMatches.filter(m => !m.is_third_place);
+      if (playable.length === 0 || !playable.every(m => m.status === 'complete')) return;
       const snapErr = await takeSnapshot(roundId);
       if (snapErr) { console.warn('Auto-snapshot failed:', snapErr.message); }
       else {
@@ -1268,35 +1109,30 @@
         .select('home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, is_longshot), away_team:teams!matches_away_team_id_fkey(id, is_longshot)')
         .eq('id', matchId).single();
       if (!match) return;
-
       const { data: matchFull } = await db.from('matches').select('round_id').eq('id', matchId).single();
       const roundId = matchFull ? matchFull.round_id : null;
-
       let picksQuery = db.from('picks').select('*').in('team_id', [match.home_team_id, match.away_team_id]);
       if (roundId) picksQuery = picksQuery.eq('round_id', roundId);
       const { data: picks } = await picksQuery;
       if (!picks || picks.length === 0) return;
-
       for (const pick of picks) {
         const isHome = pick.team_id === match.home_team_id;
-        const team   = isHome ? match.home_team : match.away_team;
+        const team = isHome ? match.home_team : match.away_team;
         let result, pointsEarned, basePoints, longshotBonus;
-
         if (isKnockout && isPens) {
-          const won        = pick.team_id === pensWinnerId;
-          result           = won ? 'win' : 'loss';
-          longshotBonus    = (won && team.is_longshot) ? 1 : 0;
-          basePoints       = 1;
-          pointsEarned     = 1 + longshotBonus;
+          const won = pick.team_id === pensWinnerId;
+          result = won ? 'win' : 'loss';
+          longshotBonus = (won && team.is_longshot) ? 1 : 0;
+          basePoints = 1;
+          pointsEarned = 1 + longshotBonus;
         } else {
           const homeResult = homeScore > awayScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
           const awayResult = awayScore > homeScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
-          result           = isHome ? homeResult : awayResult;
-          basePoints       = result === 'win' ? pick.multiplier : result === 'draw' ? 1 : 0;
-          longshotBonus    = (result === 'win' && team.is_longshot) ? 1 : 0;
-          pointsEarned     = basePoints + longshotBonus;
+          result = isHome ? homeResult : awayResult;
+          basePoints = result === 'win' ? pick.multiplier : result === 'draw' ? 1 : 0;
+          longshotBonus = (result === 'win' && team.is_longshot) ? 1 : 0;
+          pointsEarned = basePoints + longshotBonus;
         }
-
         await db.from('pick_results').upsert({
           pick_id: pick.id, match_id: matchId, base_points: basePoints,
           longshot_bonus: longshotBonus, multiplier_applied: pick.multiplier,
@@ -1308,8 +1144,10 @@
     // ── Matches ───────────────────────────────────────────────
     async function loadRoundsAndTeamsForMatchForm() {
       const { data: rounds } = await db.from('rounds').select('*').order('sort_order');
-      const { data: teams }  = await db.from('teams').select('*').order('name');
+      const { data: teams } = await db.from('teams').select('*').order('name');
       roundsCache = rounds || [];
+      // Cache group round IDs for resets
+      groupRoundIds = (rounds || []).filter(r => r.round_type === 'group').map(r => r.id);
 
       if (rounds) {
         document.getElementById('match-round-select').innerHTML =
@@ -1317,7 +1155,7 @@
           rounds.map(r => `<option value="${r.id}" data-name="${r.name}">${r.name}</option>`).join('');
       }
       if (teams) {
-        const opts = teams.map(t => {
+        const opts = teams.filter(t => !t.is_eliminated).map(t => {
           const pot = t.pot ? ` (Pot ${t.pot})` : '';
           return `<option value="${t.id}">${t.flag_emoji} ${t.name}${pot}</option>`;
         }).join('');
@@ -1327,32 +1165,36 @@
     }
 
     function updateKickoffDayLabel() {
-      const roundSel   = document.getElementById('match-round-select');
+      const roundSel = document.getElementById('match-round-select');
       const kickoffVal = document.getElementById('match-kickoff').value;
-      const labelEl    = document.getElementById('kickoff-day-label');
+      const labelEl = document.getElementById('kickoff-day-label');
       if (!kickoffVal || !roundSel.value) { labelEl.textContent = ''; return; }
       const selectedOption = roundSel.options[roundSel.selectedIndex];
-      const roundName      = selectedOption ? selectedOption.dataset.name : '';
-      const startDateStr   = ROUND_START_DATES[roundName];
+      const roundName = selectedOption ? selectedOption.dataset.name : '';
+      const startDateStr = ROUND_START_DATES[roundName];
       if (!startDateStr) { labelEl.textContent = ''; return; }
-      const kickoffDate = new Date(kickoffVal);
-      const startDate   = new Date(startDateStr + 'T00:00:00');
-      const dayNum      = Math.floor((kickoffDate - startDate) / (24*60*60*1000)) + 1;
+      // Compute day number using window logic
+      const roundWindowStartMs = Date.UTC(
+        parseInt(startDateStr.slice(0,4)),
+        parseInt(startDateStr.slice(5,7)) - 1,
+        parseInt(startDateStr.slice(8,10)),
+        WINDOW_START_HOUR, 0, 0
+      );
+      const kickoffMs = toWindowStartMs(new Date(kickoffVal).toISOString());
+      const dayNum = Math.round((kickoffMs - roundWindowStartMs) / WINDOW_DURATION_MS) + 1;
       labelEl.textContent = dayNum >= 1 ? roundName + ' · Day ' + dayNum : '⚠️ Date is before round start';
     }
 
     async function addMatch() {
-      const roundId      = document.getElementById('match-round-select').value;
-      const homeId       = document.getElementById('match-home-select').value;
-      const awayId       = document.getElementById('match-away-select').value;
+      const roundId = document.getElementById('match-round-select').value;
+      const homeId = document.getElementById('match-home-select').value;
+      const awayId = document.getElementById('match-away-select').value;
       const kickoffLocal = document.getElementById('match-kickoff').value;
-      const msg          = document.getElementById('match-msg');
-
+      const msg = document.getElementById('match-msg');
       if (!roundId || !homeId || !awayId || !kickoffLocal) { msg.style.color='var(--red)'; msg.textContent='All fields required.'; return; }
       if (homeId === awayId) { msg.style.color='var(--red)'; msg.textContent='Home and away must be different.'; return; }
-
       const kickoffUTC = new Date(new Date(kickoffLocal).getTime() - 60*60*1000).toISOString();
-      const { error }  = await db.from('matches').insert({ round_id: roundId, home_team_id: homeId, away_team_id: awayId, kickoff: kickoffUTC });
+      const { error } = await db.from('matches').insert({ round_id: roundId, home_team_id: homeId, away_team_id: awayId, kickoff: kickoffUTC });
       if (error) { msg.style.color='var(--red)'; msg.textContent=error.message; }
       else {
         msg.style.color='var(--green)'; msg.textContent='✅ Match added.';
@@ -1366,11 +1208,11 @@
 
     // ── Teams longshot + band ─────────────────────────────────
     const BAND_OPTIONS = [
-      { value: '',            label: '— Unset —' },
-      { value: 'favourite',   label: '🔵 Favourite' },
-      { value: 'dark_horse',  label: '🟡 Dark Horse' },
-      { value: 'long_shot',   label: '🟠 Long Shot' },
-      { value: 'no_hoper',    label: '🔴 No Hoper' },
+      { value: '', label: '— Unset —' },
+      { value: 'favourite', label: '🔵 Favourite' },
+      { value: 'dark_horse', label: '🟡 Dark Horse' },
+      { value: 'long_shot', label: '🟠 Long Shot' },
+      { value: 'no_hoper', label: '🔴 No Hoper' },
     ];
 
     const PRESET_BANDS = {
@@ -1387,46 +1229,61 @@
       ]);
       const el = document.getElementById('teams-longshot-list');
       if (!teams) return;
-
       const roundMap = {};
       (rounds || []).forEach(r => { roundMap[r.id] = r.name; });
-
       const unpopulated = teams.filter(t => !t.band && PRESET_BANDS[t.name]);
       if (unpopulated.length > 0) {
         for (const t of unpopulated) { await db.from('teams').update({ band: PRESET_BANDS[t.name] }).eq('id', t.id); }
         const { data: refreshed } = await db.from('teams').select('id, name, flag_emoji, pot, is_longshot, is_eliminated, band, eliminated_in_round_id').order('pot').order('name');
         if (refreshed) teams.splice(0, teams.length, ...refreshed);
       }
-
-      let html = `<div class="table-wrap"><table>
-        <thead><tr><th>Team</th><th>Pot</th><th>Band</th><th>Longshot (+1)</th><th>Eliminated</th><th>Round out</th></tr></thead><tbody>`;
-
+      let html = `<div class="table-wrap"><table><thead><tr><th>Team</th><th>Pot</th><th>Band</th><th>Longshot (+1)</th><th>Eliminated</th><th>Round out</th><th style="width:30px"></th></tr></thead><tbody>`;
       teams.forEach(t => {
-        const bandSel  = BAND_OPTIONS.map(o => `<option value="${o.value}" ${t.band === o.value ? 'selected' : ''}>${o.label}</option>`).join('');
+        const bandSel = BAND_OPTIONS.map(o => `<option value="${o.value}" ${t.band === o.value ? 'selected' : ''}>${o.label}</option>`).join('');
         const roundSel = '<option value="">— Round —</option>' + (rounds || []).map(r => `<option value="${r.id}" ${t.eliminated_in_round_id === r.id ? 'selected' : ''}>${r.name}</option>`).join('');
         const outLabel = t.is_eliminated ? ' <span style="font-size:10px;color:var(--red);font-weight:700">OUT' + (t.eliminated_in_round_id && roundMap[t.eliminated_in_round_id] ? ' (' + roundMap[t.eliminated_in_round_id] + ')' : '') + '</span>' : '';
-        html += `<tr style="${t.is_eliminated ? 'opacity:0.45' : ''}">
+        html += `<tr data-team-row="${t.id}" style="${t.is_eliminated ? 'opacity:0.45' : ''}">
           <td>${t.flag_emoji} ${t.name}${outLabel}</td>
           <td style="color:var(--text-muted)">${t.pot ? 'Pot '+t.pot : '—'}</td>
           <td><select data-team-id="${t.id}" class="band-select" style="font-size:12px; padding:2px 6px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px">${bandSel}</select></td>
           <td><input type="checkbox" ${t.is_longshot?'checked':''} data-team-id="${t.id}" class="longshot-toggle" style="width:auto; cursor:pointer; accent-color:var(--accent)" /></td>
           <td><input type="checkbox" ${t.is_eliminated?'checked':''} data-team-id="${t.id}" class="eliminated-toggle" style="width:auto; cursor:pointer; accent-color:var(--red)" /></td>
           <td><select data-team-id="${t.id}" class="round-select" style="font-size:12px; padding:2px 6px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px">${roundSel}</select></td>
+          <td class="save-indicator" style="font-size:13px; width:24px; text-align:center"></td>
         </tr>`;
       });
       html += '</tbody></table></div>';
       el.innerHTML = html;
 
-      el.querySelectorAll('.longshot-toggle').forEach(cb => { cb.addEventListener('change', function() { db.from('teams').update({ is_longshot: this.checked }).eq('id', this.dataset.teamId); }); });
+      async function teamUpdate(teamId, payload) {
+        const row = el.querySelector(`tr[data-team-row="${teamId}"]`);
+        const fb  = row ? row.querySelector('.save-indicator') : null;
+        if (fb) { fb.textContent = '⏳'; fb.style.color = 'var(--text-muted)'; fb.title = ''; }
+        const { error } = await db.from('teams').update(payload).eq('id', teamId);
+        if (error) {
+          if (fb) { fb.textContent = '❌'; fb.style.color = 'var(--red)'; fb.title = error.message; }
+          console.error('Team update failed for', teamId, ':', error.message);
+        } else {
+          if (fb) { fb.textContent = '✅'; fb.style.color = 'var(--green)'; setTimeout(() => { if (fb) fb.textContent = ''; }, 2000); }
+        }
+      }
+
+      el.querySelectorAll('.longshot-toggle').forEach(cb => {
+        cb.addEventListener('change', function() { teamUpdate(this.dataset.teamId, { is_longshot: this.checked }); });
+      });
       el.querySelectorAll('.eliminated-toggle').forEach(cb => {
         cb.addEventListener('change', function() {
           const roundSel = el.querySelector(`.round-select[data-team-id="${this.dataset.teamId}"]`);
           const roundId  = roundSel ? roundSel.value || null : null;
-          db.from('teams').update({ is_eliminated: this.checked, eliminated_in_round_id: this.checked ? roundId : null }).eq('id', this.dataset.teamId);
+          teamUpdate(this.dataset.teamId, { is_eliminated: this.checked, eliminated_in_round_id: this.checked ? roundId : null });
         });
       });
-      el.querySelectorAll('.round-select').forEach(sel => { sel.addEventListener('change', function() { db.from('teams').update({ eliminated_in_round_id: this.value || null }).eq('id', this.dataset.teamId); }); });
-      el.querySelectorAll('.band-select').forEach(sel => { sel.addEventListener('change', function() { db.from('teams').update({ band: this.value || null }).eq('id', this.dataset.teamId); }); });
+      el.querySelectorAll('.round-select').forEach(sel => {
+        sel.addEventListener('change', function() { teamUpdate(this.dataset.teamId, { eliminated_in_round_id: this.value || null }); });
+      });
+      el.querySelectorAll('.band-select').forEach(sel => {
+        sel.addEventListener('change', function() { teamUpdate(this.dataset.teamId, { band: this.value || null }); });
+      });
     }
 
     // ── Snapshot ──────────────────────────────────────────────
@@ -1446,9 +1303,9 @@
       const gdMap = {}, furthestMap = {};
       (gdData||[]).forEach(r => { gdMap[r.player_id] = r.gd; });
       (furthestData||[]).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
-      const round      = roundsCache.find(r => r.id === roundId);
+      const round = roundsCache.find(r => r.id === roundId);
       const isKnockout = round && round.round_type === 'knockout';
-      const sorted     = (scores||[]).sort((a,b) => {
+      const sorted = (scores||[]).sort((a,b) => {
         if (b.total_points !== a.total_points) return b.total_points - a.total_points;
         if (isKnockout) { const afr = furthestMap[a.player_id]||0, bfr = furthestMap[b.player_id]||0; if (bfr !== afr) return bfr - afr; }
         return (gdMap[b.player_id]||0) - (gdMap[a.player_id]||0);
@@ -1460,7 +1317,7 @@
 
     document.getElementById('btn-take-snapshot').addEventListener('click', async () => {
       const roundId = document.getElementById('snapshot-round-select').value;
-      const msg     = document.getElementById('snapshot-msg');
+      const msg = document.getElementById('snapshot-msg');
       if (!roundId) { msg.style.color='var(--red)'; msg.textContent='Select a round first.'; return; }
       msg.style.color='var(--text-muted)'; msg.textContent='Taking snapshot...';
       const error = await takeSnapshot(roundId);
@@ -1468,6 +1325,7 @@
       else { msg.style.color='var(--green)'; msg.textContent='✅ Snapshot saved.'; }
     });
 
+    // ── Reset All Results (existing) ──────────────────────────
     document.getElementById('btn-reset-all').addEventListener('click', async () => {
       const msg = document.getElementById('reset-msg');
       if (!confirm('WARNING: This will delete ALL pick results and reset ALL match statuses to scheduled.\n\nPlayers, picks, teams and fixtures are NOT affected.\n\nAre you sure?')) return;
@@ -1476,11 +1334,67 @@
       try {
         const { error: e1 } = await db.from('pick_results').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         if (e1) throw e1;
-        const { error: e2 } = await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+        const { error: e2 } = await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
         if (e2) throw e2;
         msg.style.color = 'var(--green)'; msg.textContent = '✅ All results cleared.';
-        loadMatchesForResult();
-        loadCompletedMatchesForCorrection();
+        loadMatchesForResult(); loadCompletedMatchesForCorrection();
+      } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message; }
+    });
+
+    // ── Match Reset (keep group fixtures) ─────────────────────
+    document.getElementById('btn-match-reset').addEventListener('click', async () => {
+      const msg = document.getElementById('match-reset-msg');
+      if (!confirm('MATCH RESET: This will clear all results, points, and eliminations.\n\nKnockout matches (R32+) will be deleted. Group stage fixtures are kept.\n\nAre you sure?')) return;
+      if (!confirm('Last chance — this cannot be undone. Proceed?')) return;
+      msg.style.color = 'var(--text-muted)'; msg.textContent = 'Resetting...';
+      try {
+        // 1. Delete all pick_results
+        await db.from('pick_results').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        // 2. Reset all match scores/status
+        await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+        // 3. Delete knockout matches (round_type = knockout)
+        const { data: koRounds } = await db.from('rounds').select('id').eq('round_type', 'knockout');
+        if (koRounds && koRounds.length > 0) {
+          const koRoundIds = koRounds.map(r => r.id);
+          await db.from('matches').delete().in('round_id', koRoundIds);
+        }
+        // 4. Clear all team eliminations
+        await db.from('teams').update({ is_eliminated: false, eliminated_in_round_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+        // 5. Clear round completion flags and snapshots
+        await db.from('rounds').update({ is_complete: false }).neq('id', '00000000-0000-0000-0000-000000000000');
+        await db.from('leaderboard_snapshots').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        msg.style.color = 'var(--green)'; msg.textContent = '✅ Match reset complete. Group fixtures retained. All results, eliminations and round progress cleared.';
+        loadMatchesForResult(); loadCompletedMatchesForCorrection(); loadTeamsLongshot();
+      } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message; }
+    });
+
+    // ── Nuclear Reset (testing only) ─────────────────────────
+    document.getElementById('btn-nuclear-reset').addEventListener('click', async () => {
+      const msg = document.getElementById('nuclear-reset-msg');
+      if (!confirm('☢️ NUCLEAR RESET — FOR TESTING ONLY ☢️\n\nThis will wipe:\n• All results and pick_results\n• ALL picks\n• All goals predictions\n• All eliminations\n• All round snapshots and completion flags\n• All knockout matches\n\nPlayer accounts and group fixtures are kept.\n\nAre you absolutely sure?')) return;
+      if (!confirm('This is irreversible. Final confirmation — proceed with nuclear reset?')) return;
+      msg.style.color = 'var(--text-muted)'; msg.textContent = '☢️ Nuking...';
+      try {
+        // 1. Delete pick_results
+        await db.from('pick_results').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        // 2. Delete all picks
+        await db.from('picks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        // 3. Reset all matches
+        await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+        // 4. Delete knockout matches
+        const { data: koRounds } = await db.from('rounds').select('id').eq('round_type', 'knockout');
+        if (koRounds && koRounds.length > 0) {
+          await db.from('matches').delete().in('round_id', koRounds.map(r => r.id));
+        }
+        // 5. Clear team eliminations
+        await db.from('teams').update({ is_eliminated: false, eliminated_in_round_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+        // 6. Clear round flags and snapshots
+        await db.from('rounds').update({ is_complete: false }).neq('id', '00000000-0000-0000-0000-000000000000');
+        await db.from('leaderboard_snapshots').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        // 7. Clear goals predictions and player elimination status
+        await db.from('players').update({ total_goals_prediction: null, is_eliminated: false, eliminated_at: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+        msg.style.color = 'var(--green)'; msg.textContent = '✅ Nuclear reset complete. All data wiped. Group fixtures and player accounts retained.';
+        loadMatchesForResult(); loadCompletedMatchesForCorrection(); loadTeamsLongshot(); loadPlayers();
       } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message; }
     });
 
@@ -1503,10 +1417,7 @@
       'turkey':'turkey','türkiye':'turkey',
     };
 
-    function normaliseTeamName(raw) {
-      const lower = raw.toLowerCase().trim();
-      return TEAM_NAME_MAP[lower] || lower;
-    }
+    function normaliseTeamName(raw) { const lower = raw.toLowerCase().trim(); return TEAM_NAME_MAP[lower] || lower; }
 
     async function fetchAllOdds() {
       const btn = document.getElementById('btn-fetch-odds');
@@ -1514,33 +1425,28 @@
       const remainingEl = document.getElementById('odds-remaining');
       btn.disabled = true; btn.textContent = 'Fetching...'; msg.textContent = '';
       let quotaInfo = '';
-
       try {
         msg.style.color = 'var(--text-muted)'; msg.textContent = 'Fetching outright odds...';
-        const outrightUrl  = `${ODDS_API_BASE}/sports/soccer_fifa_world_cup_winner/odds/?apiKey=${ODDS_API_KEY}&regions=uk&markets=outrights&oddsFormat=decimal`;
+        const outrightUrl = `${ODDS_API_BASE}/sports/soccer_fifa_world_cup_winner/odds/?apiKey=${ODDS_API_KEY}&regions=uk&markets=outrights&oddsFormat=decimal`;
         const outrightResp = await fetch(outrightUrl);
-        const rem1  = outrightResp.headers.get('x-requests-remaining');
+        const rem1 = outrightResp.headers.get('x-requests-remaining');
         const used1 = outrightResp.headers.get('x-requests-used');
         if (rem1) quotaInfo = `API quota: ${used1} used · ${rem1} remaining`;
         if (!outrightResp.ok) throw new Error('Outright API error: ' + outrightResp.status);
         const outrightData = await outrightResp.json();
-        const outcomes     = outrightData?.[0]?.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
-
+        const outcomes = outrightData?.[0]?.bookmakers?.[0]?.markets?.[0]?.outcomes || [];
         const { data: teams } = await db.from('teams').select('id, name');
         const teamMap = {};
         (teams||[]).forEach(t => { teamMap[t.name.toLowerCase()] = t.id; });
-
         let outrightCount = 0, changedCount = 0, skippedCount = 0;
-
         if (outcomes.length > 0) {
           const fetchedAt = new Date().toISOString();
           const { data: prevOdds } = await db.from('team_odds').select('team_id, odds_decimal, fetched_at').order('fetched_at', { ascending: false });
           const prevMap = {};
           (prevOdds || []).forEach(r => { if (!prevMap[r.team_id]) prevMap[r.team_id] = r.odds_decimal; });
-          const matched  = outcomes.map(o => ({ team_id: teamMap[normaliseTeamName(o.name)] || null, odds_decimal: o.price })).filter(r => r.team_id !== null);
+          const matched = outcomes.map(o => ({ team_id: teamMap[normaliseTeamName(o.name)] || null, odds_decimal: o.price })).filter(r => r.team_id !== null);
           const toInsert = matched.filter(r => { const prev = prevMap[r.team_id]; if (prev === undefined || prev === null) return true; return Math.abs(parseFloat(prev) - parseFloat(r.odds_decimal)) > 0.01; });
-          skippedCount  = matched.length - toInsert.length;
-          outrightCount = matched.length;
+          skippedCount = matched.length - toInsert.length; outrightCount = matched.length;
           if (toInsert.length > 0) {
             const inserts = toInsert.map(r => ({ team_id: r.team_id, odds_decimal: r.odds_decimal, odds_fractional: decimalToFractional(r.odds_decimal), fetched_at: fetchedAt }));
             const { error } = await db.from('team_odds').insert(inserts);
@@ -1548,43 +1454,36 @@
             changedCount = toInsert.length;
           }
         }
-
         msg.textContent = 'Fetching match odds...';
-        const matchUrl  = `${ODDS_API_BASE}/sports/soccer_fifa_world_cup/odds/?apiKey=${ODDS_API_KEY}&regions=uk&markets=h2h&bookmakers=paddypower&oddsFormat=decimal`;
+        const matchUrl = `${ODDS_API_BASE}/sports/soccer_fifa_world_cup/odds/?apiKey=${ODDS_API_KEY}&regions=uk&markets=h2h&bookmakers=paddypower&oddsFormat=decimal`;
         const matchResp = await fetch(matchUrl);
-        const rem2  = matchResp.headers.get('x-requests-remaining');
+        const rem2 = matchResp.headers.get('x-requests-remaining');
         const used2 = matchResp.headers.get('x-requests-used');
         if (rem2) quotaInfo = `API quota: ${used2} used · ${rem2} remaining`;
         if (!matchResp.ok) throw new Error('Match API error: ' + matchResp.status);
         const matchData = await matchResp.json();
         const { data: dbMatches } = await db.from('matches').select('id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)').not('home_team_id', 'is', null).not('away_team_id', 'is', null);
-
         let matchedCount = 0, unmatchedCount = 0;
         for (const apiMatch of matchData) {
-          const bookmaker   = apiMatch.bookmakers?.[0]; if (!bookmaker) continue;
-          const market      = bookmaker.markets?.[0];   if (!market) continue;
+          const bookmaker = apiMatch.bookmakers?.[0]; if (!bookmaker) continue;
+          const market = bookmaker.markets?.[0]; if (!market) continue;
           const homeOutcome = market.outcomes.find(o => normaliseTeamName(o.name) === normaliseTeamName(apiMatch.home_team));
           const awayOutcome = market.outcomes.find(o => normaliseTeamName(o.name) === normaliseTeamName(apiMatch.away_team));
           const drawOutcome = market.outcomes.find(o => o.name === 'Draw');
-          const apiKickoff  = new Date(apiMatch.commence_time);
-          const dbMatch     = (dbMatches||[]).find(m => { const diffHours = Math.abs(apiKickoff - new Date(m.kickoff)) / (1000 * 60 * 60); return diffHours <= 1 && m.home_team && normaliseTeamName(m.home_team.name) === normaliseTeamName(apiMatch.home_team); });
+          const apiKickoff = new Date(apiMatch.commence_time);
+          const dbMatch = (dbMatches||[]).find(m => { const diffHours = Math.abs(apiKickoff - new Date(m.kickoff)) / (1000 * 60 * 60); return diffHours <= 1 && m.home_team && normaliseTeamName(m.home_team.name) === normaliseTeamName(apiMatch.home_team); });
           if (dbMatch && homeOutcome && awayOutcome) {
             const { error } = await db.from('matches').update({ odds_home: homeOutcome.price, odds_away: awayOutcome.price, odds_draw: drawOutcome ? drawOutcome.price : null }).eq('id', dbMatch.id);
             if (!error) matchedCount++;
-          } else { unmatchedCount++; }
+          } else unmatchedCount++;
         }
-
         remainingEl.textContent = quotaInfo;
         msg.style.color = 'var(--green)';
-        if (outcomes.length === 0) { msg.textContent = `⚠️ No outright odds returned yet · Match odds: ${matchedCount} matched`; }
-        else {
-          const changeStr = changedCount > 0 ? `${changedCount} changed` : 'no changes';
-          msg.textContent = `✅ Outrights: ${outrightCount} teams (${changeStr}, ${skippedCount} unchanged) · Match odds: ${matchedCount} matched`;
-        }
+        if (outcomes.length === 0) msg.textContent = `⚠️ No outright odds returned yet · Match odds: ${matchedCount} matched`;
+        else { const changeStr = changedCount > 0 ? `${changedCount} changed` : 'no changes'; msg.textContent = `✅ Outrights: ${outrightCount} teams (${changeStr}, ${skippedCount} unchanged) · Match odds: ${matchedCount} matched`; }
         if (unmatchedCount > 0) msg.textContent += ` · ${unmatchedCount} unmatched`;
         loadOddsTable();
       } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ ' + err.message; }
-
       btn.disabled = false; btn.textContent = '🔄 Fetch Odds';
     }
 
@@ -1593,24 +1492,20 @@
       if (!wrap) return;
       const { data: allOdds } = await db.from('team_odds').select('team_id, odds_decimal, odds_fractional, fetched_at, teams(flag_emoji, name)').order('fetched_at', { ascending: false });
       if (!allOdds || allOdds.length === 0) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No odds fetched yet.</p>'; return; }
-
       const byTeam = {};
       allOdds.forEach(r => {
         if (!byTeam[r.team_id]) { byTeam[r.team_id] = { flag: r.teams?.flag_emoji || '', name: r.teams?.name || '?', current: parseFloat(r.odds_decimal), currentFrac: r.odds_fractional || decimalToFractional(r.odds_decimal), history: [] }; }
         else { byTeam[r.team_id].history.push(parseFloat(r.odds_decimal)); }
       });
-
-      const sorted       = Object.values(byTeam).sort((a,b) => a.current - b.current);
-      const latestTime   = allOdds[0].fetched_at;
-      const fetchTime    = latestTime ? new Date(latestTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+      const sorted = Object.values(byTeam).sort((a,b) => a.current - b.current);
+      const latestTime = allOdds[0].fetched_at;
+      const fetchTime = latestTime ? new Date(latestTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
       const distinctFetches = new Set(allOdds.map(r => r.fetched_at)).size;
-
       let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Last fetched: <strong>${fetchTime}</strong> · ${sorted.length} teams · ${distinctFetches} fetch${distinctFetches !== 1?'es':''} recorded</div>`;
       const maxHistory = 3;
       html += `<div class="table-wrap"><table><thead><tr><th class="left">Team</th><th>Current</th>`;
       for (let i = 0; i < maxHistory; i++) html += `<th style="color:var(--text-muted);font-size:10px">-${i+1}</th>`;
       html += `<th>Move</th><th style="color:var(--accent);font-size:10px">Original</th></tr></thead><tbody>`;
-
       sorted.forEach(t => {
         const curr = t.current, hist = t.history;
         const original = hist.length > 0 ? hist[hist.length - 1] : null;
@@ -1642,16 +1537,18 @@
 
     async function loadBulkMatches() {
       const roundId = document.getElementById('bulk-round-select').value;
-      const wrap    = document.getElementById('bulk-matches-wrap');
-      const msg     = document.getElementById('bulk-msg');
+      const wrap = document.getElementById('bulk-matches-wrap');
+      const msg = document.getElementById('bulk-msg');
       msg.textContent = '';
-
       if (!roundId) { msg.style.color='var(--red)'; msg.textContent='Select a round first.'; return; }
-
       wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
-      const roundOpt   = document.getElementById('bulk-round-select').options[document.getElementById('bulk-round-select').selectedIndex];
+      const roundOpt = document.getElementById('bulk-round-select').options[document.getElementById('bulk-round-select').selectedIndex];
       const isKnockout = roundOpt && roundOpt.dataset.type === 'knockout';
+
+      // Get first kickoff of this round for Day X calculation
+      const { data: firstKickoffData } = await db.from('matches').select('kickoff').eq('round_id', roundId).not('home_team_id', 'is', null).order('kickoff', { ascending: true }).limit(1);
+      const roundFirstKickoff = firstKickoffData && firstKickoffData.length > 0 ? firstKickoffData[0].kickoff : null;
 
       const { data: matches } = await db.from('matches')
         .select('id, kickoff, is_third_place, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)')
@@ -1679,10 +1576,16 @@
         const ko = new Date(m.kickoff).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
         const date = new Date(m.kickoff).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'});
         const thirdTag = m.is_third_place ? ' 🥉' : '';
+        // Day X label
+        let dayTag = '';
+        if (roundFirstKickoff) {
+          const dayNum = getDayNumber(m.kickoff, roundFirstKickoff);
+          if (dayNum >= 1) dayTag = `<span style="color:var(--accent);font-weight:700">Day ${dayNum} · </span>`;
+        }
         html += `<tr id="bulk-row-${m.id}">
           <td class="left" style="font-size:12px">
             <strong>${m.home_team.flag_emoji} ${m.home_team.name} vs ${m.away_team.flag_emoji} ${m.away_team.name}</strong>${thirdTag}
-            <div style="color:var(--text-muted);font-size:11px">${date} · ${ko}</div>
+            <div style="color:var(--text-muted);font-size:11px">${dayTag}${date} · ${ko}</div>
           </td>
           <td><input type="number" min="0" placeholder="—" id="bulk-home-${m.id}" style="width:70px;text-align:center" /></td>
           <td><input type="number" min="0" placeholder="—" id="bulk-away-${m.id}" style="width:70px;text-align:center" /></td>
@@ -1701,82 +1604,53 @@
 
     async function submitBulkResults(roundId, isKnockout) {
       const msg = document.getElementById('bulk-msg');
-      msg.style.color = 'var(--text-muted)';
-      msg.textContent = 'Saving...';
-
+      msg.style.color = 'var(--text-muted)'; msg.textContent = 'Saving...';
       const rows = document.querySelectorAll('[id^="bulk-row-"]');
       let saved = 0, skipped = 0, errors = 0;
-
       for (const row of rows) {
-        const matchId   = row.id.replace('bulk-row-', '');
+        const matchId = row.id.replace('bulk-row-', '');
         const homeInput = document.getElementById('bulk-home-' + matchId);
         const awayInput = document.getElementById('bulk-away-' + matchId);
         if (!homeInput || !awayInput) continue;
-
         const homeScore = parseInt(homeInput.value);
         const awayScore = parseInt(awayInput.value);
         if (isNaN(homeScore) || isNaN(awayScore)) { skipped++; continue; }
-
         const pensChecked = isKnockout && document.getElementById('bulk-pens-' + matchId)?.checked;
-        const isPens      = pensChecked && homeScore === awayScore;
-
-        // Save match result
-        const { error } = await db.from('matches').update({
-          home_score: homeScore, away_score: awayScore, status: 'complete',
-          pens_winner_id: null // pens winner not captured in bulk — use Correct a Result if needed
-        }).eq('id', matchId);
-
+        const isPens = pensChecked && homeScore === awayScore;
+        const { error } = await db.from('matches').update({ home_score: homeScore, away_score: awayScore, status: 'complete', pens_winner_id: null }).eq('id', matchId);
         if (error) { errors++; continue; }
-
-        // Get match details for pick calculation
         const { data: matchFull } = await db.from('matches')
           .select('round_id, is_third_place, home_team_id, away_team_id, rounds(round_type), home_team:teams!matches_home_team_id_fkey(id,is_longshot), away_team:teams!matches_away_team_id_fkey(id,is_longshot)')
           .eq('id', matchId).single();
-
         if (matchFull && !matchFull.is_third_place) {
           await calculatePickResults(matchId, homeScore, awayScore, matchFull.rounds?.round_type === 'knockout', false, null);
-
-          // Auto-eliminate loser in knockout
           if (matchFull.rounds?.round_type === 'knockout') {
             const losingTeamId = homeScore > awayScore ? matchFull.away_team_id : homeScore < awayScore ? matchFull.home_team_id : null;
-            if (losingTeamId) {
-              await db.from('teams').update({ is_eliminated: true, eliminated_in_round_id: matchFull.round_id }).eq('id', losingTeamId);
-            }
+            if (losingTeamId) await db.from('teams').update({ is_eliminated: true, eliminated_in_round_id: matchFull.round_id }).eq('id', losingTeamId);
           }
         }
-
-        // Dim the saved row
         row.style.opacity = '0.4';
         row.querySelectorAll('input').forEach(i => i.disabled = true);
         saved++;
       }
-
       msg.style.color = saved > 0 ? 'var(--green)' : 'var(--text-muted)';
       msg.textContent = `✅ ${saved} result(s) saved${skipped > 0 ? ` · ${skipped} skipped (no score)` : ''}${errors > 0 ? ` · ${errors} error(s)` : ''}.`;
-
       if (saved > 0) {
-        loadMatchesForResult();
-        loadCompletedMatchesForCorrection();
-        // Check for auto-snapshot
+        loadMatchesForResult(); loadCompletedMatchesForCorrection();
         if (roundId) {
           const { data: roundMatches } = await db.from('matches').select('id,status,is_third_place').eq('round_id', roundId).not('home_team_id','is',null);
           if (roundMatches) {
             const playable = roundMatches.filter(m => !m.is_third_place);
             if (playable.length > 0 && playable.every(m => m.status === 'complete')) {
               const snapErr = await takeSnapshot(roundId);
-              if (!snapErr) {
-                await db.from('rounds').update({ is_complete: true }).eq('id', roundId);
-                msg.textContent += ' 📸 Round complete — snapshot taken.';
-              }
+              if (!snapErr) { await db.from('rounds').update({ is_complete: true }).eq('id', roundId); msg.textContent += ' 📸 Round complete — snapshot taken.'; }
             }
           }
         }
       }
     }
 
-
     document.getElementById('btn-fetch-odds').addEventListener('click', fetchAllOdds);
   </script>
-
 </body>
 </html>

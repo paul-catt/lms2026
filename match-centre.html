@@ -7,29 +7,242 @@
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    .match-card { border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:12px; background:var(--surface); }
-    .match-card.live { border-color:var(--blue); }
-    .match-card.complete { border-color:var(--border); opacity:0.85; }
-    .match-teams { display:flex; align-items:center; justify-content:center; gap:12px; margin:10px 0; font-size:16px; font-weight:700; }
-    .match-score { font-size:22px; font-weight:800; color:var(--text); min-width:60px; text-align:center; }
-    .match-meta { display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--text-muted); margin-bottom:10px; }
-    .picks-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border); }
-    .pick-chip { display:inline-flex; align-items:center; gap:5px; background:var(--surface2); border-radius:20px; padding:4px 10px; font-size:12px; }
-    .pick-chip.win  { background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); }
-    .pick-chip.draw { background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); }
-    .pick-chip.loss { background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); }
-    .odds-row { display:flex; gap:8px; font-size:11px; color:var(--text-muted); margin-top:6px; flex-wrap:wrap; align-items:center; }
-    .odds-pill { background:var(--surface2); border-radius:6px; padding:2px 8px; font-size:11px; }
-    .no-odds { font-size:11px; color:var(--text-muted); font-style:italic; }
-    .day-header { font-size:13px; font-weight:800; color:var(--text); margin:20px 0 10px; padding-bottom:8px; border-bottom:2px solid var(--accent); display:flex; align-items:baseline; gap:8px; }
-    .day-header .day-date { font-size:11px; font-weight:500; color:var(--text-muted); }
-    .round-header { font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin:20px 0 8px; padding-bottom:6px; border-bottom:1px solid var(--border); }
-    .no-picks { color:var(--text-muted); font-size:12px; font-style:italic; }
-    .upcoming-card { border:1px solid var(--border); border-radius:10px; padding:12px 16px; margin-bottom:8px; background:var(--surface); opacity:0.8; }
-    .upcoming-teams { display:flex; align-items:center; justify-content:center; gap:12px; font-size:14px; font-weight:600; }
-    .upcoming-vs { font-size:13px; color:var(--text-muted); font-weight:400; }
-    .test-date-banner { background:#7c3aed; color:#fff; text-align:center; padding:8px 16px; font-size:13px; font-weight:600; }
-    .test-date-banner a { color:#e9d5ff; text-decoration:underline; cursor:pointer; margin-left:12px; font-weight:400; }
+
+    /* ── Deadline card ───────────────────────────────────────── */
+    .deadline-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+    }
+    .deadline-card.open   { border-color: #f59e0b; background: rgba(245,158,11,0.05); }
+    .deadline-card.locked { border-color: #ef4444; background: rgba(239,68,68,0.05); }
+    .deadline-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .deadline-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .deadline-round-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+    }
+    .deadline-date-str {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+    .deadline-timer {
+      font-size: 36px;
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      min-width: 200px;
+      text-align: right;
+    }
+    .deadline-timer.open   { color: #f59e0b; }
+    .deadline-timer.urgent { color: #ef4444; }
+    .deadline-timer.locked { color: var(--text-muted); font-size: 18px; font-weight: 700; }
+
+    /* ── Day headers ─────────────────────────────────────────── */
+    .day-header {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin: 20px 0 8px;
+      padding-bottom: 7px;
+      border-bottom: 2px solid var(--accent);
+    }
+    .day-header.past   { border-color: #f59e0b; }
+    .day-header.today  { border-color: #3b82f6; }
+    .day-header.future { border-color: #10b981; }
+    .day-header:first-child { margin-top: 8px; }
+
+    .day-num {
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .day-header.past   .day-num { color: #f59e0b; }
+    .day-header.today  .day-num { color: #3b82f6; }
+    .day-header.future .day-num { color: #10b981; }
+
+    .day-date-str {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .day-today-badge {
+      font-size: 10px;
+      font-weight: 700;
+      background: rgba(59,130,246,0.15);
+      color: #3b82f6;
+      padding: 2px 7px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .round-header {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 28px 0 4px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Match cards ─────────────────────────────────────────── */
+    .match-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      margin-bottom: 6px;
+    }
+    .match-card.complete { opacity: 0.85; }
+    .match-card.live     { border-color: #3b82f6; }
+
+    /* One-line row: time · home · score-or-vs · away · badge */
+    .match-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+    .match-time {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 36px;
+      flex-shrink: 0;
+    }
+    .match-home, .match-away {
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .match-home { flex: 1; text-align: right; }
+    .match-away { flex: 1; }
+    .match-score-inline {
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--text);
+      min-width: 52px;
+      text-align: center;
+      flex-shrink: 0;
+      letter-spacing: -0.01em;
+    }
+    .match-vs {
+      font-size: 11px;
+      color: var(--text-muted);
+      min-width: 52px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .match-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .badge-ft    { background: rgba(148,163,184,0.1); color: var(--text-muted); }
+    .badge-live  { background: rgba(59,130,246,0.15); color: #3b82f6; }
+    .badge-sched { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+
+    /* Sub-rows */
+    .match-sub {
+      padding-left: 44px;
+      margin-top: 5px;
+    }
+    .match-aet {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .odds-row {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .odds-label { font-size: 11px; color: var(--text-muted); margin-right: 2px; }
+    .odds-pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1px 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .no-odds { font-size: 11px; color: var(--border); font-style: italic; }
+
+    .picks-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+    .pick-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 8px;
+      font-size: 12px;
+    }
+    .pick-chip.win  { background: rgba(16,185,129,0.1);  border-color: rgba(16,185,129,0.3); }
+    .pick-chip.draw { background: rgba(245,158,11,0.1);  border-color: rgba(245,158,11,0.3); }
+    .pick-chip.loss { background: rgba(239,68,68,0.1);   border-color: rgba(239,68,68,0.3); }
+    .no-picks { font-size: 11px; color: var(--text-muted); font-style: italic; }
+
+    /* Upcoming — even lighter */
+    .upcoming-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 6px;
+      opacity: 0.72;
+    }
+
+    .test-date-banner {
+      background: #7c3aed; color: #fff; text-align: center;
+      padding: 8px 16px; font-size: 13px; font-weight: 600;
+    }
+    .test-date-banner a {
+      color: #e9d5ff; text-decoration: underline; cursor: pointer; margin-left: 12px; font-weight: 400;
+    }
+
+    @media (max-width: 600px) {
+      .deadline-timer { font-size: 26px; min-width: 0; text-align: left; }
+      .match-home, .match-away { font-size: 12px; }
+      .match-score-inline { font-size: 16px; min-width: 44px; }
+      .match-sub { padding-left: 0; }
+    }
   </style>
 </head>
 <body>
@@ -50,19 +263,10 @@
   </nav>
 
   <main>
-    <!-- DEADLINE COUNTDOWN CARD -->
-    <div class="card" id="deadline-card" style="display:none; margin-bottom:0">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
-        <div>
-          <div class="card-title" style="margin-bottom:2px" id="deadline-round-name">⏰ Picks Deadline</div>
-          <div id="deadline-text" style="font-size:13px; color:var(--text-muted)"></div>
-        </div>
-        <div id="deadline-countdown" style="font-size:26px; font-weight:800; min-width:110px; text-align:right; font-variant-numeric:tabular-nums"></div>
-      </div>
-    </div>
+    <div id="deadline-card-wrap"></div>
 
-    <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px">
+    <div class="card" id="today-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
         <div class="card-title" style="margin-bottom:0" id="today-card-title">⚽ Today's Matches</div>
         <span id="today-date" style="font-size:11px; color:var(--text-muted)"></span>
       </div>
@@ -71,7 +275,7 @@
     </div>
 
     <div class="card" id="upcoming-card" style="display:none">
-      <div class="card-title">📅 Upcoming Matches</div>
+      <div class="card-title">📅 Upcoming</div>
       <div id="upcoming-content"></div>
     </div>
 
@@ -89,76 +293,101 @@
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const LS_KEY = 'lms2026_test_date';
 
+    const WINDOW_START_HOUR = 11;
+    const WINDOW_DURATION_MS = 24 * 60 * 60 * 1000;
+
     function getEffectiveDate() {
-      const override = localStorage.getItem(LS_KEY);
-      return override ? new Date(override) : new Date();
+      const o = localStorage.getItem(LS_KEY);
+      return o ? new Date(o) : new Date();
     }
 
     (function initBanner() {
-      const override = localStorage.getItem(LS_KEY);
-      if (override) {
-        const d = new Date(override);
+      const o = localStorage.getItem(LS_KEY);
+      if (o) {
+        const d = new Date(o);
         document.getElementById('banner-date').textContent =
-          d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) +
-          ' ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+          d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) + ' ' +
+          d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
         document.getElementById('test-date-banner').style.display = 'block';
       }
     })();
+
+    function toWindowStartMs(isoStr) {
+      const d = new Date(isoStr);
+      const h = d.getUTCHours();
+      if (h < WINDOW_START_HOUR)
+        return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, WINDOW_START_HOUR, 0, 0);
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), WINDOW_START_HOUR, 0, 0);
+    }
+
+    function getGameDayWindow(date) {
+      const d = new Date(date), h = d.getUTCHours();
+      const ws = h < WINDOW_START_HOUR
+        ? new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, WINDOW_START_HOUR, 0, 0))
+        : new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), WINDOW_START_HOUR, 0, 0));
+      return { windowStart: ws, windowEnd: new Date(ws.getTime() + WINDOW_DURATION_MS) };
+    }
+
+    function getDayNumber(kickoffIso, roundFirstKickoffIso) {
+      return Math.round((toWindowStartMs(kickoffIso) - toWindowStartMs(roundFirstKickoffIso)) / WINDOW_DURATION_MS) + 1;
+    }
+
+    function fmtTime(iso) { return new Date(iso).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }); }
+    function fmtShortDate(iso) { return new Date(iso).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }); }
+    function fmtLongDate(iso)  { return new Date(iso).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' }); }
 
     // ── Deadline countdown ────────────────────────────────────
     let deadlineInterval = null;
 
     async function loadDeadline() {
-      const { data: rounds } = await db
-        .from('rounds')
+      const { data: rounds } = await db.from('rounds')
         .select('id, name, deadline, is_complete, sort_order')
-        .eq('is_complete', false)
-        .order('sort_order')
-        .limit(1);
+        .eq('is_complete', false).order('sort_order').limit(1);
 
-      const card = document.getElementById('deadline-card');
-      if (!rounds || rounds.length === 0) { card.style.display = 'none'; return; }
+      const wrap = document.getElementById('deadline-card-wrap');
+      if (!rounds || rounds.length === 0) { wrap.innerHTML = ''; return; }
 
       const round    = rounds[0];
       const deadline = new Date(round.deadline);
 
+      wrap.innerHTML = `
+        <div class="deadline-card open" id="dl-card">
+          <div class="deadline-inner">
+            <div>
+              <div class="deadline-label">⏰ Picks Deadline</div>
+              <div class="deadline-round-name" id="dl-round">${round.name}</div>
+              <div class="deadline-date-str" id="dl-date">${fmtLongDate(deadline.toISOString())} at ${fmtTime(deadline.toISOString())}</div>
+            </div>
+            <div class="deadline-timer open" id="dl-timer">--:--:--</div>
+          </div>
+        </div>`;
+
       function tick() {
-        const now  = getEffectiveDate();
-        const diff = deadline - now;
-        const nameEl  = document.getElementById('deadline-round-name');
-        const textEl  = document.getElementById('deadline-text');
-        const countEl = document.getElementById('deadline-countdown');
+        const diff  = deadline - getEffectiveDate();
+        const card  = document.getElementById('dl-card');
+        const timer = document.getElementById('dl-timer');
+        if (!card || !timer) return;
 
         if (diff <= 0) {
-          nameEl.textContent  = '🔒 ' + round.name + ' — Picks Locked';
-          textEl.textContent  = 'Deadline has passed.';
-          countEl.textContent = '';
-          countEl.style.color = 'var(--text-muted)';
-          card.style.display  = 'block';
+          card.className = 'deadline-card locked';
+          document.getElementById('dl-round').textContent = '🔒 ' + round.name + ' — Picks Locked';
+          document.getElementById('dl-date').textContent  = 'Deadline has passed.';
+          timer.className = 'deadline-timer locked';
+          timer.textContent = 'LOCKED';
           if (deadlineInterval) { clearInterval(deadlineInterval); deadlineInterval = null; }
           return;
         }
 
         const days  = Math.floor(diff / 86400000);
         const hours = Math.floor((diff % 86400000) / 3600000);
-        const mins  = Math.floor((diff % 3600000) / 60000);
-        const secs  = Math.floor((diff % 60000) / 1000);
+        const mins  = Math.floor((diff % 3600000)  / 60000);
+        const secs  = Math.floor((diff % 60000)    / 1000);
 
-        nameEl.textContent = '⏰ ' + round.name + ' Picks Deadline';
-        textEl.textContent = deadline.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' }) +
-          ' at ' + deadline.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+        timer.textContent = days > 0
+          ? days + 'd ' + String(hours).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm ' + String(secs).padStart(2,'0') + 's'
+          : String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
 
-        if (days > 0) {
-          countEl.textContent = days + 'd ' + hours + 'h ' + mins + 'm';
-          countEl.style.color = 'var(--green)';
-        } else if (hours > 0) {
-          countEl.textContent = hours + 'h ' + mins + 'm';
-          countEl.style.color = hours < 3 ? 'var(--gold)' : 'var(--green)';
-        } else {
-          countEl.textContent = mins + 'm ' + String(secs).padStart(2, '0') + 's';
-          countEl.style.color = 'var(--red)';
-        }
-        card.style.display = 'block';
+        timer.className = 'deadline-timer ' + (diff < 3 * 3600000 ? 'urgent' : 'open');
       }
 
       tick();
@@ -166,105 +395,109 @@
       deadlineInterval = setInterval(tick, 1000);
     }
 
-    // ── Game day window ───────────────────────────────────────
-    function toWindowStartMs(isoStr) {
-      const d = new Date(isoStr);
-      const h = d.getUTCHours();
-      if (h < 10) return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 14, 0, 0);
-      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 14, 0, 0);
-    }
-
-    function getGameDayWindow(effectiveDate) {
-      const d = new Date(effectiveDate);
-      const utcHour = d.getUTCHours();
-      let windowStart;
-      if (utcHour < 10) {
-        windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 14, 0, 0));
-      } else {
-        windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 14, 0, 0));
-      }
-      return { windowStart, windowEnd: new Date(windowStart.getTime() + 20 * 60 * 60 * 1000) };
-    }
-
-    function getDayNumber(kickoffIso, roundFirstKickoffIso) {
-      return Math.round((toWindowStartMs(kickoffIso) - toWindowStartMs(roundFirstKickoffIso)) / (20 * 60 * 60 * 1000)) + 1;
-    }
-
-    function fmtTime(iso)     { return new Date(iso).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }); }
-    function fmtDate(iso)     { return new Date(iso).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' }); }
-    function fmtShortDate(iso){ return new Date(iso).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }); }
-    function fmtDateTime(iso) { return fmtShortDate(iso) + ', ' + fmtTime(iso); }
-
+    // ── HTML builders ─────────────────────────────────────────
     function oddsHtml(match) {
-      if (match.odds_home) {
-        return '<div class="odds-row"><span>Odds:</span>' +
-          '<span class="odds-pill">' + match.home_team.name + ' ' + match.odds_home + '</span>' +
-          '<span class="odds-pill">Draw ' + (match.odds_draw || '—') + '</span>' +
-          '<span class="odds-pill">' + match.away_team.name + ' ' + match.odds_away + '</span></div>';
-      }
-      return '<div class="odds-row"><span class="no-odds">Odds not yet available</span></div>';
+      if (!match.odds_home) return '<div class="odds-row"><span class="no-odds">No odds yet</span></div>';
+      return '<div class="odds-row">' +
+        '<span class="odds-label">Odds</span>' +
+        '<span class="odds-pill">' + match.home_team.name + ' ' + parseFloat(match.odds_home).toFixed(2) + '</span>' +
+        '<span class="odds-pill">Draw ' + (match.odds_draw ? parseFloat(match.odds_draw).toFixed(2) : '—') + '</span>' +
+        '<span class="odds-pill">' + match.away_team.name + ' ' + parseFloat(match.odds_away).toFixed(2) + '</span>' +
+        '</div>';
     }
 
-    function dayHeaderHtml(dayNum, firstKickoffInBucket, isToday) {
-      if (isToday) return '<div class="day-header">DAY ' + dayNum + ': TODAY\'S MATCHES</div>';
-      const label = new Date(firstKickoffInBucket).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'long' }).toUpperCase();
-      return '<div class="day-header">DAY ' + dayNum + ' <span class="day-date">' + label + '</span></div>';
-    }
-
-    function matchCard(match, picks, allPlayers, showDate) {
-      const kickoffStr = showDate ? fmtDateTime(match.kickoff) : fmtTime(match.kickoff);
-      const scoreStr   = match.home_score !== null ? match.home_score + ' – ' + match.away_score : 'vs';
+    function matchCardHtml(match, picks, allPlayers) {
       const isComplete = match.status === 'complete';
       const isLive     = match.status === 'live';
 
+      const middleHtml = isComplete
+        ? '<span class="match-score-inline">' + match.home_score + '–' + match.away_score + '</span>'
+        : '<span class="match-vs">vs</span>';
+
+      const badgeHtml = isComplete
+        ? '<span class="match-badge badge-ft">FT</span>'
+        : isLive
+          ? '<span class="match-badge badge-live">🔴 Live</span>'
+          : '';
+
+      // AET / pens note
       let aetHtml = '';
       if (isComplete && match.pens_winner_id) {
-        const winner = match.pens_winner_id === match.home_team_id ? match.home_team : match.away_team;
-        aetHtml = `<div style="text-align:center;font-size:12px;color:var(--text-muted);margin-top:4px">AET — ${winner.flag_emoji} ${winner.name} win on penalties</div>`;
+        const w = match.pens_winner_id === match.home_team_id ? match.home_team : match.away_team;
+        aetHtml = '<div class="match-aet">AET · ' + w.flag_emoji + ' ' + w.name + ' win on penalties</div>';
       }
 
-      const matchPicks = picks.filter(p => p.round_id === match.round_id && (p.team_id === match.home_team_id || p.team_id === match.away_team_id));
-      const picksHtml  = matchPicks.length === 0
-        ? '<span class="no-picks">No picks for this match</span>'
-        : matchPicks.map(p => {
-            const player = allPlayers.find(pl => pl.id === p.player_id);
-            const result = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
-            const chipClass  = result ? result.match_result : '';
-            const pts        = result ? '+' + result.points_earned : '';
-            const isHome     = p.team_id === match.home_team_id;
-            const flag       = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
-            const isLongshot = isHome ? match.home_team.is_longshot : match.away_team.is_longshot;
-            return '<div class="pick-chip ' + chipClass + '">' +
-              '<a href="/' + (player ? player.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:600">' + (player ? player.name : '?') + '</a>' +
-              ' ' + flag +
-              '<span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px">' + p.multiplier + 'pt</span>' +
-              (isLongshot ? '<span title="Longshot bonus">⭐</span>' : '') +
-              (pts ? '<strong>' + pts + '</strong>' : '') +
-              '</div>';
-          }).join('');
+      // Picks
+      const matchPicks = (picks || []).filter(p =>
+        p.round_id === match.round_id &&
+        (p.team_id === match.home_team_id || p.team_id === match.away_team_id)
+      );
+
+      let picksHtml;
+      if (matchPicks.length === 0) {
+        picksHtml = '<div class="match-sub"><div class="picks-row"><span class="no-picks">No picks for this match</span></div></div>';
+      } else {
+        const chips = matchPicks.map(p => {
+          const player     = (allPlayers || []).find(pl => pl.id === p.player_id);
+          const result     = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
+          const chipClass  = result ? result.match_result : '';
+          const pts        = result ? '+' + result.points_earned : '';
+          const isHome     = p.team_id === match.home_team_id;
+          const flag       = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
+          const isLongshot = isHome ? match.home_team.is_longshot : match.away_team.is_longshot;
+          return '<div class="pick-chip ' + chipClass + '">' +
+            '<a href="/' + (player ? player.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700">' +
+              (player ? player.name : '?') + '</a>' +
+            ' ' + flag +
+            ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px">' + p.multiplier + 'pt</span>' +
+            (isLongshot ? ' ⭐' : '') +
+            (pts ? ' <strong>' + pts + '</strong>' : '') +
+            '</div>';
+        }).join('');
+        picksHtml = '<div class="match-sub"><div class="picks-row">' + chips + '</div></div>';
+      }
 
       return '<div class="match-card ' + match.status + '">' +
-        '<div class="match-meta"><span>' + match.rounds.name + ' · ' + kickoffStr + '</span>' +
-          '<span class="badge badge-' + (isComplete ? 'grey' : isLive ? 'blue' : 'grey') + '">' +
-          (isComplete ? 'FT' : isLive ? '🔴 Live' : fmtTime(match.kickoff)) + '</span></div>' +
-        '<div class="match-teams"><span>' + match.home_team.flag_emoji + ' ' + match.home_team.name + '</span>' +
-          '<span class="match-score">' + scoreStr + '</span>' +
-          '<span>' + match.away_team.name + ' ' + match.away_team.flag_emoji + '</span></div>' +
-        aetHtml + oddsHtml(match) +
-        '<div class="picks-row">' + picksHtml + '</div></div>';
+        '<div class="match-main">' +
+          '<span class="match-time">' + fmtTime(match.kickoff) + '</span>' +
+          '<span class="match-home">' + match.home_team.flag_emoji + ' ' + match.home_team.name + '</span>' +
+          middleHtml +
+          '<span class="match-away">' + match.away_team.name + ' ' + match.away_team.flag_emoji + '</span>' +
+          badgeHtml +
+        '</div>' +
+        (aetHtml ? '<div class="match-sub">' + aetHtml + '</div>' : '') +
+        '<div class="match-sub">' + oddsHtml(match) + '</div>' +
+        picksHtml +
+        '</div>';
     }
 
-    function upcomingCard(match) {
+    function upcomingCardHtml(match) {
       return '<div class="upcoming-card">' +
-        '<div class="match-meta"><span>' + match.rounds.name + '</span><span>' + fmtTime(match.kickoff) + '</span></div>' +
-        '<div class="upcoming-teams"><span>' + match.home_team.flag_emoji + ' ' + match.home_team.name + '</span>' +
-          '<span class="upcoming-vs">vs</span>' +
-          '<span>' + match.away_team.name + ' ' + match.away_team.flag_emoji + '</span></div>' +
-        oddsHtml(match) + '</div>';
+        '<div class="match-main">' +
+          '<span class="match-time">' + fmtTime(match.kickoff) + '</span>' +
+          '<span class="match-home">' + match.home_team.flag_emoji + ' ' + match.home_team.name + '</span>' +
+          '<span class="match-vs">vs</span>' +
+          '<span class="match-away">' + match.away_team.name + ' ' + match.away_team.flag_emoji + '</span>' +
+        '</div>' +
+        '<div class="match-sub">' + oddsHtml(match) + '</div>' +
+        '</div>';
+    }
+
+    function dayHeaderHtml(dayNum, windowStartMs, isToday, isPast) {
+      const cls     = isToday ? 'today' : isPast ? 'past' : 'future';
+      const repDate = new Date(windowStartMs + 4 * 60 * 60 * 1000); // noon-ish of window day
+      const dateStr = repDate.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'long' }).toUpperCase();
+      const badge   = isToday ? ' <span class="day-today-badge">Today</span>' : '';
+      return '<div class="day-header ' + cls + '">' +
+        '<span class="day-num">Day ' + dayNum + '</span>' +
+        '<span class="day-date-str">' + dateStr + '</span>' +
+        badge + '</div>';
     }
 
     async function getRoundFirstKickoff(roundId) {
-      const { data } = await db.from('matches').select('kickoff').eq('round_id', roundId).not('home_team_id', 'is', null).order('kickoff', { ascending: true }).limit(1);
+      const { data } = await db.from('matches').select('kickoff')
+        .eq('round_id', roundId).not('home_team_id', 'is', null)
+        .order('kickoff', { ascending: true }).limit(1);
       return data && data.length > 0 ? data[0].kickoff : null;
     }
 
@@ -273,8 +506,10 @@
       try {
         const effectiveNow = getEffectiveDate();
         const { windowStart, windowEnd } = getGameDayWindow(effectiveNow);
+        const todayWindowMs = toWindowStartMs(effectiveNow.toISOString());
 
-        document.getElementById('today-date').textContent = fmtDate(new Date(windowStart.getTime() + 6 * 60 * 60 * 1000).toISOString());
+        document.getElementById('today-date').textContent =
+          fmtLongDate(new Date(windowStart.getTime() + 6 * 60 * 60 * 1000).toISOString());
 
         const [{ data: players }, { data: picks }] = await Promise.all([
           db.from('players').select('id, name, slug'),
@@ -285,8 +520,10 @@
 
         // TODAY
         const { data: todayMatches } = await db.from('matches').select(matchSel)
-          .gte('kickoff', windowStart.toISOString()).lte('kickoff', windowEnd.toISOString())
-          .not('home_team_id', 'is', null).order('kickoff', { ascending: true });
+          .gte('kickoff', windowStart.toISOString())
+          .lt('kickoff',  windowEnd.toISOString())
+          .not('home_team_id', 'is', null)
+          .order('kickoff', { ascending: true });
 
         document.getElementById('today-loading').style.display = 'none';
         const todayContent = document.getElementById('today-content');
@@ -295,39 +532,39 @@
           document.getElementById('today-card-title').textContent = '⚽ Today\'s Matches';
           todayContent.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:24px">No matches today.</p>';
         } else {
-          const roundFirstKickoff = await getRoundFirstKickoff(todayMatches[0].round_id);
-          const todayDayNum = getDayNumber(windowStart.toISOString(), roundFirstKickoff);
-          document.getElementById('today-card-title').textContent = '⚽ Day ' + todayDayNum + ': Today\'s Matches';
-          const windowMidnight = new Date(Date.UTC(windowStart.getUTCFullYear(), windowStart.getUTCMonth(), windowStart.getUTCDate() + 1, 0, 0, 0));
-          todayContent.innerHTML = todayMatches.map(m => matchCard(m, picks || [], players || [], new Date(m.kickoff) >= windowMidnight)).join('');
+          const roundFirst = await getRoundFirstKickoff(todayMatches[0].round_id);
+          const dayNum = roundFirst ? getDayNumber(windowStart.toISOString(), roundFirst) : 1;
+          document.getElementById('today-card-title').textContent = '⚽ Day ' + dayNum + ': Today\'s Matches';
+          todayContent.innerHTML = todayMatches.map(m => matchCardHtml(m, picks, players)).join('');
         }
 
         // UPCOMING
-        const upcoming2End = new Date(windowEnd.getTime() + 2 * 20 * 60 * 60 * 1000);
+        const upcoming2End = new Date(windowEnd.getTime() + 2 * WINDOW_DURATION_MS);
         const { data: upcomingMatches } = await db.from('matches').select(matchSel)
-          .gt('kickoff', windowEnd.toISOString()).lte('kickoff', upcoming2End.toISOString())
-          .not('home_team_id', 'is', null).neq('status', 'complete').order('kickoff', { ascending: true });
+          .gte('kickoff', windowEnd.toISOString())
+          .lt('kickoff',  upcoming2End.toISOString())
+          .not('home_team_id', 'is', null)
+          .neq('status', 'complete')
+          .order('kickoff', { ascending: true });
 
         const upcomingCardEl  = document.getElementById('upcoming-card');
         const upcomingContent = document.getElementById('upcoming-content');
 
         if (upcomingMatches && upcomingMatches.length > 0) {
-          const windowBuckets = {};
+          const buckets = {};
           upcomingMatches.forEach(m => {
-            const { windowStart: ws } = getGameDayWindow(new Date(m.kickoff));
-            const key = ws.toISOString();
-            if (!windowBuckets[key]) windowBuckets[key] = { windowStart: ws, matches: [] };
-            windowBuckets[key].matches.push(m);
+            const key = toWindowStartMs(m.kickoff);
+            if (!buckets[key]) buckets[key] = { wsMs: key, matches: [] };
+            buckets[key].matches.push(m);
           });
-          const bucketsSorted = Object.values(windowBuckets).sort((a,b) => a.windowStart - b.windowStart);
-          const upcomingRoundFirstKickoff = await getRoundFirstKickoff(upcomingMatches[0].round_id);
-          let upcomingHtml = '';
-          for (const bucket of bucketsSorted) {
-            const dayNum = getDayNumber(bucket.windowStart.toISOString(), upcomingRoundFirstKickoff);
-            upcomingHtml += dayHeaderHtml(dayNum, bucket.matches[0].kickoff, false);
-            upcomingHtml += bucket.matches.map(m => upcomingCard(m)).join('');
-          }
-          upcomingContent.innerHTML = upcomingHtml;
+          const upcomingFirst = await getRoundFirstKickoff(upcomingMatches[0].round_id);
+          let html = '';
+          Object.values(buckets).sort((a,b) => a.wsMs - b.wsMs).forEach(b => {
+            const dayNum = upcomingFirst ? getDayNumber(new Date(b.wsMs).toISOString(), upcomingFirst) : 1;
+            html += dayHeaderHtml(dayNum, b.wsMs, false, false);
+            html += b.matches.map(m => upcomingCardHtml(m)).join('');
+          });
+          upcomingContent.innerHTML = html;
           upcomingCardEl.style.display = 'block';
         } else {
           upcomingCardEl.style.display = 'none';
@@ -335,7 +572,9 @@
 
         // RESULTS ARCHIVE
         const { data: allMatches } = await db.from('matches').select(matchSel)
-          .eq('status', 'complete').not('home_team_id', 'is', null).order('kickoff', { ascending: false });
+          .eq('status', 'complete')
+          .not('home_team_id', 'is', null)
+          .order('kickoff', { ascending: false });
 
         document.getElementById('results-loading').style.display = 'none';
         const resultsContent = document.getElementById('results-content');
@@ -353,27 +592,30 @@
         });
 
         const sortedRounds = Object.entries(byRound).sort((a,b) => b[1].sort_order - a[1].sort_order);
-        const roundFirstKickoffMap = {};
+        const roundFirstMap = {};
         for (const [, { round_id }] of sortedRounds) {
-          if (!roundFirstKickoffMap[round_id]) roundFirstKickoffMap[round_id] = await getRoundFirstKickoff(round_id);
+          if (!roundFirstMap[round_id]) roundFirstMap[round_id] = await getRoundFirstKickoff(round_id);
         }
 
         resultsContent.innerHTML = sortedRounds.map(([roundName, { round_id, matches }]) => {
           const dayBuckets = {};
           matches.forEach(m => {
-            const { windowStart: ws } = getGameDayWindow(new Date(m.kickoff));
-            const key = ws.toISOString();
-            if (!dayBuckets[key]) dayBuckets[key] = { windowStart: ws, matches: [] };
-            dayBuckets[key].matches.push(m);
+            const wsMs = toWindowStartMs(m.kickoff);
+            if (!dayBuckets[wsMs]) dayBuckets[wsMs] = { wsMs, matches: [] };
+            dayBuckets[wsMs].matches.push(m);
           });
-          const roundFirstKickoff = roundFirstKickoffMap[round_id];
-          const dayBucketsSorted  = Object.values(dayBuckets).sort((a,b) => b.windowStart - a.windowStart);
+
+          const roundFirst = roundFirstMap[round_id];
+          // Newest day first in archive
+          const dayBucketsSorted = Object.values(dayBuckets).sort((a,b) => b.wsMs - a.wsMs);
+
           return '<div class="round-header">' + roundName + '</div>' +
-            dayBucketsSorted.map(bucket => {
-              const dayNum = getDayNumber(bucket.windowStart.toISOString(), roundFirstKickoff);
-              return '<div class="day-header" style="margin-top:12px">Day ' + dayNum +
-                ' <span class="day-date">' + fmtShortDate(bucket.matches[0].kickoff) + '</span></div>' +
-                bucket.matches.map(m => matchCard(m, picks || [], players || [], false)).join('');
+            dayBucketsSorted.map(b => {
+              const dayNum  = roundFirst ? getDayNumber(new Date(b.wsMs).toISOString(), roundFirst) : 1;
+              const isPast  = b.wsMs < todayWindowMs;
+              const isToday = b.wsMs === todayWindowMs;
+              return dayHeaderHtml(dayNum, b.wsMs, isToday, isPast) +
+                b.matches.map(m => matchCardHtml(m, picks, players)).join('');
             }).join('');
         }).join('');
 

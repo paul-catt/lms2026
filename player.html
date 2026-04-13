@@ -7,45 +7,17 @@
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* ── Round progress strip ── */
-    .round-strip {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 0;
-    }
-    .round-pills {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-    .round-pill {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
-      user-select: none;
-    }
-    .round-pill:hover { border-color: var(--accent); color: var(--text); }
-    .round-pill.complete { color: var(--text); font-weight: 700; background: var(--surface2); }
-    .round-pill.has-pick { border-color: var(--green); color: var(--green); }
-    .round-pill.has-pick.complete { border-color: var(--green); color: var(--text); }
-    .round-pill.active { border-color: var(--accent); background: rgba(59,130,246,0.12); color: var(--accent); }
-    .round-pill.future { opacity: 0.45; cursor: default; }
-    .round-pill .tick { font-size: 10px; }
+    .round-strip { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:0; }
+    .round-pills { display:flex; gap:6px; flex-wrap:wrap; }
+    .round-pill { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); cursor:pointer; transition:all 0.15s; white-space:nowrap; user-select:none; }
+    .round-pill:hover { border-color:var(--accent); color:var(--text); }
+    .round-pill.complete { color:var(--text); font-weight:700; background:var(--surface2); }
+    .round-pill.has-pick { border-color:var(--green); color:var(--green); }
+    .round-pill.has-pick.complete { border-color:var(--green); color:var(--text); }
+    .round-pill.active { border-color:var(--accent); background:rgba(59,130,246,0.12); color:var(--accent); }
+    .round-pill.future { opacity:0.45; cursor:default; }
+    .round-pill .tick { font-size:10px; }
 
-    /* ── Match fixture layout ── */
     .fixture-list { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
     .fixture-row { display:grid; grid-template-columns:1fr auto 1fr; gap:6px; align-items:center; }
     .fixture-v { text-align:center; font-size:11px; font-weight:700; color:var(--text-muted); }
@@ -55,6 +27,7 @@
     .team-btn.selected-2 { border-color:var(--accent); background:rgba(59,130,246,0.15); color:var(--accent); font-weight:700; }
     .team-btn:disabled { opacity:0.35; cursor:not-allowed; }
     .team-btn.used { opacity:0.25; cursor:not-allowed; text-decoration:line-through; }
+    .team-btn.eliminated { opacity:0.25; cursor:not-allowed; }
     .fixture-separator { border:none; border-top:1px solid var(--border); margin:4px 0; }
     .deadline-bar { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--gold); margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; }
     .deadline-bar.locked { background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3); color:var(--red); }
@@ -66,15 +39,75 @@
     .pick-slot-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; }
     .pick-slot-value { font-size:15px; font-weight:700; }
     .longshot-tag { font-size:10px; color:var(--gold); margin-top:2px; }
-
-    /* ── Round selector ── */
     .round-selector-wrap { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
     .round-selector-wrap label { font-size:13px; font-weight:600; color:var(--text-muted); white-space:nowrap; }
     .round-selector-wrap select { flex:1; }
-
-    /* ── Test date banner ── */
     .test-date-banner { background:#7c3aed; color:#fff; text-align:center; padding:8px 16px; font-size:13px; font-weight:600; }
     .test-date-banner a { color:#e9d5ff; text-decoration:underline; cursor:pointer; margin-left:12px; font-weight:400; }
+
+    /* Band breakdown panel */
+    .band-breakdown {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+    .band-breakdown-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+    .band-totals {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .band-total-chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .band-total-chip.zero {
+      opacity: 0.35;
+    }
+    .band-teams-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .band-group-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .band-team-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .band-team-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
   </style>
 </head>
 <body>
@@ -104,7 +137,6 @@
 
     <div id="dashboard" style="display:none">
 
-      <!-- Name + round strip -->
       <div class="card">
         <div class="round-strip">
           <div>
@@ -115,7 +147,6 @@
         </div>
       </div>
 
-      <!-- 3 stats -->
       <div class="stats-row">
         <div class="stat-block"><div class="stat-value" id="stat-points">0</div><div class="stat-label">Total Points</div></div>
         <div class="stat-block"><div class="stat-value" id="stat-position">—</div><div class="stat-label">Position</div></div>
@@ -124,30 +155,29 @@
 
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
 
-      <!-- Pick section -->
       <div id="pick-section" style="display:none">
         <div class="card">
           <div class="card-title">🎯 Submit Your Pick</div>
-
-          <!-- Round dropdown -->
           <div class="round-selector-wrap">
             <label>Pick for round:</label>
             <select id="round-select"></select>
           </div>
-
           <div id="deadline-bar" class="deadline-bar"></div>
           <div class="pick-summary" id="pick-summary"></div>
           <div id="pick-form-inner"></div>
+
+          <!-- Band breakdown — shown above submit button -->
+          <div id="band-breakdown-wrap"></div>
+
           <div style="margin-top:14px">
             <button class="btn btn-primary" id="submit-pick-btn" style="width:100%; display:none" disabled>Select your team(s) above</button>
             <div id="pick-msg" style="margin-top:8px; font-size:12px; text-align:center"></div>
           </div>
         </div>
 
-        <!-- Goals prediction — shown for Group Phase 1 only, locked after deadline -->
         <div class="card" id="goals-prediction-card" style="display:none">
           <div class="card-title">🎯 Tournament Goals Prediction</div>
-          <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup? Used as a tiebreaker. You can change this up until the Group Phase 1 deadline.</p>
+          <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (including extra time)? Used as a tiebreaker. You can change this up until the Group Phase 1 deadline.</p>
           <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
             <input type="number" id="goals-prediction-input" placeholder="e.g. 142" min="0" max="500" style="max-width:140px" />
             <button class="btn btn-primary" id="goals-prediction-btn">Save Prediction</button>
@@ -164,7 +194,6 @@
         </div>
       </div>
 
-      <!-- Pick history -->
       <div class="card">
         <div class="card-title">📋 Pick History</div>
         <div class="table-wrap">
@@ -183,7 +212,6 @@
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ── Test date override ────────────────────────────────────
     const LS_KEY = 'lms2026_test_date';
     function getEffectiveDate() {
       const override = localStorage.getItem(LS_KEY);
@@ -200,21 +228,30 @@
       }
     })();
 
+    // Band config — colours match the leaderboard
+    const BAND_CONFIG = [
+      { key: 'favourite',  label: 'Favourite',   dot: '🔵', css: '#3b82f6' },
+      { key: 'dark_horse', label: 'Dark Horse',  dot: '🟡', css: '#eab308' },
+      { key: 'long_shot',  label: 'Long Shot',   dot: '🟠', css: '#f97316' },
+      { key: 'no_hoper',   label: 'No Hoper',    dot: '🔴', css: '#ef4444' },
+    ];
+
+    // Rounds where we show full team names instead of just totals
+    const QF_OR_LATER = ['QF', 'SF', 'Final'];
+
     const slug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
 
-    let player = null;
-    let allRounds = [];
-    let openRounds = [];
-    let allTeams = [];
-    let allPicks = [];
-    let allMatches = [];           // all matches with team info for fixture layout
+    let player       = null;
+    let allRounds    = [];
+    let openRounds   = [];
+    let allTeams     = [];
+    let allPicks     = [];
+    let allMatches   = [];
     let usedTeamIdsGlobal = new Set();
-    let countdownInterval = null;  // for live deadline countdown
-
-    // Per-selected-round state
-    let selectedRoundId = null;
-    let pick3 = null;
-    let pick2 = null;
+    let countdownInterval = null;
+    let selectedRoundId   = null;
+    let pick3      = null;
+    let pick2      = null;
     let pickSingle = null;
 
     function ordinal(n) {
@@ -222,18 +259,82 @@
       return n + (s[(v-20)%10] || s[v] || s[0]);
     }
 
-    function getTimeLeft(deadline) {
+    // ── Countdown helpers ─────────────────────────────────────
+    function getTimeLeftStr(deadline) {
       const diff = deadline - getEffectiveDate();
       if (diff <= 0) return 'Deadline passed';
-      const days = Math.floor(diff / 86400000);
+      const days  = Math.floor(diff / 86400000);
       const hours = Math.floor((diff % 86400000) / 3600000);
-      const mins = Math.floor((diff % 3600000) / 60000);
-      if (days > 0) return days + 'd ' + hours + 'h remaining';
-      if (hours > 0) return hours + 'h ' + mins + 'm remaining';
-      return mins + 'm remaining';
+      const mins  = Math.floor((diff % 3600000) / 60000);
+      const secs  = Math.floor((diff % 60000) / 1000);
+      if (days > 0)  return days + 'd ' + hours + 'h ' + mins + 'm remaining';
+      if (hours > 0) return hours + 'h ' + mins + 'm ' + String(secs).padStart(2,'0') + 's remaining';
+      return mins + 'm ' + String(secs).padStart(2,'0') + 's remaining';
     }
 
-    // ── Main load ─────────────────────────────────────────────
+    // ── Band breakdown rendering ──────────────────────────────
+    function renderBandBreakdown(round) {
+      const wrap = document.getElementById('band-breakdown-wrap');
+      if (!wrap) return;
+
+      // Which teams has this player already used (excluding current round)?
+      const currentRoundPickTeamIds = new Set(allPicks.filter(p => p.round_id === round.id).map(p => p.team_id));
+      const usedExcludingThisRound  = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundPickTeamIds.has(id)));
+
+      // Available = not used in prior rounds AND not eliminated from tournament
+      const available = allTeams.filter(t => !usedExcludingThisRound.has(t.id) && !t.is_eliminated);
+
+      if (available.length === 0) {
+        wrap.innerHTML = '<div class="band-breakdown"><div class="band-breakdown-title">🏳️ Remaining Teams</div><p style="font-size:13px;color:var(--red)">No teams available.</p></div>';
+        return;
+      }
+
+      const isDetailView = QF_OR_LATER.includes(round.name);
+
+      if (isDetailView) {
+        // QF+ — show actual team names grouped by band
+        let html = '<div class="band-breakdown"><div class="band-breakdown-title">🏳️ Remaining Teams (' + available.length + ' available)</div><div class="band-teams-grid">';
+        BAND_CONFIG.forEach(b => {
+          const teamsInBand = available.filter(t => t.band === b.key);
+          if (teamsInBand.length === 0) return;
+          html += '<div>';
+          html += '<div class="band-group-label" style="color:' + b.css + '">' + b.dot + ' ' + b.label + ' (' + teamsInBand.length + ')</div>';
+          html += '<div class="band-team-chips">';
+          teamsInBand.forEach(t => {
+            html += '<span class="band-team-chip" style="border-color:' + b.css + '20;color:' + b.css + '">' + t.flag_emoji + ' ' + t.name + '</span>';
+          });
+          html += '</div></div>';
+        });
+        // Unclassified teams
+        const unclassified = available.filter(t => !t.band);
+        if (unclassified.length > 0) {
+          html += '<div><div class="band-group-label" style="color:var(--text-muted)">⚪ Unclassified (' + unclassified.length + ')</div>';
+          html += '<div class="band-team-chips">';
+          unclassified.forEach(t => { html += '<span class="band-team-chip">' + t.flag_emoji + ' ' + t.name + '</span>'; });
+          html += '</div></div>';
+        }
+        html += '</div></div>';
+        wrap.innerHTML = html;
+      } else {
+        // Group stage / R32 / R16 — show totals only
+        let html = '<div class="band-breakdown"><div class="band-breakdown-title">🏳️ Remaining Teams (' + available.length + ' available)</div><div class="band-totals">';
+        BAND_CONFIG.forEach(b => {
+          const count = available.filter(t => t.band === b.key).length;
+          html += '<div class="band-total-chip' + (count === 0 ? ' zero' : '') + '" style="border-color:' + b.css + '40">' +
+            '<span>' + b.dot + '</span>' +
+            '<span style="color:' + b.css + '">' + b.label + '</span>' +
+            '<span style="color:var(--text);min-width:16px;text-align:center">' + count + '</span>' +
+          '</div>';
+        });
+        const unclassified = available.filter(t => !t.band).length;
+        if (unclassified > 0) {
+          html += '<div class="band-total-chip" style="border-color:var(--border)"><span>⚪</span><span style="color:var(--text-muted)">Other</span><span style="color:var(--text);min-width:16px;text-align:center">' + unclassified + '</span></div>';
+        }
+        html += '</div></div>';
+        wrap.innerHTML = html;
+      }
+    }
+
     async function loadDashboard() {
       try {
         const { data: players, error } = await db.from('players')
@@ -255,7 +356,6 @@
           ? '<span class="badge badge-red">❌ Eliminated</span>'
           : '<span class="badge badge-green">✅ Still In</span>';
 
-        // Load everything in parallel
         const [
           { data: picks },
           { data: rounds },
@@ -268,39 +368,35 @@
             .eq('player_id', player.id)
             .order('created_at', { ascending: true }),
           db.from('rounds').select('*').order('sort_order'),
-          db.from('teams').select('*').order('odds_rank'),
+          db.from('teams').select('id, name, flag_emoji, is_longshot, is_eliminated, band, odds_rank').order('odds_rank'),
           db.from('player_scores').select('player_id, total_points').order('total_points', { ascending: false }),
           db.from('matches').select('id, round_id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)').order('kickoff')
         ]);
 
-        allPicks = picks || [];
-        allRounds = rounds || [];
-        allTeams = teams || [];
+        allPicks   = picks   || [];
+        allRounds  = rounds  || [];
+        allTeams   = teams   || [];
         allMatches = matches || [];
 
-        // Global used teams (all rounds, all picks)
         usedTeamIdsGlobal = new Set(allPicks.map(p => p.team_id));
-        const teamsLeft = 48 - usedTeamIdsGlobal.size;
+        const teamsLeft   = 48 - usedTeamIdsGlobal.size;
 
-        // Points
         let totalPoints = 0;
         allPicks.forEach(p => {
           const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
           if (res) totalPoints += res.points_earned || 0;
         });
 
-        // Position
         let position = '—';
         if (allScores && allScores.length > 0) {
           const idx = allScores.findIndex(s => s.player_id === player.id);
           if (idx !== -1) position = ordinal(idx + 1) + ' / ' + allScores.length;
         }
 
-        document.getElementById('stat-points').textContent = totalPoints;
-        document.getElementById('stat-position').textContent = position;
+        document.getElementById('stat-points').textContent    = totalPoints;
+        document.getElementById('stat-position').textContent  = position;
         document.getElementById('stat-teams-left').textContent = teamsLeft;
 
-        // Teams left warning
         const roundsRemaining = allRounds.filter(r => !r.is_complete).length;
         if (teamsLeft <= roundsRemaining + 2 && !player.is_eliminated) {
           const warn = document.getElementById('teams-warning');
@@ -308,10 +404,8 @@
           warn.textContent = '⚠️ You have ' + teamsLeft + ' teams left. Pick carefully.';
         }
 
-        // Pick history
         renderHistory();
 
-        // Round strip + pick section
         openRounds = allRounds.filter(r => !r.is_complete);
         renderRoundStrip();
 
@@ -320,14 +414,9 @@
           return;
         }
 
-        // Build dropdown
         buildRoundDropdown();
         document.getElementById('pick-section').style.display = 'block';
-
-        // Default to first open round
         selectRound(openRounds[0].id);
-
-        // Goals prediction — only show during Group Phase 1
         initGoalsPrediction();
 
       } catch(err) {
@@ -337,50 +426,35 @@
       }
     }
 
-    // ── Round strip ───────────────────────────────────────────
     function renderRoundStrip() {
       const container = document.getElementById('round-pills');
       container.innerHTML = '';
-
-      // Picks by round_id for quick lookup
       const picksByRound = {};
       allPicks.forEach(p => {
         if (!picksByRound[p.round_id]) picksByRound[p.round_id] = [];
         picksByRound[p.round_id].push(p);
       });
-
       allRounds.forEach(r => {
-        const hasPick = !!(picksByRound[r.id] && picksByRound[r.id].length > 0);
+        const hasPick    = !!(picksByRound[r.id] && picksByRound[r.id].length > 0);
         const isComplete = r.is_complete;
-        const isOpen = !isComplete;
-
         const pill = document.createElement('div');
         pill.className = 'round-pill' +
           (isComplete ? ' complete' : '') +
           (hasPick ? ' has-pick' : '') +
           (!isComplete && !openRounds.find(o => o.id === r.id) ? ' future' : '');
-
-        // Short label
-        const shortLabel = r.round_type === 'group'
-          ? 'GP' + r.sort_order
-          : r.name;
-
+        const shortLabel = r.round_type === 'group' ? 'GP' + r.sort_order : r.name;
         pill.innerHTML = shortLabel + (hasPick ? ' <span class="tick">✓</span>' : '');
         pill.title = r.name + (hasPick ? ' — picks submitted' : isComplete ? ' — completed' : ' — open');
-
-        if (isOpen) {
+        if (!isComplete) {
           pill.addEventListener('click', () => {
             selectRound(r.id);
-            // scroll to pick section
-            document.getElementById('pick-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('pick-section').scrollIntoView({ behavior:'smooth', block:'start' });
           });
         }
-
         container.appendChild(pill);
       });
     }
 
-    // ── Round dropdown ────────────────────────────────────────
     function buildRoundDropdown() {
       const sel = document.getElementById('round-select');
       sel.innerHTML = '';
@@ -396,57 +470,49 @@
     function selectRound(roundId) {
       selectedRoundId = roundId;
       pick3 = null; pick2 = null; pickSingle = null;
-
-      // Sync dropdown
       document.getElementById('round-select').value = roundId;
-
-      // Sync strip highlight
       document.querySelectorAll('.round-pill').forEach(p => p.classList.remove('active'));
       const round = allRounds.find(r => r.id === roundId);
       if (!round) return;
-
-      // Highlight active pill
       const pills = document.querySelectorAll('.round-pill');
-      allRounds.forEach((r, i) => {
-        if (r.id === roundId && pills[i]) pills[i].classList.add('active');
-      });
-
+      allRounds.forEach((r, i) => { if (r.id === roundId && pills[i]) pills[i].classList.add('active'); });
       renderPickSection(round);
     }
 
-    // ── Pick section for selected round ──────────────────────
     function renderPickSection(round) {
-      const now = getEffectiveDate();
+      const now      = getEffectiveDate();
       const deadline = new Date(round.deadline);
       const isLocked = now >= deadline;
-      const isFuture = deadline > now && now < new Date(round.deadline);
-
-      // Picks already submitted for this round
-      const roundPicks = allPicks.filter(p => p.round_id === round.id);
+      const roundPicks   = allPicks.filter(p => p.round_id === round.id);
       const hasSubmitted = roundPicks.length > 0;
 
-      // Deadline bar — live countdown
       const deadlineBar = document.getElementById('deadline-bar');
+
       if (isLocked) {
         deadlineBar.className = 'deadline-bar locked';
         deadlineBar.innerHTML = '🔒 Picks locked — ' + round.name;
         if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
       } else {
         deadlineBar.className = 'deadline-bar';
+        // Tick every second for accurate countdown
         const updateCountdown = () => {
-          deadlineBar.innerHTML = '<span>⏰ ' + round.name + ' deadline</span><strong id="countdown-val">' + getTimeLeft(deadline) + '</strong>';
+          const timeStr = getTimeLeftStr(deadline);
+          deadlineBar.innerHTML =
+            '<span>⏰ ' + round.name + ' deadline</span>' +
+            '<strong style="font-variant-numeric:tabular-nums">' + timeStr + '</strong>';
         };
         updateCountdown();
         if (countdownInterval) clearInterval(countdownInterval);
-        countdownInterval = setInterval(updateCountdown, 30000);
+        countdownInterval = setInterval(updateCountdown, 1000);
       }
 
       document.getElementById('pick-msg').textContent = '';
 
-      if (hasSubmitted) {
-        showSubmittedPicks(round, roundPicks, isLocked);
-        return;
-      }
+      // Clear band breakdown before re-render
+      const bdWrap = document.getElementById('band-breakdown-wrap');
+      if (bdWrap) bdWrap.innerHTML = '';
+
+      if (hasSubmitted) { showSubmittedPicks(round, roundPicks, isLocked); return; }
 
       if (isLocked) {
         document.getElementById('pick-summary').innerHTML = '';
@@ -459,44 +525,26 @@
       renderPickForm(round);
     }
 
-    // ── Show submitted picks ──────────────────────────────────
     function showSubmittedPicks(round, roundPicks, isLocked) {
       const isGroup = round.round_type === 'group';
       let html = '<div style="text-align:center; padding:8px 0 16px; color:var(--green); font-weight:600">✅ Picks submitted for ' + round.name + '</div>';
-
       if (isGroup) {
-        const pick3s = roundPicks.find(p => p.multiplier === 3);
-        const pick2s = roundPicks.find(p => p.multiplier === 2);
+        const p3 = roundPicks.find(p => p.multiplier === 3);
+        const p2 = roundPicks.find(p => p.multiplier === 2);
         html += '<div class="pick-summary">';
-        if (pick3s) {
-          html += '<div class="pick-slot filled-3"><div class="pick-slot-label">3-Pointer</div>' +
-            '<div class="pick-slot-value">' + (pick3s.teams ? pick3s.teams.flag_emoji + ' ' + pick3s.teams.name : '—') + '</div>' +
-            (pick3s.teams && pick3s.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
-        }
-        if (pick2s) {
-          html += '<div class="pick-slot filled-2"><div class="pick-slot-label">2-Pointer</div>' +
-            '<div class="pick-slot-value">' + (pick2s.teams ? pick2s.teams.flag_emoji + ' ' + pick2s.teams.name : '—') + '</div>' +
-            (pick2s.teams && pick2s.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
-        }
+        if (p3) html += '<div class="pick-slot filled-3"><div class="pick-slot-label">3-Pointer</div><div class="pick-slot-value">' + (p3.teams ? p3.teams.flag_emoji + ' ' + p3.teams.name : '—') + '</div>' + (p3.teams && p3.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
+        if (p2) html += '<div class="pick-slot filled-2"><div class="pick-slot-label">2-Pointer</div><div class="pick-slot-value">' + (p2.teams ? p2.teams.flag_emoji + ' ' + p2.teams.name : '—') + '</div>' + (p2.teams && p2.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
         html += '</div>';
       } else {
         const single = roundPicks[0];
-        if (single) {
-          html += '<div style="display:flex; justify-content:center"><div class="pick-slot filled-2" style="max-width:200px"><div class="pick-slot-label">Your Pick</div>' +
-            '<div class="pick-slot-value">' + (single.teams ? single.teams.flag_emoji + ' ' + single.teams.name : '—') + '</div></div></div>';
-        }
+        if (single) html += '<div style="display:flex; justify-content:center"><div class="pick-slot filled-2" style="max-width:200px"><div class="pick-slot-label">Your Pick</div><div class="pick-slot-value">' + (single.teams ? single.teams.flag_emoji + ' ' + single.teams.name : '—') + '</div></div></div>';
       }
-
-      if (!isLocked) {
-        html += '<div style="margin-top:12px;text-align:center"><button class="btn btn-secondary" onclick="allowResubmit()">Change pick</button></div>';
-      }
-
+      if (!isLocked) html += '<div style="margin-top:12px;text-align:center"><button class="btn btn-secondary" onclick="allowResubmit()">Change pick</button></div>';
       document.getElementById('pick-summary').innerHTML = '';
       document.getElementById('pick-form-inner').innerHTML = html;
       document.getElementById('submit-pick-btn').style.display = 'none';
     }
 
-    // ── Allow resubmit ────────────────────────────────────────
     function allowResubmit() {
       pick3 = null; pick2 = null; pickSingle = null;
       const round = allRounds.find(r => r.id === selectedRoundId);
@@ -504,17 +552,10 @@
       document.getElementById('submit-pick-btn').style.display = 'block';
     }
 
-    // ── Render pick form ──────────────────────────────────────
     function renderPickForm(round) {
       const isGroup = round.round_type === 'group';
-
-      // Exclude current round's own picks from usedTeams (re-pick fix)
-      const currentRoundPickTeamIds = new Set(
-        allPicks.filter(p => p.round_id === round.id).map(p => p.team_id)
-      );
-      const usedExcludingThisRound = new Set(
-        [...usedTeamIdsGlobal].filter(id => !currentRoundPickTeamIds.has(id))
-      );
+      const currentRoundPickTeamIds = new Set(allPicks.filter(p => p.round_id === round.id).map(p => p.team_id));
+      const usedExcludingThisRound  = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundPickTeamIds.has(id)));
 
       const summaryEl = document.getElementById('pick-summary');
       if (isGroup) {
@@ -527,39 +568,33 @@
       }
 
       const instrHtml = isGroup
-        ? '<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Select your <span style="color:var(--gold);font-weight:700">3-pointer</span> first, then your <span style="color:var(--accent);font-weight:700">2-pointer</span>. Teams you\'ve already used are crossed out.</p>'
-        : '<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Select one team. Teams you\'ve already used are crossed out.</p>';
+        ? '<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Select your <span style="color:var(--gold);font-weight:700">3-pointer</span> first, then your <span style="color:var(--accent);font-weight:700">2-pointer</span>. Teams you\'ve already used or that are eliminated are crossed out.</p>'
+        : '<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Select one team. Teams you\'ve already used or that are eliminated are crossed out.</p>';
 
-      // Build fixture layout for this round
-      const roundMatches = allMatches.filter(m => m.round_id === round.id && m.home_team && m.away_team);
-      // Teams that appear in fixtures
+      const roundMatches    = allMatches.filter(m => m.round_id === round.id && m.home_team && m.away_team);
       const fixturedTeamIds = new Set();
       roundMatches.forEach(m => { fixturedTeamIds.add(m.home_team_id); fixturedTeamIds.add(m.away_team_id); });
 
       function teamBtn(team) {
         if (!team) return '';
-        const isUsed = usedExcludingThisRound.has(team.id);
-        return '<button class="team-btn' + (isUsed ? ' used' : '') + '" ' +
-          (isUsed ? 'disabled ' : '') +
-          'data-team-id="' + team.id + '" onclick="selectTeam(\'' + team.id + '\')">' +
-          team.flag_emoji + ' ' + team.name + (team.is_longshot ? ' ⭐' : '') +
-          '</button>';
+        const isUsed      = usedExcludingThisRound.has(team.id);
+        const isEliminated = !!team.is_eliminated;
+        const isDisabled  = isUsed || isEliminated;
+        const btnClass    = 'team-btn' + (isUsed ? ' used' : isEliminated ? ' eliminated' : '');
+        const title       = isEliminated ? ' title="Eliminated from tournament"' : '';
+        const label       = team.flag_emoji + ' ' + team.name + (team.is_longshot ? ' ⭐' : '') + (isEliminated ? ' 💀' : '');
+        return '<button class="' + btnClass + '" ' +
+          (isDisabled ? 'disabled ' : '') +
+          'data-team-id="' + team.id + '" onclick="selectTeam(\'' + team.id + '\')"' + title + '>' +
+          label + '</button>';
       }
 
       let gridHtml = '<div class="fixture-list">';
-
       if (roundMatches.length > 0) {
-        // Sort by kickoff, group into fixture rows
         roundMatches.forEach((m, i) => {
           if (i > 0) gridHtml += '<hr class="fixture-separator">';
-          gridHtml += '<div class="fixture-row">' +
-            teamBtn(m.home_team) +
-            '<div class="fixture-v">v</div>' +
-            teamBtn(m.away_team) +
-            '</div>';
+          gridHtml += '<div class="fixture-row">' + teamBtn(m.home_team) + '<div class="fixture-v">v</div>' + teamBtn(m.away_team) + '</div>';
         });
-
-        // Any teams not in fixtures (shouldn't happen in group stage but safety net)
         const unfixtured = allTeams.filter(t => !fixturedTeamIds.has(t.id));
         if (unfixtured.length > 0) {
           gridHtml += '<hr class="fixture-separator">';
@@ -568,88 +603,62 @@
           gridHtml += '</div>';
         }
       } else {
-        // No fixtures yet (e.g. knockout TBD) — alphabetical grid
         const sorted = [...allTeams].sort((a,b) => a.name.localeCompare(b.name));
         gridHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px">';
         sorted.forEach(t => { gridHtml += teamBtn(t); });
         gridHtml += '</div>';
       }
-
       gridHtml += '</div>';
 
-      // Same-match warning placeholder
       const warningHtml = '<div id="same-match-warning" style="display:none; margin-top:8px" class="alert alert-warning">⚠️ Both picks are from the same match — you can only earn points from one.</div>';
 
       document.getElementById('pick-form-inner').innerHTML = instrHtml + gridHtml + warningHtml;
       document.getElementById('submit-pick-btn').style.display = 'block';
       updateSubmitButton(isGroup);
+
+      // Render band breakdown below the team grid, above the submit button
+      renderBandBreakdown(round);
     }
 
-    // ── Team selection ────────────────────────────────────────
     function selectTeam(teamId) {
       const round = allRounds.find(r => r.id === selectedRoundId);
       if (!round) return;
       const team = allTeams.find(t => t.id === teamId);
-      if (!team) return;
+      if (!team || team.is_eliminated) return;
       const isGroup = round.round_type === 'group';
 
       if (isGroup) {
-        if (!pick3) {
-          pick3 = team;
-        } else if (pick3.id === teamId) {
-          pick3 = null;
-        } else if (!pick2) {
-          if (pick3.id !== teamId) pick2 = team;
-        } else if (pick2.id === teamId) {
-          pick2 = null;
-        } else {
-          pick2 = team;
-        }
+        if (!pick3)                   { pick3 = team; }
+        else if (pick3.id === teamId) { pick3 = null; }
+        else if (!pick2)              { if (pick3.id !== teamId) pick2 = team; }
+        else if (pick2.id === teamId) { pick2 = null; }
+        else                          { pick2 = team; }
 
         const slot3 = document.getElementById('slot-3');
-        if (pick3) {
-          slot3.className = 'pick-slot filled-3';
-          slot3.innerHTML = '<div class="pick-slot-label">3-Pointer</div><div class="pick-slot-value">' + pick3.flag_emoji + ' ' + pick3.name + '</div>' +
-            (pick3.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : '');
-        } else {
-          slot3.className = 'pick-slot';
-          slot3.innerHTML = '<div class="pick-slot-label">3-Pointer (max 4pts)</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>';
-        }
+        if (pick3) { slot3.className = 'pick-slot filled-3'; slot3.innerHTML = '<div class="pick-slot-label">3-Pointer</div><div class="pick-slot-value">' + pick3.flag_emoji + ' ' + pick3.name + '</div>' + (pick3.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
+        else       { slot3.className = 'pick-slot'; slot3.innerHTML = '<div class="pick-slot-label">3-Pointer (max 4pts)</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
 
         const slot2 = document.getElementById('slot-2');
-        if (pick2) {
-          slot2.className = 'pick-slot filled-2';
-          slot2.innerHTML = '<div class="pick-slot-label">2-Pointer</div><div class="pick-slot-value">' + pick2.flag_emoji + ' ' + pick2.name + '</div>' +
-            (pick2.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : '');
-        } else {
-          slot2.className = 'pick-slot';
-          slot2.innerHTML = '<div class="pick-slot-label">2-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>';
-        }
+        if (pick2) { slot2.className = 'pick-slot filled-2'; slot2.innerHTML = '<div class="pick-slot-label">2-Pointer</div><div class="pick-slot-value">' + pick2.flag_emoji + ' ' + pick2.name + '</div>' + (pick2.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
+        else       { slot2.className = 'pick-slot'; slot2.innerHTML = '<div class="pick-slot-label">2-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
       } else {
         pickSingle = (pickSingle && pickSingle.id === teamId) ? null : team;
         const slot = document.getElementById('slot-single');
-        if (pickSingle) {
-          slot.className = 'pick-slot filled-2';
-          slot.innerHTML = '<div class="pick-slot-label">Your Pick</div><div class="pick-slot-value">' + pickSingle.flag_emoji + ' ' + pickSingle.name + '</div>';
-        } else {
-          slot.className = 'pick-slot';
-          slot.innerHTML = '<div class="pick-slot-label">Your Pick</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>';
-        }
+        if (pickSingle) { slot.className = 'pick-slot filled-2'; slot.innerHTML = '<div class="pick-slot-label">Your Pick</div><div class="pick-slot-value">' + pickSingle.flag_emoji + ' ' + pickSingle.name + '</div>'; }
+        else            { slot.className = 'pick-slot'; slot.innerHTML = '<div class="pick-slot-label">Your Pick</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
       }
 
       document.querySelectorAll('.team-btn').forEach(btn => {
         const id = btn.dataset.teamId;
         btn.classList.remove('selected-3', 'selected-2');
-        if (pick3 && pick3.id === id) btn.classList.add('selected-3');
-        if (pick2 && pick2.id === id) btn.classList.add('selected-2');
+        if (pick3 && pick3.id === id)           btn.classList.add('selected-3');
+        if (pick2 && pick2.id === id)           btn.classList.add('selected-2');
         if (pickSingle && pickSingle.id === id) btn.classList.add('selected-2');
       });
 
-      // Same-match warning
       if (isGroup && pick3 && pick2) {
-        const round = allRounds.find(r => r.id === selectedRoundId);
-        const sameMatch = round && allMatches.some(m =>
-          m.round_id === round.id &&
+        const sameMatch = allMatches.some(m =>
+          m.round_id === selectedRoundId &&
           ((m.home_team_id === pick3.id && m.away_team_id === pick2.id) ||
            (m.home_team_id === pick2.id && m.away_team_id === pick3.id))
         );
@@ -661,7 +670,7 @@
     }
 
     function updateSubmitButton(isGroup) {
-      const btn = document.getElementById('submit-pick-btn');
+      const btn   = document.getElementById('submit-pick-btn');
       const ready = isGroup ? (pick3 && pick2) : pickSingle;
       btn.disabled = !ready;
       if (ready) {
@@ -673,18 +682,15 @@
       }
     }
 
-    // ── Submit ────────────────────────────────────────────────
     async function submitPick() {
-      const btn = document.getElementById('submit-pick-btn');
-      const msg = document.getElementById('pick-msg');
+      const btn   = document.getElementById('submit-pick-btn');
+      const msg   = document.getElementById('pick-msg');
       const round = allRounds.find(r => r.id === selectedRoundId);
       if (!round) return;
       const isGroup = round.round_type === 'group';
 
       if (getEffectiveDate() >= new Date(round.deadline)) {
-        msg.style.color = 'var(--red)';
-        msg.textContent = '❌ Deadline has passed. Picks locked.';
-        return;
+        msg.style.color = 'var(--red)'; msg.textContent = '❌ Deadline has passed. Picks locked.'; return;
       }
 
       const confirmText = isGroup
@@ -692,9 +698,7 @@
         : 'Pick: ' + pickSingle.name + '\n\nConfirm?';
       if (!confirm(confirmText)) return;
 
-      btn.disabled = true;
-      btn.textContent = 'Submitting...';
-      msg.textContent = '';
+      btn.disabled = true; btn.textContent = 'Submitting...'; msg.textContent = '';
 
       try {
         await db.from('picks').delete().eq('player_id', player.id).eq('round_id', round.id);
@@ -707,97 +711,74 @@
         }
         const { error } = await db.from('picks').insert(inserts);
         if (error) throw error;
-
-        msg.style.color = 'var(--green)';
-        msg.textContent = '✅ Picks submitted!';
-        setTimeout(() => {
-          location.reload();
-          // After reload the strip will show the green tick
-        }, 800);
+        msg.style.color = 'var(--green)'; msg.textContent = '✅ Picks submitted!';
+        setTimeout(() => { location.reload(); }, 800);
       } catch(err) {
         console.error(err);
-        msg.style.color = 'var(--red)';
-        msg.textContent = '❌ Error: ' + err.message;
-        btn.disabled = false;
-        updateSubmitButton(isGroup);
+        msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message;
+        btn.disabled = false; updateSubmitButton(isGroup);
       }
     }
 
-    // REPLACE the entire initGoalsPrediction() function in player.html with this:
+    function initGoalsPrediction() {
+      const gp1 = allRounds.find(r => r.round_type === 'group' && r.sort_order === 1);
+      if (!gp1) return;
 
-function initGoalsPrediction() {
-  const gp1 = allRounds.find(r => r.round_type === 'group' && r.sort_order === 1);
-  if (!gp1) return;
+      const card      = document.getElementById('goals-prediction-card');
+      const input     = document.getElementById('goals-prediction-input');
+      const btn       = document.getElementById('goals-prediction-btn');
+      const msg       = document.getElementById('goals-prediction-msg');
+      const lockedMsg = document.getElementById('goals-prediction-locked');
 
-  const card      = document.getElementById('goals-prediction-card');
-  const input     = document.getElementById('goals-prediction-input');
-  const btn       = document.getElementById('goals-prediction-btn');
-  const msg       = document.getElementById('goals-prediction-msg');
-  const lockedMsg = document.getElementById('goals-prediction-locked');
+      const deadline   = new Date(gp1.deadline);
+      const now        = getEffectiveDate();
+      const isLocked   = now >= deadline;
+      const hasEntered = player.total_goals_prediction !== null && player.total_goals_prediction !== undefined;
 
-  const deadline   = new Date(gp1.deadline);
-  const now        = getEffectiveDate();
-  const isLocked   = now >= deadline;
-  const hasEntered = player.total_goals_prediction !== null && player.total_goals_prediction !== undefined;
+      if (hasEntered && isLocked) return;
 
-  // Already entered AND locked: hide the card entirely — nothing to do
-  if (hasEntered && isLocked) return;
+      card.style.display = 'block';
 
-  card.style.display = 'block';
+      if (isLocked && !hasEntered) {
+        input.disabled = true; btn.style.display = 'none';
+        lockedMsg.innerHTML = '⚠️ Deadline has passed. No prediction was entered — this tiebreaker won\'t apply to you.';
+        lockedMsg.style.color = 'var(--red)'; lockedMsg.style.display = 'block';
+        return;
+      }
 
-  if (isLocked && !hasEntered) {
-    input.disabled = true;
-    btn.style.display = 'none';
-    lockedMsg.innerHTML = '⚠️ Deadline has passed. No prediction was entered — this tiebreaker won\'t apply to you.';
-    lockedMsg.style.color = 'var(--red)';
-    lockedMsg.style.display = 'block';
-    return;
-  }
+      if (hasEntered) {
+        input.value = player.total_goals_prediction;
+        card.querySelector('p').innerHTML = '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> total goals (including extra time). You can change this up until the Group Phase 1 deadline.';
+      } else {
+        const hoursLeft = (deadline - now) / (1000 * 60 * 60);
+        if (hoursLeft < 24) {
+          const minsLeft = Math.round(hoursLeft * 60);
+          const timeStr  = hoursLeft >= 1 ? Math.floor(hoursLeft) + 'h ' + (minsLeft % 60) + 'm' : minsLeft + ' minutes';
+          const reminder = document.createElement('div');
+          reminder.className = 'alert alert-warning';
+          reminder.style.cssText = 'margin-bottom:10px;font-size:13px';
+          reminder.textContent = '⏰ Deadline in ' + timeStr + ' — don\'t forget to enter your prediction!';
+          card.insertBefore(reminder, btn.closest('div'));
+        }
+      }
 
-  if (hasEntered) {
-    // Show current value, allow editing until deadline
-    input.value = player.total_goals_prediction;
-    card.querySelector('p').innerHTML =
-      '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> total goals. You can change this up until the Group Phase 1 deadline.';
-  } else {
-    // Not entered — warn if deadline is within 24h
-    const hoursLeft = (deadline - now) / (1000 * 60 * 60);
-    if (hoursLeft < 24) {
-      const minsLeft = Math.round(hoursLeft * 60);
-      const timeStr  = hoursLeft >= 1 ? Math.floor(hoursLeft) + 'h ' + (minsLeft % 60) + 'm' : minsLeft + ' minutes';
-      const reminder = document.createElement('div');
-      reminder.className = 'alert alert-warning';
-      reminder.style.cssText = 'margin-bottom:10px;font-size:13px';
-      reminder.textContent = '⏰ Deadline in ' + timeStr + ' — don\'t forget to enter your prediction!';
-      card.insertBefore(reminder, btn.closest('div'));
+      btn.addEventListener('click', async () => {
+        const val = parseInt(input.value);
+        if (isNaN(val) || val < 0 || val > 500) { msg.style.color='var(--red)'; msg.textContent='Enter a number between 0 and 500.'; return; }
+        btn.disabled = true; btn.textContent = 'Saving...'; msg.textContent = '';
+        const { error } = await db.from('players').update({ total_goals_prediction: val }).eq('id', player.id);
+        if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; }
+        else {
+          player.total_goals_prediction = val;
+          msg.style.color = 'var(--green)'; msg.textContent = '✅ Saved! You predicted ' + val + ' goals.';
+          card.querySelector('p').innerHTML = '✅ You predicted <strong>' + val + '</strong> total goals (including extra time). You can change this up until the Group Phase 1 deadline.';
+        }
+        btn.disabled = false; btn.textContent = 'Save Prediction';
+      });
     }
-  }
 
-  btn.addEventListener('click', async () => {
-    const val = parseInt(input.value);
-    if (isNaN(val) || val < 0 || val > 500) {
-      msg.style.color = 'var(--red)'; msg.textContent = 'Enter a number between 0 and 500.'; return;
-    }
-    btn.disabled = true; btn.textContent = 'Saving...'; msg.textContent = '';
-    const { error } = await db.from('players').update({ total_goals_prediction: val }).eq('id', player.id);
-    if (error) {
-      msg.style.color = 'var(--red)'; msg.textContent = '❌ ' + error.message;
-    } else {
-      player.total_goals_prediction = val;
-      msg.style.color = 'var(--green)';
-      msg.textContent = '✅ Saved! You predicted ' + val + ' goals.';
-      card.querySelector('p').innerHTML =
-        '✅ You predicted <strong>' + val + '</strong> total goals. You can change this up until the Group Phase 1 deadline.';
-    }
-    btn.disabled = false; btn.textContent = 'Save Prediction';
-  });
-}
-
-    // ── Pick history ──────────────────────────────────────────
     function renderHistory() {
       const tbody = document.getElementById('history-body');
-
-      // Build rows — include missed completed rounds
       const picksByRound = {};
       allPicks.forEach(p => {
         if (!picksByRound[p.round_id]) picksByRound[p.round_id] = [];
@@ -807,12 +788,10 @@ function initGoalsPrediction() {
       const completedRounds = allRounds.filter(r => r.is_complete);
       let rows = '';
 
-      // Completed rounds first (may have missed rounds)
       completedRounds.forEach(r => {
         const rPicks = picksByRound[r.id] || [];
         if (rPicks.length === 0) {
-          rows += '<tr><td style="font-size:12px">' + r.name + '</td>' +
-            '<td colspan="4" style="color:var(--red);font-style:italic;font-size:12px">⚠️ No pick submitted</td></tr>';
+          rows += '<tr><td style="font-size:12px">' + r.name + '</td><td colspan="4" style="color:var(--red);font-style:italic;font-size:12px">⚠️ No pick submitted</td></tr>';
         } else {
           rPicks.forEach(p => {
             const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
@@ -830,7 +809,6 @@ function initGoalsPrediction() {
         }
       });
 
-      // Open rounds with picks already banked
       const openWithPicks = allRounds.filter(r => !r.is_complete && picksByRound[r.id]);
       openWithPicks.forEach(r => {
         (picksByRound[r.id] || []).forEach(p => {
@@ -844,14 +822,10 @@ function initGoalsPrediction() {
         });
       });
 
-      if (!rows) {
-        rows = '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:20px">No picks yet.</td></tr>';
-      }
-
+      if (!rows) rows = '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:20px">No picks yet.</td></tr>';
       tbody.innerHTML = rows;
     }
 
-    // ── Init ──────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('submit-pick-btn').addEventListener('click', submitPick);
       loadDashboard();

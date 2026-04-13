@@ -15,8 +15,9 @@
     .player-name a:hover { color:var(--accent); }
     .points { font-size:16px; font-weight:700; }
     .out-row { opacity:0.45; }
-    .playing-row { background:rgba(59,130,246,0.12) !important; }
-    .playing-row:hover { background:rgba(59,130,246,0.18) !important; }
+    /* Playing today — purple (doesn't clash with Favourite blue dot) */
+    .playing-row { background:rgba(139,92,246,0.12) !important; }
+    .playing-row:hover { background:rgba(139,92,246,0.18) !important; }
     .form-pip { display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 1px; }
     .form-W { background:var(--green); }
     .form-D { background:var(--gold); }
@@ -47,17 +48,12 @@
     .goals-diff-close { color:var(--green); }
     .goals-diff-mid { color:var(--gold); }
     .goals-diff-far { color:var(--red); }
-    /* Projected / Longshot tabs */
     .lb-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
     .lb-tab { padding:6px 14px; border-radius:20px; cursor:pointer; font-size:12px; font-weight:600; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); }
     .lb-tab.active { background:var(--accent); color:white; border-color:var(--accent); }
     .lb-view { display:none; }
     .lb-view.active { display:block; }
-    .proj-badge { display:inline-block; font-size:11px; font-weight:700; padding:1px 6px; border-radius:4px; }
-    .proj-up   { background:rgba(16,185,129,0.15); color:var(--green); }
-    .proj-dn   { background:rgba(239,68,68,0.15); color:var(--red); }
-    .proj-eq   { background:var(--surface2); color:var(--text-muted); }
-    .ls-pts    { font-size:14px; font-weight:800; color:var(--gold); }
+    .ls-pts { font-size:14px; font-weight:800; color:var(--gold); }
   </style>
 </head>
 <body>
@@ -85,7 +81,6 @@
       <div id="round-heading" class="round-heading"></div>
       <div id="proj-goals-label" class="proj-goals"></div>
 
-      <!-- View tabs -->
       <div class="lb-tabs">
         <div class="lb-tab active" data-view="main" onclick="switchView('main')">📊 Standings</div>
         <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Longshot Table</div>
@@ -107,7 +102,7 @@
                 <th>Pts</th>
                 <th>GD</th>
                 <th class="hide-mobile">Diff from<br>proj.</th>
-                <th class="hide-mobile">Form</th>
+                <th class="hide-mobile">Form <span style="font-size:9px;color:var(--text-muted);font-weight:400">older→newer</span></th>
                 <th class="hide-mobile" id="left-col-header" style="display:none">Left</th>
                 <th class="hide-mobile" id="status-col-header" style="display:none">Status</th>
               </tr>
@@ -116,10 +111,12 @@
           </table>
         </div>
         <div style="margin-top:14px; font-size:11px; color:var(--text-muted); display:flex; gap:16px; flex-wrap:wrap">
-          <span>🔵 Playing today</span>
+          <!-- 🟣 purple for "playing today" so it doesn't clash with 🔵 Favourite band dot -->
+          <span>🟣 Playing today</span>
           <span class="knockout-only" style="display:none">🟢 Alive</span>
           <span class="knockout-only" style="display:none">🔴 Eliminated</span>
-          <span class="knockout-only" style="display:none">· Pool remaining: 🔵 Favourite 🟡 Dark Horse 🟠 Long Shot 🔴 No Hoper</span>
+          <!-- Band legend: hide-mobile so it doesn't show in portrait when Left col is hidden -->
+          <span class="knockout-only hide-mobile" style="display:none">· Pool remaining: 🔵 Favourite 🟡 Dark Horse 🟠 Long Shot 🔴 No Hoper</span>
           <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:2px solid #f59e0b;margin-right:3px;vertical-align:middle"></span>3pts pick</span>
           <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:2px solid #94a3b8;margin-right:3px;vertical-align:middle"></span>2pts pick</span>
           <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:4px double #f59e0b;margin-right:3px;vertical-align:middle"></span>Longshot (4pts)</span>
@@ -150,6 +147,10 @@
     const TOTAL_MATCHES = 104;
     const LS_KEY = 'lms2026_test_date';
 
+    // ── Day window: 11:00 UTC to 11:00 UTC (noon BST to noon BST) ──
+    const WINDOW_START_HOUR = 11; // UTC
+    const WINDOW_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+
     function getEffectiveDate() {
       const override = localStorage.getItem(LS_KEY);
       return override ? new Date(override) : new Date();
@@ -166,29 +167,33 @@
       }
     })();
 
+    // ── Day window helpers ────────────────────────────────────
     function toWindowStartMs(isoStr) {
       const d = new Date(isoStr);
       const h = d.getUTCHours();
-      if (h < 10) return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 14, 0, 0);
-      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 14, 0, 0);
+      if (h < WINDOW_START_HOUR) {
+        return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, WINDOW_START_HOUR, 0, 0);
+      }
+      return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), WINDOW_START_HOUR, 0, 0);
     }
 
     function getGameDayWindow(effectiveDate) {
       const d = new Date(effectiveDate);
       const utcHour = d.getUTCHours();
       let windowStart;
-      if (utcHour < 10) windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 14, 0, 0));
-      else              windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 14, 0, 0));
-      return { windowStart, windowEnd: new Date(windowStart.getTime() + 20 * 60 * 60 * 1000) };
+      if (utcHour < WINDOW_START_HOUR) {
+        windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, WINDOW_START_HOUR, 0, 0));
+      } else {
+        windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), WINDOW_START_HOUR, 0, 0));
+      }
+      return { windowStart, windowEnd: new Date(windowStart.getTime() + WINDOW_DURATION_MS) };
     }
 
-    // ── View switching ────────────────────────────────────────
     function switchView(name) {
       document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
       document.querySelectorAll('.lb-view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
     }
 
-    // ── Shared data ───────────────────────────────────────────
     let _leaderboardData = null;
 
     async function loadLeaderboard() {
@@ -234,26 +239,29 @@
         if (projectedTotal !== null) projLabel.textContent = `⚽ Projected tournament goals: ${Math.round(projectedTotal)} (${goalsScored} goals in ${matchesPlayed} matches)`;
 
         // Round context
-        const currentRound    = (rounds || []).find(r => !r.is_complete);
-        const isKnockout      = currentRound && currentRound.round_type === 'knockout';
+        const currentRound = (rounds || []).find(r => !r.is_complete);
+        const isKnockout = currentRound && currentRound.round_type === 'knockout';
         const completedRounds = (rounds || []).filter(r => r.is_complete).sort((a,b) => b.sort_order - a.sort_order);
-        const lastCompleted   = completedRounds.length > 0 ? completedRounds[0] : null;
+        const lastCompleted = completedRounds.length > 0 ? completedRounds[0] : null;
 
+        // Day label for round heading
         let dayLabel = '';
         if (currentRound && firstMatchData) {
           const roundMatches = (firstMatchData || []).filter(m => m.round_id === currentRound.id);
           if (roundMatches.length > 0) {
             const firstWindowMs = toWindowStartMs(roundMatches[0].kickoff);
-            const nowWindowMs   = toWindowStartMs(now.toISOString());
-            const dayNum = Math.round((nowWindowMs - firstWindowMs) / (20 * 60 * 60 * 1000)) + 1;
+            const nowWindowMs = toWindowStartMs(now.toISOString());
+            const dayNum = Math.round((nowWindowMs - firstWindowMs) / WINDOW_DURATION_MS) + 1;
             if (dayNum >= 1) dayLabel = ' · Day ' + dayNum;
           }
         }
         if (currentRound) document.getElementById('round-heading').textContent = currentRound.name + dayLabel;
 
         // Lookup maps
-        const gdMap = {};      (gdData || []).forEach(r => { gdMap[r.player_id] = r.gd; });
-        const furthestMap = {}; (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
+        const gdMap = {};
+        (gdData || []).forEach(r => { gdMap[r.player_id] = r.gd; });
+        const furthestMap = {};
+        (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
 
         const priorPosMap = {};
         if (lastCompleted && snapshots) {
@@ -266,11 +274,11 @@
           if (r.match_result) formMap[r.player_id].push(r.match_result === 'win' ? 'W' : r.match_result === 'draw' ? 'D' : 'L');
         });
 
-        // Today's picks
+        // Today's picks — matches within the current game-day window
         const todayTeamRoundPairs = new Set();
         (todayMatchRows || []).forEach(m => {
           const ko = new Date(m.kickoff);
-          if (ko >= windowStart && ko <= windowEnd) {
+          if (ko >= windowStart && ko < windowEnd) {
             todayTeamRoundPairs.add(m.home_team_id + '|' + m.round_id);
             todayTeamRoundPairs.add(m.away_team_id + '|' + m.round_id);
           }
@@ -288,12 +296,17 @@
         });
 
         // Band / remaining teams
-        const BAND_COLOUR = { favourite: { dot:'🔵', css:'#3b82f6' }, dark_horse: { dot:'🟡', css:'#eab308' }, long_shot: { dot:'🟠', css:'#f97316' }, no_hoper: { dot:'🔴', css:'#ef4444' } };
-        const BAND_ORDER  = { favourite:1, dark_horse:2, long_shot:3, no_hoper:4 };
-        const teamById    = {};
+        const BAND_COLOUR = {
+          favourite:  { dot:'🔵', css:'#3b82f6' },
+          dark_horse: { dot:'🟡', css:'#eab308' },
+          long_shot:  { dot:'🟠', css:'#f97316' },
+          no_hoper:   { dot:'🔴', css:'#ef4444' }
+        };
+        const BAND_ORDER = { favourite:1, dark_horse:2, long_shot:3, no_hoper:4 };
+        const teamById = {};
         (allTeams || []).forEach(t => { teamById[t.id] = t; });
         const alivePoolTeams = (allTeams || []).filter(t => !t.is_eliminated).sort((a,b) => (BAND_ORDER[a.band]||5) - (BAND_ORDER[b.band]||5));
-        const usedByPlayer  = {};
+        const usedByPlayer = {};
         (allPicks || []).forEach(pick => {
           if (!usedByPlayer[pick.player_id]) usedByPlayer[pick.player_id] = new Set();
           usedByPlayer[pick.player_id].add(pick.team_id);
@@ -305,17 +318,25 @@
         function remainingTeamsHtml(playerId, isQFOrLater) {
           const remaining = getPlayerRemainingTeams(playerId);
           if (remaining.length === 0) return '<span style="color:var(--text-muted);font-size:11px">none</span>';
-          if (isQFOrLater) return remaining.map(t => { const b = BAND_COLOUR[t.band] || { css:'#94a3b8' }; return `<span style="font-size:14px;border-bottom:2px solid ${b.css};margin-right:3px">${t.flag_emoji}</span>`; }).join('');
+          if (isQFOrLater) {
+            return remaining.map(t => {
+              const b = BAND_COLOUR[t.band] || { css:'#94a3b8' };
+              return `<span style="font-size:14px;border-bottom:2px solid ${b.css};margin-right:3px">${t.flag_emoji}</span>`;
+            }).join('');
+          }
           const bandCounts = { favourite:0, dark_horse:0, long_shot:0, no_hoper:0 };
           remaining.forEach(t => { if (t.band && bandCounts[t.band] !== undefined) bandCounts[t.band]++; });
-          const dots = Object.entries(bandCounts).filter(([,n]) => n > 0).map(([band,n]) => { const b = BAND_COLOUR[band]; return `<span style="font-size:10px" title="${band.replace('_',' ')}: ${n}">${b.dot}${n}</span>`; }).join(' ');
+          const dots = Object.entries(bandCounts).filter(([,n]) => n > 0).map(([band,n]) => {
+            const b = BAND_COLOUR[band];
+            return `<span style="font-size:10px" title="${band.replace('_',' ')}: ${n}">${b.dot}${n}</span>`;
+          }).join(' ');
           return `<span style="font-size:12px;font-weight:600">${remaining.length}</span> <span style="font-size:11px">${dots}</span>`;
         }
         const isQFOrLater = currentRound && ['QF','SF','Final'].includes(currentRound.name);
 
         // Show/hide columns
         const koDisplay = isKnockout ? '' : 'none';
-        document.getElementById('left-col-header').style.display   = isKnockout ? '' : 'none';
+        document.getElementById('left-col-header').style.display = isKnockout ? '' : 'none';
         document.getElementById('status-col-header').style.display = isKnockout ? '' : 'none';
         document.querySelectorAll('.knockout-only').forEach(el => el.style.display = koDisplay);
         document.querySelectorAll('.group-only').forEach(el => el.style.display = isKnockout ? 'none' : '');
@@ -335,30 +356,30 @@
           return 0;
         });
 
-        // ── Render main leaderboard ───────────────────────────
+        // Render
         const tbody = document.getElementById('leaderboard-body');
         tbody.innerHTML = '';
 
         sorted.forEach((p, i) => {
           const pos = i + 1;
           const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
-          const gd    = gdMap[p.player_id] || 0;
-          const form  = formMap[p.player_id] || [];
+          const gd = gdMap[p.player_id] || 0;
+          const form = formMap[p.player_id] || [];
           const todayData = playerTodayMap[p.player_id];
           const isPlayingToday = !!todayData;
-          const todayPicks_p   = todayData ? todayData.picks : [];
+          const todayPicks_p = todayData ? todayData.picks : [];
 
           let arrowHtml = '<span class="arrow-eq">—</span>';
           if (priorPosMap[p.player_id]) {
             const prev = priorPosMap[p.player_id];
-            if (pos < prev)      arrowHtml = '<span class="arrow-up">▲' + (prev - pos) + '</span>';
+            if (pos < prev) arrowHtml = '<span class="arrow-up">▲' + (prev - pos) + '</span>';
             else if (pos > prev) arrowHtml = '<span class="arrow-dn">▼' + (pos - prev) + '</span>';
           }
 
           const recentForm = form.slice(-5);
-          const formHtml   = recentForm.map(f => '<span class="form-pip form-' + f + '" title="' + f + '"></span>').join('');
-          const gdHtml     = gd > 0 ? '<span class="gd-pos">+' + gd + '</span>' : gd < 0 ? '<span class="gd-neg">' + gd + '</span>' : '<span class="gd-zero">0</span>';
-          const flagHtml   = todayPicks_p.map(pick => {
+          const formHtml = recentForm.map(f => '<span class="form-pip form-' + f + '" title="' + f + '"></span>').join('');
+          const gdHtml = gd > 0 ? '<span class="gd-pos">+' + gd + '</span>' : gd < 0 ? '<span class="gd-neg">' + gd + '</span>' : '<span class="gd-zero">0</span>';
+          const flagHtml = todayPicks_p.map(pick => {
             const cls = pick.multiplier === 3 ? (pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt') : (pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt');
             return '<span class="flag-inline' + cls + '">' + pick.flag + '</span>';
           }).join('');
@@ -367,7 +388,7 @@
           if (projectedTotal !== null && p.total_goals_prediction !== null && p.total_goals_prediction !== undefined) {
             const diff = Math.round(p.total_goals_prediction - projectedTotal);
             const sign = diff >= 0 ? '+' : '';
-            const cls  = Math.abs(diff) <= 10 ? 'goals-diff-close' : Math.abs(diff) <= 30 ? 'goals-diff-mid' : 'goals-diff-far';
+            const cls = Math.abs(diff) <= 10 ? 'goals-diff-close' : Math.abs(diff) <= 30 ? 'goals-diff-mid' : 'goals-diff-far';
             goalsDiffHtml = `<span class="goals-diff ${cls}">${sign}${diff}</span>`;
           }
 
@@ -394,9 +415,7 @@
         document.getElementById('leaderboard-wrap').style.display = 'block';
         document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
-        // Save data for other views
         _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap };
-
         renderLongshotView();
 
       } catch(err) {
@@ -404,55 +423,37 @@
         document.getElementById('loading').innerHTML = '<p style="color:var(--red)">Failed to load. Check console.</p>';
       }
     }
-    // ── Longshot leaderboard ──────────────────────────────────
+
     function renderLongshotView() {
       const wrap = document.getElementById('longshot-wrap');
       if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the main leaderboard first.</p>'; return; }
-
       const { allPicks, sorted } = _leaderboardData;
-
-      // Tally longshot bonuses per player
       const lsData = {};
-      sorted.forEach(p => {
-        lsData[p.player_id] = { name: p.name, slug: p.slug, bonusPoints: 0, longshotWins: [], longshotPicks: 0 };
-      });
-
+      sorted.forEach(p => { lsData[p.player_id] = { name: p.name, slug: p.slug, bonusPoints: 0, longshotWins: [], longshotPicks: 0 }; });
       (allPicks || []).forEach(pick => {
         if (!pick.teams?.is_longshot) return;
         const s = lsData[pick.player_id];
         if (!s) return;
         s.longshotPicks++;
         const res = pick.pick_results && pick.pick_results[0];
-        if (res && res.longshot_bonus > 0) {
-          s.bonusPoints += res.longshot_bonus;
-          s.longshotWins.push(pick.teams.flag_emoji || '⭐');
-        }
+        if (res && res.longshot_bonus > 0) { s.bonusPoints += res.longshot_bonus; s.longshotWins.push(pick.teams.flag_emoji || '⭐'); }
       });
-
       const lsSorted = Object.values(lsData).sort((a, b) => {
         if (b.bonusPoints !== a.bonusPoints) return b.bonusPoints - a.bonusPoints;
         return b.longshotPicks - a.longshotPicks;
       });
-
       const hasAny = lsSorted.some(p => p.longshotPicks > 0);
-      if (!hasAny) {
-        wrap.innerHTML = '<p style="color:var(--text-muted);padding:16px 0">No longshot picks recorded yet.</p>';
-        return;
-      }
-
+      if (!hasAny) { wrap.innerHTML = '<p style="color:var(--text-muted);padding:16px 0">No longshot picks recorded yet.</p>'; return; }
       let html = '<table><thead><tr><th class="pos">#</th><th>Player</th><th>Longshot Picks</th><th>Wins ⭐</th><th>Bonus Pts</th></tr></thead><tbody>';
-
       lsSorted.filter(p => p.longshotPicks > 0).forEach((p, i) => {
-        const winsStr = p.longshotWins.length > 0 ? p.longshotWins.join(' ') : '—';
         html += `<tr>
           <td class="pos">${i + 1}</td>
           <td style="font-weight:600"><a href="/${p.slug}" style="color:var(--text);text-decoration:none">${p.name}</a></td>
           <td style="color:var(--text-muted)">${p.longshotPicks}</td>
-          <td>${winsStr}</td>
+          <td>${p.longshotWins.length > 0 ? p.longshotWins.join(' ') : '—'}</td>
           <td class="ls-pts">${p.bonusPoints > 0 ? '+' + p.bonusPoints : '—'}</td>
         </tr>`;
       });
-
       html += '</tbody></table>';
       wrap.innerHTML = html;
     }
