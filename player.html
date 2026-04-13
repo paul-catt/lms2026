@@ -11,103 +11,101 @@
     .round-pills { display:flex; gap:6px; flex-wrap:wrap; }
     .round-pill { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); cursor:pointer; transition:all 0.15s; white-space:nowrap; user-select:none; }
     .round-pill:hover { border-color:var(--accent); color:var(--text); }
-    .round-pill.complete { color:var(--text); font-weight:700; background:var(--surface2); }
+    .round-pill.complete { color:var(--text); font-weight:700; }
     .round-pill.has-pick { border-color:var(--green); color:var(--green); }
     .round-pill.has-pick.complete { border-color:var(--green); color:var(--text); }
     .round-pill.active { border-color:var(--accent); background:rgba(59,130,246,0.12); color:var(--accent); }
     .round-pill.future { opacity:0.45; cursor:default; }
     .round-pill .tick { font-size:10px; }
 
-    .fixture-list { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
-    .fixture-row { display:grid; grid-template-columns:1fr auto 1fr; gap:6px; align-items:center; }
-    .fixture-v { text-align:center; font-size:11px; font-weight:700; color:var(--text-muted); }
-    .team-btn { display:flex; align-items:center; gap:6px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; font-size:13px; font-weight:500; transition:all 0.15s; width:100%; justify-content:center; }
-    .team-btn:hover:not(:disabled) { border-color:var(--accent); background:rgba(59,130,246,0.1); }
-    .team-btn.selected-3 { border-color:var(--gold); background:rgba(245,158,11,0.15); color:var(--gold); font-weight:700; }
-    .team-btn.selected-2 { border-color:var(--accent); background:rgba(59,130,246,0.15); color:var(--accent); font-weight:700; }
-    .team-btn:disabled { opacity:0.35; cursor:not-allowed; }
-    .team-btn.used { opacity:0.25; cursor:not-allowed; text-decoration:line-through; }
-    .team-btn.eliminated { opacity:0.25; cursor:not-allowed; }
-    .fixture-separator { border:none; border-top:1px solid var(--border); margin:4px 0; }
-    .deadline-bar { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--gold); margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; }
-    .deadline-bar.locked { background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.3); color:var(--red); }
-    .deadline-bar.future { background:rgba(59,130,246,0.07); border-color:rgba(59,130,246,0.25); color:var(--accent); }
+    /* Deadline bar inside pick card */
+    .deadline-bar { border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; font-weight:600; }
+    .deadline-bar.open   { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); color:var(--gold); }
+    .deadline-bar.locked { background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.3);  color:var(--red); }
+    .deadline-bar .countdown { font-variant-numeric:tabular-nums; font-weight:800; }
+
+    /* Top deadline card */
+    .top-deadline-card {
+      background: var(--surface);
+      border: 1px solid #f59e0b;
+      background: rgba(245,158,11,0.05);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .top-deadline-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); margin-bottom:3px; }
+    .top-deadline-round { font-size:15px; font-weight:800; color:var(--text); }
+    .top-deadline-timer { font-size:26px; font-weight:900; font-variant-numeric:tabular-nums; color:#f59e0b; letter-spacing:-0.02em; }
+    .top-deadline-timer.urgent { color:#ef4444; }
+    .top-deadline-timer.locked { color:var(--text-muted); font-size:16px; }
+
+    /* Goals prediction top card */
+    .goals-top-card {
+      background: rgba(59,130,246,0.07);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 16px;
+    }
+    .goals-top-card .card-title { color: var(--accent); margin-bottom:8px; }
+
+    /* Pick slots */
     .pick-summary { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
     .pick-slot { flex:1; min-width:140px; background:var(--surface2); border:2px dashed var(--border); border-radius:8px; padding:12px; text-align:center; }
-    .pick-slot.filled-3 { border-color:var(--gold); background:rgba(245,158,11,0.08); }
-    .pick-slot.filled-2 { border-color:var(--accent); background:rgba(59,130,246,0.08); }
+    .pick-slot.filled-3 { border-color:var(--gold);   background:rgba(245,158,11,0.08); }
+    .pick-slot.filled-2 { border-color:var(--accent);  background:rgba(59,130,246,0.08); }
     .pick-slot-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; }
     .pick-slot-value { font-size:15px; font-weight:700; }
     .longshot-tag { font-size:10px; color:var(--gold); margin-top:2px; }
+
+    /* Fixture grid */
+    .fixture-list { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+    .fixture-row { display:grid; grid-template-columns:1fr auto 1fr; gap:6px; align-items:center; }
+    .fixture-v { text-align:center; font-size:11px; font-weight:700; color:var(--text-muted); }
+    .fixture-separator { border:none; border-top:1px solid var(--border); margin:4px 0; }
+
+    /* Team buttons */
+    .team-btn { display:flex; align-items:center; gap:6px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; font-size:13px; font-weight:500; transition:all 0.15s; width:100%; justify-content:center; }
+    .team-btn:hover:not(:disabled) { border-color:var(--accent); background:rgba(59,130,246,0.1); }
+    .team-btn.selected-3 { border-color:var(--gold);   background:rgba(245,158,11,0.15);  color:var(--gold);   font-weight:700; }
+    .team-btn.selected-2 { border-color:var(--accent); background:rgba(59,130,246,0.15);  color:var(--accent); font-weight:700; }
+    .team-btn:disabled { opacity:0.3; cursor:not-allowed; text-decoration:line-through; }
+
+    /* Band group headers in knockout */
+    .band-group { margin-bottom:14px; }
+    .band-group-header { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; padding:4px 0; margin-bottom:6px; border-bottom:1px solid var(--border); }
+    .band-group-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:6px; }
+
+    /* Band breakdown panel (knockout only, between stats and pick card) */
+    .band-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .band-panel-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-right:4px; }
+    .band-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px; font-size:13px; font-weight:700; background:var(--surface2); border:1px solid var(--border); }
+
+    /* Round selector */
     .round-selector-wrap { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
     .round-selector-wrap label { font-size:13px; font-weight:600; color:var(--text-muted); white-space:nowrap; }
     .round-selector-wrap select { flex:1; }
+
+    /* History table round column */
+    .history-round { min-width:60px; font-size:12px; }
+
     .test-date-banner { background:#7c3aed; color:#fff; text-align:center; padding:8px 16px; font-size:13px; font-weight:600; }
     .test-date-banner a { color:#e9d5ff; text-decoration:underline; cursor:pointer; margin-left:12px; font-weight:400; }
-
-    /* Band breakdown panel */
-    .band-breakdown {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 14px;
-      margin-bottom: 14px;
-    }
-    .band-breakdown-title {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 10px;
-    }
-    .band-totals {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .band-total-chip {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 700;
-      background: var(--surface);
-      border: 1px solid var(--border);
-    }
-    .band-total-chip.zero {
-      opacity: 0.35;
-    }
-    .band-teams-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .band-group-label {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 4px;
-    }
-    .band-team-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-    }
-    .band-team-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 8px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 600;
-      border: 1px solid var(--border);
-      background: var(--surface);
-    }
   </style>
 </head>
 <body>
@@ -120,7 +118,7 @@
   <nav>
     <a class="nav-logo" href="/">⚽ LMS 2026</a>
     <div class="nav-links">
-      <a href="/leaderboard">Leaderboard</a>
+      <a href="/leaderboard" id="leaderboard-link">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
       <a href="/rules">Rules</a>
     </div>
@@ -137,6 +135,18 @@
 
     <div id="dashboard" style="display:none">
 
+      <!-- Goals prediction — top card, shown only if not entered and GP1 open -->
+      <div id="goals-top-card" style="display:none" class="goals-top-card">
+        <div class="card-title">🎯 Tournament Goals Prediction</div>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (including extra time)? Used as a tiebreaker. Must be entered before the Group Phase 1 deadline.</p>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+          <input type="number" id="goals-input-top" placeholder="e.g. 142" min="0" max="500" style="max-width:140px" />
+          <button class="btn btn-primary" id="goals-btn-top">Save Prediction</button>
+          <span id="goals-msg-top" style="font-size:12px"></span>
+        </div>
+      </div>
+
+      <!-- Name / status / round pills -->
       <div class="card">
         <div class="round-strip">
           <div>
@@ -147,14 +157,25 @@
         </div>
       </div>
 
+      <!-- Stats -->
       <div class="stats-row">
         <div class="stat-block"><div class="stat-value" id="stat-points">0</div><div class="stat-label">Total Points</div></div>
         <div class="stat-block"><div class="stat-value" id="stat-position">—</div><div class="stat-label">Position</div></div>
-        <div class="stat-block"><div class="stat-value" id="stat-teams-left">48</div><div class="stat-label">Teams Left</div></div>
+        <div class="stat-block"><div class="stat-value" id="stat-teams-left">—</div><div class="stat-label">Teams Left</div></div>
       </div>
 
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
 
+      <!-- Band panel — knockout rounds only -->
+      <div id="band-panel" style="display:none" class="band-panel">
+        <span class="band-panel-label">🏳️ Available</span>
+        <span id="band-chip-fav"  class="band-chip"><span>🔵</span><span style="color:#3b82f6">Favourite</span><span id="bc-fav">0</span></span>
+        <span id="band-chip-dh"   class="band-chip"><span>🟡</span><span style="color:#eab308">Dark Horse</span><span id="bc-dh">0</span></span>
+        <span id="band-chip-ls"   class="band-chip"><span>🟠</span><span style="color:#f97316">Long Shot</span><span id="bc-ls">0</span></span>
+        <span id="band-chip-nh"   class="band-chip"><span>🔴</span><span style="color:#ef4444">No Hoper</span><span id="bc-nh">0</span></span>
+      </div>
+
+      <!-- Pick section -->
       <div id="pick-section" style="display:none">
         <div class="card">
           <div class="card-title">🎯 Submit Your Pick</div>
@@ -162,19 +183,22 @@
             <label>Pick for round:</label>
             <select id="round-select"></select>
           </div>
-          <div id="deadline-bar" class="deadline-bar"></div>
+          <div id="deadline-bar" class="deadline-bar open"></div>
           <div class="pick-summary" id="pick-summary"></div>
+
+          <!-- Top submit button -->
+          <button class="btn btn-primary" id="submit-pick-btn-top" style="width:100%; display:none; margin-bottom:14px" disabled>Select your team above</button>
+
           <div id="pick-form-inner"></div>
 
-          <!-- Band breakdown — shown above submit button -->
-          <div id="band-breakdown-wrap"></div>
-
+          <!-- Bottom submit button -->
           <div style="margin-top:14px">
-            <button class="btn btn-primary" id="submit-pick-btn" style="width:100%; display:none" disabled>Select your team(s) above</button>
+            <button class="btn btn-primary" id="submit-pick-btn" style="width:100%; display:none" disabled>Select your team above</button>
             <div id="pick-msg" style="margin-top:8px; font-size:12px; text-align:center"></div>
           </div>
         </div>
 
+        <!-- Goals prediction — normal position (shown when entered or after deadline) -->
         <div class="card" id="goals-prediction-card" style="display:none">
           <div class="card-title">🎯 Tournament Goals Prediction</div>
           <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (including extra time)? Used as a tiebreaker. You can change this up until the Group Phase 1 deadline.</p>
@@ -183,7 +207,7 @@
             <button class="btn btn-primary" id="goals-prediction-btn">Save Prediction</button>
             <span id="goals-prediction-msg" style="font-size:12px"></span>
           </div>
-          <div id="goals-prediction-locked" style="display:none; font-size:13px; color:var(--text-muted); margin-top:8px">🔒 Prediction locked — Group Phase 1 deadline has passed.</div>
+          <div id="goals-prediction-locked" style="display:none; font-size:13px; color:var(--text-muted); margin-top:8px"></div>
         </div>
       </div>
 
@@ -194,11 +218,12 @@
         </div>
       </div>
 
+      <!-- Pick history -->
       <div class="card">
         <div class="card-title">📋 Pick History</div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Round</th><th>Team</th><th>Pts</th><th>Result</th><th>Earned</th></tr></thead>
+            <thead><tr><th style="min-width:60px">Round</th><th>Team</th><th>Pts</th><th>Result</th><th>Earned</th></tr></thead>
             <tbody id="history-body"></tbody>
           </table>
         </div>
@@ -214,32 +239,36 @@
 
     const LS_KEY = 'lms2026_test_date';
     function getEffectiveDate() {
-      const override = localStorage.getItem(LS_KEY);
-      return override ? new Date(override) : new Date();
+      const o = localStorage.getItem(LS_KEY);
+      return o ? new Date(o) : new Date();
     }
     (function initBanner() {
-      const override = localStorage.getItem(LS_KEY);
-      if (override) {
-        const d = new Date(override);
+      const o = localStorage.getItem(LS_KEY);
+      if (o) {
+        const d = new Date(o);
         document.getElementById('banner-date').textContent =
-          d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) +
-          ' ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+          d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) + ' ' +
+          d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
         document.getElementById('test-date-banner').style.display = 'block';
       }
     })();
 
-    // Band config — colours match the leaderboard
-    const BAND_CONFIG = [
-      { key: 'favourite',  label: 'Favourite',   dot: '🔵', css: '#3b82f6' },
-      { key: 'dark_horse', label: 'Dark Horse',  dot: '🟡', css: '#eab308' },
-      { key: 'long_shot',  label: 'Long Shot',   dot: '🟠', css: '#f97316' },
-      { key: 'no_hoper',   label: 'No Hoper',    dot: '🔴', css: '#ef4444' },
-    ];
-
-    // Rounds where we show full team names instead of just totals
-    const QF_OR_LATER = ['QF', 'SF', 'Final'];
-
+    // Store slug in localStorage so leaderboard can offer "back" link
     const slug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
+    if (slug) localStorage.setItem('lms2026_my_slug', slug);
+
+    // Leaderboard link carries slug for row highlighting
+    const lbLink = document.getElementById('leaderboard-link');
+    if (slug) lbLink.href = '/leaderboard?me=' + slug;
+
+    const BAND_CONFIG = [
+      { key:'favourite',  label:'Favourite',  dot:'🔵', css:'#3b82f6' },
+      { key:'dark_horse', label:'Dark Horse', dot:'🟡', css:'#eab308' },
+      { key:'long_shot',  label:'Long Shot',  dot:'🟠', css:'#f97316' },
+      { key:'no_hoper',   label:'No Hoper',   dot:'🔴', css:'#ef4444' },
+    ];
+    const KO_ROUNDS = ['R32','R16','QF','SF','Final'];
+    const QF_PLUS   = ['QF','SF','Final'];
 
     let player       = null;
     let allRounds    = [];
@@ -247,8 +276,10 @@
     let allTeams     = [];
     let allPicks     = [];
     let allMatches   = [];
+    let eliminatedIds = new Set();
     let usedTeamIdsGlobal = new Set();
     let countdownInterval = null;
+    let deadlineInterval  = null;
     let selectedRoundId   = null;
     let pick3      = null;
     let pick2      = null;
@@ -259,80 +290,41 @@
       return n + (s[(v-20)%10] || s[v] || s[0]);
     }
 
-    // ── Countdown helpers ─────────────────────────────────────
     function getTimeLeftStr(deadline) {
       const diff = deadline - getEffectiveDate();
-      if (diff <= 0) return 'Deadline passed';
+      if (diff <= 0) return 'Locked';
       const days  = Math.floor(diff / 86400000);
       const hours = Math.floor((diff % 86400000) / 3600000);
-      const mins  = Math.floor((diff % 3600000) / 60000);
-      const secs  = Math.floor((diff % 60000) / 1000);
-      if (days > 0)  return days + 'd ' + hours + 'h ' + mins + 'm remaining';
-      if (hours > 0) return hours + 'h ' + mins + 'm ' + String(secs).padStart(2,'0') + 's remaining';
-      return mins + 'm ' + String(secs).padStart(2,'0') + 's remaining';
+      const mins  = Math.floor((diff % 3600000)  / 60000);
+      const secs  = Math.floor((diff % 60000)    / 1000);
+      if (days > 0) return days + 'd ' + String(hours).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm ' + String(secs).padStart(2,'0') + 's';
+      return String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
     }
 
-    // ── Band breakdown rendering ──────────────────────────────
-    function renderBandBreakdown(round) {
-      const wrap = document.getElementById('band-breakdown-wrap');
-      if (!wrap) return;
+    // ── Band panel (knockout only) ────────────────────────────
+    function updateBandPanel(round) {
+      const panel = document.getElementById('band-panel');
+      const isKO  = round && KO_ROUNDS.includes(round.name);
+      if (!isKO) { panel.style.display = 'none'; return; }
 
-      // Which teams has this player already used (excluding current round)?
       const currentRoundPickTeamIds = new Set(allPicks.filter(p => p.round_id === round.id).map(p => p.team_id));
-      const usedExcludingThisRound  = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundPickTeamIds.has(id)));
+      const usedExcl = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundPickTeamIds.has(id)));
+      // Available = not used in prior rounds AND not eliminated
+      const available = allTeams.filter(t => !usedExcl.has(t.id) && !eliminatedIds.has(t.id));
 
-      // Available = not used in prior rounds AND not eliminated from tournament
-      const available = allTeams.filter(t => !usedExcludingThisRound.has(t.id) && !t.is_eliminated);
+      document.getElementById('bc-fav').textContent = available.filter(t => t.band === 'favourite').length;
+      document.getElementById('bc-dh').textContent  = available.filter(t => t.band === 'dark_horse').length;
+      document.getElementById('bc-ls').textContent  = available.filter(t => t.band === 'long_shot').length;
+      document.getElementById('bc-nh').textContent  = available.filter(t => t.band === 'no_hoper').length;
 
-      if (available.length === 0) {
-        wrap.innerHTML = '<div class="band-breakdown"><div class="band-breakdown-title">🏳️ Remaining Teams</div><p style="font-size:13px;color:var(--red)">No teams available.</p></div>';
-        return;
-      }
+      // Grey out chips with zero
+      ['fav','dh','ls','nh'].forEach((k, i) => {
+        const chip = document.getElementById('band-chip-' + k);
+        const count = parseInt(['bc-fav','bc-dh','bc-ls','bc-nh'].map(id => document.getElementById(id).textContent)[i]);
+        chip.style.opacity = count === 0 ? '0.3' : '1';
+      });
 
-      const isDetailView = QF_OR_LATER.includes(round.name);
-
-      if (isDetailView) {
-        // QF+ — show actual team names grouped by band
-        let html = '<div class="band-breakdown"><div class="band-breakdown-title">🏳️ Remaining Teams (' + available.length + ' available)</div><div class="band-teams-grid">';
-        BAND_CONFIG.forEach(b => {
-          const teamsInBand = available.filter(t => t.band === b.key);
-          if (teamsInBand.length === 0) return;
-          html += '<div>';
-          html += '<div class="band-group-label" style="color:' + b.css + '">' + b.dot + ' ' + b.label + ' (' + teamsInBand.length + ')</div>';
-          html += '<div class="band-team-chips">';
-          teamsInBand.forEach(t => {
-            html += '<span class="band-team-chip" style="border-color:' + b.css + '20;color:' + b.css + '">' + t.flag_emoji + ' ' + t.name + '</span>';
-          });
-          html += '</div></div>';
-        });
-        // Unclassified teams
-        const unclassified = available.filter(t => !t.band);
-        if (unclassified.length > 0) {
-          html += '<div><div class="band-group-label" style="color:var(--text-muted)">⚪ Unclassified (' + unclassified.length + ')</div>';
-          html += '<div class="band-team-chips">';
-          unclassified.forEach(t => { html += '<span class="band-team-chip">' + t.flag_emoji + ' ' + t.name + '</span>'; });
-          html += '</div></div>';
-        }
-        html += '</div></div>';
-        wrap.innerHTML = html;
-      } else {
-        // Group stage / R32 / R16 — show totals only
-        let html = '<div class="band-breakdown"><div class="band-breakdown-title">🏳️ Remaining Teams (' + available.length + ' available)</div><div class="band-totals">';
-        BAND_CONFIG.forEach(b => {
-          const count = available.filter(t => t.band === b.key).length;
-          html += '<div class="band-total-chip' + (count === 0 ? ' zero' : '') + '" style="border-color:' + b.css + '40">' +
-            '<span>' + b.dot + '</span>' +
-            '<span style="color:' + b.css + '">' + b.label + '</span>' +
-            '<span style="color:var(--text);min-width:16px;text-align:center">' + count + '</span>' +
-          '</div>';
-        });
-        const unclassified = available.filter(t => !t.band).length;
-        if (unclassified > 0) {
-          html += '<div class="band-total-chip" style="border-color:var(--border)"><span>⚪</span><span style="color:var(--text-muted)">Other</span><span style="color:var(--text);min-width:16px;text-align:center">' + unclassified + '</span></div>';
-        }
-        html += '</div></div>';
-        wrap.innerHTML = html;
-      }
+      panel.style.display = 'flex';
     }
 
     async function loadDashboard() {
@@ -370,16 +362,20 @@
           db.from('rounds').select('*').order('sort_order'),
           db.from('teams').select('id, name, flag_emoji, is_longshot, is_eliminated, band, odds_rank').order('odds_rank'),
           db.from('player_scores').select('player_id, total_points').order('total_points', { ascending: false }),
-          db.from('matches').select('id, round_id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)').order('kickoff')
+          db.from('matches').select('id, round_id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band)').order('kickoff')
         ]);
 
-        allPicks   = picks   || [];
-        allRounds  = rounds  || [];
-        allTeams   = teams   || [];
-        allMatches = matches || [];
+        allPicks    = picks   || [];
+        allRounds   = rounds  || [];
+        allTeams    = teams   || [];
+        allMatches  = matches || [];
+        eliminatedIds = new Set((teams || []).filter(t => t.is_eliminated).map(t => t.id));
 
         usedTeamIdsGlobal = new Set(allPicks.map(p => p.team_id));
-        const teamsLeft   = 48 - usedTeamIdsGlobal.size;
+
+        // Teams left = 48 - used - eliminated (that haven't been used)
+        const eliminatedNotUsed = [...eliminatedIds].filter(id => !usedTeamIdsGlobal.has(id)).length;
+        const teamsLeft = 48 - usedTeamIdsGlobal.size - eliminatedNotUsed;
 
         let totalPoints = 0;
         allPicks.forEach(p => {
@@ -409,6 +405,9 @@
         openRounds = allRounds.filter(r => !r.is_complete);
         renderRoundStrip();
 
+        // Goals prediction — top card logic
+        initGoalsPrediction();
+
         if (player.is_eliminated || openRounds.length === 0) {
           document.getElementById('no-round').style.display = 'block';
           return;
@@ -416,14 +415,24 @@
 
         buildRoundDropdown();
         document.getElementById('pick-section').style.display = 'block';
-        selectRound(openRounds[0].id);
-        initGoalsPrediction();
+
+        // Default to earliest round with a future deadline
+        const now = getEffectiveDate();
+        const activeRound = openRounds.find(r => new Date(r.deadline) > now) || openRounds[0];
+        selectRound(activeRound.id);
+
+        // Top deadline countdown (always ticking)
+        startTopDeadline(activeRound);
 
       } catch(err) {
         console.error(err);
         document.getElementById('loading').style.display = 'none';
         document.getElementById('not-found').style.display = 'block';
       }
+    }
+
+    function startTopDeadline(round) {
+      // No separate top deadline card — handled inside pick card deadline bar with seconds
     }
 
     function renderRoundStrip() {
@@ -444,7 +453,7 @@
           (!isComplete && !openRounds.find(o => o.id === r.id) ? ' future' : '');
         const shortLabel = r.round_type === 'group' ? 'GP' + r.sort_order : r.name;
         pill.innerHTML = shortLabel + (hasPick ? ' <span class="tick">✓</span>' : '');
-        pill.title = r.name + (hasPick ? ' — picks submitted' : isComplete ? ' — completed' : ' — open');
+        pill.title = r.name + (hasPick ? ' — pick submitted' : isComplete ? ' — completed' : ' — open');
         if (!isComplete) {
           pill.addEventListener('click', () => {
             selectRound(r.id);
@@ -476,6 +485,7 @@
       if (!round) return;
       const pills = document.querySelectorAll('.round-pill');
       allRounds.forEach((r, i) => { if (r.id === roundId && pills[i]) pills[i].classList.add('active'); });
+      updateBandPanel(round);
       renderPickSection(round);
     }
 
@@ -485,49 +495,48 @@
       const isLocked = now >= deadline;
       const roundPicks   = allPicks.filter(p => p.round_id === round.id);
       const hasSubmitted = roundPicks.length > 0;
+      const isKO        = KO_ROUNDS.includes(round.name);
+      const isGroup      = round.round_type === 'group';
 
+      // Deadline bar — ticking every second
       const deadlineBar = document.getElementById('deadline-bar');
+      if (deadlineInterval) clearInterval(deadlineInterval);
 
       if (isLocked) {
         deadlineBar.className = 'deadline-bar locked';
-        deadlineBar.innerHTML = '🔒 Picks locked — ' + round.name;
-        if (countdownInterval) { clearInterval(countdownInterval); countdownInterval = null; }
+        deadlineBar.innerHTML = '🔒 ' + round.name + ' — Picks Locked';
       } else {
-        deadlineBar.className = 'deadline-bar';
-        // Tick every second for accurate countdown
-        const updateCountdown = () => {
-          const timeStr = getTimeLeftStr(deadline);
+        deadlineBar.className = 'deadline-bar open';
+        const tick = () => {
           deadlineBar.innerHTML =
             '<span>⏰ ' + round.name + ' deadline</span>' +
-            '<strong style="font-variant-numeric:tabular-nums">' + timeStr + '</strong>';
+            '<span class="countdown">' + getTimeLeftStr(deadline) + '</span>';
         };
-        updateCountdown();
-        if (countdownInterval) clearInterval(countdownInterval);
-        countdownInterval = setInterval(updateCountdown, 1000);
+        tick();
+        deadlineInterval = setInterval(tick, 1000);
       }
 
       document.getElementById('pick-msg').textContent = '';
 
-      // Clear band breakdown before re-render
-      const bdWrap = document.getElementById('band-breakdown-wrap');
-      if (bdWrap) bdWrap.innerHTML = '';
-
-      if (hasSubmitted) { showSubmittedPicks(round, roundPicks, isLocked); return; }
-
+      if (hasSubmitted) {
+        showSubmittedPicks(round, roundPicks, isLocked, isKO);
+        return;
+      }
       if (isLocked) {
         document.getElementById('pick-summary').innerHTML = '';
         document.getElementById('pick-form-inner').innerHTML =
           '<p style="color:var(--text-muted);text-align:center;padding:16px">Deadline has passed. No pick was submitted for this round.</p>';
         document.getElementById('submit-pick-btn').style.display = 'none';
+        document.getElementById('submit-pick-btn-top').style.display = 'none';
         return;
       }
-
       renderPickForm(round);
     }
 
-    function showSubmittedPicks(round, roundPicks, isLocked) {
-      const isGroup = round.round_type === 'group';
-      let html = '<div style="text-align:center; padding:8px 0 16px; color:var(--green); font-weight:600">✅ Picks submitted for ' + round.name + '</div>';
+    function showSubmittedPicks(round, roundPicks, isLocked, isKO) {
+      const isGroup  = round.round_type === 'group';
+      const pickWord = isKO ? 'Pick' : 'Picks';
+      let html = '<div style="text-align:center; padding:8px 0 16px; color:var(--green); font-weight:600">✅ ' + pickWord + ' submitted for ' + round.name + '</div>';
       if (isGroup) {
         const p3 = roundPicks.find(p => p.multiplier === 3);
         const p2 = roundPicks.find(p => p.multiplier === 2);
@@ -543,20 +552,22 @@
       document.getElementById('pick-summary').innerHTML = '';
       document.getElementById('pick-form-inner').innerHTML = html;
       document.getElementById('submit-pick-btn').style.display = 'none';
+      document.getElementById('submit-pick-btn-top').style.display = 'none';
     }
 
     function allowResubmit() {
       pick3 = null; pick2 = null; pickSingle = null;
       const round = allRounds.find(r => r.id === selectedRoundId);
       if (round) renderPickForm(round);
-      document.getElementById('submit-pick-btn').style.display = 'block';
     }
 
     function renderPickForm(round) {
       const isGroup = round.round_type === 'group';
+      const isKO    = KO_ROUNDS.includes(round.name);
       const currentRoundPickTeamIds = new Set(allPicks.filter(p => p.round_id === round.id).map(p => p.team_id));
-      const usedExcludingThisRound  = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundPickTeamIds.has(id)));
+      const usedExcl = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundPickTeamIds.has(id)));
 
+      // Pick summary slots
       const summaryEl = document.getElementById('pick-summary');
       if (isGroup) {
         summaryEl.innerHTML =
@@ -567,64 +578,97 @@
           '<div class="pick-slot" id="slot-single"><div class="pick-slot-label">Your Pick</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div></div>';
       }
 
-      const instrHtml = isGroup
-        ? '<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Select your <span style="color:var(--gold);font-weight:700">3-pointer</span> first, then your <span style="color:var(--accent);font-weight:700">2-pointer</span>. Teams you\'ve already used or that are eliminated are crossed out.</p>'
-        : '<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Select one team. Teams you\'ve already used or that are eliminated are crossed out.</p>';
+      let gridHtml = '';
 
-      const roundMatches    = allMatches.filter(m => m.round_id === round.id && m.home_team && m.away_team);
-      const fixturedTeamIds = new Set();
-      roundMatches.forEach(m => { fixturedTeamIds.add(m.home_team_id); fixturedTeamIds.add(m.away_team_id); });
+      if (isGroup) {
+        // Group stage — fixture matchups
+        const instrHtml = '<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Select your <span style="color:var(--gold);font-weight:700">3-pointer</span> first, then your <span style="color:var(--accent);font-weight:700">2-pointer</span>.</p>';
+        const roundMatches    = allMatches.filter(m => m.round_id === round.id && m.home_team && m.away_team);
+        const fixturedTeamIds = new Set();
+        roundMatches.forEach(m => { fixturedTeamIds.add(m.home_team_id); fixturedTeamIds.add(m.away_team_id); });
 
-      function teamBtn(team) {
-        if (!team) return '';
-        const isUsed      = usedExcludingThisRound.has(team.id);
-        const isEliminated = !!team.is_eliminated;
-        const isDisabled  = isUsed || isEliminated;
-        const btnClass    = 'team-btn' + (isUsed ? ' used' : isEliminated ? ' eliminated' : '');
-        const title       = isEliminated ? ' title="Eliminated from tournament"' : '';
-        const label       = team.flag_emoji + ' ' + team.name + (team.is_longshot ? ' ⭐' : '') + (isEliminated ? ' 💀' : '');
-        return '<button class="' + btnClass + '" ' +
-          (isDisabled ? 'disabled ' : '') +
-          'data-team-id="' + team.id + '" onclick="selectTeam(\'' + team.id + '\')"' + title + '>' +
-          label + '</button>';
-      }
+        function teamBtnGroup(team) {
+          if (!team) return '';
+          const isUsed      = usedExcl.has(team.id);
+          const isElim      = eliminatedIds.has(team.id);
+          const isDisabled  = isUsed || isElim;
+          const cls         = 'team-btn' + (isDisabled ? '' : '');
+          const label       = team.flag_emoji + ' ' + team.name + (team.is_longshot ? ' ⭐' : '') + (isElim ? ' 💀' : '');
+          return '<button class="' + cls + '" ' +
+            (isDisabled ? 'disabled ' : '') +
+            'data-team-id="' + team.id + '" onclick="selectTeam(\'' + team.id + '\')">' +
+            label + '</button>';
+        }
 
-      let gridHtml = '<div class="fixture-list">';
-      if (roundMatches.length > 0) {
+        let fixtureHtml = '<div class="fixture-list">';
         roundMatches.forEach((m, i) => {
-          if (i > 0) gridHtml += '<hr class="fixture-separator">';
-          gridHtml += '<div class="fixture-row">' + teamBtn(m.home_team) + '<div class="fixture-v">v</div>' + teamBtn(m.away_team) + '</div>';
+          if (i > 0) fixtureHtml += '<hr class="fixture-separator">';
+          fixtureHtml += '<div class="fixture-row">' + teamBtnGroup(m.home_team) + '<div class="fixture-v">v</div>' + teamBtnGroup(m.away_team) + '</div>';
         });
         const unfixtured = allTeams.filter(t => !fixturedTeamIds.has(t.id));
         if (unfixtured.length > 0) {
-          gridHtml += '<hr class="fixture-separator">';
-          gridHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px">';
-          unfixtured.forEach(t => { gridHtml += teamBtn(t); });
-          gridHtml += '</div>';
+          fixtureHtml += '<hr class="fixture-separator"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px">';
+          unfixtured.forEach(t => { fixtureHtml += teamBtnGroup(t); });
+          fixtureHtml += '</div>';
         }
+        fixtureHtml += '</div>';
+
+        const warningHtml = '<div id="same-match-warning" style="display:none; margin-top:8px" class="alert alert-warning">⚠️ Both picks are from the same match — you can only earn points from one.</div>';
+        gridHtml = instrHtml + fixtureHtml + warningHtml;
+
       } else {
-        const sorted = [...allTeams].sort((a,b) => a.name.localeCompare(b.name));
-        gridHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px">';
-        sorted.forEach(t => { gridHtml += teamBtn(t); });
-        gridHtml += '</div>';
+        // Knockout — grouped by band, eliminated teams hidden
+        const instrHtml = '<p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Select one team. Teams you\'ve already used are crossed out.</p>';
+
+        // Available = not eliminated. Used = crossed out. Neither shows eliminated.
+        let bandHtml = '';
+        BAND_CONFIG.forEach(b => {
+          const teamsInBand = allTeams.filter(t =>
+            t.band === b.key &&
+            !eliminatedIds.has(t.id) // hide eliminated entirely
+          );
+          if (teamsInBand.length === 0) return;
+
+          bandHtml += '<div class="band-group">';
+          bandHtml += '<div class="band-group-header" style="color:' + b.css + '">' + b.dot + ' ' + b.label + 's</div>';
+          bandHtml += '<div class="band-group-grid">';
+          teamsInBand.forEach(t => {
+            const isUsed     = usedExcl.has(t.id);
+            const label      = t.flag_emoji + ' ' + t.name + (t.is_longshot ? ' ⭐' : '');
+            const borderStyle = isUsed ? '' : 'border-color:' + b.css + '40;';
+            bandHtml += '<button class="team-btn" style="' + borderStyle + '" ' +
+              (isUsed ? 'disabled ' : '') +
+              'data-team-id="' + t.id + '" onclick="selectTeam(\'' + t.id + '\')">' +
+              label + '</button>';
+          });
+          bandHtml += '</div></div>';
+        });
+
+        // Unclassified teams (band not set) — not eliminated
+        const unclassified = allTeams.filter(t => !t.band && !eliminatedIds.has(t.id));
+        if (unclassified.length > 0) {
+          bandHtml += '<div class="band-group"><div class="band-group-header" style="color:var(--text-muted)">⚪ Other</div><div class="band-group-grid">';
+          unclassified.forEach(t => {
+            const isUsed = usedExcl.has(t.id);
+            bandHtml += '<button class="team-btn" ' + (isUsed ? 'disabled ' : '') + 'data-team-id="' + t.id + '" onclick="selectTeam(\'' + t.id + '\')">' + t.flag_emoji + ' ' + t.name + '</button>';
+          });
+          bandHtml += '</div></div>';
+        }
+
+        gridHtml = instrHtml + bandHtml;
       }
-      gridHtml += '</div>';
 
-      const warningHtml = '<div id="same-match-warning" style="display:none; margin-top:8px" class="alert alert-warning">⚠️ Both picks are from the same match — you can only earn points from one.</div>';
-
-      document.getElementById('pick-form-inner').innerHTML = instrHtml + gridHtml + warningHtml;
+      document.getElementById('pick-form-inner').innerHTML = gridHtml;
       document.getElementById('submit-pick-btn').style.display = 'block';
+      document.getElementById('submit-pick-btn-top').style.display = 'block';
       updateSubmitButton(isGroup);
-
-      // Render band breakdown below the team grid, above the submit button
-      renderBandBreakdown(round);
     }
 
     function selectTeam(teamId) {
       const round = allRounds.find(r => r.id === selectedRoundId);
       if (!round) return;
       const team = allTeams.find(t => t.id === teamId);
-      if (!team || team.is_eliminated) return;
+      if (!team || eliminatedIds.has(team.id)) return;
       const isGroup = round.round_type === 'group';
 
       if (isGroup) {
@@ -670,27 +714,27 @@
     }
 
     function updateSubmitButton(isGroup) {
-      const btn   = document.getElementById('submit-pick-btn');
       const ready = isGroup ? (pick3 && pick2) : pickSingle;
-      btn.disabled = !ready;
-      if (ready) {
-        btn.textContent = isGroup
-          ? 'Submit: ' + pick3.name + ' (3pt) + ' + pick2.name + ' (2pt)'
-          : 'Submit: ' + pickSingle.name;
-      } else {
-        btn.textContent = isGroup ? 'Select your 3pt and 2pt picks above' : 'Select a team above';
-      }
+      const label = ready
+        ? (isGroup ? 'Submit: ' + pick3.name + ' (3pt) + ' + pick2.name + ' (2pt)' : 'Submit: ' + pickSingle.name)
+        : (isGroup ? 'Select your 3pt and 2pt picks above' : 'Select a team above');
+      ['submit-pick-btn', 'submit-pick-btn-top'].forEach(id => {
+        const btn = document.getElementById(id);
+        btn.disabled = !ready;
+        btn.textContent = label;
+      });
     }
 
     async function submitPick() {
       const btn   = document.getElementById('submit-pick-btn');
+      const btnT  = document.getElementById('submit-pick-btn-top');
       const msg   = document.getElementById('pick-msg');
       const round = allRounds.find(r => r.id === selectedRoundId);
       if (!round) return;
       const isGroup = round.round_type === 'group';
 
       if (getEffectiveDate() >= new Date(round.deadline)) {
-        msg.style.color = 'var(--red)'; msg.textContent = '❌ Deadline has passed. Picks locked.'; return;
+        msg.style.color = 'var(--red)'; msg.textContent = '❌ Deadline has passed.'; return;
       }
 
       const confirmText = isGroup
@@ -698,7 +742,8 @@
         : 'Pick: ' + pickSingle.name + '\n\nConfirm?';
       if (!confirm(confirmText)) return;
 
-      btn.disabled = true; btn.textContent = 'Submitting...'; msg.textContent = '';
+      [btn, btnT].forEach(b => { b.disabled = true; b.textContent = 'Submitting...'; });
+      msg.textContent = '';
 
       try {
         await db.from('picks').delete().eq('player_id', player.id).eq('round_id', round.id);
@@ -711,12 +756,12 @@
         }
         const { error } = await db.from('picks').insert(inserts);
         if (error) throw error;
-        msg.style.color = 'var(--green)'; msg.textContent = '✅ Picks submitted!';
-        setTimeout(() => { location.reload(); }, 800);
+        msg.style.color = 'var(--green)'; msg.textContent = '✅ Submitted!';
+        setTimeout(() => location.reload(), 800);
       } catch(err) {
         console.error(err);
         msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message;
-        btn.disabled = false; updateSubmitButton(isGroup);
+        updateSubmitButton(isGroup);
       }
     }
 
@@ -724,57 +769,61 @@
       const gp1 = allRounds.find(r => r.round_type === 'group' && r.sort_order === 1);
       if (!gp1) return;
 
-      const card      = document.getElementById('goals-prediction-card');
-      const input     = document.getElementById('goals-prediction-input');
-      const btn       = document.getElementById('goals-prediction-btn');
-      const msg       = document.getElementById('goals-prediction-msg');
-      const lockedMsg = document.getElementById('goals-prediction-locked');
-
       const deadline   = new Date(gp1.deadline);
       const now        = getEffectiveDate();
       const isLocked   = now >= deadline;
       const hasEntered = player.total_goals_prediction !== null && player.total_goals_prediction !== undefined;
 
-      if (hasEntered && isLocked) return;
-
-      card.style.display = 'block';
-
-      if (isLocked && !hasEntered) {
-        input.disabled = true; btn.style.display = 'none';
-        lockedMsg.innerHTML = '⚠️ Deadline has passed. No prediction was entered — this tiebreaker won\'t apply to you.';
-        lockedMsg.style.color = 'var(--red)'; lockedMsg.style.display = 'block';
+      if (isLocked) {
+        // Deadline passed — show in normal position only if entered
+        if (hasEntered) {
+          const card  = document.getElementById('goals-prediction-card');
+          const input = document.getElementById('goals-prediction-input');
+          const btn   = document.getElementById('goals-prediction-btn');
+          const locked = document.getElementById('goals-prediction-locked');
+          card.style.display = 'block';
+          input.value    = player.total_goals_prediction;
+          input.disabled = true;
+          btn.style.display = 'none';
+          locked.textContent = '🔒 Prediction locked — Group Phase 1 deadline has passed.';
+          locked.style.display = 'block';
+        }
         return;
       }
 
-      if (hasEntered) {
-        input.value = player.total_goals_prediction;
-        card.querySelector('p').innerHTML = '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> total goals (including extra time). You can change this up until the Group Phase 1 deadline.';
+      if (!hasEntered) {
+        // Not entered, deadline open — show prominently at top
+        const topCard = document.getElementById('goals-top-card');
+        topCard.style.display = 'block';
+        const topBtn = document.getElementById('goals-btn-top');
+        const topMsg = document.getElementById('goals-msg-top');
+        topBtn.addEventListener('click', async () => {
+          const val = parseInt(document.getElementById('goals-input-top').value);
+          if (isNaN(val) || val < 0 || val > 500) { topMsg.style.color='var(--red)'; topMsg.textContent='Enter 0–500.'; return; }
+          topBtn.disabled = true; topBtn.textContent = 'Saving...';
+          const { error } = await db.from('players').update({ total_goals_prediction: val }).eq('id', player.id);
+          if (error) { topMsg.style.color='var(--red)'; topMsg.textContent='❌ '+error.message; topBtn.disabled=false; topBtn.textContent='Save Prediction'; }
+          else { player.total_goals_prediction = val; topMsg.style.color='var(--green)'; topMsg.textContent='✅ Saved!'; setTimeout(() => location.reload(), 800); }
+        });
       } else {
-        const hoursLeft = (deadline - now) / (1000 * 60 * 60);
-        if (hoursLeft < 24) {
-          const minsLeft = Math.round(hoursLeft * 60);
-          const timeStr  = hoursLeft >= 1 ? Math.floor(hoursLeft) + 'h ' + (minsLeft % 60) + 'm' : minsLeft + ' minutes';
-          const reminder = document.createElement('div');
-          reminder.className = 'alert alert-warning';
-          reminder.style.cssText = 'margin-bottom:10px;font-size:13px';
-          reminder.textContent = '⏰ Deadline in ' + timeStr + ' — don\'t forget to enter your prediction!';
-          card.insertBefore(reminder, btn.closest('div'));
-        }
+        // Entered, deadline still open — show in normal position so they can update
+        const card  = document.getElementById('goals-prediction-card');
+        const input = document.getElementById('goals-prediction-input');
+        const btn   = document.getElementById('goals-prediction-btn');
+        const msg   = document.getElementById('goals-prediction-msg');
+        card.style.display = 'block';
+        input.value = player.total_goals_prediction;
+        card.querySelector('p').innerHTML = '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> goals. You can change this until the Group Phase 1 deadline.';
+        btn.addEventListener('click', async () => {
+          const val = parseInt(input.value);
+          if (isNaN(val) || val < 0 || val > 500) { msg.style.color='var(--red)'; msg.textContent='Enter 0–500.'; return; }
+          btn.disabled = true; btn.textContent = 'Saving...';
+          const { error } = await db.from('players').update({ total_goals_prediction: val }).eq('id', player.id);
+          if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; }
+          else { player.total_goals_prediction = val; msg.style.color='var(--green)'; msg.textContent='✅ Saved!'; }
+          btn.disabled = false; btn.textContent = 'Save Prediction';
+        });
       }
-
-      btn.addEventListener('click', async () => {
-        const val = parseInt(input.value);
-        if (isNaN(val) || val < 0 || val > 500) { msg.style.color='var(--red)'; msg.textContent='Enter a number between 0 and 500.'; return; }
-        btn.disabled = true; btn.textContent = 'Saving...'; msg.textContent = '';
-        const { error } = await db.from('players').update({ total_goals_prediction: val }).eq('id', player.id);
-        if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; }
-        else {
-          player.total_goals_prediction = val;
-          msg.style.color = 'var(--green)'; msg.textContent = '✅ Saved! You predicted ' + val + ' goals.';
-          card.querySelector('p').innerHTML = '✅ You predicted <strong>' + val + '</strong> total goals (including extra time). You can change this up until the Group Phase 1 deadline.';
-        }
-        btn.disabled = false; btn.textContent = 'Save Prediction';
-      });
     }
 
     function renderHistory() {
@@ -791,19 +840,20 @@
       completedRounds.forEach(r => {
         const rPicks = picksByRound[r.id] || [];
         if (rPicks.length === 0) {
-          rows += '<tr><td style="font-size:12px">' + r.name + '</td><td colspan="4" style="color:var(--red);font-style:italic;font-size:12px">⚠️ No pick submitted</td></tr>';
+          rows += '<tr><td class="history-round">' + r.name + '</td><td colspan="4" style="color:var(--red);font-style:italic;font-size:12px">⚠️ No pick submitted</td></tr>';
         } else {
           rPicks.forEach(p => {
             const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
             const resultBadge = res
               ? '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + res.match_result.toUpperCase() + '</span>'
               : '<span class="badge badge-grey">Pending</span>';
+            const earned = res ? res.points_earned : '—';
             rows += '<tr>' +
-              '<td style="font-size:12px">' + r.name + '</td>' +
+              '<td class="history-round">' + r.name + '</td>' +
               '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
               '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
               '<td>' + resultBadge + '</td>' +
-              '<td style="font-weight:600">' + (res ? res.points_earned : '—') + '</td>' +
+              '<td style="font-weight:600">' + earned + '</td>' +
               '</tr>';
           });
         }
@@ -813,7 +863,7 @@
       openWithPicks.forEach(r => {
         (picksByRound[r.id] || []).forEach(p => {
           rows += '<tr style="opacity:0.7">' +
-            '<td style="font-size:12px">' + r.name + ' <span style="color:var(--accent);font-size:10px">(upcoming)</span></td>' +
+            '<td class="history-round">' + r.name + ' <span style="color:var(--accent);font-size:10px">(upcoming)</span></td>' +
             '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
             '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
             '<td><span class="badge badge-grey">Pending</span></td>' +
@@ -828,6 +878,7 @@
 
     document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('submit-pick-btn').addEventListener('click', submitPick);
+      document.getElementById('submit-pick-btn-top').addEventListener('click', submitPick);
       loadDashboard();
     });
   </script>

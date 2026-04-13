@@ -69,6 +69,7 @@
       <a href="/leaderboard" class="active">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
       <a href="/admin">Admin</a>
+      <a id="my-page-link" style="display:none">← My Page</a>
     </div>
   </nav>
 
@@ -146,6 +147,16 @@
 
     const TOTAL_MATCHES = 104;
     const LS_KEY = 'lms2026_test_date';
+
+    // ── My page link & row highlight ──────────────────────────
+    // Pick up slug from ?me=slug URL param, or fall back to localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const mySlug = urlParams.get('me') || localStorage.getItem('lms2026_my_slug') || null;
+    if (mySlug) {
+      const link = document.getElementById('my-page-link');
+      link.href = '/' + mySlug;
+      link.style.display = 'inline';
+    }
 
     // ── Day window: 11:00 UTC to 11:00 UTC (noon BST to noon BST) ──
     const WINDOW_START_HOUR = 11; // UTC
@@ -396,6 +407,11 @@
           const row = document.createElement('tr');
           if (p.is_eliminated) row.classList.add('out-row');
           if (isPlayingToday && !p.is_eliminated) row.classList.add('playing-row');
+          // Highlight own row
+          if (mySlug && p.slug === mySlug) {
+            row.style.outline = '2px solid var(--accent)';
+            row.style.outlineOffset = '-2px';
+          }
           row.innerHTML =
             '<td class="pos">' + pos + '</td>' +
             '<td class="prior">' + arrowHtml + '</td>' +
