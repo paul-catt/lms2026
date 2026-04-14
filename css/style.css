@@ -15,6 +15,20 @@
   --red: #ef4444;
   --blue: #3b82f6;
   --gold: #f59e0b;
+
+  /* ── Round colour palette ─────────────────────────────────
+     Used in match-centre results archive banners,
+     leaderboard round headings, and admin day labels.
+     Keep these consistent across all pages.              */
+  --round-gp1:    #6366f1;   /* indigo   — Group Phase 1  */
+  --round-gp2:    #8b5cf6;   /* violet   — Group Phase 2  */
+  --round-gp3:    #a855f7;   /* purple   — Group Phase 3  */
+  --round-r32:    #0ea5e9;   /* sky blue — Round of 32    */
+  --round-r16:    #06b6d4;   /* cyan     — Round of 16    */
+  --round-qf:     #10b981;   /* emerald  — Quarter Finals */
+  --round-sf:     #f59e0b;   /* amber    — Semi Finals    */
+  --round-3p:     #94a3b8;   /* slate    — 3rd Place      */
+  --round-final:  #ef4444;   /* red      — Final          */
 }
 
 * {
@@ -316,6 +330,33 @@ label {
 .arrow-up { color: var(--green); }
 .arrow-down { color: var(--red); }
 .arrow-same { color: var(--text-muted); }
+
+/* ── Round banner (results archive & leaderboard) ────────────
+   Full-width coloured section dividers for each round.      */
+.round-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 28px 0 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #fff;
+}
+.round-banner:first-child { margin-top: 4px; }
+
+.round-banner-gp1   { background: var(--round-gp1);   }
+.round-banner-gp2   { background: var(--round-gp2);   }
+.round-banner-gp3   { background: var(--round-gp3);   }
+.round-banner-r32   { background: var(--round-r32);   }
+.round-banner-r16   { background: var(--round-r16);   }
+.round-banner-qf    { background: var(--round-qf);    color: #052e16; }
+.round-banner-sf    { background: var(--round-sf);    color: #431407; }
+.round-banner-3p    { background: var(--round-3p);    color: var(--bg); }
+.round-banner-final { background: var(--round-final); }
 
 /* MOBILE */
 @media (max-width: 600px) {

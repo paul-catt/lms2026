@@ -54,6 +54,12 @@
     .lb-view { display:none; }
     .lb-view.active { display:block; }
     .ls-pts { font-size:14px; font-weight:800; color:var(--gold); }
+    #longshot-wrap table { table-layout:fixed; }
+    #longshot-wrap th:nth-child(1) { width:36px; }
+    #longshot-wrap th:nth-child(2) { width:auto; }
+    #longshot-wrap th:nth-child(3) { width:110px; }
+    #longshot-wrap th:nth-child(4) { width:70px; }
+    #longshot-wrap th:nth-child(5) { width:80px; }
   </style>
 </head>
 <body>
@@ -103,8 +109,7 @@
                 <th>Pts</th>
                 <th>GD</th>
                 <th class="hide-mobile">Diff from<br>proj.</th>
-                <th class="hide-mobile">Form <span style="font-size:9px;color:var(--text-muted);font-weight:400">older→newer</span></th>
-                <th class="hide-mobile" id="left-col-header" style="display:none">Left</th>
+                <th class="hide-mobile">Form<br><span style="font-size:9px;color:var(--text-muted);font-weight:400">older→newer</span></th>
                 <th class="hide-mobile" id="status-col-header" style="display:none">Status</th>
               </tr>
             </thead>
@@ -233,7 +238,7 @@
           db.from('leaderboard_snapshots').select('player_id, position, round_id'),
           db.from('matches').select('home_score, away_score').eq('status', 'complete').not('home_score', 'is', null),
           db.from('matches').select('home_team_id, away_team_id, round_id, kickoff, status, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)').not('home_team_id', 'is', null),
-          db.from('picks').select('player_id, team_id, multiplier, round_id, teams(flag_emoji, is_longshot), players(slug), pick_results(points_earned, longshot_bonus, match_result)'),
+          db.from('picks').select('player_id, team_id, multiplier, round_id, teams(flag_emoji, name, is_longshot), players(slug), pick_results(points_earned, longshot_bonus, match_result)'),
           db.from('teams').select('id, name, flag_emoji, band, is_eliminated')
         ]);
 
@@ -345,12 +350,39 @@
         }
         const isQFOrLater = currentRound && ['QF','SF','Final'].includes(currentRound.name);
 
+        // Competition ended = Final complete, all eliminated, or ≤1 player still alive
+        const activePlayers = (scores || []).filter(p => !p.is_eliminated);
+        const competitionEnded = (!currentRound && (rounds || []).length > 0) ||
+                                 (scores || []).every(p => p.is_eliminated) ||
+                                 activePlayers.length <= 1;
+
         // Show/hide columns
         const koDisplay = isKnockout ? '' : 'none';
-        document.getElementById('left-col-header').style.display = isKnockout ? '' : 'none';
-        document.getElementById('status-col-header').style.display = isKnockout ? '' : 'none';
+        document.getElementById('status-col-header').style.display = (isKnockout || competitionEnded) ? '' : 'none';
         document.querySelectorAll('.knockout-only').forEach(el => el.style.display = koDisplay);
         document.querySelectorAll('.group-only').forEach(el => el.style.display = isKnockout ? 'none' : '');
+
+        // Elimination reason lookup — needs picks data
+        // exit_reason stored on player record is not available here, so we derive from allPicks
+        // Three exit reasons: "[Team] pick lost", "Ran out of picks", "No default pick"
+        // We store exit_reason on the player row if is_eliminated. Fall back to generic.
+        function exitReasonHtml(player) {
+          // Try to find their last pick_result with a loss
+          const playerPicks = (allPicks || []).filter(p => p.player_id === player.player_id);
+          const lostPick = [...playerPicks].reverse().find(p => {
+            const res = p.pick_results && p.pick_results[0];
+            return res && res.match_result === 'loss';
+          });
+          if (lostPick && lostPick.teams) {
+            return '<span style="font-size:12px;color:var(--red)">OUT · ' + (lostPick.teams.flag_emoji || '') + ' ' + (lostPick.teams.name || '') + ' pick lost</span>';
+          }
+          // Check if they ran out of teams
+          const remaining = getPlayerRemainingTeams(player.player_id);
+          if (remaining.length === 0) {
+            return '<span style="font-size:12px;color:var(--red)">OUT · No picks remaining</span>';
+          }
+          return '<span style="font-size:12px;color:var(--red)">OUT · No default pick</span>';
+        }
 
         // Sort
         const sorted = (scores || []).sort((a, b) => {
@@ -403,15 +435,28 @@
             goalsDiffHtml = `<span class="goals-diff ${cls}">${sign}${diff}</span>`;
           }
 
-          const koStyle = isKnockout ? '' : 'display:none;';
+          const koStyle = (isKnockout || competitionEnded) ? '' : 'display:none;';
           const row = document.createElement('tr');
-          if (p.is_eliminated) row.classList.add('out-row');
+          // Only dim eliminated rows during active competition; never dim when competition ended
+          if (p.is_eliminated && !competitionEnded) row.classList.add('out-row');
           if (isPlayingToday && !p.is_eliminated) row.classList.add('playing-row');
           // Highlight own row
           if (mySlug && p.slug === mySlug) {
             row.style.outline = '2px solid var(--accent)';
             row.style.outlineOffset = '-2px';
           }
+
+          // Combined status/left cell content
+          let statusCellHtml = '';
+          if (isKnockout || competitionEnded) {
+            if (p.is_eliminated) {
+              statusCellHtml = exitReasonHtml(p);
+            } else {
+              statusCellHtml = remainingTeamsHtml(p.player_id, isQFOrLater);
+            }
+          }
+          const statusColStyle = (isKnockout || competitionEnded) ? '' : 'display:none;';
+
           row.innerHTML =
             '<td class="pos">' + pos + '</td>' +
             '<td class="prior">' + arrowHtml + '</td>' +
@@ -422,8 +467,7 @@
             '<td>' + gdHtml + '</td>' +
             '<td class="hide-mobile tiebreak-val">' + goalsDiffHtml + '</td>' +
             '<td class="hide-mobile">' + formHtml + '</td>' +
-            '<td class="hide-mobile" style="' + koStyle + '">' + (isKnockout ? remainingTeamsHtml(p.player_id, isQFOrLater) : '') + '</td>' +
-            '<td class="hide-mobile" style="' + koStyle + '">' + (p.is_eliminated ? '<span class="badge badge-red">OUT</span>' : isPlayingToday ? '<span class="badge badge-blue">Playing</span>' : '<span class="badge badge-green">Alive</span>') + '</td>';
+            '<td class="hide-mobile" style="' + statusColStyle + '">' + statusCellHtml + '</td>';
           tbody.appendChild(row);
         });
 

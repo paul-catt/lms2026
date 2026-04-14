@@ -95,15 +95,12 @@
       letter-spacing: 0.06em;
     }
 
-    .round-header {
+    /* round-banner styles are defined globally in style.css */
+    .match-venue {
       font-size: 11px;
-      font-weight: 700;
       color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin: 28px 0 4px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid var(--border);
+      margin-top: 3px;
+      padding-left: 44px;
     }
 
     /* ── Match cards ─────────────────────────────────────────── */
@@ -457,6 +454,10 @@
         picksHtml = '<div class="match-sub"><div class="picks-row">' + chips + '</div></div>';
       }
 
+      const venueHtml = match.venue
+        ? '<div class="match-venue">📍 ' + match.venue + '</div>'
+        : '';
+
       return '<div class="match-card ' + match.status + '">' +
         '<div class="match-main">' +
           '<span class="match-time">' + fmtTime(match.kickoff) + '</span>' +
@@ -465,6 +466,7 @@
           '<span class="match-away">' + match.away_team.name + ' ' + match.away_team.flag_emoji + '</span>' +
           badgeHtml +
         '</div>' +
+        venueHtml +
         (aetHtml ? '<div class="match-sub">' + aetHtml + '</div>' : '') +
         '<div class="match-sub">' + oddsHtml(match) + '</div>' +
         picksHtml +
@@ -472,6 +474,9 @@
     }
 
     function upcomingCardHtml(match) {
+      const venueHtml = match.venue
+        ? '<div class="match-venue">📍 ' + match.venue + '</div>'
+        : '';
       return '<div class="upcoming-card">' +
         '<div class="match-main">' +
           '<span class="match-time">' + fmtTime(match.kickoff) + '</span>' +
@@ -479,6 +484,7 @@
           '<span class="match-vs">vs</span>' +
           '<span class="match-away">' + match.away_team.name + ' ' + match.away_team.flag_emoji + '</span>' +
         '</div>' +
+        venueHtml +
         '<div class="match-sub">' + oddsHtml(match) + '</div>' +
         '</div>';
     }
@@ -516,7 +522,7 @@
           db.from('picks').select('player_id, team_id, multiplier, round_id, pick_results(points_earned, match_result)')
         ]);
 
-        const matchSel = 'id, kickoff, status, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, round_id, pens_winner_id, rounds(id, name, sort_order), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)';
+        const matchSel = 'id, kickoff, status, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, round_id, pens_winner_id, venue, rounds(id, name, sort_order), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)';
 
         // TODAY
         const { data: todayMatches } = await db.from('matches').select(matchSel)
@@ -597,6 +603,20 @@
           if (!roundFirstMap[round_id]) roundFirstMap[round_id] = await getRoundFirstKickoff(round_id);
         }
 
+        function roundBannerClass(name) {
+          const n = (name || '').toLowerCase().replace(/\s+/g, '');
+          if (n.includes('group phase 1') || n === 'gp1') return 'round-banner-gp1';
+          if (n.includes('group phase 2') || n === 'gp2') return 'round-banner-gp2';
+          if (n.includes('group phase 3') || n === 'gp3') return 'round-banner-gp3';
+          if (n.includes('round of 32')   || n === 'r32') return 'round-banner-r32';
+          if (n.includes('round of 16')   || n === 'r16') return 'round-banner-r16';
+          if (n.includes('quarter')       || n === 'qf')  return 'round-banner-qf';
+          if (n.includes('semi')          || n === 'sf')  return 'round-banner-sf';
+          if (n.includes('3rd') || n.includes('third'))   return 'round-banner-3p';
+          if (n.includes('final'))                        return 'round-banner-final';
+          return 'round-banner-gp1';
+        }
+
         resultsContent.innerHTML = sortedRounds.map(([roundName, { round_id, matches }]) => {
           const dayBuckets = {};
           matches.forEach(m => {
@@ -606,10 +626,10 @@
           });
 
           const roundFirst = roundFirstMap[round_id];
-          // Newest day first in archive
           const dayBucketsSorted = Object.values(dayBuckets).sort((a,b) => b.wsMs - a.wsMs);
+          const bannerCls = roundBannerClass(roundName);
 
-          return '<div class="round-header">' + roundName + '</div>' +
+          return '<div class="round-banner ' + bannerCls + '">🏆 ' + roundName + '</div>' +
             dayBucketsSorted.map(b => {
               const dayNum  = roundFirst ? getDayNumber(new Date(b.wsMs).toISOString(), roundFirst) : 1;
               const isPast  = b.wsMs < todayWindowMs;

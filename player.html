@@ -16,6 +16,7 @@
     .round-pill.has-pick.complete { border-color:var(--green); color:var(--text); }
     .round-pill.active { border-color:var(--accent); background:rgba(59,130,246,0.12); color:var(--accent); }
     .round-pill.future { opacity:0.45; cursor:default; }
+    .round-pill.eliminated { border-color:var(--red); color:var(--red); box-shadow:0 0 0 2px rgba(239,68,68,0.25); }
     .round-pill .tick { font-size:10px; }
 
     /* Deadline bar inside pick card */
@@ -102,7 +103,7 @@
     .round-selector-wrap select { flex:1; }
 
     /* History table round column */
-    .history-round { min-width:60px; font-size:12px; }
+    .history-round { font-size:12px; }
 
     .test-date-banner { background:#7c3aed; color:#fff; text-align:center; padding:8px 16px; font-size:13px; font-weight:600; }
     .test-date-banner a { color:#e9d5ff; text-decoration:underline; cursor:pointer; margin-left:12px; font-weight:400; }
@@ -222,8 +223,8 @@
       <div class="card">
         <div class="card-title">📋 Pick History</div>
         <div class="table-wrap">
-          <table>
-            <thead><tr><th style="min-width:60px">Round</th><th>Team</th><th>Pts</th><th>Result</th><th>Earned</th></tr></thead>
+          <table style="font-size:12px">
+            <thead><tr><th>Round</th><th>Team</th><th style="white-space:nowrap">Pts</th><th>Result</th><th>Pts+</th></tr></thead>
             <tbody id="history-body"></tbody>
           </table>
         </div>
@@ -344,8 +345,9 @@
         document.getElementById('dashboard').style.display = 'block';
         document.getElementById('player-name').textContent = player.name;
         document.title = player.name + ' — LMS 2026';
+        // Derive elimination reason after picks are loaded — placeholder until then
         document.getElementById('player-status').innerHTML = player.is_eliminated
-          ? '<span class="badge badge-red">❌ Eliminated</span>'
+          ? '<span class="badge badge-red" id="elim-badge">❌ Eliminated</span>'
           : '<span class="badge badge-green">✅ Still In</span>';
 
         const [
@@ -401,8 +403,24 @@
         }
 
         renderHistory();
+        // Update elimination badge with reason
+        if (player.is_eliminated) {
+          const badge = document.getElementById('elim-badge');
+          if (badge) {
+            const lostPick = [...allPicks].reverse().find(p => {
+              const res = p.pick_results && p.pick_results[0];
+              return res && res.match_result === 'loss';
+            });
+            if (lostPick && lostPick.teams) {
+              badge.textContent = '❌ OUT · ' + lostPick.teams.flag_emoji + ' ' + lostPick.teams.name + ' pick lost';
+            } else {
+              const remaining = allTeams.filter(t => !usedTeamIdsGlobal.has(t.id) && !eliminatedIds.has(t.id));
+              badge.textContent = remaining.length === 0 ? '❌ OUT · No picks remaining' : '❌ OUT · No default pick';
+            }
+          }
+        }
 
-        openRounds = allRounds.filter(r => !r.is_complete);
+        openRounds = allRounds.filter(r => !r.is_complete && r.name !== '3rd Place');
         renderRoundStrip();
 
         // Goals prediction — top card logic
@@ -443,17 +461,31 @@
         if (!picksByRound[p.round_id]) picksByRound[p.round_id] = [];
         picksByRound[p.round_id].push(p);
       });
-      allRounds.forEach(r => {
+      // Find the round where this player was eliminated (lost pick)
+      const eliminatedRoundId = (() => {
+        for (const r of [...allRounds].reverse()) {
+          const rPicks = picksByRound[r.id] || [];
+          for (const p of rPicks) {
+            const res = p.pick_results && p.pick_results[0];
+            if (res && res.match_result === 'loss') return r.id;
+          }
+        }
+        return null;
+      })();
+
+      allRounds.filter(r => r.name !== '3rd Place').forEach(r => {
         const hasPick    = !!(picksByRound[r.id] && picksByRound[r.id].length > 0);
         const isComplete = r.is_complete;
+        const isElimRound = player.is_eliminated && r.id === eliminatedRoundId;
         const pill = document.createElement('div');
         pill.className = 'round-pill' +
           (isComplete ? ' complete' : '') +
           (hasPick ? ' has-pick' : '') +
-          (!isComplete && !openRounds.find(o => o.id === r.id) ? ' future' : '');
+          (!isComplete && !openRounds.find(o => o.id === r.id) ? ' future' : '') +
+          (isElimRound ? ' eliminated' : '');
         const shortLabel = r.round_type === 'group' ? 'GP' + r.sort_order : r.name;
-        pill.innerHTML = shortLabel + (hasPick ? ' <span class="tick">✓</span>' : '');
-        pill.title = r.name + (hasPick ? ' — pick submitted' : isComplete ? ' — completed' : ' — open');
+        pill.innerHTML = shortLabel + (hasPick ? ' <span class="tick">✓</span>' : '') + (isElimRound ? ' 🔴' : '');
+        pill.title = r.name + (hasPick ? ' — pick submitted' : isComplete ? ' — completed' : ' — open') + (isElimRound ? ' — eliminated here' : '');
         if (!isComplete) {
           pill.addEventListener('click', () => {
             selectRound(r.id);
@@ -519,6 +551,31 @@
       document.getElementById('pick-msg').textContent = '';
 
       if (hasSubmitted) {
+        // Check if any picked team has since been eliminated
+        const eliminatedPicks = roundPicks.filter(p => eliminatedIds.has(p.team_id));
+        if (eliminatedPicks.length > 0 && !isLocked) {
+          // Force them back to pick form with a warning
+          const names = eliminatedPicks.map(p => p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : 'your team').join(' and ');
+          document.getElementById('pick-summary').innerHTML = '';
+          document.getElementById('pick-form-inner').innerHTML =
+            '<div class="alert alert-warning" style="margin-bottom:14px">⚠️ <strong>' + names + '</strong> ' +
+            (eliminatedPicks.length > 1 ? 'have' : 'has') +
+            ' been eliminated from the tournament. You need to change your pick before the deadline.</div>';
+          document.getElementById('submit-pick-btn').style.display = 'block';
+          document.getElementById('submit-pick-btn-top').style.display = 'block';
+          // Delete the stale pick and render the form fresh
+          pick3 = null; pick2 = null; pickSingle = null;
+          const round2 = allRounds.find(r => r.id === round.id);
+          if (round2) {
+            // Remove stale picks from allPicks so usedExcl is calculated correctly
+            allPicks = allPicks.filter(p => p.round_id !== round.id);
+            usedTeamIdsGlobal = new Set(allPicks.map(p => p.team_id));
+            // Delete from DB
+            db.from('picks').delete().eq('player_id', player.id).eq('round_id', round.id);
+            renderPickForm(round2);
+          }
+          return;
+        }
         showSubmittedPicks(round, roundPicks, isLocked, isKO);
         return;
       }
