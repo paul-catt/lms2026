@@ -871,9 +871,6 @@ Good luck! ⚽🏆`;
       } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message; }
       btn.disabled = false; btn.textContent = '🤖 Assign Unpicked Players';
     }
-      msg.style.color = 'var(--text-muted)'; msg.textContent = 'Checking picks...';
-      detail.textContent = '';
-
 
     // ── Goals predictor tab ───────────────────────────────────
     async function loadGoalsTab() {
@@ -1554,7 +1551,7 @@ Good luck! ⚽🏆`;
     // ── Match Reset (keep group fixtures) ─────────────────────
     document.getElementById('btn-match-reset').addEventListener('click', async () => {
       const msg = document.getElementById('match-reset-msg');
-      if (!confirm('MATCH RESET: This will clear all results, points, and eliminations.\n\nKnockout matches (R32+) will be deleted. Group stage fixtures are kept.\n\nAre you sure?')) return;
+      if (!confirm('MATCH RESET: This will clear all results, points, and eliminations.\n\nKnockout fixture shells are kept but team assignments will be cleared. Group fixtures untouched.\n\nAre you sure?')) return;
       if (!confirm('Last chance — this cannot be undone. Proceed?')) return;
       msg.style.color = 'var(--text-muted)'; msg.textContent = 'Resetting...';
       try {
@@ -1562,18 +1559,18 @@ Good luck! ⚽🏆`;
         await db.from('pick_results').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         // 2. Reset all match scores/status
         await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
-        // 3. Delete knockout matches (round_type = knockout)
+        // 3. Clear team assignments on KO matches (keep fixture shells with date/venue/match_number)
         const { data: koRounds } = await db.from('rounds').select('id').eq('round_type', 'knockout');
         if (koRounds && koRounds.length > 0) {
           const koRoundIds = koRounds.map(r => r.id);
-          await db.from('matches').delete().in('round_id', koRoundIds);
+          await db.from('matches').update({ home_team_id: null, away_team_id: null }).in('round_id', koRoundIds);
         }
         // 4. Clear all team eliminations
         await db.from('teams').update({ is_eliminated: false, eliminated_in_round_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
         // 5. Clear round completion flags and snapshots
         await db.from('rounds').update({ is_complete: false }).neq('id', '00000000-0000-0000-0000-000000000000');
         await db.from('leaderboard_snapshots').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        msg.style.color = 'var(--green)'; msg.textContent = '✅ Match reset complete. Group fixtures retained. All results, eliminations and round progress cleared.';
+        msg.style.color = 'var(--green)'; msg.textContent = '✅ Match reset complete. KO fixture shells retained. All results, team assignments, eliminations and round progress cleared.';
         loadMatchesForResult(); loadCompletedMatchesForCorrection(); loadTeamsLongshot();
       } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message; }
     });
@@ -1581,7 +1578,7 @@ Good luck! ⚽🏆`;
     // ── Nuclear Reset (testing only) ─────────────────────────
     document.getElementById('btn-nuclear-reset').addEventListener('click', async () => {
       const msg = document.getElementById('nuclear-reset-msg');
-      if (!confirm('☢️ NUCLEAR RESET — FOR TESTING ONLY ☢️\n\nThis will wipe:\n• All results and pick_results\n• ALL picks\n• All goals predictions\n• All eliminations\n• All round snapshots and completion flags\n• All knockout matches\n\nPlayer accounts and group fixtures are kept.\n\nAre you absolutely sure?')) return;
+      if (!confirm('☢️ NUCLEAR RESET — FOR TESTING ONLY ☢️\n\nThis will wipe:\n• All results and pick_results\n• ALL picks\n• All goals predictions\n• All eliminations\n• All round snapshots and completion flags\n• All KO team assignments (fixture shells kept)\n\nPlayer accounts and all fixtures are kept.\n\nAre you absolutely sure?')) return;
       if (!confirm('This is irreversible. Final confirmation — proceed with nuclear reset?')) return;
       msg.style.color = 'var(--text-muted)'; msg.textContent = '☢️ Nuking...';
       try {
@@ -1591,10 +1588,10 @@ Good luck! ⚽🏆`;
         await db.from('picks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         // 3. Reset all matches
         await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
-        // 4. Delete knockout matches
+        // 4. Clear team assignments on KO matches (keep fixture shells with date/venue/match_number)
         const { data: koRounds } = await db.from('rounds').select('id').eq('round_type', 'knockout');
         if (koRounds && koRounds.length > 0) {
-          await db.from('matches').delete().in('round_id', koRounds.map(r => r.id));
+          await db.from('matches').update({ home_team_id: null, away_team_id: null, home_score: null, away_score: null, pens_winner_id: null, status: 'scheduled' }).in('round_id', koRounds.map(r => r.id));
         }
         // 5. Clear team eliminations
         await db.from('teams').update({ is_eliminated: false, eliminated_in_round_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');

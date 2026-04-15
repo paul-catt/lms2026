@@ -54,6 +54,26 @@
     .lb-view { display:none; }
     .lb-view.active { display:block; }
     .ls-pts { font-size:14px; font-weight:800; color:var(--gold); }
+
+    /* ── Pick Matrix ─────────────────────────────────────────── */
+    .matrix-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .matrix-table { border-collapse:collapse; font-size:11px; white-space:nowrap; }
+    .matrix-table td, .matrix-table th { padding:3px 4px; border:1px solid var(--border); text-align:center; }
+    .matrix-table .m-player { text-align:left; font-weight:600; padding:3px 8px; white-space:nowrap; min-width:80px; }
+    .matrix-table .m-player.elim { color:var(--red); }
+    .matrix-table .m-pos { color:var(--text-muted); font-size:10px; padding:3px 4px; }
+    .matrix-table .m-header { writing-mode:vertical-rl; transform:rotate(180deg); font-size:10px; font-weight:700; padding:6px 3px; max-height:80px; vertical-align:bottom; }
+    .matrix-table .m-header-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; }
+    .m-W  { background:rgba(16,185,129,0.25);  color:var(--green); font-weight:700; }
+    .m-D  { background:rgba(245,158,11,0.2);   color:var(--gold);  font-weight:700; }
+    .m-L  { background:rgba(239,68,68,0.2);    color:var(--red);   font-weight:700; }
+    .m-fav  { border-bottom:2px solid #3b82f6; }
+    .m-dh   { border-bottom:2px solid #eab308; }
+    .m-ls   { border-bottom:2px solid #f97316; }
+    .m-nh   { border-bottom:2px solid #ef4444; }
+    .m-good { font-weight:800; color:var(--green); }
+    .m-total { font-weight:700; color:var(--text-muted); }
+    .matrix-table .m-summary { background:var(--surface2); font-weight:700; }
     #longshot-wrap table { table-layout:fixed; }
     #longshot-wrap th:nth-child(1) { width:36px; }
     #longshot-wrap th:nth-child(2) { width:auto; }
@@ -91,6 +111,7 @@
       <div class="lb-tabs">
         <div class="lb-tab active" data-view="main" onclick="switchView('main')">📊 Standings</div>
         <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Longshot Table</div>
+        <div class="lb-tab" data-view="matrix" onclick="switchView('matrix')">🔢 Matrix</div>
       </div>
 
       <div id="loading" class="loading"><div class="spinner"></div>Loading standings...</div>
@@ -137,6 +158,25 @@
           Tracks longshot bonus points earned across the tournament. ⭐ = longshot pick that won.
         </p>
         <div id="longshot-wrap" class="table-wrap">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- PICK MATRIX -->
+      <div class="lb-view" id="view-matrix">
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px">
+          Every player's pick history across all rounds. Colour = result. Right columns show teams remaining.
+        </p>
+        <div style="font-size:11px; color:var(--text-muted); margin-bottom:12px; display:flex; gap:12px; flex-wrap:wrap">
+          <span class="m-W" style="padding:1px 6px; border-radius:4px">W</span> Win &nbsp;
+          <span class="m-D" style="padding:1px 6px; border-radius:4px">D</span> Draw &nbsp;
+          <span class="m-L" style="padding:1px 6px; border-radius:4px">L</span> Loss &nbsp;
+          <span style="display:inline-block;width:20px;border-bottom:2px solid #3b82f6"></span> Fav &nbsp;
+          <span style="display:inline-block;width:20px;border-bottom:2px solid #eab308"></span> Dark Horse &nbsp;
+          <span style="display:inline-block;width:20px;border-bottom:2px solid #f97316"></span> Long Shot &nbsp;
+          <span style="display:inline-block;width:20px;border-bottom:2px solid #ef4444"></span> No Hoper
+        </div>
+        <div id="matrix-wrap" class="matrix-wrap">
           <div class="loading"><div class="spinner"></div></div>
         </div>
       </div>
@@ -205,12 +245,124 @@
       return { windowStart, windowEnd: new Date(windowStart.getTime() + WINDOW_DURATION_MS) };
     }
 
+    let _matrixRendered = false;
     function switchView(name) {
       document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
       document.querySelectorAll('.lb-view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+      if (name === 'matrix' && !_matrixRendered && _leaderboardData) { _matrixRendered = true; renderMatrixView(); }
     }
 
     let _leaderboardData = null;
+
+    function renderMatrixView() {
+      const wrap = document.getElementById('matrix-wrap');
+      if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the standings first.</p>'; return; }
+      const { sorted, allPicks, scores } = _leaderboardData;
+
+      // All rounds that have picks or are complete — derive from picks
+      const roundsInPicks = {};
+      (allPicks || []).forEach(p => {
+        if (!roundsInPicks[p.round_id]) roundsInPicks[p.round_id] = { id: p.round_id, name: '', sort: 0 };
+      });
+
+      // Build pick lookup: player_id -> team_id -> { result, multiplier }
+      const pickMap = {};
+      (allPicks || []).forEach(p => {
+        if (!pickMap[p.player_id]) pickMap[p.player_id] = {};
+        const res = p.pick_results && p.pick_results[0];
+        pickMap[p.player_id][p.team_id] = {
+          result: res ? res.match_result : 'pending',
+          multiplier: p.multiplier,
+          roundId: p.round_id
+        };
+      });
+
+      // Get all teams that appear in any pick, sorted by band then name
+      const BAND_ORDER = { favourite:1, dark_horse:2, long_shot:3, no_hoper:4 };
+      const BAND_CLASS = { favourite:'m-fav', dark_horse:'m-dh', long_shot:'m-ls', no_hoper:'m-nh' };
+      const teamsInPicks = new Map();
+      (allPicks || []).forEach(p => {
+        if (p.teams && !teamsInPicks.has(p.team_id)) {
+          teamsInPicks.set(p.team_id, { id: p.team_id, flag: p.teams.flag_emoji, name: '', band: p.teams.band || '' });
+        }
+      });
+
+      // Also get team names from allTeams in _leaderboardData
+      const { allPicks: ap } = _leaderboardData;
+
+      // Use scores for player order (already sorted by points)
+      const players = sorted;
+
+      // Get alive pool teams for "remaining" columns
+      const usedByPlayer = {};
+      (allPicks || []).forEach(p => {
+        if (!usedByPlayer[p.player_id]) usedByPlayer[p.player_id] = new Set();
+        usedByPlayer[p.player_id].add(p.team_id);
+      });
+
+      // Sort teams: by band order
+      const teamList = [...teamsInPicks.values()].sort((a,b) => {
+        const ao = BAND_ORDER[a.band] || 5, bo = BAND_ORDER[b.band] || 5;
+        if (ao !== bo) return ao - bo;
+        return (a.flag || '').localeCompare(b.flag || '');
+      });
+
+      if (teamList.length === 0) {
+        wrap.innerHTML = '<p style="color:var(--text-muted);padding:16px 0">No picks recorded yet.</p>';
+        return;
+      }
+
+      // Build table
+      let html = '<div class="matrix-wrap"><table class="matrix-table"><thead><tr>';
+      html += '<th class="m-pos">#</th>';
+      html += '<th class="m-player" style="text-align:left">Player</th>';
+
+      // Team headers — diagonal
+      teamList.forEach(t => {
+        const bandCls = BAND_CLASS[t.band] || '';
+        html += `<th><div class="m-header-wrap"><span class="m-header ${bandCls}">${t.flag}</span></div></th>`;
+      });
+
+      html += '<th class="m-summary" title="Favourites + Dark Horses remaining">Good<br>Left</th>';
+      html += '<th class="m-summary" title="All teams remaining">Total<br>Left</th>';
+      html += '</tr></thead><tbody>';
+
+      players.forEach((p, i) => {
+        const pos = i + 1;
+        const isElim = p.is_eliminated;
+        const used = usedByPlayer[p.player_id] || new Set();
+        const playerPicks = pickMap[p.player_id] || {};
+
+        html += `<tr>`;
+        html += `<td class="m-pos">${pos}</td>`;
+        html += `<td class="m-player${isElim ? ' elim' : ''}"><a href="/${p.slug}" style="color:inherit;text-decoration:none">${p.name}</a></td>`;
+
+        teamList.forEach(t => {
+          const pick = playerPicks[t.id];
+          if (!pick) {
+            html += '<td></td>';
+          } else {
+            const r = pick.result;
+            const cls = r === 'win' ? 'm-W' : r === 'draw' ? 'm-D' : r === 'loss' ? 'm-L' : '';
+            const label = r === 'win' ? 'W' : r === 'draw' ? 'D' : r === 'loss' ? 'L' : '·';
+            const ptLabel = pick.multiplier ? `<span style="font-size:9px;color:var(--text-muted)">${pick.multiplier}</span>` : '';
+            html += `<td class="${cls}" title="${t.flag} ${r||'pending'}">${label}${ptLabel}</td>`;
+          }
+        });
+
+        // Summary columns — remaining teams
+        const aliveTeams = (window._matrixAllTeams || []).filter(t => !t.is_eliminated && !used.has(t.id));
+        const goodLeft = aliveTeams.filter(t => t.band === 'favourite' || t.band === 'dark_horse').length;
+        const totalLeft = aliveTeams.length;
+
+        html += `<td class="m-summary m-good">${isElim ? '—' : goodLeft}</td>`;
+        html += `<td class="m-summary m-total">${isElim ? '—' : totalLeft}</td>`;
+        html += '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+      wrap.innerHTML = html;
+    }
 
     async function loadLeaderboard() {
       try {
@@ -321,6 +473,7 @@
         const BAND_ORDER = { favourite:1, dark_horse:2, long_shot:3, no_hoper:4 };
         const teamById = {};
         (allTeams || []).forEach(t => { teamById[t.id] = t; });
+        window._matrixAllTeams = allTeams || [];
         const alivePoolTeams = (allTeams || []).filter(t => !t.is_eliminated).sort((a,b) => (BAND_ORDER[a.band]||5) - (BAND_ORDER[b.band]||5));
         const usedByPlayer = {};
         (allPicks || []).forEach(pick => {
@@ -349,6 +502,11 @@
           return `<span style="font-size:12px;font-weight:600">${remaining.length}</span> <span style="font-size:11px">${dots}</span>`;
         }
         const isQFOrLater = currentRound && ['QF','SF','Final'].includes(currentRound.name);
+
+        // Show matrix tab only from R32 onwards (or when competition ended)
+        const showMatrix = competitionEnded || (currentRound && ['Round of 32','R32','Round of 16','R16','QF','SF','Final'].includes(currentRound.name)) ||
+                           (!currentRound && (rounds||[]).some(r => ['Round of 32','R32','Round of 16','R16','QF','SF','Final'].includes(r.name) && r.is_complete));
+        document.querySelector('[data-view="matrix"]').style.display = showMatrix ? '' : 'none';
 
         // Competition ended = Final complete, all eliminated, or ≤1 player still alive
         const activePlayers = (scores || []).filter(p => !p.is_eliminated);
@@ -475,6 +633,7 @@
         document.getElementById('leaderboard-wrap').style.display = 'block';
         document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
+        _matrixRendered = false;
         _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap };
         renderLongshotView();
 
