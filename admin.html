@@ -4,14 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — LMS 2026</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="apple-touch-icon" href="/icon-192.png">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Icons & PWA -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f1117">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="LMS 2026">
+
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta name="apple-mobile-web-app-title" content="LMS 2026">
   <style>
+    body { font-family: 'Inter', sans-serif; }
+    nav, .nav-logo, .card-title, thead th, .tab { font-family: 'Rajdhani', sans-serif; }
     .tab-bar { display:flex; gap:4px; margin-bottom:20px; flex-wrap:wrap; }
     .tab { padding:8px 16px; border-radius:8px; cursor:pointer; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); font-size:13px; font-weight:600; }
     .tab.active { background:var(--accent); color:white; border-color:var(--accent); }
@@ -91,10 +104,11 @@
   </div>
 
   <nav>
-    <a class="nav-logo" href="/">⚽ LMS 2026</a>
+    <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
       <a href="/leaderboard">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
+      <a href="/bracket">Bracket</a>
       <a href="/admin" class="active">Admin</a>
       <a href="/rules">Rules</a>
     </div>
@@ -112,6 +126,7 @@
       <div class="tab" data-tab="players">👥 Players</div>
       <div class="tab" data-tab="matches">📅 Matches</div>
       <div class="tab" data-tab="teams">🏳️ Teams</div>
+      <div class="tab" data-tab="bracket">🏆 Bracket</div>
       <div class="tab" data-tab="testdate">🧪 Test Date</div>
       <a href="/whatsapp-export" class="tab" style="text-decoration:none; background:var(--surface2); color:var(--text-muted)">📱 WhatsApp</a>
     </div>
@@ -417,6 +432,54 @@
       </div>
     </div>
 
+    <!-- BRACKET TAB -->
+    <div class="tab-content" id="tab-bracket">
+      <div class="card">
+        <div class="card-title">🏆 Bracket Predictions</div>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
+          Upload predicted teams and match structure for the knockout bracket. Each upload creates a new version — the most recent always wins.<br>
+          <strong>Before GP1:</strong> upload with all predicted teams. <strong>After GP3:</strong> assign real teams via Matches tab — bracket updates automatically.
+        </p>
+
+        <!-- Upload section -->
+        <div style="margin-bottom:24px">
+          <div class="card-title" style="font-size:12px; margin-bottom:8px">Upload Predictions JSON</div>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px">
+            Paste your JSON below. Must include <code>r32</code>, <code>r16</code>, <code>qf</code>, <code>sf</code>, <code>final</code> match ID arrays and a <code>predicted_teams</code> object keyed by match ID.
+          </p>
+          <div class="form-group">
+            <label>Label (optional — e.g. "Pre-GP1 predictions")</label>
+            <input type="text" id="bracket-label" placeholder="e.g. Pre-GP1 predictions" style="max-width:360px">
+          </div>
+          <div class="form-group">
+            <label>JSON</label>
+            <textarea id="bracket-json" rows="10" style="font-family:monospace; font-size:12px; resize:vertical" placeholder='{
+  "r32": [73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88],
+  "r16": [89,90,91,92,93,94,95,96],
+  "qf":  [97,98,99,100],
+  "sf":  [101,102],
+  "final": [104],
+  "predicted_teams": {
+    "73": { "home": { "name": "Czech Rep", "flag": "🇨🇿" }, "away": { "name": "South Africa", "flag": "🇿🇦" } }
+  }
+}'></textarea>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="uploadBracketPredictions()">📤 Upload Predictions</button>
+            <span id="bracket-upload-msg" style="font-size:12px"></span>
+          </div>
+        </div>
+
+        <!-- Version history -->
+        <div style="border-top:1px solid var(--border); padding-top:20px">
+          <div class="card-title" style="font-size:12px; margin-bottom:12px">Version History</div>
+          <div id="bracket-versions-wrap">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <!-- Auto-assign confirmation modal -->
@@ -572,6 +635,7 @@
       if (name === 'goals') loadGoalsTab();
       if (name === 'odds') loadOddsTable();
       if (name === 'teams' && !_teamsLoaded) { _teamsLoaded = true; loadTeamsLongshot(); }
+      if (name === 'bracket') loadBracketVersions();
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -853,10 +917,11 @@ Good luck! ⚽🏆`;
         document.getElementById('assign-modal-body').innerHTML = preview.join('<br>');
         document.getElementById('assign-modal').classList.add('open');
         document.getElementById('assign-modal-confirm').onclick = async () => {
+          const assignmentsToProcess = [..._pendingAssignments];
           closeAssignModal();
           msg.style.color = 'var(--text-muted)'; msg.textContent = 'Applying...';
           let assignCount = 0;
-          for (const a of _pendingAssignments) {
+          for (const a of assignmentsToProcess) {
             if (a.eliminate) {
               await db.from('players').update({ is_eliminated: true, eliminated_at: new Date().toISOString() }).eq('id', a.player_id);
             } else {
@@ -1442,7 +1507,15 @@ Good luck! ⚽🏆`;
       const roundMap = {};
       (rounds || []).forEach(r => { roundMap[r.id] = r.name; });
 
-      let html = `<div class="table-wrap"><table><thead><tr><th>Team</th><th>Pot</th><th>Band</th><th>Longshot (+1)</th><th>Eliminated</th><th>Round out</th><th style="width:30px"></th></tr></thead><tbody>`;
+      let html = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><thead><tr>
+        <th style="width:160px">Team</th>
+        <th style="width:50px">Pot</th>
+        <th style="width:140px">Band</th>
+        <th style="width:80px;text-align:center">Longshot (+1)</th>
+        <th style="width:80px;text-align:center">Eliminated</th>
+        <th style="width:140px">Round out</th>
+        <th style="width:30px"></th>
+      </tr></thead><tbody>`;
       teams.forEach(t => {
         const bandSel = BAND_OPTIONS.map(o => `<option value="${o.value}" ${t.band === o.value ? 'selected' : ''}>${o.label}</option>`).join('');
         // Default to Group Phase 3 for manual elimination if no round set
@@ -1814,6 +1887,7 @@ Good luck! ⚽🏆`;
       html += `</tbody></table></div>
         <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap">
           <button class="btn btn-primary" onclick="submitBulkResults('${roundId}', ${isKnockout})">💾 Save All Results & Calculate Points</button>
+          <button class="btn btn-secondary" onclick="fillTestScores()" title="Fill all rows with 1-1 for testing">🧪 Fill 1-1 (test)</button>
           <span style="font-size:12px;color:var(--text-muted);align-self:center">Only rows with both scores filled will be saved.</span>
         </div>`;
 
@@ -1821,6 +1895,17 @@ Good luck! ⚽🏆`;
     }
 
     // ── Bulk pens helpers ─────────────────────────────────────
+    function fillTestScores() {
+      document.querySelectorAll('#bulk-matches-wrap input[type="number"]').forEach(input => {
+        if (input.id.startsWith('bulk-home-') || input.id.startsWith('bulk-away-')) {
+          input.value = 1;
+          // Trigger draw-check for each match
+          const matchId = input.id.replace('bulk-home-', '').replace('bulk-away-', '');
+          bulkCheckDraw(matchId);
+        }
+      });
+    }
+
     function bulkCheckDraw(matchId) {
       const h  = parseInt(document.getElementById('bulk-home-' + matchId)?.value);
       const a  = parseInt(document.getElementById('bulk-away-' + matchId)?.value);
@@ -1924,6 +2009,88 @@ Good luck! ⚽🏆`;
     }
 
     document.getElementById('btn-fetch-odds').addEventListener('click', fetchAllOdds);
+
+    // ── Bracket predictions ───────────────────────────────────
+    async function uploadBracketPredictions() {
+      const msg   = document.getElementById('bracket-upload-msg');
+      const raw   = document.getElementById('bracket-json').value.trim();
+      const label = document.getElementById('bracket-label').value.trim();
+      msg.textContent = '';
+
+      if (!raw) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Paste JSON first.'; return; }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch(e) {
+        msg.style.color = 'var(--red)'; msg.textContent = '❌ Invalid JSON: ' + e.message; return;
+      }
+
+      // Basic structure check
+      const required = ['r32','r16','qf','sf','final'];
+      const missing = required.filter(k => !parsed[k]);
+      if (missing.length) {
+        msg.style.color = 'var(--red)';
+        msg.textContent = '❌ Missing keys: ' + missing.join(', ');
+        return;
+      }
+
+      msg.style.color = 'var(--text-muted)'; msg.textContent = 'Uploading...';
+
+      const { error } = await db.from('bracket_predictions').insert({
+        data: parsed,
+        label: label || null
+      });
+
+      if (error) {
+        msg.style.color = 'var(--red)'; msg.textContent = '❌ ' + error.message;
+      } else {
+        msg.style.color = 'var(--green)'; msg.textContent = '✅ Uploaded. Bracket will update immediately.';
+        document.getElementById('bracket-json').value = '';
+        document.getElementById('bracket-label').value = '';
+        loadBracketVersions();
+      }
+    }
+
+    async function loadBracketVersions() {
+      const wrap = document.getElementById('bracket-versions-wrap');
+      wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      const { data: versions, error } = await db
+        .from('bracket_predictions')
+        .select('id, label, created_at, data')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) { wrap.innerHTML = '<p style="color:var(--red)">Error: ' + error.message + '</p>'; return; }
+      if (!versions || versions.length === 0) {
+        wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No uploads yet.</p>';
+        return;
+      }
+
+      let html = '<div class="table-wrap"><table><thead><tr><th>#</th><th>Label</th><th>Uploaded</th><th>Predicted Teams</th><th>Action</th></tr></thead><tbody>';
+      versions.forEach((v, i) => {
+        const date = new Date(v.created_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+        const teamCount = v.data.predicted_teams ? Object.keys(v.data.predicted_teams).length : 0;
+        const isCurrent = i === 0;
+        html += `<tr style="${isCurrent ? 'background:rgba(245,158,11,0.06)' : ''}">
+          <td style="color:var(--text-muted)">${versions.length - i}</td>
+          <td>${v.label || '<span style="color:var(--text-muted)">—</span>'}${isCurrent ? ' <span class="badge badge-gold">Current</span>' : ''}</td>
+          <td style="color:var(--text-muted);font-size:12px">${date}</td>
+          <td style="color:var(--text-muted)">${teamCount} match(es)</td>
+          <td><button class="btn btn-secondary" style="font-size:11px;padding:4px 10px" onclick="deleteBracketVersion('${v.id}')">🗑 Delete</button></td>
+        </tr>`;
+      });
+      html += '</tbody></table></div>';
+      wrap.innerHTML = html;
+    }
+
+    async function deleteBracketVersion(id) {
+      if (!confirm('Delete this bracket prediction version? This cannot be undone.')) return;
+      const { error } = await db.from('bracket_predictions').delete().eq('id', id);
+      if (error) { alert('Error: ' + error.message); return; }
+      loadBracketVersions();
+    }
   </script>
 </body>
 </html>

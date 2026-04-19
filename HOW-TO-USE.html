@@ -1,0 +1,55 @@
+<!-- ═══════════════════════════════════════════════════════
+     DROP THIS INTO THE <head> OF EVERY HTML PAGE
+     ═══════════════════════════════════════════════════════ -->
+
+<!-- Favicon -->
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+
+<!-- iPhone home screen icon (PWA) -->
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- PWA manifest (if you have one) -->
+<link rel="manifest" href="/manifest.json">
+
+
+<!-- ═══════════════════════════════════════════════════════
+     NAV LOGO — replace your existing .nav-logo content
+     with this in every page
+     ═══════════════════════════════════════════════════════ -->
+<a href="/" class="nav-logo">
+  <img src="/logo.svg" alt="LMS 2026" height="36">
+</a>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     manifest.json — create this file at your project root
+     ═══════════════════════════════════════════════════════
+{
+  "name": "LMS 2026",
+  "short_name": "LMS",
+  "description": "Last Man Standing — World Cup 2026",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080c14",
+  "theme_color": "#f0a500",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "1024x1024", "type": "image/png" }
+  ]
+}
+═══════════════════════════════════════════════════════ -->
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FILE CHECKLIST — all these go in your project root
+     ═══════════════════════════════════════════════════════
+  /logo.svg              ← nav wordmark (trophy + LMS 2026)
+  /icon.svg              ← square icon (SVG source)
+  /apple-touch-icon.png  ← 1024×1024 — iPhone home screen
+  /icon-512.png          ← 512×512   — PWA / Android
+  /icon-192.png          ← 192×192   — PWA splash
+  /favicon.ico           ← browser tab
+  /manifest.json         ← create manually (JSON above)
+═══════════════════════════════════════════════════════ -->

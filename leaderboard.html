@@ -4,16 +4,33 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Leaderboard — LMS 2026</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Icons & PWA -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LMS 2026">
+
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    body { font-family: 'Inter', sans-serif; }
+    nav, .nav-logo, .lb-tab, .card-title, thead th, .round-heading { font-family: 'Rajdhani', sans-serif; }
     .pos { font-weight:700; color:var(--text-muted); width:32px; }
     .prior { width:40px; text-align:center; font-size:11px; }
     .medal { width:24px; text-align:center; }
     .player-name { font-weight:600; }
     .player-name a { color:var(--text); text-decoration:none; }
-    .player-name a:hover { color:var(--accent); }
-    .points { font-size:16px; font-weight:700; }
+    .player-name a:hover { color:var(--gold); }
+    .points { font-size:16px; font-weight:700; color:var(--gold); }
     .out-row { opacity:0.45; }
     /* Playing today — purple (doesn't clash with Favourite blue dot) */
     .playing-row { background:rgba(139,92,246,0.12) !important; }
@@ -30,7 +47,7 @@
     .gd-neg { color:var(--red); font-weight:600; }
     .gd-zero { color:var(--text-muted); }
     .tiebreak-val { color:var(--text-muted); font-size:12px; }
-    .round-heading { font-size:12px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:12px; }
+    .round-heading { font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:14px; }
     thead th { white-space:nowrap; font-size:11px; color:var(--text-muted); }
     td { font-size:13px; }
     @media(max-width:600px) { .hide-mobile { display:none; } }
@@ -48,9 +65,10 @@
     .goals-diff-close { color:var(--green); }
     .goals-diff-mid { color:var(--gold); }
     .goals-diff-far { color:var(--red); }
-    .lb-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
-    .lb-tab { padding:6px 14px; border-radius:20px; cursor:pointer; font-size:12px; font-weight:600; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); }
-    .lb-tab.active { background:var(--accent); color:white; border-color:var(--accent); }
+    .lb-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+    .lb-tab { font-family:'Rajdhani',sans-serif; padding:7px 18px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:700; letter-spacing:0.04em; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); transition:all 0.15s; }
+    .lb-tab:hover { color:var(--text); border-color:var(--text-muted); }
+    .lb-tab.active { background:var(--gold); color:#000; border-color:var(--gold); }
     .lb-view { display:none; }
     .lb-view.active { display:block; }
     .ls-pts { font-size:14px; font-weight:800; color:var(--gold); }
@@ -90,10 +108,12 @@
   </div>
 
   <nav>
-    <a class="nav-logo" href="/">⚽ LMS 2026</a>
+    <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
       <a href="/leaderboard" class="active">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
+      <a href="/bracket">Bracket</a>
+      <a href="/rules">Rules</a>
       <a href="/admin">Admin</a>
       <a id="my-page-link" style="display:none">← My Page</a>
     </div>
@@ -102,7 +122,7 @@
   <main>
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:8px">
-        <div class="card-title" style="margin-bottom:0">📊 Leaderboard</div>
+        <div style="font-family:'Rajdhani',sans-serif; font-size:22px; font-weight:700; letter-spacing:0.04em; color:var(--text)">LEADERBOARD</div>
         <span id="last-updated" style="font-size:11px; color:var(--text-muted)"></span>
       </div>
       <div id="round-heading" class="round-heading"></div>
@@ -137,19 +157,17 @@
             <tbody id="leaderboard-body"></tbody>
           </table>
         </div>
-        <div style="margin-top:14px; font-size:11px; color:var(--text-muted); display:flex; gap:16px; flex-wrap:wrap">
-          <!-- 🟣 purple for "playing today" so it doesn't clash with 🔵 Favourite band dot -->
+        <div style="margin-top:16px; font-size:11px; color:var(--text-muted); display:flex; gap:14px; flex-wrap:wrap; padding-top:12px; border-top:1px solid var(--border)">
           <span>🟣 Playing today</span>
           <span class="knockout-only" style="display:none">🟢 Alive</span>
           <span class="knockout-only" style="display:none">🔴 Eliminated</span>
-          <!-- Band legend: hide-mobile so it doesn't show in portrait when Left col is hidden -->
           <span class="knockout-only hide-mobile" style="display:none">· Pool remaining: 🔵 Favourite 🟡 Dark Horse 🟠 Long Shot 🔴 No Hoper</span>
-          <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:2px solid #f59e0b;margin-right:3px;vertical-align:middle"></span>3pts pick</span>
-          <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:2px solid #94a3b8;margin-right:3px;vertical-align:middle"></span>2pts pick</span>
-          <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:4px double #f59e0b;margin-right:3px;vertical-align:middle"></span>Longshot (4pts)</span>
-          <span class="group-only"><span style="display:inline-block;width:18px;border-bottom:4px double #94a3b8;margin-right:3px;vertical-align:middle"></span>Longshot (3pts)</span>
+          <span class="group-only"><span style="display:inline-block;width:16px;border-bottom:2px solid var(--gold);margin-right:3px;vertical-align:middle"></span>3pt pick</span>
+          <span class="group-only"><span style="display:inline-block;width:16px;border-bottom:2px solid var(--text-muted);margin-right:3px;vertical-align:middle"></span>2pt pick</span>
+          <span class="group-only"><span style="display:inline-block;width:16px;border-bottom:3px double var(--gold);margin-right:3px;vertical-align:middle"></span>Longshot (4pts)</span>
+          <span class="group-only"><span style="display:inline-block;width:16px;border-bottom:3px double var(--text-muted);margin-right:3px;vertical-align:middle"></span>Longshot (3pts)</span>
         </div>
-        <div class="rotate-hint">↔ Rotate phone for full table</div>
+        <div class="rotate-hint">↔ Rotate for full table</div>
       </div>
 
       <!-- LONGSHOT LEADERBOARD -->
@@ -503,16 +521,16 @@
         }
         const isQFOrLater = currentRound && ['QF','SF','Final'].includes(currentRound.name);
 
-        // Show matrix tab only from R32 onwards (or when competition ended)
-        const showMatrix = competitionEnded || (currentRound && ['Round of 32','R32','Round of 16','R16','QF','SF','Final'].includes(currentRound.name)) ||
-                           (!currentRound && (rounds||[]).some(r => ['Round of 32','R32','Round of 16','R16','QF','SF','Final'].includes(r.name) && r.is_complete));
-        document.querySelector('[data-view="matrix"]').style.display = showMatrix ? '' : 'none';
-
         // Competition ended = Final complete, all eliminated, or ≤1 player still alive
         const activePlayers = (scores || []).filter(p => !p.is_eliminated);
         const competitionEnded = (!currentRound && (rounds || []).length > 0) ||
                                  (scores || []).every(p => p.is_eliminated) ||
                                  activePlayers.length <= 1;
+
+        // Show matrix tab only from R32 onwards (or when competition ended)
+        const showMatrix = competitionEnded || (currentRound && ['Round of 32','R32','Round of 16','R16','QF','SF','Final'].includes(currentRound.name)) ||
+                           (!currentRound && (rounds||[]).some(r => ['Round of 32','R32','Round of 16','R16','QF','SF','Final'].includes(r.name) && r.is_complete));
+        document.querySelector('[data-view="matrix"]').style.display = showMatrix ? '' : 'none';
 
         // Show/hide columns
         const koDisplay = isKnockout ? '' : 'none';

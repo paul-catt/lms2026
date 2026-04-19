@@ -4,18 +4,25 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LMS 2026 — World Cup Last Man Standing</title>
-  <link rel="stylesheet" href="/css/style.css">
 
-  <!-- PWA / Home screen icon -->
-  <link rel="apple-touch-icon" href="/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Icons & PWA -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#0d1b37">
+  <meta name="theme-color" content="#0f1117">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="LMS 2026">
 
+  <link rel="stylesheet" href="/css/style.css">
   <style>
+    body { font-family: 'Inter', sans-serif; }
+    nav, .nav-logo, h1, .info-block .title { font-family: 'Rajdhani', sans-serif; }
     .hero {
       text-align: center;
       padding: 60px 16px 40px;
@@ -52,10 +59,11 @@
 </head>
 <body>
   <nav>
-    <a class="nav-logo" href="/">⚽ LMS 2026</a>
+    <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
       <a href="/leaderboard">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
+      <a href="/bracket">Bracket</a>
       <a href="/rules">Rules</a>
       <a href="/admin">Admin</a>
     </div>
@@ -63,12 +71,13 @@
 
   <main style="max-width:700px">
     <div class="hero">
-      <div class="hero-emoji">🏆</div>
-      <h1>LMS 2026</h1>
+      <div class="hero-emoji"><img src="/logo.svg" alt="LMS 2026" style="height:80px;width:auto"></div>
+      <h1 style="font-family:'Rajdhani',sans-serif;font-size:42px;font-weight:700;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px">LMS 2026</h1>
       <p>World Cup Last Man Standing · June – July 2026</p>
       <div class="hero-links">
         <a href="/leaderboard" class="btn btn-primary">📊 Leaderboard</a>
         <a href="/match-centre" class="btn btn-secondary">⚽ Match Centre</a>
+        <a href="/bracket" class="btn btn-secondary">🏆 Bracket</a>
         <a href="/rules" class="btn btn-secondary">📋 Rules</a>
       </div>
     </div>

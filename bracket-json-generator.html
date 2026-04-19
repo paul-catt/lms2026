@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LMS 2026 — Bracket JSON Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f1117; color: #f1f5f9; font-family: 'Inter', system-ui, sans-serif; font-size: 14px; padding: 24px 16px; }
+    h1 { font-size: 22px; font-weight: 700; color: #f59e0b; margin-bottom: 6px; }
+    .sub { color: #94a3b8; font-size: 13px; margin-bottom: 24px; }
+    .card { background: #1a1d27; border: 1px solid #2e3350; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+    .card-title { font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+    label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 500; }
+    textarea, input { background: #22263a; border: 1px solid #2e3350; border-radius: 8px; color: #f1f5f9; padding: 10px 12px; font-size: 13px; width: 100%; outline: none; transition: border-color 0.15s; }
+    textarea:focus, input:focus { border-color: #f59e0b; }
+    textarea { font-family: monospace; resize: vertical; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+    .btn-primary { background: #f59e0b; color: #000; }
+    .btn-primary:hover { background: #d97706; }
+    .btn-secondary { background: #22263a; color: #f1f5f9; border: 1px solid #2e3350; }
+    .btn-secondary:hover { background: #2e3350; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .output-wrap { position: relative; }
+    .copy-btn { position: absolute; top: 10px; right: 10px; padding: 5px 12px; font-size: 12px; }
+    .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px; }
+    .alert-error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; }
+    .alert-success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #10b981; }
+    .team-unknown { color: #f59e0b; }
+    .hint { font-size: 11px; color: #94a3b8; margin-top: 6px; line-height: 1.5; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media(max-width:600px) { .grid2 { grid-template-columns: 1fr; } }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+    th { background: #22263a; color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; padding: 8px 10px; text-align: left; }
+    td { padding: 7px 10px; border-bottom: 1px solid #2e3350; }
+    .badge { display: inline-flex; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-ok { background: rgba(16,185,129,0.15); color: #10b981; }
+    .badge-warn { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  </style>
+</head>
+<body>
+
+<h1>🏆 Bracket JSON Generator</h1>
+<p class="sub">LMS 2026 · Paste your R32 fixture data, generate the upload JSON</p>
+
+<div class="card">
+  <div class="card-title">Step 1 — Paste R32 Fixtures</div>
+  <p class="hint" style="margin-bottom:12px">Three columns, tab-separated (copy straight from Excel): <strong>Match Number · Home Team · Away Team</strong><br>
+  One match per line. Team names must match the list below (case-insensitive).</p>
+  <textarea id="input-data" rows="18" placeholder="74	Curaçao	Australia
+77	Senegal	Tunisia
+73	South Africa	Switzerland
+75	Japan	Haiti
+83	Colombia	Ghana
+84	Cape Verde	Austria
+81	Paraguay	Jordan
+82	Egypt	South Korea
+76	Morocco	Sweden
+78	Ecuador	Iraq
+79	Czech Rep	Scotland
+80	Croatia	Norway
+85	Algeria	Uruguay
+86	Turkey	Iran
+87	Bosnia/Herzeg	New Zealand
+88	DR Congo	Panama
+89	Argentina	TBD
+..."></textarea>
+  <p class="hint">💡 You only need R32 — the tool generates placeholder TBD entries for R16 onwards based on the match ID arrays you set in Step 2.</p>
+</div>
+
+<div class="card">
+  <div class="card-title">Step 2 — Match IDs (fixed)</div>
+  <p class="hint">These are hardcoded from your Supabase fixture import. No changes needed.</p>
+  <table style="margin-top:10px; font-size:12px">
+    <thead><tr><th>Round</th><th>Match Numbers</th></tr></thead>
+    <tbody>
+      <tr><td>R32</td><td style="color:#94a3b8;font-family:monospace">73–88</td></tr>
+      <tr><td>R16</td><td style="color:#94a3b8;font-family:monospace">89–96</td></tr>
+      <tr><td>QF</td><td style="color:#94a3b8;font-family:monospace">97–100</td></tr>
+      <tr><td>SF</td><td style="color:#94a3b8;font-family:monospace">101–102</td></tr>
+      <tr><td>3rd Place</td><td style="color:#94a3b8;font-family:monospace">103</td></tr>
+      <tr><td>Final</td><td style="color:#94a3b8;font-family:monospace">104</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="btn-row" style="margin-bottom:16px">
+  <button class="btn btn-primary" onclick="generate()">⚡ Generate JSON</button>
+  <button class="btn btn-secondary" onclick="clearAll()">🗑 Clear</button>
+</div>
+
+<div id="msg"></div>
+
+<div class="card" id="output-card" style="display:none">
+  <div class="card-title">Generated JSON — ready to paste into Admin → Bracket tab</div>
+  <div class="output-wrap">
+    <button class="btn btn-secondary copy-btn" onclick="copyJson()">📋 Copy</button>
+    <textarea id="output-json" rows="20" readonly style="font-size:11px"></textarea>
+  </div>
+  <div id="copy-msg" style="font-size:12px; margin-top:6px; color:#10b981"></div>
+</div>
+
+<div class="card" id="preview-card" style="display:none">
+  <div class="card-title">Preview — parsed matches</div>
+  <div id="preview-table"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">Team Name Reference (48 teams)</div>
+  <p class="hint" style="margin-bottom:10px">Use these exact names in your spreadsheet (case-insensitive).</p>
+  <div id="team-list"></div>
+</div>
+
+<script>
+// ── Flag lookup table — all 48 WC2026 teams ──────────────────
+const TEAMS = {
+  // Group A
+  'mexico':        { flag: '🇲🇽', display: 'Mexico' },
+  'usa':           { flag: '🇺🇸', display: 'USA' },
+  'canada':        { flag: '🇨🇦', display: 'Canada' },
+  'new zealand':   { flag: '🇳🇿', display: 'New Zealand' },
+  // Group B
+  'argentina':     { flag: '🇦🇷', display: 'Argentina' },
+  'chile':         { flag: '🇨🇱', display: 'Chile' },
+  'peru':          { flag: '🇵🇪', display: 'Peru' },
+  'australia':     { flag: '🇦🇺', display: 'Australia' },
+  // Group C
+  'brazil':        { flag: '🇧🇷', display: 'Brazil' },
+  'colombia':      { flag: '🇨🇴', display: 'Colombia' },
+  'paraguay':      { flag: '🇵🇾', display: 'Paraguay' },
+  'dr congo':      { flag: '🇨🇩', display: 'DR Congo' },
+  // Group D
+  'france':        { flag: '🇫🇷', display: 'France' },
+  'england':       { flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', display: 'England' },
+  'algeria':       { flag: '🇩🇿', display: 'Algeria' },
+  'south africa':  { flag: '🇿🇦', display: 'South Africa' },
+  // Group E
+  'spain':         { flag: '🇪🇸', display: 'Spain' },
+  'croatia':       { flag: '🇭🇷', display: 'Croatia' },
+  'japan':         { flag: '🇯🇵', display: 'Japan' },
+  'senegal':       { flag: '🇸🇳', display: 'Senegal' },
+  // Group F
+  'germany':       { flag: '🇩🇪', display: 'Germany' },
+  'portugal':      { flag: '🇵🇹', display: 'Portugal' },
+  'turkey':        { flag: '🇹🇷', display: 'Turkey' },
+  'ecuador':       { flag: '🇪🇨', display: 'Ecuador' },
+  // Group G
+  'netherlands':   { flag: '🇳🇱', display: 'Netherlands' },
+  'austria':       { flag: '🇦🇹', display: 'Austria' },
+  'egypt':         { flag: '🇪🇬', display: 'Egypt' },
+  'iraq':          { flag: '🇮🇶', display: 'Iraq' },
+  // Group H
+  'morocco':       { flag: '🇲🇦', display: 'Morocco' },
+  'south korea':   { flag: '🇰🇷', display: 'South Korea' },
+  'iran':          { flag: '🇮🇷', display: 'Iran' },
+  'uruguay':       { flag: '🇺🇾', display: 'Uruguay' },
+  // Group I
+  'belgium':       { flag: '🇧🇪', display: 'Belgium' },
+  'switzerland':   { flag: '🇨🇭', display: 'Switzerland' },
+  'ghana':         { flag: '🇬🇭', display: 'Ghana' },
+  'norway':        { flag: '🇳🇴', display: 'Norway' },
+  // Group J
+  'italy':         { flag: '🇮🇹', display: 'Italy' },
+  'czech rep':     { flag: '🇨🇿', display: 'Czech Rep' },
+  'scotland':      { flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', display: 'Scotland' },
+  'sweden':        { flag: '🇸🇪', display: 'Sweden' },
+  // Group K
+  'denmark':       { flag: '🇩🇰', display: 'Denmark' },
+  'ivory coast':   { flag: '🇨🇮', display: 'Ivory Coast' },
+  'cape verde':    { flag: '🇨🇻', display: 'Cape Verde' },
+  'curaçao':       { flag: '🇨🇼', display: 'Curaçao' },
+  'curacao':       { flag: '🇨🇼', display: 'Curaçao' },
+  // Group L
+  'qatar':         { flag: '🇶🇦', display: 'Qatar' },
+  'bosnia/herzeg': { flag: '🇧🇦', display: 'Bosnia/Herzeg' },
+  'haiti':         { flag: '🇭🇹', display: 'Haiti' },
+  'panama':        { flag: '🇵🇦', display: 'Panama' },
+  // Extra (non-group confirmed)
+  'jordan':        { flag: '🇯🇴', display: 'Jordan' },
+  'tunisia':       { flag: '🇹🇳', display: 'Tunisia' },
+  'guinea':        { flag: '🇬🇳', display: 'Guinea' },
+};
+
+function lookupTeam(name) {
+  if (!name || name.trim() === '' || name.trim().toLowerCase() === 'tbd') return null;
+  return TEAMS[name.trim().toLowerCase()] || null;
+}
+
+function parseIds(str) {
+  return str.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+}
+
+function generate() {
+  const raw = document.getElementById('input-data').value.trim();
+  const msgEl = document.getElementById('msg');
+  msgEl.innerHTML = '';
+
+  if (!raw) { showMsg('Paste your fixture data first.', 'error'); return; }
+
+  // Hardcoded from Supabase fixture import
+  const r32ids   = [73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88];
+  const r16ids   = [89,90,91,92,93,94,95,96];
+  const qfids    = [97,98,99,100];
+  const sfids    = [101,102];
+  const finalids = [104];
+  const p3ids    = [103];
+
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const predicted_teams = {};
+  const errors = [];
+  const preview = [];
+
+  lines.forEach((line, i) => {
+    const parts = line.split('\t');
+    if (parts.length < 3) {
+      errors.push(`Line ${i+1}: expected 3 tab-separated columns, got ${parts.length}`);
+      return;
+    }
+    const matchId = parseInt(parts[0].trim());
+    const homeName = parts[1].trim();
+    const awayName = parts[2].trim();
+
+    if (isNaN(matchId)) { errors.push(`Line ${i+1}: "${parts[0]}" is not a valid match number`); return; }
+
+    const home = lookupTeam(homeName);
+    const away = lookupTeam(awayName);
+
+    if (!home) errors.push(`Line ${i+1}: Unknown team "${homeName}"`);
+    if (!away) errors.push(`Line ${i+1}: Unknown team "${awayName}"`);
+
+    predicted_teams[String(matchId)] = {
+      home: home ? { name: home.display, flag: home.flag } : { name: homeName, flag: '🏳' },
+      away: away ? { name: away.display, flag: away.flag } : { name: awayName, flag: '🏳' }
+    };
+
+    preview.push({ matchId, homeName, home, awayName, away });
+  });
+
+  if (errors.length > 0) {
+    showMsg('<strong>Warnings:</strong><br>' + errors.join('<br>'), 'error');
+  }
+
+  const result = {
+    r32:   r32ids,
+    r16:   r16ids,
+    qf:    qfids,
+    sf:    sfids,
+    third_place: p3ids,
+    final: finalids,
+    // Bracket progression: winner of R32 match → R16 match slot
+    progression: {
+      "74": { "next": 89, "slot": "home" },
+      "77": { "next": 89, "slot": "away" },
+      "73": { "next": 90, "slot": "home" },
+      "75": { "next": 90, "slot": "away" },
+      "83": { "next": 97, "slot": "home" },
+      "84": { "next": 93, "slot": "home" },
+      "81": { "next": 94, "slot": "home" },
+      "82": { "next": 94, "slot": "away" },
+      "76": { "next": 91, "slot": "home" },
+      "78": { "next": 91, "slot": "away" },
+      "79": { "next": 92, "slot": "home" },
+      "80": { "next": 92, "slot": "away" },
+      "86": { "next": 95, "slot": "home" },
+      "88": { "next": 95, "slot": "away" },
+      "85": { "next": 96, "slot": "home" },
+      "87": { "next": 96, "slot": "away" },
+      // R16 → QF
+      "89": { "next": 97, "slot": "home" },
+      "90": { "next": 97, "slot": "away" },
+      "93": { "next": 98, "slot": "away" },
+      "94": { "next": 98, "slot": "home" },
+      "91": { "next": 99, "slot": "home" },
+      "92": { "next": 99, "slot": "away" },
+      "95": { "next": 100, "slot": "home" },
+      "96": { "next": 100, "slot": "away" },
+      // QF → SF
+      "97": { "next": 101, "slot": "home" },
+      "98": { "next": 101, "slot": "away" },
+      "99": { "next": 102, "slot": "home" },
+      "100": { "next": 102, "slot": "away" },
+      // SF → Final / 3rd
+      "101": { "next": 104, "slot": "home", "loser_next": 103, "loser_slot": "home" },
+      "102": { "next": 104, "slot": "away", "loser_next": 103, "loser_slot": "away" }
+    },
+    predicted_teams
+  };
+
+  const json = JSON.stringify(result, null, 2);
+  document.getElementById('output-json').value = json;
+  document.getElementById('output-card').style.display = 'block';
+
+  // Preview table
+  let tableHtml = '<table><thead><tr><th>Match</th><th>Home</th><th>Away</th><th>Status</th></tr></thead><tbody>';
+  preview.forEach(r => {
+    const ok = r.home && r.away;
+    tableHtml += `<tr>
+      <td style="color:#94a3b8">#${r.matchId}</td>
+      <td>${r.home ? r.home.flag + ' ' + r.home.display : '<span style="color:#f59e0b">⚠ ' + r.homeName + '</span>'}</td>
+      <td>${r.away ? r.away.flag + ' ' + r.away.display : '<span style="color:#f59e0b">⚠ ' + r.awayName + '</span>'}</td>
+      <td><span class="badge ${ok ? 'badge-ok' : 'badge-warn'}">${ok ? '✓ OK' : '⚠ Unknown'}</span></td>
+    </tr>`;
+  });
+  tableHtml += '</tbody></table>';
+  document.getElementById('preview-table').innerHTML = tableHtml;
+  document.getElementById('preview-card').style.display = 'block';
+
+  if (errors.length === 0) showMsg(`✅ Generated ${preview.length} matches. Copy the JSON and paste into Admin → Bracket tab.`, 'success');
+}
+
+function copyJson() {
+  const ta = document.getElementById('output-json');
+  ta.select();
+  document.execCommand('copy');
+  document.getElementById('copy-msg').textContent = '✅ Copied to clipboard';
+  setTimeout(() => { document.getElementById('copy-msg').textContent = ''; }, 2000);
+}
+
+function clearAll() {
+  document.getElementById('input-data').value = '';
+  document.getElementById('output-json').value = '';
+  document.getElementById('output-card').style.display = 'none';
+  document.getElementById('preview-card').style.display = 'none';
+  document.getElementById('msg').innerHTML = '';
+}
+
+function showMsg(text, type) {
+  document.getElementById('msg').innerHTML = `<div class="alert alert-${type}">${text}</div>`;
+}
+
+// Render team list
+function renderTeamList() {
+  const sorted = Object.entries(TEAMS)
+    .filter(([k, v]) => k !== 'curacao') // dedupe
+    .sort((a, b) => a[1].display.localeCompare(b[1].display));
+  let html = '<table><thead><tr><th>Flag</th><th>Name to use in spreadsheet</th></tr></thead><tbody>';
+  sorted.forEach(([key, t]) => {
+    html += `<tr><td>${t.flag}</td><td style="font-family:monospace">${t.display}</td></tr>`;
+  });
+  html += '</tbody></table>';
+  document.getElementById('team-list').innerHTML = html;
+}
+
+renderTeamList();
+</script>
+</body>
+</html>

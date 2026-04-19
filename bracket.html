@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bracket — LMS 2026</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Icons & PWA -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LMS 2026">
+
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    nav, .nav-logo, .card-title, .bracket-round-label { font-family: 'Rajdhani', sans-serif; }
+    .bracket-outer {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 16px;
+    }
+    .bracket-grid {
+      display: flex;
+      gap: 0;
+      min-width: 860px;
+      align-items: stretch;
+    }
+
+    /* ── Columns ── */
+    .bracket-col {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-width: 120px;
+      max-width: 155px;
+    }
+    .bracket-col-header {
+      text-align: center;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 0 4px 10px;
+      white-space: nowrap;
+    }
+    .bracket-slots {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      justify-content: space-around;
+    }
+    .bracket-slot-group {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      flex: 1;
+      padding: 3px 5px;
+      min-height: 0;
+    }
+
+    /* ── Match card ── */
+    .bracket-match {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      overflow: hidden;
+      background: var(--surface2);
+    }
+    .bracket-kickoff {
+      font-size: 8px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 2px 4px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    .bracket-kickoff .ft-badge {
+      font-size: 7px;
+      font-weight: 700;
+      color: var(--green);
+      background: rgba(16,185,129,0.15);
+      border-radius: 3px;
+      padding: 1px 4px;
+      letter-spacing: 0.06em;
+      flex-shrink: 0;
+    }
+    .bracket-team {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 7px;
+      border-bottom: 1px solid var(--border);
+      min-height: 32px;
+    }
+    .bracket-team:last-child { border-bottom: none; }
+
+    /* Actual confirmed result — winner */
+    .bracket-team.winner-actual {
+      background: rgba(16,185,129,0.14);
+      font-weight: 700;
+      color: var(--green);
+    }
+    /* Actual confirmed result — loser */
+    .bracket-team.loser-actual { opacity: 0.35; }
+
+    /* Predicted winner (from odds) — teams are actual */
+    .bracket-team.winner-pred {
+      background: rgba(59,130,246,0.1);
+      font-weight: 600;
+      color: #93c5fd;
+    }
+    /* Predicted loser — no dimming, just neutral */
+    .bracket-team.loser-pred { color: var(--text-muted); }
+
+    /* Predicted team (from JSON, not yet in DB) */
+    .bracket-team.team-pred { font-style: italic; color: var(--text-muted); }
+    /* Predicted team AND predicted winner */
+    .bracket-team.team-pred.winner-pred {
+      font-style: italic;
+      color: #93c5fd;
+      background: rgba(59,130,246,0.08);
+    }
+    /* Predicted team AND predicted loser — no dimming */
+    .bracket-team.team-pred.loser-pred { color: var(--text-muted); font-style: italic; }
+
+    .bracket-team .t-flag { font-size: 13px; flex-shrink: 0; }
+    .bracket-team .t-name {
+      flex: 1;
+      font-size: 10.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bracket-team .t-odds {
+      font-size: 8px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      opacity: 0.5;
+    }
+    .bracket-team .t-score {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--gold);
+      flex-shrink: 0;
+    }
+    .bracket-team .t-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .tbd-row {
+      display: flex;
+      align-items: center;
+      padding: 4px 7px;
+      min-height: 26px;
+      border-bottom: 1px solid var(--border);
+      font-size: 9px;
+      color: var(--border);
+      font-style: italic;
+    }
+    .tbd-row:last-child { border-bottom: none; }
+
+    /* ── Connector ── */
+    .bracket-connector {
+      width: 20px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-self: stretch;
+      position: relative;
+    }
+    .bracket-connector svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    /* ── Champion ── */
+    .champion-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 90px;
+      padding: 12px 8px;
+      gap: 6px;
+    }
+    .champion-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gold);
+    }
+    .champion-flag { font-size: 30px; line-height: 1; }
+    .champion-name {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--gold);
+      text-align: center;
+    }
+    .champion-name.predicted { color: #93c5fd; font-style: italic; font-weight: 600; }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .legend-line {
+      width: 18px; height: 1px;
+      background: var(--text-muted);
+      opacity: 0.5;
+      flex-shrink: 0;
+    }
+
+    .bracket-meta { font-size: 11px; color: var(--text-muted); }
+    .no-bracket { padding: 40px; text-align: center; color: var(--text-muted); }
+    .scroll-hint { display: none; font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+    @media(max-width: 960px) { .scroll-hint { display: block; } }
+
+    /* ── View toggle ── */
+    .view-toggle { display: flex; gap: 6px; margin-bottom: 14px; }
+    .view-toggle-btn {
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .view-toggle-btn.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
+    <div class="nav-links">
+      <a href="/leaderboard">Leaderboard</a>
+      <a href="/match-centre">Match Centre</a>
+      <a href="/bracket" class="active">Bracket</a>
+      <a href="/admin">Admin</a>
+      <a id="my-page-link" style="display:none">← My Page</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:8px">
+        <div class="card-title" style="margin-bottom:0">🏆 Tournament Bracket</div>
+        <span id="bracket-meta" class="bracket-meta"></span>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:var(--green)"></div>
+          Confirmed result
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:#3b82f6"></div>
+          Predicted winner (odds)
+        </div>
+        <div class="legend-item">
+          <div class="legend-line"></div>
+          <em style="font-size:10px">Italic</em>&nbsp;= predicted team
+        </div>
+      </div>
+
+      <div id="loading" class="loading"><div class="spinner"></div>Loading bracket...</div>
+
+      <div id="bracket-content" style="display:none">
+        <div class="view-toggle">
+          <button class="view-toggle-btn active" id="btn-all-rounds" onclick="setView('all')">📋 All Rounds</button>
+          <button class="view-toggle-btn" id="btn-live-view" onclick="setView('live')">⚡ From Current Round</button>
+        </div>
+        <div class="scroll-hint">↔ Scroll right to see the full bracket</div>
+        <div class="bracket-outer">
+          <div class="bracket-grid" id="bracket-grid"></div>
+        </div>
+        <div style="margin-top:12px; font-size:11px; color:var(--text-muted)">
+          Predicted teams shown in <em>italic</em> until confirmed · Predicted winners based on Paddy Power outright odds · Actual results always take priority
+        </div>
+      </div>
+
+      <div id="no-bracket" class="no-bracket" style="display:none">
+        <div style="font-size:32px; margin-bottom:12px">🏗️</div>
+        <div style="font-weight:700; margin-bottom:6px">Bracket not yet published</div>
+        <div style="font-size:13px">Check back soon.</div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const SUPABASE_URL      = 'https://jrdjdqjepffdcjdfuarc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZGpkcWplcGZmZGNqZGZ1YXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTczMTcsImV4cCI6MjA5MTAzMzMxN30.nzriEXXYSau-2wBElzgWw-Gwhf1crzVA2lcvPexjq0M';
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const mySlug = urlParams.get('me') || localStorage.getItem('lms2026_my_slug') || null;
+    if (mySlug) {
+      const link = document.getElementById('my-page-link');
+      link.href = '/' + mySlug;
+      link.style.display = 'inline';
+    }
+
+    const ROUND_DEFS = [
+      { key: 'r32',   label: 'Round of 32',    count: 16 },
+      { key: 'r16',   label: 'Round of 16',    count: 8  },
+      { key: 'qf',    label: 'Quarter-Finals', count: 4  },
+      { key: 'sf',    label: 'Semi-Finals',    count: 2  },
+      { key: 'final', label: 'Final',          count: 1  },
+    ];
+
+    // ── View toggle ───────────────────────────────────────────────
+    let _currentView = 'all';
+    let _lastRenderArgs = null; // store args so we can re-render on toggle
+
+    function setView(mode) {
+      _currentView = mode;
+      document.getElementById('btn-all-rounds').classList.toggle('active', mode === 'all');
+      document.getElementById('btn-live-view').classList.toggle('active', mode === 'live');
+      if (_lastRenderArgs) {
+        renderBracket(..._lastRenderArgs);
+      }
+    }
+
+    function fmtKickoff(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) +
+        ' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function loadBracket() {
+      try {
+        // 1. Latest bracket prediction blob
+        const { data: preds, error: predErr } = await db
+          .from('bracket_predictions')
+          .select('data, label, created_at')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (predErr) throw predErr;
+        if (!preds || preds.length === 0) {
+          document.getElementById('loading').style.display = 'none';
+          document.getElementById('no-bracket').style.display = 'block';
+          return;
+        }
+
+        const pred        = preds[0];
+        const bracketData = pred.data;
+        // bracketData shape:
+        // {
+        //   r32: [73,74,...], r16: [...], qf: [...], sf: [...], final: [104],
+        //   predicted_teams: {
+        //     "73": { home: { name, flag }, away: { name, flag } },
+        //     ...
+        //   }
+        // }
+
+        const predTeams = bracketData.predicted_teams || {};
+        const allNums   = ['r32','r16','qf','sf','final']
+          .flatMap(k => bracketData[k] || [])
+          .filter(Boolean);
+
+        // 2. Pull all referenced KO matches from DB
+        const { data: matchRows, error: matchErr } = await db
+          .from('matches')
+          .select(`
+            match_number, kickoff, status,
+            home_score, away_score, pens_winner_id,
+            home_team_id, away_team_id,
+            home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji),
+            away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji),
+            rounds(round_type)
+          `)
+          .in('match_number', allNums);
+
+        if (matchErr) throw matchErr;
+
+        const matchMap = {};
+        (matchRows || []).forEach(m => { matchMap[m.match_number] = m; });
+
+        // 3. Latest odds per team (first seen = most recent, ordered by fetched_at desc)
+        const { data: oddsRows } = await db
+          .from('team_odds')
+          .select('team_id, odds_decimal')
+          .order('fetched_at', { ascending: false });
+
+        const oddsMap = {};
+        (oddsRows || []).forEach(r => {
+          if (oddsMap[r.team_id] === undefined) {
+            oddsMap[r.team_id] = parseFloat(r.odds_decimal);
+          }
+        });
+
+        // 4. Build name → team_id lookup so predicted teams can get odds too
+        // Normalise to lowercase for fuzzy matching
+        const { data: allTeams } = await db
+          .from('teams')
+          .select('id, name');
+
+        const nameToId = {};
+        (allTeams || []).forEach(t => {
+          nameToId[t.name.toLowerCase().trim()] = t.id;
+        });
+
+        // 5. Render
+        _lastRenderArgs = [bracketData, matchMap, predTeams, oddsMap, nameToId];
+
+        // Derive predicted teams for R16+ from R32 progression + odds
+        const allPredTeams = derivePredictedTeams(bracketData, predTeams, matchMap, oddsMap, nameToId);
+
+        renderBracket(bracketData, matchMap, allPredTeams, oddsMap, nameToId);
+        // Draw SVG connectors after DOM is laid out
+        requestAnimationFrame(() => drawConnectors());
+
+        // Meta
+        const uploaded = new Date(pred.created_at).toLocaleString('en-GB', {
+          day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+        });
+        const labelStr = pred.label ? `"${pred.label}" · ` : '';
+        document.getElementById('bracket-meta').textContent =
+          `${labelStr}Predictions updated ${uploaded}`;
+
+        document.getElementById('loading').style.display        = 'none';
+        document.getElementById('bracket-content').style.display = 'block';
+
+      } catch(err) {
+        console.error(err);
+        document.getElementById('loading').innerHTML =
+          '<p style="color:var(--red)">Failed to load bracket. Check console.</p>';
+      }
+    }
+
+    // ── Winner helpers ────────────────────────────────────────────
+
+    // Lowest decimal odds = favourite. Returns 'home', 'away', or null.
+    function predictedWinnerByOdds(homeId, awayId, oddsMap) {
+      if (!homeId || !awayId) return null;
+      const h = oddsMap[homeId];
+      const a = oddsMap[awayId];
+      if (h === undefined && a === undefined) return null;
+      if (h === undefined) return 'away';
+      if (a === undefined) return 'home';
+      return h <= a ? 'home' : 'away';
+    }
+
+    // Returns 'home', 'away', or null.
+    function actualWinner(match) {
+      if (!match || match.status !== 'complete') return null;
+      if (match.pens_winner_id) {
+        return match.pens_winner_id === match.home_team_id ? 'home' : 'away';
+      }
+      if (match.home_score > match.away_score) return 'home';
+      if (match.away_score > match.home_score) return 'away';
+      return null;
+    }
+
+    // ── Render ────────────────────────────────────────────────────
+
+    // ── Derive predicted teams for R16+ from progression + odds ──
+    // For each match in R16/QF/SF/Final, look up which R32/R16/QF matches
+    // feed into it via the progression map, find the predicted winner of
+    // each feeder match (by odds), and use that as the predicted team.
+    function derivePredictedTeams(bracketData, predTeams, matchMap, oddsMap, nameToId) {
+      const derived = Object.assign({}, predTeams); // start with R32 data
+      const progression = bracketData.progression || {};
+
+      // Helper: get predicted winner team object for a match number
+      // Returns { name, flag } or null
+      function getPredWinner(matchNum) {
+        const key = String(matchNum);
+        const dbMatch = matchMap[matchNum];
+
+        // If match is complete, use actual winner
+        if (dbMatch && dbMatch.status === 'complete') {
+          const w = dbMatch.home_score > dbMatch.away_score ? 'home'
+                  : dbMatch.away_score > dbMatch.home_score ? 'away'
+                  : dbMatch.pens_winner_id
+                    ? (dbMatch.pens_winner_id === dbMatch.home_team_id ? 'home' : 'away')
+                    : null;
+          if (!w) return null;
+          const t = w === 'home' ? dbMatch.home_team : dbMatch.away_team;
+          return t ? { name: t.name, flag: t.flag_emoji } : null;
+        }
+
+        // If DB has actual teams, use odds to predict
+        if (dbMatch && dbMatch.home_team_id && dbMatch.away_team_id) {
+          const w = predictedWinnerByOdds(dbMatch.home_team_id, dbMatch.away_team_id, oddsMap);
+          const t = w === 'home' ? dbMatch.home_team : dbMatch.away_team;
+          return t ? { name: t.name, flag: t.flag_emoji } : null;
+        }
+
+        // Use derived predicted teams + odds
+        const pred = derived[key];
+        if (pred && pred.home && pred.away) {
+          const homeId = nameToId[(pred.home.name || '').toLowerCase().trim()] || null;
+          const awayId = nameToId[(pred.away.name || '').toLowerCase().trim()] || null;
+          const w = predictedWinnerByOdds(homeId, awayId, oddsMap);
+          return w === 'away' ? pred.away : pred.home;
+        }
+
+        return null;
+      }
+
+      // Process rounds in order: R16, QF, SF, Final
+      const roundKeys = ['r16', 'qf', 'sf', 'final'];
+      roundKeys.forEach(rk => {
+        const matchNums = bracketData[rk] || [];
+        matchNums.forEach(matchNum => {
+          // Already has predicted teams (from upload)? Skip
+          if (derived[String(matchNum)]) return;
+          // DB teams assigned? Skip — renderMatchCard will use those
+          const dbMatch = matchMap[matchNum];
+          if (dbMatch && dbMatch.home_team_id && dbMatch.away_team_id) return;
+
+          // Find feeder matches from progression map
+          const homeFeeder = Object.entries(progression).find(([src, p]) =>
+            p.next === matchNum && p.slot === 'home'
+          );
+          const awayFeeder = Object.entries(progression).find(([src, p]) =>
+            p.next === matchNum && p.slot === 'away'
+          );
+
+          const homeTeam = homeFeeder ? getPredWinner(parseInt(homeFeeder[0])) : null;
+          const awayTeam = awayFeeder ? getPredWinner(parseInt(awayFeeder[0])) : null;
+
+          if (homeTeam || awayTeam) {
+            derived[String(matchNum)] = {
+              home: homeTeam || { name: 'TBD', flag: '' },
+              away: awayTeam || { name: 'TBD', flag: '' }
+            };
+          }
+        });
+      });
+
+      return derived;
+    }
+
+    function renderBracket(bracketData, matchMap, predTeams, oddsMap, nameToId) {
+      const grid = document.getElementById('bracket-grid');
+      grid.innerHTML = '';
+
+      // In live view, hide rounds where ALL matches are complete
+      // Find the first round that has at least one incomplete or unplayed match
+      let roundsToShow = ROUND_DEFS;
+      if (_currentView === 'live') {
+        const firstIncompleteIdx = ROUND_DEFS.findIndex(round => {
+          const nums = bracketData[round.key] || [];
+          // Round is "active or future" if any match is not complete, or no matches assigned yet
+          return nums.length === 0 || nums.some(num => {
+            const m = num ? matchMap[num] : null;
+            return !m || m.status !== 'complete';
+          });
+        });
+        // Never start later than QF (index 2) — QF+SF+Final always fits on screen
+        // and showing just 2 SF fixtures or 1 Final looks broken
+        const QF_IDX = ROUND_DEFS.findIndex(r => r.key === 'qf');
+        const startIdx = firstIncompleteIdx >= 0
+          ? Math.min(firstIncompleteIdx, QF_IDX)
+          : 0;
+        roundsToShow = ROUND_DEFS.slice(startIdx);
+      }
+
+      roundsToShow.forEach(round => {
+        const nums   = bracketData[round.key] || [];
+        const isLast = round.key === 'final';
+
+        const col = document.createElement('div');
+        col.className = 'bracket-col';
+
+        const hdr = document.createElement('div');
+        hdr.className = 'bracket-col-header';
+        hdr.textContent = round.label;
+        col.appendChild(hdr);
+
+        const slots = document.createElement('div');
+        slots.className = 'bracket-slots';
+
+        // Pad to expected slot count so spacing stays consistent
+        const padded = [...nums];
+        while (padded.length < round.count) padded.push(null);
+
+        padded.forEach(num => {
+          const group = document.createElement('div');
+          group.className = 'bracket-slot-group';
+          const dbMatch  = num ? matchMap[num] : null;
+          const predTeam = num ? (predTeams[String(num)] || null) : null;
+          group.appendChild(renderMatchCard(dbMatch, predTeam, oddsMap, nameToId));
+          slots.appendChild(group);
+        });
+
+        col.appendChild(slots);
+        grid.appendChild(col);
+
+        // SVG bracket connectors (not after final)
+        if (!isLast) {
+          const conn = document.createElement('div');
+          conn.className = 'bracket-connector';
+          conn.dataset.slotCount = padded.length;
+          grid.appendChild(conn);
+        }
+      });
+
+      // Champion column — only show once Final is complete
+      const showChampion = roundsToShow.some(r => r.key === 'final');
+      if (showChampion) {
+        const finalNums  = bracketData['final'] || [];
+        const finalNum   = finalNums[0] || null;
+        const finalMatch = finalNum ? matchMap[finalNum] : null;
+        const finalIsComplete = finalMatch && finalMatch.status === 'complete';
+        if (finalIsComplete) {
+          const finalPred  = finalNum ? (predTeams[String(finalNum)] || null) : null;
+          grid.appendChild(renderChampionCol(finalMatch, finalPred, oddsMap, nameToId));
+        }
+      }
+    }
+
+    // ── Match card ────────────────────────────────────────────────
+    // Priority:
+    //   Team display:  DB home_team > predTeam.home > TBD
+    //   Winner display: actual result > predicted by odds
+    function renderMatchCard(dbMatch, predTeam, oddsMap, nameToId) {
+      const wrap = document.createElement('div');
+      wrap.className = 'bracket-match';
+
+      const isComplete    = dbMatch && dbMatch.status === 'complete';
+      const hasActualHome = dbMatch && dbMatch.home_team_id;
+      const hasActualAway = dbMatch && dbMatch.away_team_id;
+
+      // Resolve team ID for predicted teams via name lookup
+      function resolveId(name) {
+        if (!name) return null;
+        return nameToId[name.toLowerCase().trim()] || null;
+      }
+
+      // Which team to show for each side, with resolved IDs for odds lookup
+      const homeTeam = hasActualHome
+        ? { name: dbMatch.home_team.name, flag: dbMatch.home_team.flag_emoji, isActual: true,  teamId: dbMatch.home_team_id }
+        : predTeam && predTeam.home
+          ? { name: predTeam.home.name,   flag: predTeam.home.flag,           isActual: false, teamId: resolveId(predTeam.home.name) }
+          : null;
+
+      const awayTeam = hasActualAway
+        ? { name: dbMatch.away_team.name, flag: dbMatch.away_team.flag_emoji, isActual: true,  teamId: dbMatch.away_team_id }
+        : predTeam && predTeam.away
+          ? { name: predTeam.away.name,   flag: predTeam.away.flag,           isActual: false, teamId: resolveId(predTeam.away.name) }
+          : null;
+
+      // Winner logic
+      const winner = isComplete ? actualWinner(dbMatch) : null;
+
+      // Predicted winner — works for both actual and predicted teams now that IDs are resolved
+      const homeId = homeTeam && homeTeam.teamId;
+      const awayId = awayTeam && awayTeam.teamId;
+      const predWinner = !isComplete
+        ? predictedWinnerByOdds(homeId, awayId, oddsMap)
+        : null;
+
+      // Kickoff bar with optional FT badge
+      const kb = document.createElement('div');
+      kb.className = 'bracket-kickoff';
+      const dateSpan = document.createElement('span');
+      dateSpan.textContent = dbMatch ? fmtKickoff(dbMatch.kickoff) : '—';
+      kb.appendChild(dateSpan);
+      if (isComplete) {
+        const ft = document.createElement('span');
+        ft.className = 'ft-badge';
+        ft.textContent = 'FT';
+        kb.appendChild(ft);
+      }
+      wrap.appendChild(kb);
+
+      // Home row
+      wrap.appendChild(buildTeamRow(
+        homeTeam,
+        isComplete ? dbMatch.home_score : null,
+        isComplete,
+        winner === 'home',
+        predWinner === 'home',
+        !isComplete && homeTeam && homeTeam.teamId ? oddsMap[homeTeam.teamId] : null
+      ));
+
+      // Away row
+      wrap.appendChild(buildTeamRow(
+        awayTeam,
+        isComplete ? dbMatch.away_score : null,
+        isComplete,
+        winner === 'away',
+        predWinner === 'away',
+        !isComplete && awayTeam && awayTeam.teamId ? oddsMap[awayTeam.teamId] : null
+      ));
+
+      return wrap;
+    }
+
+    // ── Team row ──────────────────────────────────────────────────
+    function buildTeamRow(team, score, isComplete, isWinner, isPredWinner, odds) {
+      if (!team) {
+        const el = document.createElement('div');
+        el.className = 'tbd-row';
+        el.textContent = 'TBD';
+        return el;
+      }
+
+      const row = document.createElement('div');
+      row.className = 'bracket-team';
+
+      if (!team.isActual) row.classList.add('team-pred');
+
+      if (isComplete) {
+        row.classList.add(isWinner ? 'winner-actual' : 'loser-actual');
+      } else if (isPredWinner !== null) {
+        row.classList.add(isPredWinner ? 'winner-pred' : 'loser-pred');
+      }
+
+      let dotColor = 'var(--border)';
+      if (isComplete)                    dotColor = isWinner      ? 'var(--green)' : 'var(--border)';
+      else if (isPredWinner !== null)    dotColor = isPredWinner  ? '#3b82f6'      : 'var(--border)';
+
+      // Odds shown only on unplayed matches where we have a resolved team ID
+      function decimalToFractional(dec) {
+        if (!dec || dec <= 1) return '';
+        const numerator = Math.round((dec - 1) * 10);
+        const denominator = 10;
+        const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+        const g = gcd(numerator, denominator);
+        return (numerator / g) + '/' + (denominator / g);
+      }
+
+      const oddsHtml = (!isComplete && odds !== null && odds !== undefined)
+        ? `<span class="t-odds">${decimalToFractional(odds)}</span>`
+        : '';
+
+      row.innerHTML =
+        `<span class="t-flag">${team.flag || ''}</span>` +
+        `<span class="t-name">${team.name || ''}</span>` +
+        oddsHtml +
+        (isComplete && score !== null && score !== undefined
+          ? `<span class="t-score">${score}</span>` : '') +
+        `<span class="t-dot" style="background:${dotColor}"></span>`;
+
+      return row;
+    }
+
+    // ── Champion column ───────────────────────────────────────────
+    function renderChampionCol(finalMatch, finalPred, oddsMap, nameToId) {
+      const col = document.createElement('div');
+      col.className = 'champion-col';
+
+      const lbl = document.createElement('div');
+      lbl.className = 'champion-label';
+      lbl.textContent = '🏆 Champion';
+      col.appendChild(lbl);
+
+      const isComplete    = finalMatch && finalMatch.status === 'complete';
+      const hasActualHome = finalMatch && finalMatch.home_team_id;
+      const hasActualAway = finalMatch && finalMatch.away_team_id;
+
+      let champTeam = null;
+      let isActual  = false;
+
+      if (isComplete) {
+        const w   = actualWinner(finalMatch);
+        champTeam = w === 'home' ? finalMatch.home_team : finalMatch.away_team;
+        isActual  = true;
+      } else if (hasActualHome && hasActualAway) {
+        // Both teams confirmed in DB — use DB IDs
+        const w   = predictedWinnerByOdds(finalMatch.home_team_id, finalMatch.away_team_id, oddsMap);
+        champTeam = w === 'home' ? finalMatch.home_team : finalMatch.away_team;
+      } else if (finalPred && finalPred.home && finalPred.away) {
+        // Fully predicted — resolve IDs from names for odds lookup
+        const homeId = nameToId[(finalPred.home.name || '').toLowerCase().trim()] || null;
+        const awayId = nameToId[(finalPred.away.name || '').toLowerCase().trim()] || null;
+        const w      = predictedWinnerByOdds(homeId, awayId, oddsMap);
+        champTeam    = w === 'away'
+          ? { name: finalPred.away.name, flag_emoji: finalPred.away.flag }
+          : { name: finalPred.home.name, flag_emoji: finalPred.home.flag };
+      }
+
+      const flagEl = document.createElement('div');
+      flagEl.className = 'champion-flag';
+      flagEl.textContent = champTeam ? (champTeam.flag_emoji || champTeam.flag || '') : '❓';
+      col.appendChild(flagEl);
+
+      const nameEl = document.createElement('div');
+      nameEl.className = 'champion-name' + (isActual ? '' : ' predicted');
+      nameEl.textContent = champTeam ? (champTeam.name || '') : 'TBD';
+      col.appendChild(nameEl);
+
+      return col;
+    }
+
+    // ── Draw SVG bracket connector lines ─────────────────────────
+    // Runs after DOM layout. For each connector div, finds the bracket-match
+    // cards in the preceding column and the following column, measures their
+    // vertical centres, and draws H-V-H lines connecting pairs to their output.
+    function drawConnectors() {
+      const grid = document.getElementById('bracket-grid');
+      const connectors = grid.querySelectorAll('.bracket-connector');
+      const gridRect = grid.getBoundingClientRect();
+
+      connectors.forEach(conn => {
+        const slotCount = parseInt(conn.dataset.slotCount || '0');
+        if (slotCount < 2) return;
+
+        // Get the column before and after this connector
+        const prevCol = conn.previousElementSibling;
+        const nextCol = conn.nextElementSibling;
+        if (!prevCol || !nextCol) return;
+
+        const prevMatches = prevCol.querySelectorAll('.bracket-match');
+        const nextMatches = nextCol.querySelectorAll('.bracket-match');
+        if (prevMatches.length < 2 || nextMatches.length < 1) return;
+
+        const connRect = conn.getBoundingClientRect();
+        const W = connRect.width;
+        const H = connRect.height;
+
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', W);
+        svg.setAttribute('height', H);
+        svg.style.cssText = 'position:absolute;top:0;left:0;overflow:visible;pointer-events:none';
+
+        const stroke = '#2e3350';
+        const sw = '1.5';
+
+        // For each pair of prev matches → one next match
+        const pairsCount = nextMatches.length;
+        for (let i = 0; i < pairsCount; i++) {
+          const topMatch  = prevMatches[i * 2];
+          const botMatch  = prevMatches[i * 2 + 1];
+          const outMatch  = nextMatches[i];
+          if (!topMatch || !botMatch || !outMatch) continue;
+
+          const topRect  = topMatch.getBoundingClientRect();
+          const botRect  = botMatch.getBoundingClientRect();
+          const outRect  = outMatch.getBoundingClientRect();
+
+          // Y centres relative to connector
+          const y1 = topRect.top + topRect.height / 2 - connRect.top;
+          const y2 = botRect.top + botRect.height / 2 - connRect.top;
+          const yOut = outRect.top + outRect.height / 2 - connRect.top;
+          const yMid = (y1 + y2) / 2;
+
+          // Draw: short H line from left edge at y1 → vertical bar → short H line at y2
+          // then vertical connects yMid → yOut, then H line to right edge at yOut
+          const path = `
+            M 0 ${y1} H ${W * 0.45}
+            M 0 ${y2} H ${W * 0.45}
+            M ${W * 0.45} ${y1} V ${y2}
+            M ${W * 0.45} ${yMid} H ${W}
+          `.trim();
+
+          const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          p.setAttribute('d', path);
+          p.setAttribute('stroke', stroke);
+          p.setAttribute('stroke-width', sw);
+          p.setAttribute('fill', 'none');
+          p.setAttribute('stroke-linecap', 'round');
+          svg.appendChild(p);
+        }
+
+        conn.appendChild(svg);
+      });
+    }
+
+    loadBracket();
+  </script>
+</body>
+</html>

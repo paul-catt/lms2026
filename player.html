@@ -4,9 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Dashboard — LMS 2026</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Icons & PWA -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LMS 2026">
+
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    body { font-family: 'Inter', sans-serif; }
+    nav, .nav-logo, .card-title, thead th { font-family: 'Rajdhani', sans-serif; }
     .round-strip { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:0; }
     .round-pills { display:flex; gap:6px; flex-wrap:wrap; }
     .round-pill { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); cursor:pointer; transition:all 0.15s; white-space:nowrap; user-select:none; }
@@ -117,10 +134,11 @@
   </div>
 
   <nav>
-    <a class="nav-logo" href="/">⚽ LMS 2026</a>
+    <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
       <a href="/leaderboard" id="leaderboard-link">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
+      <a href="/bracket">Bracket</a>
       <a href="/rules">Rules</a>
     </div>
   </nav>
@@ -194,21 +212,20 @@
 
           <!-- Bottom submit button -->
           <div style="margin-top:14px">
+            <!-- Goals prediction — shown inline above submit when entered or after deadline -->
+            <div class="card" id="goals-prediction-card" style="display:none; margin-bottom:14px">
+              <div class="card-title">🎯 Tournament Goals Prediction</div>
+              <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (104 games, including extra time)? Used as a tiebreaker. You can change this up until the Group Phase 1 deadline.</p>
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+                <input type="number" id="goals-prediction-input" placeholder="e.g. 142" min="0" max="500" style="max-width:140px" />
+                <button class="btn btn-primary" id="goals-prediction-btn">Save Prediction</button>
+                <span id="goals-prediction-msg" style="font-size:12px"></span>
+              </div>
+              <div id="goals-prediction-locked" style="display:none; font-size:13px; color:var(--text-muted); margin-top:8px"></div>
+            </div>
             <button class="btn btn-primary" id="submit-pick-btn" style="width:100%; display:none" disabled>Select your team above</button>
             <div id="pick-msg" style="margin-top:8px; font-size:12px; text-align:center"></div>
           </div>
-        </div>
-
-        <!-- Goals prediction — normal position (shown when entered or after deadline) -->
-        <div class="card" id="goals-prediction-card" style="display:none">
-          <div class="card-title">🎯 Tournament Goals Prediction</div>
-          <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (including extra time)? Used as a tiebreaker. You can change this up until the Group Phase 1 deadline.</p>
-          <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
-            <input type="number" id="goals-prediction-input" placeholder="e.g. 142" min="0" max="500" style="max-width:140px" />
-            <button class="btn btn-primary" id="goals-prediction-btn">Save Prediction</button>
-            <span id="goals-prediction-msg" style="font-size:12px"></span>
-          </div>
-          <div id="goals-prediction-locked" style="display:none; font-size:13px; color:var(--text-muted); margin-top:8px"></div>
         </div>
       </div>
 
@@ -358,7 +375,7 @@
           { data: matches }
         ] = await Promise.all([
           db.from('picks')
-            .select('id, multiplier, team_id, round_id, rounds(id, name, round_type, deadline, sort_order, is_complete), teams(id, name, flag_emoji, is_longshot), pick_results(points_earned, match_result)')
+            .select('id, multiplier, team_id, round_id, is_assigned, rounds(id, name, round_type, deadline, sort_order, is_complete), teams(id, name, flag_emoji, is_longshot), pick_results(points_earned, match_result)')
             .eq('player_id', player.id)
             .order('created_at', { ascending: true }),
           db.from('rounds').select('*').order('sort_order'),
@@ -733,7 +750,7 @@
         else if (pick3.id === teamId) { pick3 = null; }
         else if (!pick2)              { if (pick3.id !== teamId) pick2 = team; }
         else if (pick2.id === teamId) { pick2 = null; }
-        else                          { pick2 = team; }
+        else                          { if (pick3.id !== teamId) pick2 = team; }
 
         const slot3 = document.getElementById('slot-3');
         if (pick3) { slot3.className = 'pick-slot filled-3'; slot3.innerHTML = '<div class="pick-slot-label">3-Pointer</div><div class="pick-slot-value">' + pick3.flag_emoji + ' ' + pick3.name + '</div>' + (pick3.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
@@ -792,6 +809,10 @@
 
       if (getEffectiveDate() >= new Date(round.deadline)) {
         msg.style.color = 'var(--red)'; msg.textContent = '❌ Deadline has passed.'; return;
+      }
+
+      if (isGroup && pick3.id === pick2.id) {
+        msg.style.color = 'var(--red)'; msg.textContent = '❌ You cannot pick the same team twice.'; return;
       }
 
       const confirmText = isGroup
@@ -905,9 +926,10 @@
               ? '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + res.match_result.toUpperCase() + '</span>'
               : '<span class="badge badge-grey">Pending</span>';
             const earned = res ? res.points_earned : '—';
+            const autoBadge = p.is_assigned ? '<span class="badge badge-grey" style="font-size:10px;margin-left:4px">auto</span>' : '';
             rows += '<tr>' +
               '<td class="history-round">' + r.name + '</td>' +
-              '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
+              '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + autoBadge + '</td>' +
               '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
               '<td>' + resultBadge + '</td>' +
               '<td style="font-weight:600">' + earned + '</td>' +

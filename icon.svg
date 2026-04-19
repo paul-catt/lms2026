@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <linearGradient id="bg-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f1a2e"/>
+      <stop offset="100%" stop-color="#080c14"/>
+    </linearGradient>
+    <linearGradient id="cup-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fcd34d"/>
+      <stop offset="55%" stop-color="#f0a500"/>
+      <stop offset="100%" stop-color="#78450a"/>
+    </linearGradient>
+    <linearGradient id="base-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0a500"/>
+      <stop offset="100%" stop-color="#5a2d00"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="trophy-shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="20" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background with rounded corners -->
+  <rect width="1024" height="1024" rx="220" fill="url(#bg-grad)"/>
+
+  <!-- Subtle inner vignette -->
+  <radialGradient id="vignette" cx="50%" cy="40%" r="70%">
+    <stop offset="0%" stop-color="#1a2d50" stop-opacity="0.4"/>
+    <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+  </radialGradient>
+  <rect width="1024" height="1024" rx="220" fill="url(#vignette)"/>
+
+  <!-- Gold border ring -->
+  <rect x="18" y="18" width="988" height="988" rx="208" fill="none" stroke="#f0a500" stroke-width="6" stroke-opacity="0.25"/>
+
+  <!-- ══════════════════════════════════════
+       TROPHY — centred, large
+       ══════════════════════════════════════ -->
+  <g filter="url(#trophy-shadow)" transform="translate(512,490)">
+
+    <!-- Cup body: wide trapezoid -->
+    <path d="M-195 -240 L195 -240 L145 60 L-145 60 Z" fill="url(#cup-grad)"/>
+
+    <!-- Inner shadow on cup body -->
+    <path d="M-195 -240 L195 -240 L145 60 L-145 60 Z"
+      fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="8"/>
+
+    <!-- Cup shine (left highlight) -->
+    <path d="M-160 -220 L-120 40" stroke="rgba(255,255,255,0.15)" stroke-width="28" stroke-linecap="round"/>
+
+    <!-- Left handle -->
+    <path d="M-195 -180 Q-310 -180 -310 -90 Q-310 0 -195 0"
+      stroke="url(#cup-grad)" stroke-width="52" fill="none"
+      stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Right handle -->
+    <path d="M195 -180 Q310 -180 310 -90 Q310 0 195 0"
+      stroke="url(#cup-grad)" stroke-width="52" fill="none"
+      stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Handle inner cutout (dark) -->
+    <path d="M-195 -140 Q-255 -140 -255 -90 Q-255 -40 -195 -40"
+      stroke="#080c14" stroke-width="28" fill="none" stroke-linecap="round"/>
+    <path d="M195 -140 Q255 -140 255 -90 Q255 -40 195 -40"
+      stroke="#080c14" stroke-width="28" fill="none" stroke-linecap="round"/>
+
+    <!-- Stem -->
+    <rect x="-38" y="60" width="76" height="90" rx="8" fill="#b45309"/>
+
+    <!-- Base plate -->
+    <rect x="-130" y="150" width="260" height="44" rx="22" fill="url(#base-grad)"/>
+    <rect x="-155" y="190" width="310" height="36" rx="18" fill="#5a2d00"/>
+
+    <!-- ── CROSSHAIR ── -->
+    <!-- Outer ring -->
+    <circle cx="0" cy="-100" r="118"
+      stroke="rgba(255,255,255,0.9)" stroke-width="14"
+      fill="rgba(255,255,255,0.05)"
+      filter="url(#glow)"/>
+
+    <!-- Tick marks — top -->
+    <line x1="0" y1="-240" x2="0" y2="-218" stroke="white" stroke-width="14" stroke-linecap="round"/>
+    <!-- bottom -->
+    <line x1="0" y1="18" x2="0" y2="40" stroke="white" stroke-width="14" stroke-linecap="round"/>
+    <!-- left -->
+    <line x1="-240" y1="-100" x2="-218" y2="-100" stroke="white" stroke-width="14" stroke-linecap="round"/>
+    <!-- right -->
+    <line x1="118" y1="-100" x2="140" y2="-100" stroke="white" stroke-width="14" stroke-linecap="round"/>
+
+    <!-- Centre dot with glow -->
+    <circle cx="0" cy="-100" r="28" fill="white" filter="url(#glow)"/>
+    <circle cx="0" cy="-100" r="16" fill="white"/>
+
+  </g>
+
+  <!-- ══════════════════════════════════════
+       LMS text — bottom of icon
+       ══════════════════════════════════════ -->
+  <text
+    x="512" y="910"
+    font-family="'Rajdhani', 'Arial Black', Impact, sans-serif"
+    font-weight="700"
+    font-size="120"
+    letter-spacing="24"
+    text-anchor="middle"
+    fill="#f0a500"
+    opacity="0.95">LMS</text>
+
+</svg>
