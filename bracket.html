@@ -51,7 +51,7 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--text-muted);
-      padding: 0 4px 10px;
+      padding: 0 4px 10px 0;
       white-space: nowrap;
     }
     .bracket-slots {
@@ -75,6 +75,22 @@
       border-radius: 7px;
       overflow: hidden;
       background: var(--surface2);
+    }
+    /* Teams confirmed in DB, not yet played */
+    .bracket-match.state-confirmed {
+      border-color: #3b82f6;
+      border-left-width: 3px;
+    }
+    /* Teams from uploaded JSON prediction only */
+    .bracket-match.state-predicted {
+      border-color: var(--border);
+      border-left: 2px dashed #4b5563;
+      background: rgba(255,255,255,0.02);
+    }
+    /* Match complete — actual result */
+    .bracket-match.state-complete {
+      border-color: var(--green);
+      border-left-width: 3px;
     }
     .bracket-kickoff {
       font-size: 8px;
@@ -284,16 +300,20 @@
 
       <div class="legend">
         <div class="legend-item">
-          <div class="legend-dot" style="background:var(--green)"></div>
-          Confirmed result
+          <div style="width:14px;height:14px;border-radius:3px;border:1px solid var(--green);border-left:3px solid var(--green);background:var(--surface2)"></div>
+          Result confirmed
+        </div>
+        <div class="legend-item">
+          <div style="width:14px;height:14px;border-radius:3px;border:1px solid #3b82f6;border-left:3px solid #3b82f6;background:var(--surface2)"></div>
+          Teams assigned
+        </div>
+        <div class="legend-item">
+          <div style="width:14px;height:14px;border-radius:3px;border:1px solid #4b5563;border-left:2px dashed #4b5563;background:rgba(255,255,255,0.02)"></div>
+          <em style="font-size:10px">Predicted</em>
         </div>
         <div class="legend-item">
           <div class="legend-dot" style="background:#3b82f6"></div>
           Predicted winner (odds)
-        </div>
-        <div class="legend-item">
-          <div class="legend-line"></div>
-          <em style="font-size:10px">Italic</em>&nbsp;= predicted team
         </div>
       </div>
 
@@ -679,6 +699,18 @@
         : predTeam && predTeam.away
           ? { name: predTeam.away.name,   flag: predTeam.away.flag,           isActual: false, teamId: resolveId(predTeam.away.name) }
           : null;
+
+      // Mark card state for visual distinction
+      if (isComplete) {
+        wrap.classList.add('state-complete');
+      } else if (hasActualHome && hasActualAway) {
+        wrap.classList.add('state-confirmed');
+      } else {
+        wrap.classList.add('state-predicted');
+      }
+
+      // Mark card as all-predicted if neither team is confirmed in DB
+      if (!hasActualHome && !hasActualAway) wrap.classList.add('all-predicted');
 
       // Winner logic
       const winner = isComplete ? actualWinner(dbMatch) : null;

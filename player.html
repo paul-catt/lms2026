@@ -230,9 +230,9 @@
       </div>
 
       <div id="no-round" style="display:none">
-        <div class="card" style="text-align:center; padding:24px; color:var(--text-muted)">
-          <div style="font-size:32px; margin-bottom:8px">⏳</div>
-          <div>No rounds currently open for picks.</div>
+        <div class="card" style="text-align:center; padding:24px;">
+          <div id="no-round-icon" style="font-size:32px; margin-bottom:8px">⏳</div>
+          <div id="no-round-msg" style="color:var(--text-muted)">No rounds currently open for picks.</div>
         </div>
       </div>
 
@@ -315,7 +315,7 @@
       const hours = Math.floor((diff % 86400000) / 3600000);
       const mins  = Math.floor((diff % 3600000)  / 60000);
       const secs  = Math.floor((diff % 60000)    / 1000);
-      if (days > 0) return days + 'd ' + String(hours).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm ' + String(secs).padStart(2,'0') + 's';
+      if (days > 0) return days + 'd ' + String(hours).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm';
       return String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
     }
 
@@ -444,7 +444,14 @@
         initGoalsPrediction();
 
         if (player.is_eliminated || openRounds.length === 0) {
-          document.getElementById('no-round').style.display = 'block';
+          const noRound = document.getElementById('no-round');
+          noRound.style.display = 'block';
+          if (player.is_eliminated) {
+            document.getElementById('no-round-icon').textContent = '💀';
+            document.getElementById('no-round-msg').innerHTML =
+              '<strong style="color:var(--red)">You\'ve been eliminated.</strong><br>' +
+              '<span style="font-size:13px;color:var(--text-muted)">No more picks to submit — check your pick history below.</span>';
+          }
           return;
         }
 
@@ -815,8 +822,16 @@
         msg.style.color = 'var(--red)'; msg.textContent = '❌ You cannot pick the same team twice.'; return;
       }
 
+      const sameMatch = isGroup && allMatches.some(m =>
+        m.round_id === selectedRoundId &&
+        ((m.home_team_id === pick3.id && m.away_team_id === pick2.id) ||
+         (m.home_team_id === pick2.id && m.away_team_id === pick3.id))
+      );
+
       const confirmText = isGroup
-        ? '3pt: ' + pick3.name + '\n2pt: ' + pick2.name + '\n\nConfirm these picks?'
+        ? '3pt: ' + pick3.name + '\n2pt: ' + pick2.name +
+          (sameMatch ? '\n\n⚠️ These two teams are playing each other — you can only earn points from one result.' : '') +
+          '\n\nConfirm these picks?'
         : 'Pick: ' + pickSingle.name + '\n\nConfirm?';
       if (!confirm(confirmText)) return;
 
@@ -852,22 +867,8 @@
       const isLocked   = now >= deadline;
       const hasEntered = player.total_goals_prediction !== null && player.total_goals_prediction !== undefined;
 
-      if (isLocked) {
-        // Deadline passed — show in normal position only if entered
-        if (hasEntered) {
-          const card  = document.getElementById('goals-prediction-card');
-          const input = document.getElementById('goals-prediction-input');
-          const btn   = document.getElementById('goals-prediction-btn');
-          const locked = document.getElementById('goals-prediction-locked');
-          card.style.display = 'block';
-          input.value    = player.total_goals_prediction;
-          input.disabled = true;
-          btn.style.display = 'none';
-          locked.textContent = '🔒 Prediction locked — Group Phase 1 deadline has passed.';
-          locked.style.display = 'block';
-        }
-        return;
-      }
+      // After deadline — hide completely regardless of whether entered
+      if (isLocked) return;
 
       if (!hasEntered) {
         // Not entered, deadline open — show prominently at top
@@ -884,7 +885,7 @@
           else { player.total_goals_prediction = val; topMsg.style.color='var(--green)'; topMsg.textContent='✅ Saved!'; setTimeout(() => location.reload(), 800); }
         });
       } else {
-        // Entered, deadline still open — show in normal position so they can update
+        // Entered, deadline still open — show above submit so they can update
         const card  = document.getElementById('goals-prediction-card');
         const input = document.getElementById('goals-prediction-input');
         const btn   = document.getElementById('goals-prediction-btn');

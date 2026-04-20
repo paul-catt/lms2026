@@ -860,15 +860,19 @@ Good luck! ⚽🏆`;
       try {
         const { data: players } = await db.from('players').select('id, name').eq('is_eliminated', false);
         const { data: existingPicks } = await db.from('picks').select('player_id, multiplier').eq('round_id', roundId);
-        const { data: pool } = await db.from('default_pool').select('priority_order, team_id, teams(id, name, flag_emoji)').order('priority_order');
+        const { data: pool } = await db.from('default_pool').select('priority_order, team_id, teams(id, name, flag_emoji, is_eliminated)').order('priority_order');
         const { data: aliveMatches } = await db.from('matches').select('home_team_id, away_team_id').in('status', ['scheduled', 'live']);
         const aliveTeamIds = new Set();
         (aliveMatches || []).forEach(m => { aliveTeamIds.add(m.home_team_id); aliveTeamIds.add(m.away_team_id); });
-        const alivePool = (pool || []).filter(p => aliveTeamIds.has(p.team_id));
+        const isGroup = roundType === 'group';
+        // Group stage: filter pool to teams with live/scheduled matches
+        // Knockout: filter pool to teams not yet eliminated (KO shells may not be assigned yet)
+        const alivePool = isGroup
+          ? (pool || []).filter(p => aliveTeamIds.has(p.team_id))
+          : (pool || []).filter(p => p.teams && !p.teams.is_eliminated);
         const { data: allPicks } = await db.from('picks').select('player_id, team_id');
         const usedByPlayer = {};
         (allPicks || []).forEach(p => { if (!usedByPlayer[p.player_id]) usedByPlayer[p.player_id] = new Set(); usedByPlayer[p.player_id].add(p.team_id); });
-        const isGroup = roundType === 'group';
         const preview = [];
         _pendingAssignments = [];
 
@@ -1376,6 +1380,98 @@ Good luck! ⚽🏆`;
           await db.from('players')
             .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
             .eq('id', pick.player_id);
+        }
+      }
+
+      // ── Advance winner to next round match shell ──
+      if (isKnockout) {
+        await advanceWinnerToNextMatch(matchId, match, homeScore, awayScore, isPens, pensWinnerId);
+      }
+    }
+
+    // Progression map: match_number -> { nextMatchNumber, slot ('home'|'away') }
+    // For 3rd place (103): loser of SF advances, handled separately
+    const KO_PROGRESSION = {
+      74: { next: 89, slot: 'home' },
+      77: { next: 89, slot: 'away' },
+      73: { next: 90, slot: 'home' },
+      75: { next: 90, slot: 'away' },
+      76: { next: 91, slot: 'home' },
+      78: { next: 91, slot: 'away' },
+      79: { next: 92, slot: 'home' },
+      80: { next: 92, slot: 'away' },
+      83: { next: 93, slot: 'home' },
+      84: { next: 93, slot: 'away' },
+      81: { next: 94, slot: 'home' },
+      82: { next: 94, slot: 'away' },
+      86: { next: 95, slot: 'home' },
+      88: { next: 95, slot: 'away' },
+      85: { next: 96, slot: 'home' },
+      87: { next: 96, slot: 'away' },
+      89: { next: 97, slot: 'home' },
+      90: { next: 97, slot: 'away' },
+      93: { next: 98, slot: 'home' },
+      94: { next: 98, slot: 'away' },
+      91: { next: 99, slot: 'home' },
+      92: { next: 99, slot: 'away' },
+      95: { next: 100, slot: 'home' },
+      96: { next: 100, slot: 'away' },
+      97: { next: 101, slot: 'home' },
+      98: { next: 101, slot: 'away' },
+      99: { next: 102, slot: 'home' },
+      100: { next: 102, slot: 'away' },
+      101: { next: 104, slot: 'home' },
+      102: { next: 104, slot: 'away' },
+    };
+
+    // SF losers → 3rd place match (103)
+    const THIRD_PLACE_LOSERS = {
+      101: 'home',
+      102: 'away',
+    };
+
+    async function advanceWinnerToNextMatch(matchId, match, homeScore, awayScore, isPens, pensWinnerId) {
+      // Get match_number for this match
+      const { data: matchRow } = await db.from('matches').select('match_number').eq('id', matchId).single();
+      if (!matchRow) return;
+      const mn = matchRow.match_number;
+
+      // Determine winner and loser team IDs
+      let winnerId, loserId;
+      if (isPens && pensWinnerId) {
+        winnerId = pensWinnerId;
+        loserId  = pensWinnerId === match.home_team_id ? match.away_team_id : match.home_team_id;
+      } else if (homeScore > awayScore) {
+        winnerId = match.home_team_id;
+        loserId  = match.away_team_id;
+      } else {
+        winnerId = match.away_team_id;
+        loserId  = match.home_team_id;
+      }
+
+      // Advance winner to next match
+      const prog = KO_PROGRESSION[mn];
+      if (prog) {
+        const { data: nextMatch } = await db.from('matches')
+          .select('id').eq('match_number', prog.next).single();
+        if (nextMatch) {
+          const update = prog.slot === 'home'
+            ? { home_team_id: winnerId }
+            : { away_team_id: winnerId };
+          await db.from('matches').update(update).eq('id', nextMatch.id);
+        }
+      }
+
+      // Advance loser to 3rd place match if this is a SF
+      const thirdSlot = THIRD_PLACE_LOSERS[mn];
+      if (thirdSlot && loserId) {
+        const { data: thirdMatch } = await db.from('matches')
+          .select('id').eq('match_number', 103).single();
+        if (thirdMatch) {
+          const update = thirdSlot === 'home'
+            ? { home_team_id: loserId }
+            : { away_team_id: loserId };
+          await db.from('matches').update(update).eq('id', thirdMatch.id);
         }
       }
     }
@@ -1887,7 +1983,7 @@ Good luck! ⚽🏆`;
       html += `</tbody></table></div>
         <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap">
           <button class="btn btn-primary" onclick="submitBulkResults('${roundId}', ${isKnockout})">💾 Save All Results & Calculate Points</button>
-          <button class="btn btn-secondary" onclick="fillTestScores()" title="Fill all rows with 1-1 for testing">🧪 Fill 1-1 (test)</button>
+          <button class="btn btn-secondary" onclick="fillTestScores()" title="Fill all rows with 2-1 for testing">🧪 Fill 2-1 (test)</button>
           <span style="font-size:12px;color:var(--text-muted);align-self:center">Only rows with both scores filled will be saved.</span>
         </div>`;
 
@@ -1897,10 +1993,13 @@ Good luck! ⚽🏆`;
     // ── Bulk pens helpers ─────────────────────────────────────
     function fillTestScores() {
       document.querySelectorAll('#bulk-matches-wrap input[type="number"]').forEach(input => {
-        if (input.id.startsWith('bulk-home-') || input.id.startsWith('bulk-away-')) {
+        if (input.id.startsWith('bulk-home-')) {
+          input.value = 2;
+          const matchId = input.id.replace('bulk-home-', '');
+          bulkCheckDraw(matchId);
+        } else if (input.id.startsWith('bulk-away-')) {
           input.value = 1;
-          // Trigger draw-check for each match
-          const matchId = input.id.replace('bulk-home-', '').replace('bulk-away-', '');
+          const matchId = input.id.replace('bulk-away-', '');
           bulkCheckDraw(matchId);
         }
       });
