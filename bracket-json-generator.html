@@ -198,8 +198,8 @@ function generate() {
   if (!raw) { showMsg('Paste your fixture data first.', 'error'); return; }
 
   // Hardcoded from Supabase fixture import
-  const r32ids   = [73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88];
-  const r16ids   = [89,90,91,92,93,94,95,96];
+  const r32ids   = [74,77,73,75,76,78,79,80,83,84,81,82,86,88,85,87];
+  const r16ids   = [89,90,93,94,91,92,95,96];
   const qfids    = [97,98,99,100];
   const sfids    = [101,102];
   const finalids = [104];
@@ -265,7 +265,6 @@ function generate() {
       "88": { "next": 95, "slot": "away" },
       "85": { "next": 96, "slot": "home" },
       "87": { "next": 96, "slot": "away" },
-      // R16 → QF
       "89": { "next": 97, "slot": "home" },
       "90": { "next": 97, "slot": "away" },
       "93": { "next": 98, "slot": "home" },
@@ -274,12 +273,10 @@ function generate() {
       "92": { "next": 99, "slot": "away" },
       "95": { "next": 100, "slot": "home" },
       "96": { "next": 100, "slot": "away" },
-      // QF → SF
       "97": { "next": 101, "slot": "home" },
       "98": { "next": 101, "slot": "away" },
       "99": { "next": 102, "slot": "home" },
       "100": { "next": 102, "slot": "away" },
-      // SF → Final / 3rd
       "101": { "next": 104, "slot": "home", "loser_next": 103, "loser_slot": "home" },
       "102": { "next": 104, "slot": "away", "loser_next": 103, "loser_slot": "away" }
     },

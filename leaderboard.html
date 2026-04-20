@@ -24,6 +24,7 @@
   <style>
     body { font-family: 'Inter', sans-serif; }
     nav, .nav-logo, .lb-tab, .card-title, thead th, .round-heading { font-family: 'Rajdhani', sans-serif; }
+    .nav-links a { font-size: 13px; }
     .pos { font-weight:700; color:var(--text-muted); width:32px; }
     .prior { width:40px; text-align:center; font-size:11px; }
     .medal { width:24px; text-align:center; }
@@ -47,7 +48,7 @@
     .gd-neg { color:var(--red); font-weight:600; }
     .gd-zero { color:var(--text-muted); }
     .tiebreak-val { color:var(--text-muted); font-size:12px; }
-    .round-heading { font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:14px; }
+    .round-heading { font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; color:var(--gold); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:4px; }
     thead th { white-space:nowrap; font-size:11px; color:var(--text-muted); }
     td { font-size:13px; }
     @media(max-width:600px) { .hide-mobile { display:none; } }
@@ -60,7 +61,8 @@
     @media(max-width:900px) and (orientation:landscape) { .rotate-hint { display:none; } }
     .test-date-banner { background:#7c3aed; color:#fff; text-align:center; padding:8px 16px; font-size:13px; font-weight:600; }
     .test-date-banner a { color:#e9d5ff; text-decoration:underline; cursor:pointer; margin-left:12px; font-weight:400; }
-    .proj-goals { font-size:11px; color:var(--text-muted); margin-top:4px; }
+    .proj-goals { font-size:11px; color:var(--text-muted); margin-top:2px; margin-bottom:16px; }
+    @media(max-width:600px) { .proj-goals { display:none !important; } }
     .goals-diff { font-weight:700; font-size:13px; }
     .goals-diff-close { color:var(--green); }
     .goals-diff-mid { color:var(--gold); }
@@ -92,12 +94,11 @@
     .m-good { font-weight:800; color:var(--green); }
     .m-total { font-weight:700; color:var(--text-muted); }
     .matrix-table .m-summary { background:var(--surface2); font-weight:700; }
-    #longshot-wrap table { table-layout:fixed; }
+    #longshot-wrap table { border-collapse:collapse; width:100%; }
     #longshot-wrap th:nth-child(1) { width:36px; }
-    #longshot-wrap th:nth-child(2) { width:auto; }
-    #longshot-wrap th:nth-child(3) { width:110px; }
-    #longshot-wrap th:nth-child(4) { width:70px; }
-    #longshot-wrap th:nth-child(5) { width:80px; }
+    #longshot-wrap th:nth-child(3) { width:90px; }
+    #longshot-wrap th:nth-child(4) { width:60px; }
+    #longshot-wrap th:nth-child(5) { width:70px; }
   </style>
 </head>
 <body>
@@ -128,10 +129,10 @@
       <div id="round-heading" class="round-heading"></div>
       <div id="proj-goals-label" class="proj-goals"></div>
 
-      <div class="lb-tabs">
+      <div class="lb-tabs" style="flex-wrap:nowrap">
         <div class="lb-tab active" data-view="main" onclick="switchView('main')">📊 Standings</div>
-        <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Longshot Table</div>
         <div class="lb-tab" data-view="matrix" onclick="switchView('matrix')">🔢 Matrix</div>
+        <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Longshot</div>
       </div>
 
       <div id="loading" class="loading"><div class="spinner"></div>Loading standings...</div>
@@ -172,8 +173,11 @@
 
       <!-- LONGSHOT LEADERBOARD -->
       <div class="lb-view" id="view-longshot">
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:2px">
+          Tracks longshot bonus points earned across the tournament.
+        </p>
         <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px">
-          Tracks longshot bonus points earned across the tournament. ⭐ = longshot pick that won.
+          ⭐ = longshot pick that won.
         </p>
         <div id="longshot-wrap" class="table-wrap">
           <div class="loading"><div class="spinner"></div></div>
@@ -185,14 +189,16 @@
         <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px">
           Every player's pick history across all rounds. Colour = result. Right columns show teams remaining.
         </p>
-        <div style="font-size:11px; color:var(--text-muted); margin-bottom:12px; display:flex; gap:12px; flex-wrap:wrap">
+        <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px; display:flex; gap:12px; align-items:center">
           <span class="m-W" style="padding:1px 6px; border-radius:4px">W</span> Win &nbsp;
           <span class="m-D" style="padding:1px 6px; border-radius:4px">D</span> Draw &nbsp;
-          <span class="m-L" style="padding:1px 6px; border-radius:4px">L</span> Loss &nbsp;
-          <span style="display:inline-block;width:20px;border-bottom:2px solid #3b82f6"></span> Fav &nbsp;
-          <span style="display:inline-block;width:20px;border-bottom:2px solid #eab308"></span> Dark Horse &nbsp;
-          <span style="display:inline-block;width:20px;border-bottom:2px solid #f97316"></span> Long Shot &nbsp;
-          <span style="display:inline-block;width:20px;border-bottom:2px solid #ef4444"></span> No Hoper
+          <span class="m-L" style="padding:1px 6px; border-radius:4px">L</span> Loss
+        </div>
+        <div style="font-size:11px; margin-bottom:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap">
+          <span style="border-bottom:2px solid #3b82f6;color:#3b82f6;font-weight:700">Fav</span>
+          <span style="border-bottom:2px solid #eab308;color:#eab308;font-weight:700">Dark Horse</span>
+          <span style="border-bottom:2px solid #f97316;color:#f97316;font-weight:700">Long Shot</span>
+          <span style="border-bottom:2px solid #ef4444;color:#ef4444;font-weight:700">No Hoper</span>
         </div>
         <div id="matrix-wrap" class="matrix-wrap">
           <div class="loading"><div class="spinner"></div></div>
@@ -267,7 +273,7 @@
     function switchView(name) {
       document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
       document.querySelectorAll('.lb-view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
-      if (name === 'matrix' && !_matrixRendered && _leaderboardData) { _matrixRendered = true; renderMatrixView(); }
+      if (name === 'matrix' && _leaderboardData) renderMatrixView();
     }
 
     let _leaderboardData = null;
@@ -275,13 +281,19 @@
     function renderMatrixView() {
       const wrap = document.getElementById('matrix-wrap');
       if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the standings first.</p>'; return; }
-      const { sorted, allPicks, scores } = _leaderboardData;
+      const { sorted, allPicks, rounds } = _leaderboardData;
 
-      // All rounds that have picks or are complete — derive from picks
-      const roundsInPicks = {};
-      (allPicks || []).forEach(p => {
-        if (!roundsInPicks[p.round_id]) roundsInPicks[p.round_id] = { id: p.round_id, name: '', sort: 0 };
-      });
+      // Only show matrix from R32 onwards (first knockout round complete)
+      const completedKORounds = (rounds || []).filter(r => r.round_type === 'knockout' && r.is_complete);
+      if (completedKORounds.length === 0) {
+        wrap.innerHTML = '<p style="color:var(--text-muted);padding:16px 0">Matrix available from Round of 32 onwards.</p>';
+        return;
+      }
+
+      const BAND_ORDER = { favourite:1, dark_horse:2, long_shot:3, no_hoper:4 };
+      const BAND_CLASS = { favourite:'m-fav', dark_horse:'m-dh', long_shot:'m-ls', no_hoper:'m-nh' };
+      const BAND_LABEL = { favourite:'Fav', dark_horse:'Dark H', long_shot:'L/S', no_hoper:'No H' };
+      const BAND_COLOR = { favourite:'#3b82f6', dark_horse:'#eab308', long_shot:'#f97316', no_hoper:'#ef4444' };
 
       // Build pick lookup: player_id -> team_id -> { result, multiplier }
       const pickMap = {};
@@ -291,61 +303,63 @@
         pickMap[p.player_id][p.team_id] = {
           result: res ? res.match_result : 'pending',
           multiplier: p.multiplier,
-          roundId: p.round_id
         };
       });
 
-      // Get all teams that appear in any pick, sorted by band then name
-      const BAND_ORDER = { favourite:1, dark_horse:2, long_shot:3, no_hoper:4 };
-      const BAND_CLASS = { favourite:'m-fav', dark_horse:'m-dh', long_shot:'m-ls', no_hoper:'m-nh' };
-      const teamsInPicks = new Map();
-      (allPicks || []).forEach(p => {
-        if (p.teams && !teamsInPicks.has(p.team_id)) {
-          teamsInPicks.set(p.team_id, { id: p.team_id, flag: p.teams.flag_emoji, name: '', band: p.teams.band || '' });
-        }
-      });
-
-      // Also get team names from allTeams in _leaderboardData
-      const { allPicks: ap } = _leaderboardData;
-
-      // Use scores for player order (already sorted by points)
-      const players = sorted;
-
-      // Get alive pool teams for "remaining" columns
+      // Used teams per player
       const usedByPlayer = {};
       (allPicks || []).forEach(p => {
         if (!usedByPlayer[p.player_id]) usedByPlayer[p.player_id] = new Set();
         usedByPlayer[p.player_id].add(p.team_id);
       });
 
-      // Sort teams: by band order
-      const teamList = [...teamsInPicks.values()].sort((a,b) => {
-        const ao = BAND_ORDER[a.band] || 5, bo = BAND_ORDER[b.band] || 5;
-        if (ao !== bo) return ao - bo;
-        return (a.flag || '').localeCompare(b.flag || '');
-      });
+      // All teams — use window._matrixAllTeams (set during loadLeaderboard)
+      const allTeams = window._matrixAllTeams || [];
+
+      // Columns = all non-eliminated teams, sorted by band then flag
+      const teamList = allTeams
+        .filter(t => !t.is_eliminated)
+        .sort((a, b) => {
+          const ao = BAND_ORDER[a.band] || 5, bo = BAND_ORDER[b.band] || 5;
+          if (ao !== bo) return ao - bo;
+          return (a.flag_emoji || '').localeCompare(b.flag_emoji || '');
+        });
 
       if (teamList.length === 0) {
-        wrap.innerHTML = '<p style="color:var(--text-muted);padding:16px 0">No picks recorded yet.</p>';
+        wrap.innerHTML = '<p style="color:var(--text-muted);padding:16px 0">No teams data available.</p>';
         return;
       }
 
-      // Build table
-      let html = '<div class="matrix-wrap"><table class="matrix-table"><thead><tr>';
-      html += '<th class="m-pos">#</th>';
-      html += '<th class="m-player" style="text-align:left">Player</th>';
+      // Build table — two header rows: row1 = flags with colour underline, row2 = band label
+      let html = '<div class="matrix-wrap"><table class="matrix-table"><thead>';
 
-      // Team headers — diagonal
-      teamList.forEach(t => {
-        const bandCls = BAND_CLASS[t.band] || '';
-        html += `<th><div class="m-header-wrap"><span class="m-header ${bandCls}">${t.flag}</span></div></th>`;
+      // Determine band boundaries for divider lines
+      const getBorderStyle = (t, i) => {
+        const prevBand = i > 0 ? teamList[i-1].band : t.band;
+        return prevBand !== t.band ? 'border-left:3px solid var(--border)' : '';
+      };
+
+      // Row 1: position, player, flags with colour underline
+      html += '<tr><th class="m-pos">#</th><th class="m-player" style="text-align:left">Player</th>';
+      teamList.forEach((t, i) => {
+        const color = BAND_COLOR[t.band] || 'var(--border)';
+        const divider = getBorderStyle(t, i);
+        html += `<th style="border-bottom:3px solid ${color};${divider}"><div class="m-header-wrap"><span class="m-header">${t.flag_emoji || ''}</span></div></th>`;
       });
+      html += '<th class="m-summary">Good<br>Left</th><th class="m-summary">Total<br>Left</th></tr>';
 
-      html += '<th class="m-summary" title="Favourites + Dark Horses remaining">Good<br>Left</th>';
-      html += '<th class="m-summary" title="All teams remaining">Total<br>Left</th>';
-      html += '</tr></thead><tbody>';
+      // Row 2: blank, blank, band labels in colour with underline
+      html += '<tr><th></th><th></th>';
+      teamList.forEach((t, i) => {
+        const color = BAND_COLOR[t.band] || 'var(--border)';
+        const divider = getBorderStyle(t, i);
+        html += `<th style="font-size:8px;color:${color};padding:1px 2px;border-bottom:3px solid ${color};${divider}">${BAND_LABEL[t.band] || ''}</th>`;
+      });
+      html += '<th></th><th></th></tr>';
 
-      players.forEach((p, i) => {
+      html += '</thead><tbody>';
+
+      sorted.forEach((p, i) => {
         const pos = i + 1;
         const isElim = p.is_eliminated;
         const used = usedByPlayer[p.player_id] || new Set();
@@ -355,21 +369,22 @@
         html += `<td class="m-pos">${pos}</td>`;
         html += `<td class="m-player${isElim ? ' elim' : ''}"><a href="/${p.slug}" style="color:inherit;text-decoration:none">${p.name}</a></td>`;
 
-        teamList.forEach(t => {
+        teamList.forEach((t, i) => {
           const pick = playerPicks[t.id];
+          const divider = getBorderStyle(t, i);
           if (!pick) {
-            html += '<td></td>';
+            html += `<td style="${divider}"></td>`;
           } else {
             const r = pick.result;
             const cls = r === 'win' ? 'm-W' : r === 'draw' ? 'm-D' : r === 'loss' ? 'm-L' : '';
             const label = r === 'win' ? 'W' : r === 'draw' ? 'D' : r === 'loss' ? 'L' : '·';
             const ptLabel = pick.multiplier ? `<span style="font-size:9px;color:var(--text-muted)">${pick.multiplier}</span>` : '';
-            html += `<td class="${cls}" title="${t.flag} ${r||'pending'}">${label}${ptLabel}</td>`;
+            html += `<td class="${cls}" style="${divider}" title="${t.flag_emoji || ''} ${r||'pending'}">${label}${ptLabel}</td>`;
           }
         });
 
-        // Summary columns — remaining teams
-        const aliveTeams = (window._matrixAllTeams || []).filter(t => !t.is_eliminated && !used.has(t.id));
+        // Summary cols
+        const aliveTeams = teamList.filter(t => !used.has(t.id));
         const goodLeft = aliveTeams.filter(t => t.band === 'favourite' || t.band === 'dark_horse').length;
         const totalLeft = aliveTeams.length;
 
@@ -527,9 +542,8 @@
                                  (scores || []).every(p => p.is_eliminated) ||
                                  activePlayers.length <= 1;
 
-        // Show matrix tab only from R32 onwards (or when competition ended)
-        const showMatrix = competitionEnded || (currentRound && ['Round of 32','R32','Round of 16','R16','QF','SF','Final'].includes(currentRound.name)) ||
-                           (!currentRound && (rounds||[]).some(r => ['Round of 32','R32','Round of 16','R16','QF','SF','Final'].includes(r.name) && r.is_complete));
+        // Show matrix tab only from R32 onwards (i.e. any KO round exists)
+        const showMatrix = competitionEnded || isKnockout || (rounds||[]).some(r => r.round_type === 'knockout' && r.is_complete);
         document.querySelector('[data-view="matrix"]').style.display = showMatrix ? '' : 'none';
 
         // Show/hide columns
@@ -589,7 +603,7 @@
           const todayPicks_p = todayData ? todayData.picks : [];
 
           let arrowHtml = '<span class="arrow-eq">—</span>';
-          if (priorPosMap[p.player_id]) {
+          if (priorPosMap[p.player_id] !== undefined) {
             const prev = priorPosMap[p.player_id];
             if (pos < prev) arrowHtml = '<span class="arrow-up">▲' + (prev - pos) + '</span>';
             else if (pos > prev) arrowHtml = '<span class="arrow-dn">▼' + (pos - prev) + '</span>';
@@ -652,7 +666,9 @@
         document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
         _matrixRendered = false;
-        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap };
+        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds };
+        // Re-render matrix if it's currently visible
+        if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
         renderLongshotView();
 
       } catch(err) {

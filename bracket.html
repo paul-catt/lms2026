@@ -283,10 +283,9 @@
   <nav>
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
-      <a href="/leaderboard">Leaderboard</a>
+      <a href="/leaderboard" style="text-align:center">Leader-<br>board</a>
       <a href="/match-centre">Match Centre</a>
       <a href="/bracket" class="active">Bracket</a>
-      <a href="/admin">Admin</a>
       <a id="my-page-link" style="display:none">← My Page</a>
     </div>
   </nav>
@@ -458,10 +457,9 @@
         });
 
         // 5. Render
-        _lastRenderArgs = [bracketData, matchMap, predTeams, oddsMap, nameToId];
-
         // Derive predicted teams for R16+ from R32 progression + odds
         const allPredTeams = derivePredictedTeams(bracketData, predTeams, matchMap, oddsMap, nameToId);
+        _lastRenderArgs = [bracketData, matchMap, allPredTeams, oddsMap, nameToId];
 
         renderBracket(bracketData, matchMap, allPredTeams, oddsMap, nameToId);
         // Draw SVG connectors after DOM is laid out
@@ -517,7 +515,32 @@
     // each feeder match (by odds), and use that as the predicted team.
     function derivePredictedTeams(bracketData, predTeams, matchMap, oddsMap, nameToId) {
       const derived = Object.assign({}, predTeams); // start with R32 data
-      const progression = bracketData.progression || {};
+
+      // Remove any stale prediction entries where DB already has actual teams assigned
+      Object.keys(derived).forEach(key => {
+        const mn = parseInt(key);
+        const dbMatch = matchMap[mn];
+        if (dbMatch && dbMatch.home_team_id && dbMatch.away_team_id) {
+          delete derived[key];
+        }
+      });
+      const progression = bracketData.progression || {
+        "74":{"next":89,"slot":"home"},"77":{"next":89,"slot":"away"},
+        "73":{"next":90,"slot":"home"},"75":{"next":90,"slot":"away"},
+        "76":{"next":91,"slot":"home"},"78":{"next":91,"slot":"away"},
+        "79":{"next":92,"slot":"home"},"80":{"next":92,"slot":"away"},
+        "84":{"next":93,"slot":"home"},"83":{"next":93,"slot":"away"},
+        "81":{"next":94,"slot":"home"},"82":{"next":94,"slot":"away"},
+        "86":{"next":95,"slot":"home"},"88":{"next":95,"slot":"away"},
+        "85":{"next":96,"slot":"home"},"87":{"next":96,"slot":"away"},
+        "89":{"next":97,"slot":"home"},"90":{"next":97,"slot":"away"},
+        "93":{"next":98,"slot":"home"},"94":{"next":98,"slot":"away"},
+        "91":{"next":99,"slot":"home"},"92":{"next":99,"slot":"away"},
+        "95":{"next":100,"slot":"home"},"96":{"next":100,"slot":"away"},
+        "97":{"next":101,"slot":"home"},"98":{"next":101,"slot":"away"},
+        "99":{"next":102,"slot":"home"},"100":{"next":102,"slot":"away"},
+        "101":{"next":104,"slot":"home"},"102":{"next":104,"slot":"away"}
+      };
 
       // Helper: get predicted winner team object for a match number
       // Returns { name, flag } or null
@@ -690,13 +713,13 @@
       // Which team to show for each side, with resolved IDs for odds lookup
       const homeTeam = hasActualHome
         ? { name: dbMatch.home_team.name, flag: dbMatch.home_team.flag_emoji, isActual: true,  teamId: dbMatch.home_team_id }
-        : predTeam && predTeam.home
+        : (predTeam && predTeam.home && !hasActualHome)
           ? { name: predTeam.home.name,   flag: predTeam.home.flag,           isActual: false, teamId: resolveId(predTeam.home.name) }
           : null;
 
       const awayTeam = hasActualAway
         ? { name: dbMatch.away_team.name, flag: dbMatch.away_team.flag_emoji, isActual: true,  teamId: dbMatch.away_team_id }
-        : predTeam && predTeam.away
+        : (predTeam && predTeam.away && !hasActualAway)
           ? { name: predTeam.away.name,   flag: predTeam.away.flag,           isActual: false, teamId: resolveId(predTeam.away.name) }
           : null;
 
@@ -786,11 +809,14 @@
       // Odds shown only on unplayed matches where we have a resolved team ID
       function decimalToFractional(dec) {
         if (!dec || dec <= 1) return '';
-        const numerator = Math.round((dec - 1) * 10);
-        const denominator = 10;
-        const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
-        const g = gcd(numerator, denominator);
-        return (numerator / g) + '/' + (denominator / g);
+        const raw = dec - 1;
+        let rounded;
+        if (raw > 200)      rounded = Math.round(raw / 50) * 50;
+        else if (raw > 100) rounded = Math.round(raw / 20) * 20;
+        else if (raw > 25)  rounded = Math.round(raw / 5) * 5;
+        else                rounded = Math.round(raw);
+        if (rounded <= 0) rounded = 1;
+        return rounded + '/1';
       }
 
       const oddsHtml = (!isComplete && odds !== null && odds !== undefined)

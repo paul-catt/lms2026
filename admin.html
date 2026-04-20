@@ -438,7 +438,8 @@
         <div class="card-title">🏆 Bracket Predictions</div>
         <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
           Upload predicted teams and match structure for the knockout bracket. Each upload creates a new version — the most recent always wins.<br>
-          <strong>Before GP1:</strong> upload with all predicted teams. <strong>After GP3:</strong> assign real teams via Matches tab — bracket updates automatically.
+          <strong>Before GP1:</strong> use the <a href="/bracket-json-generator" target="_blank" style="color:var(--accent)">Bracket JSON Generator</a> to build and paste your JSON below. <strong>After GP3:</strong> assign real teams via Matches tab — bracket updates automatically.<br>
+          <strong>Important:</strong> the generator outputs matches in the correct pairing order for the bracket display — do not reorder the r32 array.
         </p>
 
         <!-- Upload section -->
@@ -1347,48 +1348,48 @@ Good luck! ⚽🏆`;
       let picksQuery = db.from('picks').select('*').in('team_id', [match.home_team_id, match.away_team_id]);
       if (roundId) picksQuery = picksQuery.eq('round_id', roundId);
       const { data: picks } = await picksQuery;
-      if (!picks || picks.length === 0) return;
 
-      for (const pick of picks) {
-        const isHome = pick.team_id === match.home_team_id;
-        const team   = isHome ? match.home_team : match.away_team;
-        let result, pointsEarned, basePoints, longshotBonus;
+      if (picks && picks.length > 0) {
+        for (const pick of picks) {
+          const isHome = pick.team_id === match.home_team_id;
+          const team   = isHome ? match.home_team : match.away_team;
+          let result, pointsEarned, basePoints, longshotBonus;
 
-        if (isKnockout && isPens) {
-          const won     = pick.team_id === pensWinnerId;
-          result        = won ? 'win' : 'loss';
-          longshotBonus = (won && team.is_longshot) ? 1 : 0;
-          basePoints    = 1;
-          pointsEarned  = 1 + longshotBonus;
-        } else {
-          const homeResult = homeScore > awayScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
-          const awayResult = awayScore > homeScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
-          result        = isHome ? homeResult : awayResult;
-          basePoints    = result === 'win' ? pick.multiplier : result === 'draw' ? 1 : 0;
-          longshotBonus = (result === 'win' && team.is_longshot) ? 1 : 0;
-          pointsEarned  = basePoints + longshotBonus;
-        }
+          if (isKnockout && isPens) {
+            const won     = pick.team_id === pensWinnerId;
+            result        = won ? 'win' : 'loss';
+            longshotBonus = (won && team.is_longshot) ? 1 : 0;
+            basePoints    = 1;
+            pointsEarned  = 1 + longshotBonus;
+          } else {
+            const homeResult = homeScore > awayScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
+            const awayResult = awayScore > homeScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
+            result        = isHome ? homeResult : awayResult;
+            basePoints    = result === 'win' ? pick.multiplier : result === 'draw' ? 1 : 0;
+            longshotBonus = (result === 'win' && team.is_longshot) ? 1 : 0;
+            pointsEarned  = basePoints + longshotBonus;
+          }
 
-        await db.from('pick_results').upsert({
-          pick_id: pick.id, match_id: matchId, base_points: basePoints,
-          longshot_bonus: longshotBonus, multiplier_applied: pick.multiplier,
-          points_earned: pointsEarned, match_result: result
-        }, { onConflict: 'pick_id,match_id' });
+          await db.from('pick_results').upsert({
+            pick_id: pick.id, match_id: matchId, base_points: basePoints,
+            longshot_bonus: longshotBonus, multiplier_applied: pick.multiplier,
+            points_earned: pointsEarned, match_result: result
+          }, { onConflict: 'pick_id,match_id' });
 
-        // ── Eliminate player if they lost in a knockout round ──
-        if (isKnockout && result === 'loss') {
-          await db.from('players')
-            .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
-            .eq('id', pick.player_id);
+          // ── Eliminate player if they lost in a knockout round ──
+          if (isKnockout && result === 'loss') {
+            await db.from('players')
+              .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
+              .eq('id', pick.player_id);
+          }
         }
       }
 
-      // ── Advance winner to next round match shell ──
+      // ── Advance winner to next round match shell — always fires for KO ──
       if (isKnockout) {
         await advanceWinnerToNextMatch(matchId, match, homeScore, awayScore, isPens, pensWinnerId);
       }
     }
-
     // Progression map: match_number -> { nextMatchNumber, slot ('home'|'away') }
     // For 3rd place (103): loser of SF advances, handled separately
     const KO_PROGRESSION = {
@@ -1492,7 +1493,7 @@ Good luck! ⚽🏆`;
 
       // Build team options — alive + not already assigned to a KO fixture
       if (teams) {
-        window._allTeamsForMatch = teams;
+        window._allTeamsForMatch = teams.filter(t => !t.is_eliminated);
       }
     }
 
