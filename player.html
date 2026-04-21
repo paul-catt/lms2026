@@ -25,8 +25,12 @@
     body { font-family: 'Inter', sans-serif; }
     nav, .nav-logo, .card-title, thead th { font-family: 'Rajdhani', sans-serif; }
     .round-strip { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:0; }
-    .round-pills { display:flex; gap:6px; flex-wrap:wrap; }
-    .round-pill { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); cursor:pointer; transition:all 0.15s; white-space:nowrap; user-select:none; }
+
+    /* ITEM 22: pills on one scrollable row, no wrap */
+    .round-pills { display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; max-width:100%; padding-bottom:2px; }
+    .round-pills::-webkit-scrollbar { display:none; }
+
+    .round-pill { display:flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); cursor:pointer; transition:all 0.15s; white-space:nowrap; user-select:none; flex-shrink:0; }
     .round-pill:hover { border-color:var(--accent); color:var(--text); }
     .round-pill.complete { color:var(--text); font-weight:700; }
     .round-pill.has-pick { border-color:var(--green); color:var(--green); }
@@ -41,36 +45,6 @@
     .deadline-bar.open   { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); color:var(--gold); }
     .deadline-bar.locked { background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.3);  color:var(--red); }
     .deadline-bar .countdown { font-variant-numeric:tabular-nums; font-weight:800; }
-
-    /* Top deadline card */
-    .top-deadline-card {
-      background: var(--surface);
-      border: 1px solid #f59e0b;
-      background: rgba(245,158,11,0.05);
-      border-radius: 12px;
-      padding: 14px 18px;
-      margin-bottom: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .top-deadline-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-muted); margin-bottom:3px; }
-    .top-deadline-round { font-size:15px; font-weight:800; color:var(--text); }
-    .top-deadline-timer { font-size:26px; font-weight:900; font-variant-numeric:tabular-nums; color:#f59e0b; letter-spacing:-0.02em; }
-    .top-deadline-timer.urgent { color:#ef4444; }
-    .top-deadline-timer.locked { color:var(--text-muted); font-size:16px; }
-
-    /* Goals prediction top card */
-    .goals-top-card {
-      background: rgba(59,130,246,0.07);
-      border: 1px solid rgba(59,130,246,0.3);
-      border-radius: 12px;
-      padding: 16px 18px;
-      margin-bottom: 16px;
-    }
-    .goals-top-card .card-title { color: var(--accent); margin-bottom:8px; }
 
     /* Pick slots */
     .pick-summary { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
@@ -99,7 +73,7 @@
     .band-group-header { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; padding:4px 0; margin-bottom:6px; border-bottom:1px solid var(--border); }
     .band-group-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:6px; }
 
-    /* Band breakdown panel (knockout only, between stats and pick card) */
+    /* Band breakdown panel (knockout only) */
     .band-panel {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -114,6 +88,16 @@
     .band-panel-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-right:4px; }
     .band-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px; font-size:13px; font-weight:700; background:var(--surface2); border:1px solid var(--border); }
 
+    /* Goals prediction card (above submit) */
+    .goals-inline-card {
+      background: rgba(59,130,246,0.07);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+    }
+    .goals-inline-card .card-title { color: var(--accent); margin-bottom:8px; }
+
     /* Round selector */
     .round-selector-wrap { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
     .round-selector-wrap label { font-size:13px; font-weight:600; color:var(--text-muted); white-space:nowrap; }
@@ -122,16 +106,16 @@
     /* History table round column */
     .history-round { font-size:12px; }
 
-    .test-date-banner { background:#7c3aed; color:#fff; text-align:center; padding:8px 16px; font-size:13px; font-weight:600; }
-    .test-date-banner a { color:#e9d5ff; text-decoration:underline; cursor:pointer; margin-left:12px; font-weight:400; }
+    /* ITEM 21: 4-card stats row — tighter on mobile */
+    .stats-row { display:flex; gap:8px; margin-bottom:16px; }
+    .stats-row .stat-block { flex:1; min-width:0; }
+    .stats-row .stat-value { font-size:20px; }
+    .stats-row .stat-label { font-size:10px; }
   </style>
 </head>
 <body>
 
-  <div class="test-date-banner" id="test-date-banner" style="display:none">
-    🧪 Test mode — date overridden to <span id="banner-date"></span>
-    <a href="/admin">Change in Admin</a>
-  </div>
+  <!-- ITEM 29: purple test banner removed -->
 
   <nav>
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
@@ -154,17 +138,6 @@
 
     <div id="dashboard" style="display:none">
 
-      <!-- Goals prediction — top card, shown only if not entered and GP1 open -->
-      <div id="goals-top-card" style="display:none" class="goals-top-card">
-        <div class="card-title">🎯 Tournament Goals Prediction</div>
-        <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (including extra time)? Used as a tiebreaker. Must be entered before the Group Phase 1 deadline.</p>
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
-          <input type="number" id="goals-input-top" placeholder="e.g. 142" min="0" max="500" style="max-width:140px" />
-          <button class="btn btn-primary" id="goals-btn-top">Save Prediction</button>
-          <span id="goals-msg-top" style="font-size:12px"></span>
-        </div>
-      </div>
-
       <!-- Name / status / round pills -->
       <div class="card">
         <div class="round-strip">
@@ -172,15 +145,17 @@
             <h1 id="player-name" style="font-size:28px; font-weight:900; margin:0; letter-spacing:-0.02em"></h1>
             <div id="player-status" style="margin-top:4px"></div>
           </div>
+          <!-- ITEM 22: pills are nowrap / scrollable -->
           <div class="round-pills" id="round-pills"></div>
         </div>
       </div>
 
-      <!-- Stats -->
+      <!-- ITEM 21: 4 stat cards — Points / Position / Teams Left / Goals -->
       <div class="stats-row">
-        <div class="stat-block"><div class="stat-value" id="stat-points">0</div><div class="stat-label">Total Points</div></div>
+        <div class="stat-block"><div class="stat-value" id="stat-points">0</div><div class="stat-label">Points</div></div>
         <div class="stat-block"><div class="stat-value" id="stat-position">—</div><div class="stat-label">Position</div></div>
         <div class="stat-block"><div class="stat-value" id="stat-teams-left">—</div><div class="stat-label">Teams Left</div></div>
+        <div class="stat-block"><div class="stat-value" id="stat-goals">—</div><div class="stat-label">Goals</div></div>
       </div>
 
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
@@ -210,19 +185,19 @@
 
           <div id="pick-form-inner"></div>
 
+          <!-- ITEM 20: Goals prediction appears here, above submit, injected by initGoalsPrediction() -->
+          <div id="goals-prediction-card" style="display:none" class="goals-inline-card">
+            <div class="card-title">🎯 Tournament Goals Prediction</div>
+            <p id="goals-prediction-desc" style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (104 games, including extra time)? Used as a tiebreaker. You can change this until the Group Phase 1 deadline.</p>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+              <input type="number" id="goals-prediction-input" placeholder="e.g. 142" min="0" max="500" style="max-width:140px" />
+              <button class="btn btn-primary" id="goals-prediction-btn">Save Prediction</button>
+              <span id="goals-prediction-msg" style="font-size:12px"></span>
+            </div>
+          </div>
+
           <!-- Bottom submit button -->
           <div style="margin-top:14px">
-            <!-- Goals prediction — shown inline above submit when entered or after deadline -->
-            <div class="card" id="goals-prediction-card" style="display:none; margin-bottom:14px">
-              <div class="card-title">🎯 Tournament Goals Prediction</div>
-              <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (104 games, including extra time)? Used as a tiebreaker. You can change this up until the Group Phase 1 deadline.</p>
-              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
-                <input type="number" id="goals-prediction-input" placeholder="e.g. 142" min="0" max="500" style="max-width:140px" />
-                <button class="btn btn-primary" id="goals-prediction-btn">Save Prediction</button>
-                <span id="goals-prediction-msg" style="font-size:12px"></span>
-              </div>
-              <div id="goals-prediction-locked" style="display:none; font-size:13px; color:var(--text-muted); margin-top:8px"></div>
-            </div>
             <button class="btn btn-primary" id="submit-pick-btn" style="width:100%; display:none" disabled>Select your team above</button>
             <div id="pick-msg" style="margin-top:8px; font-size:12px; text-align:center"></div>
           </div>
@@ -236,7 +211,7 @@
         </div>
       </div>
 
-      <!-- Pick history -->
+      <!-- ITEM 19: Pick history — most recent first (handled in renderHistory) -->
       <div class="card">
         <div class="card-title">📋 Pick History</div>
         <div class="table-wrap">
@@ -260,16 +235,6 @@
       const o = localStorage.getItem(LS_KEY);
       return o ? new Date(o) : new Date();
     }
-    (function initBanner() {
-      const o = localStorage.getItem(LS_KEY);
-      if (o) {
-        const d = new Date(o);
-        document.getElementById('banner-date').textContent =
-          d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) + ' ' +
-          d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-        document.getElementById('test-date-banner').style.display = 'block';
-      }
-    })();
 
     // Store slug in localStorage so leaderboard can offer "back" link
     const slug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
@@ -286,7 +251,6 @@
       { key:'no_hoper',   label:'No Hoper',   dot:'🔴', css:'#ef4444' },
     ];
     const KO_ROUNDS = ['R32','R16','QF','SF','Final'];
-    const QF_PLUS   = ['QF','SF','Final'];
 
     let player       = null;
     let allRounds    = [];
@@ -296,7 +260,6 @@
     let allMatches   = [];
     let eliminatedIds = new Set();
     let usedTeamIdsGlobal = new Set();
-    let countdownInterval = null;
     let deadlineInterval  = null;
     let selectedRoundId   = null;
     let pick3      = null;
@@ -319,6 +282,21 @@
       return String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
     }
 
+    // ITEM 18: contextual teams-left warning messages
+    function teamsLeftMessage(n) {
+      if (n <= 0) return '⚠️ You have no teams left!';
+      if (n === 1) return '⚠️ 1 team left — good luck with that! 😬';
+      if (n === 2) return '⚠️ Only 2 teams left. Choose very wisely.';
+      if (n === 3) return '⚠️ Just 3 teams remaining. Pick carefully.';
+      if (n === 4) return '⚠️ 4 teams left — think before you pick.';
+      return '⚠️ You have ' + n + ' teams left. Pick carefully.';
+    }
+
+    // ITEM 18: correct singular/plural
+    function teamsLeftLabel(n) {
+      return n === 1 ? '1 team left' : n + ' teams left';
+    }
+
     // ── Band panel (knockout only) ────────────────────────────
     function updateBandPanel(round) {
       const panel = document.getElementById('band-panel');
@@ -327,7 +305,6 @@
 
       const currentRoundPickTeamIds = new Set(allPicks.filter(p => p.round_id === round.id).map(p => p.team_id));
       const usedExcl = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundPickTeamIds.has(id)));
-      // Available = not used in prior rounds AND not eliminated
       const available = allTeams.filter(t => !usedExcl.has(t.id) && !eliminatedIds.has(t.id));
 
       document.getElementById('bc-fav').textContent = available.filter(t => t.band === 'favourite').length;
@@ -335,7 +312,6 @@
       document.getElementById('bc-ls').textContent  = available.filter(t => t.band === 'long_shot').length;
       document.getElementById('bc-nh').textContent  = available.filter(t => t.band === 'no_hoper').length;
 
-      // Grey out chips with zero
       ['fav','dh','ls','nh'].forEach((k, i) => {
         const chip = document.getElementById('band-chip-' + k);
         const count = parseInt(['bc-fav','bc-dh','bc-ls','bc-nh'].map(id => document.getElementById(id).textContent)[i]);
@@ -362,7 +338,6 @@
         document.getElementById('dashboard').style.display = 'block';
         document.getElementById('player-name').textContent = player.name;
         document.title = player.name + ' — LMS 2026';
-        // Derive elimination reason after picks are loaded — placeholder until then
         document.getElementById('player-status').innerHTML = player.is_eliminated
           ? '<span class="badge badge-red" id="elim-badge">❌ Eliminated</span>'
           : '<span class="badge badge-green">✅ Still In</span>';
@@ -392,7 +367,6 @@
 
         usedTeamIdsGlobal = new Set(allPicks.map(p => p.team_id));
 
-        // Teams left = 48 - used - eliminated (that haven't been used)
         const eliminatedNotUsed = [...eliminatedIds].filter(id => !usedTeamIdsGlobal.has(id)).length;
         const teamsLeft = 48 - usedTeamIdsGlobal.size - eliminatedNotUsed;
 
@@ -405,22 +379,30 @@
         let position = '—';
         if (allScores && allScores.length > 0) {
           const idx = allScores.findIndex(s => s.player_id === player.id);
-          if (idx !== -1) position = ordinal(idx + 1) + ' / ' + allScores.length;
+          if (idx !== -1) position = ordinal(idx + 1) + '/' + allScores.length;
         }
 
         document.getElementById('stat-points').textContent    = totalPoints;
         document.getElementById('stat-position').textContent  = position;
+        // ITEM 18: use singular/plural helper for teams-left stat label
         document.getElementById('stat-teams-left').textContent = teamsLeft;
+        document.querySelector('#stat-teams-left').closest('.stat-block').querySelector('.stat-label').textContent =
+          teamsLeft === 1 ? 'Team Left' : 'Teams Left';
+        // ITEM 21: goals card
+        document.getElementById('stat-goals').textContent =
+          (player.total_goals_prediction !== null && player.total_goals_prediction !== undefined)
+            ? player.total_goals_prediction : '—';
 
         const roundsRemaining = allRounds.filter(r => !r.is_complete).length;
         if (teamsLeft <= roundsRemaining + 2 && !player.is_eliminated) {
           const warn = document.getElementById('teams-warning');
           warn.style.display = 'block';
-          warn.textContent = '⚠️ You have ' + teamsLeft + ' teams left. Pick carefully.';
+          // ITEM 18: contextual message
+          warn.textContent = teamsLeftMessage(teamsLeft);
         }
 
         renderHistory();
-        // Update elimination badge with reason
+
         if (player.is_eliminated) {
           const badge = document.getElementById('elim-badge');
           if (badge) {
@@ -439,8 +421,6 @@
 
         openRounds = allRounds.filter(r => !r.is_complete && r.name !== '3rd Place');
         renderRoundStrip();
-
-        // Goals prediction — top card logic
         initGoalsPrediction();
 
         if (player.is_eliminated || openRounds.length === 0) {
@@ -458,23 +438,15 @@
         buildRoundDropdown();
         document.getElementById('pick-section').style.display = 'block';
 
-        // Default to earliest round with a future deadline
         const now = getEffectiveDate();
         const activeRound = openRounds.find(r => new Date(r.deadline) > now) || openRounds[0];
         selectRound(activeRound.id);
-
-        // Top deadline countdown (always ticking)
-        startTopDeadline(activeRound);
 
       } catch(err) {
         console.error(err);
         document.getElementById('loading').style.display = 'none';
         document.getElementById('not-found').style.display = 'block';
       }
-    }
-
-    function startTopDeadline(round) {
-      // No separate top deadline card — handled inside pick card deadline bar with seconds
     }
 
     function renderRoundStrip() {
@@ -485,7 +457,7 @@
         if (!picksByRound[p.round_id]) picksByRound[p.round_id] = [];
         picksByRound[p.round_id].push(p);
       });
-      // Find the round where this player was eliminated (lost pick)
+
       const eliminatedRoundId = (() => {
         for (const r of [...allRounds].reverse()) {
           const rPicks = picksByRound[r.id] || [];
@@ -498,8 +470,8 @@
       })();
 
       allRounds.filter(r => r.name !== '3rd Place').forEach(r => {
-        const hasPick    = !!(picksByRound[r.id] && picksByRound[r.id].length > 0);
-        const isComplete = r.is_complete;
+        const hasPick     = !!(picksByRound[r.id] && picksByRound[r.id].length > 0);
+        const isComplete  = r.is_complete;
         const isElimRound = player.is_eliminated && r.id === eliminatedRoundId;
         const pill = document.createElement('div');
         pill.className = 'round-pill' +
@@ -507,6 +479,7 @@
           (hasPick ? ' has-pick' : '') +
           (!isComplete && !openRounds.find(o => o.id === r.id) ? ' future' : '') +
           (isElimRound ? ' eliminated' : '');
+        // ITEM 22: short labels
         const shortLabel = r.round_type === 'group' ? 'GP' + r.sort_order : r.name;
         pill.innerHTML = shortLabel + (hasPick ? ' <span class="tick">✓</span>' : '') + (isElimRound ? ' 🔴' : '');
         pill.title = r.name + (hasPick ? ' — pick submitted' : isComplete ? ' — completed' : ' — open') + (isElimRound ? ' — eliminated here' : '');
@@ -552,9 +525,7 @@
       const roundPicks   = allPicks.filter(p => p.round_id === round.id);
       const hasSubmitted = roundPicks.length > 0;
       const isKO        = KO_ROUNDS.includes(round.name);
-      const isGroup      = round.round_type === 'group';
 
-      // Deadline bar — ticking every second
       const deadlineBar = document.getElementById('deadline-bar');
       if (deadlineInterval) clearInterval(deadlineInterval);
 
@@ -575,10 +546,8 @@
       document.getElementById('pick-msg').textContent = '';
 
       if (hasSubmitted) {
-        // Check if any picked team has since been eliminated
         const eliminatedPicks = roundPicks.filter(p => eliminatedIds.has(p.team_id));
         if (eliminatedPicks.length > 0 && !isLocked) {
-          // Force them back to pick form with a warning
           const names = eliminatedPicks.map(p => p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : 'your team').join(' and ');
           document.getElementById('pick-summary').innerHTML = '';
           document.getElementById('pick-form-inner').innerHTML =
@@ -587,14 +556,11 @@
             ' been eliminated from the tournament. You need to change your pick before the deadline.</div>';
           document.getElementById('submit-pick-btn').style.display = 'block';
           document.getElementById('submit-pick-btn-top').style.display = 'block';
-          // Delete the stale pick and render the form fresh
           pick3 = null; pick2 = null; pickSingle = null;
           const round2 = allRounds.find(r => r.id === round.id);
           if (round2) {
-            // Remove stale picks from allPicks so usedExcl is calculated correctly
             allPicks = allPicks.filter(p => p.round_id !== round.id);
             usedTeamIdsGlobal = new Set(allPicks.map(p => p.team_id));
-            // Delete from DB
             db.from('picks').delete().eq('player_id', player.id).eq('round_id', round.id);
             renderPickForm(round2);
           }
@@ -648,7 +614,6 @@
       const currentRoundPickTeamIds = new Set(allPicks.filter(p => p.round_id === round.id).map(p => p.team_id));
       const usedExcl = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundPickTeamIds.has(id)));
 
-      // Pick summary slots
       const summaryEl = document.getElementById('pick-summary');
       if (isGroup) {
         summaryEl.innerHTML =
@@ -662,7 +627,6 @@
       let gridHtml = '';
 
       if (isGroup) {
-        // Group stage — fixture matchups
         const instrHtml = '<p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Select your <span style="color:var(--gold);font-weight:700">3-pointer</span> first, then your <span style="color:var(--accent);font-weight:700">2-pointer</span>.</p>';
         const roundMatches    = allMatches.filter(m => m.round_id === round.id && m.home_team && m.away_team);
         const fixturedTeamIds = new Set();
@@ -670,12 +634,11 @@
 
         function teamBtnGroup(team) {
           if (!team) return '';
-          const isUsed      = usedExcl.has(team.id);
-          const isElim      = eliminatedIds.has(team.id);
-          const isDisabled  = isUsed || isElim;
-          const cls         = 'team-btn' + (isDisabled ? '' : '');
-          const label       = team.flag_emoji + ' ' + team.name + (team.is_longshot ? ' ⭐' : '') + (isElim ? ' 💀' : '');
-          return '<button class="' + cls + '" ' +
+          const isUsed     = usedExcl.has(team.id);
+          const isElim     = eliminatedIds.has(team.id);
+          const isDisabled = isUsed || isElim;
+          const label      = team.flag_emoji + ' ' + team.name + (team.is_longshot ? ' ⭐' : '') + (isElim ? ' 💀' : '');
+          return '<button class="team-btn" ' +
             (isDisabled ? 'disabled ' : '') +
             'data-team-id="' + team.id + '" onclick="selectTeam(\'' + team.id + '\')">' +
             label + '</button>';
@@ -693,39 +656,28 @@
           fixtureHtml += '</div>';
         }
         fixtureHtml += '</div>';
-
         const warningHtml = '<div id="same-match-warning" style="display:none; margin-top:8px" class="alert alert-warning">⚠️ Both picks are from the same match — you can only earn points from one.</div>';
         gridHtml = instrHtml + fixtureHtml + warningHtml;
 
       } else {
-        // Knockout — grouped by band, eliminated teams hidden
         const instrHtml = '<p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Select one team. Teams you\'ve already used are crossed out.</p>';
-
-        // Available = not eliminated. Used = crossed out. Neither shows eliminated.
         let bandHtml = '';
         BAND_CONFIG.forEach(b => {
-          const teamsInBand = allTeams.filter(t =>
-            t.band === b.key &&
-            !eliminatedIds.has(t.id) // hide eliminated entirely
-          );
+          const teamsInBand = allTeams.filter(t => t.band === b.key && !eliminatedIds.has(t.id));
           if (teamsInBand.length === 0) return;
-
           bandHtml += '<div class="band-group">';
           bandHtml += '<div class="band-group-header" style="color:' + b.css + '">' + b.dot + ' ' + b.label + 's</div>';
           bandHtml += '<div class="band-group-grid">';
           teamsInBand.forEach(t => {
-            const isUsed     = usedExcl.has(t.id);
-            const label      = t.flag_emoji + ' ' + t.name + (t.is_longshot ? ' ⭐' : '');
+            const isUsed      = usedExcl.has(t.id);
             const borderStyle = isUsed ? '' : 'border-color:' + b.css + '40;';
             bandHtml += '<button class="team-btn" style="' + borderStyle + '" ' +
               (isUsed ? 'disabled ' : '') +
               'data-team-id="' + t.id + '" onclick="selectTeam(\'' + t.id + '\')">' +
-              label + '</button>';
+              t.flag_emoji + ' ' + t.name + (t.is_longshot ? ' ⭐' : '') + '</button>';
           });
           bandHtml += '</div></div>';
         });
-
-        // Unclassified teams (band not set) — not eliminated
         const unclassified = allTeams.filter(t => !t.band && !eliminatedIds.has(t.id));
         if (unclassified.length > 0) {
           bandHtml += '<div class="band-group"><div class="band-group-header" style="color:var(--text-muted)">⚪ Other</div><div class="band-group-grid">';
@@ -735,7 +687,6 @@
           });
           bandHtml += '</div></div>';
         }
-
         gridHtml = instrHtml + bandHtml;
       }
 
@@ -817,7 +768,6 @@
       if (getEffectiveDate() >= new Date(round.deadline)) {
         msg.style.color = 'var(--red)'; msg.textContent = '❌ Deadline has passed.'; return;
       }
-
       if (isGroup && pick3.id === pick2.id) {
         msg.style.color = 'var(--red)'; msg.textContent = '❌ You cannot pick the same team twice.'; return;
       }
@@ -858,53 +808,52 @@
       }
     }
 
+    // ITEM 20: Goals prediction only shown above submit button (not at page top)
     function initGoalsPrediction() {
       const gp1 = allRounds.find(r => r.round_type === 'group' && r.sort_order === 1);
       if (!gp1) return;
 
-      const deadline   = new Date(gp1.deadline);
-      const now        = getEffectiveDate();
-      const isLocked   = now >= deadline;
-      const hasEntered = player.total_goals_prediction !== null && player.total_goals_prediction !== undefined;
+      const deadline = new Date(gp1.deadline);
+      const now      = getEffectiveDate();
+      const isLocked = now >= deadline;
 
-      // After deadline — hide completely regardless of whether entered
+      // After deadline — hide entirely
       if (isLocked) return;
 
-      if (!hasEntered) {
-        // Not entered, deadline open — show prominently at top
-        const topCard = document.getElementById('goals-top-card');
-        topCard.style.display = 'block';
-        const topBtn = document.getElementById('goals-btn-top');
-        const topMsg = document.getElementById('goals-msg-top');
-        topBtn.addEventListener('click', async () => {
-          const val = parseInt(document.getElementById('goals-input-top').value);
-          if (isNaN(val) || val < 0 || val > 500) { topMsg.style.color='var(--red)'; topMsg.textContent='Enter 0–500.'; return; }
-          topBtn.disabled = true; topBtn.textContent = 'Saving...';
-          const { error } = await db.from('players').update({ total_goals_prediction: val }).eq('id', player.id);
-          if (error) { topMsg.style.color='var(--red)'; topMsg.textContent='❌ '+error.message; topBtn.disabled=false; topBtn.textContent='Save Prediction'; }
-          else { player.total_goals_prediction = val; topMsg.style.color='var(--green)'; topMsg.textContent='✅ Saved!'; setTimeout(() => location.reload(), 800); }
-        });
-      } else {
-        // Entered, deadline still open — show above submit so they can update
-        const card  = document.getElementById('goals-prediction-card');
-        const input = document.getElementById('goals-prediction-input');
-        const btn   = document.getElementById('goals-prediction-btn');
-        const msg   = document.getElementById('goals-prediction-msg');
-        card.style.display = 'block';
+      // Show the card above the submit button
+      const card  = document.getElementById('goals-prediction-card');
+      const input = document.getElementById('goals-prediction-input');
+      const btn   = document.getElementById('goals-prediction-btn');
+      const msg   = document.getElementById('goals-prediction-msg');
+      const desc  = document.getElementById('goals-prediction-desc');
+
+      card.style.display = 'block';
+
+      const hasEntered = player.total_goals_prediction !== null && player.total_goals_prediction !== undefined;
+      if (hasEntered) {
         input.value = player.total_goals_prediction;
-        card.querySelector('p').innerHTML = '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> goals. You can change this until the Group Phase 1 deadline.';
-        btn.addEventListener('click', async () => {
-          const val = parseInt(input.value);
-          if (isNaN(val) || val < 0 || val > 500) { msg.style.color='var(--red)'; msg.textContent='Enter 0–500.'; return; }
-          btn.disabled = true; btn.textContent = 'Saving...';
-          const { error } = await db.from('players').update({ total_goals_prediction: val }).eq('id', player.id);
-          if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; }
-          else { player.total_goals_prediction = val; msg.style.color='var(--green)'; msg.textContent='✅ Saved!'; }
-          btn.disabled = false; btn.textContent = 'Save Prediction';
-        });
+        desc.innerHTML = '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> goals. You can change this until the Group Phase 1 deadline.';
       }
+
+      btn.addEventListener('click', async () => {
+        const val = parseInt(input.value);
+        if (isNaN(val) || val < 0 || val > 500) { msg.style.color='var(--red)'; msg.textContent='Enter 0–500.'; return; }
+        btn.disabled = true; btn.textContent = 'Saving...';
+        const { error } = await db.from('players').update({ total_goals_prediction: val }).eq('id', player.id);
+        if (error) {
+          msg.style.color='var(--red)'; msg.textContent='❌ '+error.message;
+          btn.disabled=false; btn.textContent='Save Prediction';
+        } else {
+          player.total_goals_prediction = val;
+          document.getElementById('stat-goals').textContent = val;
+          msg.style.color='var(--green)'; msg.textContent='✅ Saved!';
+          btn.disabled=false; btn.textContent='Save Prediction';
+          desc.innerHTML = '✅ You predicted <strong>' + val + '</strong> goals. You can change this until the Group Phase 1 deadline.';
+        }
+      });
     }
 
+    // ITEM 19: most recent picks first
     function renderHistory() {
       const tbody = document.getElementById('history-body');
       const picksByRound = {};
@@ -913,7 +862,8 @@
         picksByRound[p.round_id].push(p);
       });
 
-      const completedRounds = allRounds.filter(r => r.is_complete);
+      // Completed rounds newest first
+      const completedRounds = [...allRounds.filter(r => r.is_complete)].reverse();
       let rows = '';
 
       completedRounds.forEach(r => {
@@ -939,7 +889,8 @@
         }
       });
 
-      const openWithPicks = allRounds.filter(r => !r.is_complete && picksByRound[r.id]);
+      // Upcoming picks with pending picks (also newest first)
+      const openWithPicks = [...allRounds.filter(r => !r.is_complete && picksByRound[r.id])].reverse();
       openWithPicks.forEach(r => {
         (picksByRound[r.id] || []).forEach(p => {
           rows += '<tr style="opacity:0.7">' +

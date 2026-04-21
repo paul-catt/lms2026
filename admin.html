@@ -124,7 +124,7 @@
       <div class="tab" data-tab="goals">🎯 Goals</div>
       <div class="tab" data-tab="odds">📈 Odds</div>
       <div class="tab" data-tab="players">👥 Players</div>
-      <div class="tab" data-tab="matches">📅 Matches</div>
+      <div class="tab" data-tab="matches">🏆 R32</div>
       <div class="tab" data-tab="teams">🏳️ Teams</div>
       <div class="tab" data-tab="bracket">🏆 Bracket</div>
       <div class="tab" data-tab="testdate">🧪 Test Date</div>
@@ -222,20 +222,6 @@
           <button class="btn btn-danger" id="btn-undo-result">↩️ Undo Result Completely</button>
         </div>
         <div id="correct-msg" style="margin-top:8px; font-size:12px"></div>
-      </div>
-
-      <!-- SNAPSHOT -->
-      <div class="card" style="margin-top:16px">
-        <div class="card-title">📸 Leaderboard Snapshot</div>
-        <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">
-          Snapshots are taken <strong>automatically</strong> when the last result of a round is saved. Use this only if you need to retake one.
-        </p>
-        <div class="form-group">
-          <label>Round to snapshot</label>
-          <select id="snapshot-round-select" style="max-width:300px"><option value="">Select round...</option></select>
-        </div>
-        <button class="btn btn-secondary" id="btn-take-snapshot">📸 Take Snapshot Now</button>
-        <div id="snapshot-msg" style="margin-top:8px; font-size:12px"></div>
       </div>
 
       <!-- DANGER ZONE -->
@@ -337,19 +323,13 @@
     <!-- MATCHES TAB -->
     <div class="tab-content" id="tab-matches">
       <div class="card">
-        <div class="card-title">Assign Teams to Knockout Match</div>
+        <div class="card-title">🏆 R32 Input</div>
         <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px">
-          Select a round, then pick the match number. Date, time and venue will pre-populate. Then assign the two teams.
+          Pick a match — date, time and venue will pre-populate. Then assign the two teams.
         </p>
-        <div class="admin-grid">
-          <div class="form-group">
-            <label>Round</label>
-            <select id="match-round-select"><option value="">Select round...</option></select>
-          </div>
-          <div class="form-group">
-            <label>Match Number</label>
-            <select id="match-number-select" disabled><option value="">Select round first...</option></select>
-          </div>
+        <div class="form-group">
+          <label>Match</label>
+          <select id="match-number-select"><option value="">Loading R32 matches...</option></select>
         </div>
         <div id="match-prefill" style="display:none; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px 14px; margin-bottom:14px; font-size:13px;">
           <div style="display:flex; gap:24px; flex-wrap:wrap;">
@@ -367,7 +347,7 @@
             <select id="match-away-select"><option value="">Select team...</option></select>
           </div>
         </div>
-        <button class="btn btn-primary" id="add-match-btn" style="display:none">Save Teams to Match</button>
+        <button class="btn btn-primary" id="add-match-btn" style="display:none">✅ Confirm R32 Teams</button>
         <div id="match-msg" style="margin-top:8px; font-size:12px"></div>
       </div>
 
@@ -418,6 +398,7 @@
           <div style="display:flex; gap:8px; flex-wrap:wrap">
             <button class="btn btn-primary" id="btn-set-test-date">Set Test Date</button>
             <button class="btn btn-secondary" id="btn-clear-test-date">Clear Override</button>
+            <button class="btn btn-secondary" id="btn-plus-day">+1 Day</button>
           </div>
         </div>
         <div id="test-date-msg" style="margin-top:12px; font-size:13px"></div>
@@ -637,6 +618,7 @@
       if (name === 'odds') loadOddsTable();
       if (name === 'teams' && !_teamsLoaded) { _teamsLoaded = true; loadTeamsLongshot(); }
       if (name === 'bracket') loadBracketVersions();
+      if (name === 'matches') loadR32Matches();
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -652,7 +634,7 @@
       document.getElementById('result-away-score').addEventListener('input', updatePreview);
       document.getElementById('pens-checkbox').addEventListener('change', onPensToggle);
       document.getElementById('pens-winner-select').addEventListener('change', updatePreview);
-      document.getElementById('match-round-select').addEventListener('change', onMatchRoundSelected);
+      // R32 matches load automatically when tab is opened via switchTab → loadR32Matches()
       document.getElementById('match-number-select').addEventListener('change', onMatchNumberSelected);
       document.getElementById('btn-auto-assign').addEventListener('click', autoAssignMissingPicks);
       document.getElementById('correct-match-select').addEventListener('change', onCorrectMatchSelected);
@@ -668,6 +650,14 @@
       document.getElementById('btn-clear-test-date').addEventListener('click', () => {
         clearTestDate();
         document.getElementById('test-date-msg').innerHTML = '<span style="color:var(--green)">✅ Cleared — using real date.</span>';
+      });
+      document.getElementById('btn-plus-day').addEventListener('click', () => {
+        const current = localStorage.getItem(LS_KEY);
+        const base = current ? new Date(current) : new Date();
+        const next = new Date(base.getTime() + 24 * 60 * 60 * 1000);
+        setTestDate(next.toISOString());
+        document.getElementById('test-date-input').value = new Date(next.getTime() - next.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+        document.getElementById('test-date-msg').innerHTML = '<span style="color:var(--green)">✅ Advanced by 1 day.</span>';
       });
 
       buildQuickJumps();
@@ -686,7 +676,6 @@
       loadMatchesForResult();
       loadCompletedMatchesForCorrection();
       loadRoundsAndTeamsForMatchForm();
-      loadSnapshotRounds();
       loadOddsTable();
       loadAssignRounds();
       loadBulkRounds();
@@ -1191,6 +1180,10 @@ Good luck! ⚽🏆`;
       const matchId = document.getElementById('result-match-select').value;
       const match = matchId ? matchCache[matchId] : null;
       document.getElementById('third-place-notice').style.display = (match && match.is_third_place) ? 'block' : 'none';
+      const homeLbl = document.getElementById('home-score-label');
+      const awayLbl = document.getElementById('away-score-label');
+      homeLbl.childNodes[0].textContent = match && match.home_team ? match.home_team.flag_emoji + ' ' + match.home_team.name + ' Score ' : 'Home Score ';
+      awayLbl.childNodes[0].textContent = match && match.away_team ? match.away_team.flag_emoji + ' ' + match.away_team.name + ' Score ' : 'Away Score ';
       updateScoreLabels(matchId, 'home-score-hint', 'away-score-hint');
     }
 
@@ -1320,6 +1313,8 @@ Good luck! ⚽🏆`;
       document.getElementById('pens-row').style.display='none';
       document.getElementById('picks-preview').style.display='none';
       document.getElementById('third-place-notice').style.display='none';
+      document.getElementById('home-score-label').childNodes[0].textContent = 'Home Score ';
+      document.getElementById('away-score-label').childNodes[0].textContent = 'Away Score ';
       loadMatchesForResult();
       loadCompletedMatchesForCorrection();
       if (!isThird && match && match.round_id) await maybeAutoSnapshot(match.round_id, msg);
@@ -1484,12 +1479,7 @@ Good luck! ⚽🏆`;
       roundsCache = rounds || [];
       groupRoundIds = (rounds || []).filter(r => r.round_type === 'group').map(r => r.id);
 
-      if (rounds) {
-        const koRounds = rounds.filter(r => r.round_type === 'knockout');
-        document.getElementById('match-round-select').innerHTML =
-          '<option value="">Select round...</option>' +
-          koRounds.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-      }
+      // round dropdown removed — R32 loaded directly via loadR32Matches()
 
       // Build team options — alive + not already assigned to a KO fixture
       if (teams) {
@@ -1497,37 +1487,42 @@ Good luck! ⚽🏆`;
       }
     }
 
-    async function onMatchRoundSelected() {
-      const roundId = document.getElementById('match-round-select').value;
+    async function loadR32Matches() {
       const numSel = document.getElementById('match-number-select');
       document.getElementById('match-prefill').style.display = 'none';
       document.getElementById('match-team-fields').style.display = 'none';
       document.getElementById('add-match-btn').style.display = 'none';
       document.getElementById('match-msg').textContent = '';
 
-      if (!roundId) { numSel.innerHTML = '<option value="">Select round first...</option>'; numSel.disabled = true; return; }
+      const { data: r32Round } = await db.from('rounds').select('id').eq('name', 'Round of 32').single();
+      if (!r32Round) { numSel.innerHTML = '<option value="">R32 round not found in DB</option>'; return; }
 
-      // Load unassigned matches (no home_team_id) in this round
       const { data: matches } = await db.from('matches')
         .select('id, match_number, kickoff, venue')
-        .eq('round_id', roundId)
+        .eq('round_id', r32Round.id)
         .is('home_team_id', null)
         .order('match_number');
 
       if (!matches || matches.length === 0) {
-        numSel.innerHTML = '<option value="">No unassigned matches</option>';
-        numSel.disabled = true;
+        numSel.innerHTML = '<option value="">All R32 matches assigned ✅</option>';
         return;
       }
 
-      numSel.innerHTML = '<option value="">Select match number...</option>' +
+      numSel.innerHTML = '<option value="">Select match...</option>' +
         matches.map(m => {
           const d = new Date(m.kickoff).toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
           const t = new Date(m.kickoff).toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-          return `<option value="${m.id}" data-kickoff="${m.kickoff}" data-venue="${m.venue || ''}">#${m.match_number} · ${d} ${t} · ${m.venue || '—'}</option>`;
+          const slotLabel = R32_SLOTS[m.match_number] ? R32_SLOTS[m.match_number] + ' · ' : '#' + m.match_number + ' · ';
+          return `<option value="${m.id}" data-kickoff="${m.kickoff}" data-venue="${m.venue || ''}" data-match-number="${m.match_number}">${slotLabel}${d} ${t} · ${m.venue || '—'}</option>`;
         }).join('');
-      numSel.disabled = false;
     }
+
+    const R32_SLOTS = {
+      73:'2nd A v 2nd B', 74:'1st E v 3rd', 75:'1st F v 2nd C', 76:'1st C v 2nd F',
+      77:'1st I v 3rd',   78:'2nd E v 2nd I', 79:'1st A v 3rd', 80:'1st L v 3rd',
+      81:'1st D v 3rd',   82:'1st G v 3rd', 83:'2nd K v 2nd L', 84:'1st H v 2nd J',
+      85:'1st B v 3rd',   86:'1st J v 2nd H', 87:'1st K v 3rd', 88:'2nd D v 2nd G',
+    };
 
     async function onMatchNumberSelected() {
       const numSel = document.getElementById('match-number-select');
@@ -1566,10 +1561,13 @@ Good luck! ⚽🏆`;
       });
 
       const available = (window._allTeamsForMatch || []).filter(t => !t.is_eliminated && !assignedIds.has(t.id));
-      const opts = '<option value="">Select team...</option>' +
+      const matchNumber = parseInt(opt.dataset.matchNumber);
+      const slot = R32_SLOTS[matchNumber] || '';
+      const [homeSlot, awaySlot] = slot ? slot.split(' v ') : ['Home team', 'Away team'];
+      const makeOpts = placeholder => '<option value="">' + placeholder + '...</option>' +
         available.map(t => `<option value="${t.id}">${t.flag_emoji} ${t.name}</option>`).join('');
-      document.getElementById('match-home-select').innerHTML = opts;
-      document.getElementById('match-away-select').innerHTML = opts;
+      document.getElementById('match-home-select').innerHTML = makeOpts(homeSlot);
+      document.getElementById('match-away-select').innerHTML = makeOpts(awaySlot);
       document.getElementById('match-team-fields').style.display = '';
       document.getElementById('add-match-btn').style.display = 'block';
     }
@@ -1586,7 +1584,7 @@ Good luck! ⚽🏆`;
       else {
         msg.style.color='var(--green)'; msg.textContent='✅ Teams assigned.';
         // Reload the match number dropdown to remove the assigned match
-        onMatchRoundSelected();
+        loadR32Matches();
         document.getElementById('match-prefill').style.display = 'none';
         document.getElementById('match-team-fields').style.display = 'none';
         document.getElementById('add-match-btn').style.display = 'none';
@@ -1664,12 +1662,6 @@ Good luck! ⚽🏆`;
     }
 
     // ── Snapshot ──────────────────────────────────────────────
-    async function loadSnapshotRounds() {
-      const sel = document.getElementById('snapshot-round-select');
-      const { data: rounds } = await db.from('rounds').select('id, name, sort_order').order('sort_order');
-      if (!rounds) return;
-      sel.innerHTML = '<option value="">Select round...</option>' + rounds.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-    }
 
     async function takeSnapshot(roundId) {
       const [{ data: scores }, { data: gdData }, { data: furthestData }] = await Promise.all([
@@ -1692,15 +1684,7 @@ Good luck! ⚽🏆`;
       return error;
     }
 
-    document.getElementById('btn-take-snapshot').addEventListener('click', async () => {
-      const roundId = document.getElementById('snapshot-round-select').value;
-      const msg = document.getElementById('snapshot-msg');
-      if (!roundId) { msg.style.color='var(--red)'; msg.textContent='Select a round first.'; return; }
-      msg.style.color='var(--text-muted)'; msg.textContent='Taking snapshot...';
-      const error = await takeSnapshot(roundId);
-      if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; }
-      else { msg.style.color='var(--green)'; msg.textContent='✅ Snapshot saved.'; }
-    });
+
 
     // ── Reset All Results (existing) ──────────────────────────
     document.getElementById('btn-reset-all').addEventListener('click', async () => {

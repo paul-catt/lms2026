@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Match Centre — LMS 2026</title>
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Icons & PWA -->
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.json">
@@ -25,7 +23,7 @@
     body { font-family: 'Inter', sans-serif; }
     nav, .nav-logo, .card-title, thead th, .day-num { font-family: 'Rajdhani', sans-serif; }
 
-    /* ── Deadline card ───────────────────────────────────────── */
+    /* ── Deadline card ─────────────────────────────────── */
     .deadline-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -35,92 +33,95 @@
     }
     .deadline-card.open   { border-color: #f59e0b; background: rgba(245,158,11,0.05); }
     .deadline-card.locked { border-color: #ef4444; background: rgba(239,68,68,0.05); }
-    .deadline-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
+    .deadline-inner { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+    .deadline-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:4px; }
+    .deadline-round-name { font-size:18px; font-weight:800; color:var(--text); }
+    .deadline-date-str { font-size:13px; color:var(--text-muted); margin-top:3px; }
+    .deadline-timer { font-size:36px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; line-height:1; min-width:200px; text-align:right; }
+    .deadline-timer.open   { color:#f59e0b; }
+    .deadline-timer.urgent { color:#ef4444; }
+    .deadline-timer.locked { color:var(--text-muted); font-size:18px; font-weight:700; }
+
+    /* ── Round colours ─────────────────────────────────── */
+    /* Each round has a colour token used for banners AND day headers */
+    :root {
+      --rc-gp1:   #6366f1; /* indigo */
+      --rc-gp2:   #8b5cf6; /* violet */
+      --rc-gp3:   #a855f7; /* purple */
+      --rc-r32:   #0ea5e9; /* sky */
+      --rc-r16:   #10b981; /* emerald */
+      --rc-qf:    #f59e0b; /* amber */
+      --rc-sf:    #ef4444; /* red */
+      --rc-3p:    #6b7280; /* grey */
+      --rc-final: #dc2626; /* blood red */
     }
-    .deadline-label {
-      font-size: 11px;
-      font-weight: 700;
+
+    /* ── Round banners (item 5) ────────────────────────── */
+    .round-banner {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 13px;
+      font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      color: var(--text-muted);
-      margin-bottom: 4px;
+      padding: 7px 14px;
+      border-radius: 8px;
+      margin: 20px 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    .deadline-round-name {
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--text);
-    }
-    .deadline-date-str {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-top: 3px;
-    }
-    .deadline-timer {
-      font-size: 36px;
-      font-weight: 900;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: -0.02em;
-      line-height: 1;
-      min-width: 200px;
-      text-align: right;
-    }
-    .deadline-timer.open   { color: #f59e0b; }
-    .deadline-timer.urgent { color: #ef4444; }
-    .deadline-timer.locked { color: var(--text-muted); font-size: 18px; font-weight: 700; }
+    .round-banner:first-child { margin-top: 0; }
 
-    /* ── Day headers ─────────────────────────────────────────── */
+    .round-banner-gp1   { background: rgba(99,102,241,0.12);  color: var(--rc-gp1);   border-left: 3px solid var(--rc-gp1); }
+    .round-banner-gp2   { background: rgba(139,92,246,0.12);  color: var(--rc-gp2);   border-left: 3px solid var(--rc-gp2); }
+    .round-banner-gp3   { background: rgba(168,85,247,0.12);  color: var(--rc-gp3);   border-left: 3px solid var(--rc-gp3); }
+    .round-banner-r32   { background: rgba(14,165,233,0.12);  color: var(--rc-r32);   border-left: 3px solid var(--rc-r32); }
+    .round-banner-r16   { background: rgba(16,185,129,0.12);  color: var(--rc-r16);   border-left: 3px solid var(--rc-r16); }
+    .round-banner-qf    { background: rgba(245,158,11,0.12);  color: var(--rc-qf);    border-left: 3px solid var(--rc-qf); }
+    .round-banner-sf    { background: rgba(239,68,68,0.12);   color: var(--rc-sf);    border-left: 3px solid var(--rc-sf); }
+    .round-banner-3p    { background: rgba(107,114,128,0.12); color: var(--rc-3p);    border-left: 3px solid var(--rc-3p); }
+    .round-banner-final { background: rgba(220,38,38,0.15);   color: var(--rc-final); border-left: 3px solid var(--rc-final); }
+
+    /* ── Day headers (items 2/3/4/5) ──────────────────── */
+    /* Format: ROUND NAME · DAY X · DATE */
     .day-header {
       display: flex;
-      align-items: baseline;
-      gap: 10px;
-      margin: 20px 0 8px;
-      padding-bottom: 7px;
-      border-bottom: 2px solid var(--border);
-    }
-    .day-header.past   { border-color: var(--border); }
-    .day-header.today  { border-color: var(--gold); }
-    .day-header.future { border-color: var(--accent); }
-    .day-header:first-child { margin-top: 8px; }
-
-    .day-num {
-      font-size: 14px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .day-header.past   .day-num { color: var(--text-muted); }
-    .day-header.today  .day-num { color: var(--gold); }
-    .day-header.future .day-num { color: var(--accent); }
-
-    .day-date-str {
+      align-items: center;
+      gap: 0;
+      margin: 14px 0 6px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-family: 'Rajdhani', sans-serif;
       font-size: 12px;
-      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
+    .day-header:first-child { margin-top: 4px; }
+
+    /* Colour variants matching round */
+    .day-header-gp1   { background: rgba(99,102,241,0.07);  color: var(--rc-gp1); }
+    .day-header-gp2   { background: rgba(139,92,246,0.07);  color: var(--rc-gp2); }
+    .day-header-gp3   { background: rgba(168,85,247,0.07);  color: var(--rc-gp3); }
+    .day-header-r32   { background: rgba(14,165,233,0.07);  color: var(--rc-r32); }
+    .day-header-r16   { background: rgba(16,185,129,0.07);  color: var(--rc-r16); }
+    .day-header-qf    { background: rgba(245,158,11,0.07);  color: var(--rc-qf); }
+    .day-header-sf    { background: rgba(239,68,68,0.07);   color: var(--rc-sf); }
+    .day-header-3p    { background: rgba(107,114,128,0.07); color: var(--rc-3p); }
+    .day-header-final { background: rgba(220,38,38,0.1);    color: var(--rc-final); }
+
+    .day-header .sep { opacity: 0.6; margin: 0 7px; font-weight: 400; }
     .day-today-badge {
+      margin-left: 8px;
       font-size: 10px;
       font-weight: 700;
-      background: rgba(245,158,11,0.15);
+      background: rgba(245,158,11,0.2);
       color: var(--gold);
-      padding: 2px 7px;
-      border-radius: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
+      padding: 1px 6px;
+      border-radius: 8px;
     }
 
-    /* round-banner styles are defined globally in style.css */
-    .match-venue {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 3px;
-      padding-left: 44px;
-    }
-
-    /* ── Match cards ─────────────────────────────────────────── */
+    /* ── Match cards ───────────────────────────────────── */
     .match-card {
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -131,75 +132,23 @@
     .match-card.complete { opacity: 0.75; }
     .match-card.live     { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
 
-    /* One-line row: time · home · score-or-vs · away · badge */
-    .match-main {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: nowrap;
-    }
-    .match-time {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-muted);
-      min-width: 36px;
-      flex-shrink: 0;
-    }
-    .match-home, .match-away {
-      font-size: 13px;
-      font-weight: 700;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .match-home { flex: 1; text-align: right; }
-    .match-away { flex: 1; }
-    .match-score-inline {
-      font-size: 18px;
-      font-weight: 900;
-      color: var(--text);
-      min-width: 52px;
-      text-align: center;
-      flex-shrink: 0;
-      letter-spacing: -0.01em;
-    }
-    .match-vs {
-      font-size: 11px;
-      color: var(--text-muted);
-      min-width: 52px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-    .match-badge {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 10px;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-    .badge-ft    { background: rgba(148,163,184,0.1); color: var(--text-muted); }
-    .badge-live  { background: rgba(59,130,246,0.15); color: #3b82f6; }
-    .badge-sched { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+    .match-main { display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
+    .match-time { font-size:11px; font-weight:600; color:var(--text-muted); min-width:36px; flex-shrink:0; }
+    .match-home, .match-away { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .match-home { flex:1; text-align:right; }
+    .match-away { flex:1; }
+    .match-score-inline { font-size:18px; font-weight:900; color:var(--text); min-width:52px; text-align:center; flex-shrink:0; letter-spacing:-0.01em; }
+    .match-vs { font-size:11px; color:var(--text-muted); min-width:52px; text-align:center; flex-shrink:0; }
+    .match-badge { font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; white-space:nowrap; flex-shrink:0; }
+    .badge-ft    { background:rgba(148,163,184,0.1); color:var(--text-muted); }
+    .badge-live  { background:rgba(59,130,246,0.15); color:#3b82f6; }
 
-    /* Sub-rows */
-    .match-sub {
-      padding-left: 44px;
-      margin-top: 5px;
-    }
-    .match-aet {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-    .odds-row {
-      display: flex;
-      gap: 5px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-bottom: 4px;
-    }
-    .odds-label { font-size: 11px; color: var(--text-muted); margin-right: 2px; }
+    .match-sub { padding-left:44px; margin-top:5px; }
+    .match-aet { font-size:11px; color:var(--text-muted); margin-bottom:4px; }
+
+    /* ── Odds (items 6 & 7) ────────────────────────────── */
+    .odds-row { display:flex; gap:5px; flex-wrap:wrap; align-items:center; margin-bottom:4px; }
+    .odds-label { font-size:11px; color:var(--text-muted); margin-right:2px; }
     .odds-pill {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -207,64 +156,34 @@
       padding: 1px 6px;
       font-size: 11px;
       color: var(--text-muted);
+      transition: all 0.1s;
     }
-    .no-odds { font-size: 11px; color: var(--border); font-style: italic; }
+    /* Item 7: winning odds highlighted, others dimmed */
+    .odds-pill.odds-winner { color: var(--text); border-color: var(--green); background: rgba(16,185,129,0.1); font-weight: 700; }
+    .odds-pill.odds-loser  { opacity: 0.35; }
+    .no-odds { font-size:11px; color:var(--border); font-style:italic; }
 
-    .picks-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      padding-top: 6px;
-      border-top: 1px solid var(--border);
-      margin-top: 4px;
-    }
-    .pick-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 3px 8px;
-      font-size: 12px;
-    }
-    .pick-chip.win  { background: rgba(16,185,129,0.1);  border-color: rgba(16,185,129,0.3); }
-    .pick-chip.draw { background: rgba(245,158,11,0.1);  border-color: rgba(245,158,11,0.3); }
-    .pick-chip.loss { background: rgba(239,68,68,0.1);   border-color: rgba(239,68,68,0.3); }
-    .no-picks { font-size: 11px; color: var(--text-muted); font-style: italic; }
+    /* ── Picks ─────────────────────────────────────────── */
+    .picks-row { display:flex; flex-wrap:wrap; gap:4px; padding-top:6px; border-top:1px solid var(--border); margin-top:4px; }
+    .pick-chip { display:inline-flex; align-items:center; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:3px 8px; font-size:12px; }
+    .pick-chip.win  { background:rgba(16,185,129,0.1);  border-color:rgba(16,185,129,0.3); }
+    .pick-chip.draw { background:rgba(245,158,11,0.1);  border-color:rgba(245,158,11,0.3); }
+    .pick-chip.loss { background:rgba(239,68,68,0.1);   border-color:rgba(239,68,68,0.3); }
+    .no-picks { font-size:11px; color:var(--text-muted); font-style:italic; }
 
-    /* Upcoming — even lighter */
-    .upcoming-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 14px;
-      margin-bottom: 6px;
-      opacity: 0.72;
-    }
-
-    .test-date-banner {
-      background: #7c3aed; color: #fff; text-align: center;
-      padding: 8px 16px; font-size: 13px; font-weight: 600;
-    }
-    .test-date-banner a {
-      color: #e9d5ff; text-decoration: underline; cursor: pointer; margin-left: 12px; font-weight: 400;
-    }
+    .upcoming-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 14px; margin-bottom:6px; opacity:0.72; }
 
     @media (max-width: 600px) {
-      .deadline-timer { font-size: 26px; min-width: 0; text-align: left; }
-      .match-home, .match-away { font-size: 12px; }
-      .match-score-inline { font-size: 16px; min-width: 44px; }
-      .match-sub { padding-left: 0; }
+      .deadline-timer { font-size:26px; min-width:0; text-align:left; }
+      .match-home, .match-away { font-size:12px; }
+      .match-score-inline { font-size:16px; min-width:44px; }
+      .match-sub { padding-left:0; }
     }
   </style>
 </head>
 <body>
 
-  <div class="test-date-banner" id="test-date-banner" style="display:none">
-    🧪 Test mode — date overridden to <span id="banner-date"></span>
-    <a href="/admin">Change in Admin</a>
-  </div>
+  <!-- Item 29: purple test banner removed -->
 
   <nav>
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
@@ -273,7 +192,6 @@
       <a href="/match-centre" class="active">Match Centre</a>
       <a href="/bracket">Bracket</a>
       <a href="/rules">Rules</a>
-      <a href="/admin">Admin</a>
     </div>
   </nav>
 
@@ -281,10 +199,7 @@
     <div id="deadline-card-wrap"></div>
 
     <div class="card" id="today-card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-        <div class="card-title" style="margin-bottom:0" id="today-card-title">⚽ Today's Matches</div>
-        <span id="today-date" style="font-size:11px; color:var(--text-muted)"></span>
-      </div>
+      <div class="card-title">📅 Today</div>
       <div id="today-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="today-content"></div>
     </div>
@@ -308,7 +223,7 @@
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const LS_KEY = 'lms2026_test_date';
 
-    const WINDOW_START_HOUR = 11;
+    const WINDOW_START_HOUR  = 11;
     const WINDOW_DURATION_MS = 24 * 60 * 60 * 1000;
 
     function getEffectiveDate() {
@@ -316,20 +231,8 @@
       return o ? new Date(o) : new Date();
     }
 
-    (function initBanner() {
-      const o = localStorage.getItem(LS_KEY);
-      if (o) {
-        const d = new Date(o);
-        document.getElementById('banner-date').textContent =
-          d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) + ' ' +
-          d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-        document.getElementById('test-date-banner').style.display = 'block';
-      }
-    })();
-
     function toWindowStartMs(isoStr) {
-      const d = new Date(isoStr);
-      const h = d.getUTCHours();
+      const d = new Date(isoStr), h = d.getUTCHours();
       if (h < WINDOW_START_HOUR)
         return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, WINDOW_START_HOUR, 0, 0);
       return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), WINDOW_START_HOUR, 0, 0);
@@ -351,7 +254,34 @@
     function fmtShortDate(iso) { return new Date(iso).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }); }
     function fmtLongDate(iso)  { return new Date(iso).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' }); }
 
-    // ── Deadline countdown ────────────────────────────────────
+    // Item 6: format odds — max 1dp, drop trailing zero
+    function fmtOdds(val) {
+      if (!val) return '—';
+      const n = parseFloat(val);
+      if (isNaN(n)) return '—';
+      // 1dp, strip trailing zero
+      return (Math.round(n * 10) / 10).toString();
+    }
+
+    // Map round name → CSS key
+    function roundKey(name) {
+      const n = (name || '').toLowerCase().replace(/\s+/g, '');
+      if (n.includes('groupphase1') || n === 'gp1') return 'gp1';
+      if (n.includes('groupphase2') || n === 'gp2') return 'gp2';
+      if (n.includes('groupphase3') || n === 'gp3') return 'gp3';
+      if (n.includes('roundof32')   || n === 'r32') return 'r32';
+      if (n.includes('roundof16')   || n === 'r16') return 'r16';
+      if (n.includes('quarter')     || n === 'qf')  return 'qf';
+      if (n.includes('semi')        || n === 'sf')  return 'sf';
+      if (n.includes('3rd') || n.includes('third')) return '3p';
+      if (n.includes('final'))                      return 'final';
+      return 'gp1';
+    }
+
+    function roundBannerClass(name)  { return 'round-banner-' + roundKey(name); }
+    function dayHeaderClass(name)    { return 'day-header-'    + roundKey(name); }
+
+    // ── Deadline countdown ───────────────────────────────
     let deadlineInterval = null;
 
     async function loadDeadline() {
@@ -382,7 +312,6 @@
         const card  = document.getElementById('dl-card');
         const timer = document.getElementById('dl-timer');
         if (!card || !timer) return;
-
         if (diff <= 0) {
           card.className = 'deadline-card locked';
           document.getElementById('dl-round').textContent = '🔒 ' + round.name + ' — Picks Locked';
@@ -392,36 +321,54 @@
           if (deadlineInterval) { clearInterval(deadlineInterval); deadlineInterval = null; }
           return;
         }
-
         const days  = Math.floor(diff / 86400000);
         const hours = Math.floor((diff % 86400000) / 3600000);
         const mins  = Math.floor((diff % 3600000)  / 60000);
         const secs  = Math.floor((diff % 60000)    / 1000);
-
         timer.textContent = days > 0
           ? days + 'd ' + String(hours).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm ' + String(secs).padStart(2,'0') + 's'
           : String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
-
         timer.className = 'deadline-timer ' + (diff < 3 * 3600000 ? 'urgent' : 'open');
       }
-
       tick();
       if (deadlineInterval) clearInterval(deadlineInterval);
       deadlineInterval = setInterval(tick, 1000);
     }
 
-    // ── HTML builders ─────────────────────────────────────────
-    function oddsHtml(match) {
+    // ── Odds HTML ────────────────────────────────────────
+    // Item 6: 1dp. Item 7: winner highlighted in results, others dimmed.
+    function oddsHtml(match, highlightWinner) {
       if (!match.odds_home) return '<div class="odds-row"><span class="no-odds">No odds yet</span></div>';
+
+      // Determine winner for highlighting
+      let winnerSide = null; // 'home', 'draw', 'away'
+      if (highlightWinner && match.status === 'complete') {
+        if (match.home_score > match.away_score) winnerSide = 'home';
+        else if (match.away_score > match.home_score) winnerSide = 'away';
+        else winnerSide = 'draw';
+        // pens: winner side takes it
+        if (match.pens_winner_id) {
+          winnerSide = match.pens_winner_id === match.home_team_id ? 'home' : 'away';
+        }
+      }
+
+      function pillCls(side) {
+        if (!winnerSide) return 'odds-pill';
+        if (side === winnerSide) return 'odds-pill odds-winner';
+        return 'odds-pill odds-loser';
+      }
+
       return '<div class="odds-row">' +
         '<span class="odds-label">Odds</span>' +
-        '<span class="odds-pill">' + match.home_team.name + ' ' + parseFloat(match.odds_home).toFixed(2) + '</span>' +
-        '<span class="odds-pill">Draw ' + (match.odds_draw ? parseFloat(match.odds_draw).toFixed(2) : '—') + '</span>' +
-        '<span class="odds-pill">' + match.away_team.name + ' ' + parseFloat(match.odds_away).toFixed(2) + '</span>' +
+        '<span class="' + pillCls('home') + '">' + match.home_team.name + ' ' + fmtOdds(match.odds_home) + '</span>' +
+        '<span class="' + pillCls('draw') + '">Draw ' + fmtOdds(match.odds_draw) + '</span>' +
+        '<span class="' + pillCls('away') + '">' + match.away_team.name + ' ' + fmtOdds(match.odds_away) + '</span>' +
         '</div>';
     }
 
-    function matchCardHtml(match, picks, allPlayers) {
+    // ── Match card (today + results archive) ────────────
+    // Item 8: showVenue=false for results archive
+    function matchCardHtml(match, picks, allPlayers, showVenue) {
       const isComplete = match.status === 'complete';
       const isLive     = match.status === 'live';
 
@@ -431,18 +378,15 @@
 
       const badgeHtml = isComplete
         ? '<span class="match-badge badge-ft">FT</span>'
-        : isLive
-          ? '<span class="match-badge badge-live">🔴 Live</span>'
-          : '';
+        : isLive ? '<span class="match-badge badge-live">🔴 Live</span>' : '';
 
-      // AET / pens note
       let aetHtml = '';
       if (isComplete && match.pens_winner_id) {
         const w = match.pens_winner_id === match.home_team_id ? match.home_team : match.away_team;
         aetHtml = '<div class="match-aet">AET · ' + w.flag_emoji + ' ' + w.name + ' win on penalties</div>';
       }
 
-      // Picks
+      // Picks for this match
       const matchPicks = (picks || []).filter(p =>
         p.round_id === match.round_id &&
         (p.team_id === match.home_team_id || p.team_id === match.away_team_id)
@@ -453,7 +397,7 @@
         picksHtml = '<div class="match-sub"><div class="picks-row"><span class="no-picks">No picks for this match</span></div></div>';
       } else {
         const chips = matchPicks.map(p => {
-          const player     = (allPlayers || []).find(pl => pl.id === p.player_id);
+          const pl         = (allPlayers || []).find(pl => pl.id === p.player_id);
           const result     = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
           const chipClass  = result ? result.match_result : '';
           const pts        = result ? '+' + result.points_earned : '';
@@ -461,8 +405,8 @@
           const flag       = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
           const isLongshot = isHome ? match.home_team.is_longshot : match.away_team.is_longshot;
           return '<div class="pick-chip ' + chipClass + '">' +
-            '<a href="/' + (player ? player.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700">' +
-              (player ? player.name : '?') + '</a>' +
+            '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700">' +
+              (pl ? pl.name : '?') + '</a>' +
             ' ' + flag +
             ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px">' + p.multiplier + 'pt</span>' +
             (isLongshot ? ' ⭐' : '') +
@@ -472,8 +416,9 @@
         picksHtml = '<div class="match-sub"><div class="picks-row">' + chips + '</div></div>';
       }
 
-      const venueHtml = match.venue
-        ? '<div class="match-venue">📍 ' + match.venue + '</div>'
+      // Item 8: venue only shown when showVenue=true
+      const venueHtml = (showVenue && match.venue)
+        ? '<div style="font-size:11px;color:var(--text-muted);margin-top:3px;padding-left:44px">📍 ' + match.venue + '</div>'
         : '';
 
       return '<div class="match-card ' + match.status + '">' +
@@ -486,15 +431,41 @@
         '</div>' +
         venueHtml +
         (aetHtml ? '<div class="match-sub">' + aetHtml + '</div>' : '') +
-        '<div class="match-sub">' + oddsHtml(match) + '</div>' +
+        '<div class="match-sub">' + oddsHtml(match, isComplete) + '</div>' +
         picksHtml +
         '</div>';
     }
 
-    function upcomingCardHtml(match) {
+    // ── Upcoming card (item 1: show picks) ──────────────
+    function upcomingCardHtml(match, picks, allPlayers) {
       const venueHtml = match.venue
-        ? '<div class="match-venue">📍 ' + match.venue + '</div>'
+        ? '<div style="font-size:11px;color:var(--text-muted);margin-top:3px;padding-left:44px">📍 ' + match.venue + '</div>'
         : '';
+
+      // Item 1: picks for upcoming matches
+      const matchPicks = (picks || []).filter(p =>
+        p.round_id === match.round_id &&
+        (p.team_id === match.home_team_id || p.team_id === match.away_team_id)
+      );
+
+      let picksHtml = '';
+      if (matchPicks.length > 0) {
+        const chips = matchPicks.map(p => {
+          const pl         = (allPlayers || []).find(pl => pl.id === p.player_id);
+          const isHome     = p.team_id === match.home_team_id;
+          const flag       = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
+          const isLongshot = isHome ? match.home_team.is_longshot : match.away_team.is_longshot;
+          return '<div class="pick-chip">' +
+            '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700">' +
+              (pl ? pl.name : '?') + '</a>' +
+            ' ' + flag +
+            ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px">' + p.multiplier + 'pt</span>' +
+            (isLongshot ? ' ⭐' : '') +
+            '</div>';
+        }).join('');
+        picksHtml = '<div class="match-sub"><div class="picks-row">' + chips + '</div></div>';
+      }
+
       return '<div class="upcoming-card">' +
         '<div class="match-main">' +
           '<span class="match-time">' + fmtTime(match.kickoff) + '</span>' +
@@ -503,19 +474,26 @@
           '<span class="match-away">' + match.away_team.name + ' ' + match.away_team.flag_emoji + '</span>' +
         '</div>' +
         venueHtml +
-        '<div class="match-sub">' + oddsHtml(match) + '</div>' +
+        '<div class="match-sub">' + oddsHtml(match, false) + '</div>' +
+        picksHtml +
         '</div>';
     }
 
-    function dayHeaderHtml(dayNum, windowStartMs, isToday, isPast) {
-      const cls     = isToday ? 'today' : isPast ? 'past' : 'future';
-      const repDate = new Date(windowStartMs + 4 * 60 * 60 * 1000); // noon-ish of window day
-      const dateStr = repDate.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'long' }).toUpperCase();
-      const badge   = isToday ? ' <span class="day-today-badge">Today</span>' : '';
+    // ── Day header (items 2/3/4/5) ───────────────────────
+    // Format: ROUND NAME · DAY X · DATE
+    function dayHeaderHtml(roundName, dayNum, windowStartMs, isToday) {
+      const cls     = dayHeaderClass(roundName);
+      const repDate = new Date(windowStartMs + 4 * 60 * 60 * 1000);
+      const dateStr = repDate.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }).toUpperCase();
+      const todayBadge = isToday ? ' <span class="day-today-badge">Today</span>' : '';
       return '<div class="day-header ' + cls + '">' +
-        '<span class="day-num">Day ' + dayNum + '</span>' +
-        '<span class="day-date-str">' + dateStr + '</span>' +
-        badge + '</div>';
+        '<span>' + roundName.toUpperCase() + '</span>' +
+        '<span class="sep">|</span>' +
+        '<span>Day ' + dayNum + '</span>' +
+        '<span class="sep">|</span>' +
+        '<span>' + dateStr + '</span>' +
+        todayBadge +
+        '</div>';
     }
 
     async function getRoundFirstKickoff(roundId) {
@@ -530,10 +508,6 @@
       try {
         const effectiveNow = getEffectiveDate();
         const { windowStart, windowEnd } = getGameDayWindow(effectiveNow);
-        const todayWindowMs = toWindowStartMs(effectiveNow.toISOString());
-
-        document.getElementById('today-date').textContent =
-          fmtLongDate(new Date(windowStart.getTime() + 6 * 60 * 60 * 1000).toISOString());
 
         const [{ data: players }, { data: picks }] = await Promise.all([
           db.from('players').select('id, name, slug'),
@@ -542,7 +516,7 @@
 
         const matchSel = 'id, kickoff, status, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, round_id, pens_winner_id, venue, rounds(id, name, sort_order), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)';
 
-        // TODAY
+        // ── TODAY ──────────────────────────────────────────
         const { data: todayMatches } = await db.from('matches').select(matchSel)
           .gte('kickoff', windowStart.toISOString())
           .lt('kickoff',  windowEnd.toISOString())
@@ -553,16 +527,16 @@
         const todayContent = document.getElementById('today-content');
 
         if (!todayMatches || todayMatches.length === 0) {
-          document.getElementById('today-card-title').textContent = '⚽ Today\'s Matches';
           todayContent.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:24px">No matches today.</p>';
         } else {
+          const rName      = todayMatches[0].rounds ? todayMatches[0].rounds.name : '';
           const roundFirst = await getRoundFirstKickoff(todayMatches[0].round_id);
-          const dayNum = roundFirst ? getDayNumber(windowStart.toISOString(), roundFirst) : 1;
-          document.getElementById('today-card-title').textContent = '⚽ Day ' + dayNum + ': Today\'s Matches';
-          todayContent.innerHTML = todayMatches.map(m => matchCardHtml(m, picks, players)).join('');
+          const dayNum     = roundFirst ? getDayNumber(windowStart.toISOString(), roundFirst) : 1;
+          todayContent.innerHTML = dayHeaderHtml(rName, dayNum, windowStart.getTime(), true) +
+            todayMatches.map(m => matchCardHtml(m, picks, players, true)).join('');
         }
 
-        // UPCOMING
+        // ── UPCOMING ───────────────────────────────────────
         const upcoming2End = new Date(windowEnd.getTime() + 2 * WINDOW_DURATION_MS);
         const { data: upcomingMatches } = await db.from('matches').select(matchSel)
           .gte('kickoff', windowEnd.toISOString())
@@ -575,18 +549,26 @@
         const upcomingContent = document.getElementById('upcoming-content');
 
         if (upcomingMatches && upcomingMatches.length > 0) {
+          // Group by window day
           const buckets = {};
           upcomingMatches.forEach(m => {
             const key = toWindowStartMs(m.kickoff);
-            if (!buckets[key]) buckets[key] = { wsMs: key, matches: [] };
+            if (!buckets[key]) buckets[key] = { wsMs: key, matches: [], roundName: m.rounds ? m.rounds.name : '' };
             buckets[key].matches.push(m);
           });
-          const upcomingFirst = await getRoundFirstKickoff(upcomingMatches[0].round_id);
+          // Pre-fetch first kickoff per round
+          const roundFirstCache = {};
+          for (const b of Object.values(buckets)) {
+            const rid = b.matches[0].round_id;
+            if (!roundFirstCache[rid]) roundFirstCache[rid] = await getRoundFirstKickoff(rid);
+          }
           let html = '';
           Object.values(buckets).sort((a,b) => a.wsMs - b.wsMs).forEach(b => {
-            const dayNum = upcomingFirst ? getDayNumber(new Date(b.wsMs).toISOString(), upcomingFirst) : 1;
-            html += dayHeaderHtml(dayNum, b.wsMs, false, false);
-            html += b.matches.map(m => upcomingCardHtml(m)).join('');
+            const rid    = b.matches[0].round_id;
+            const dayNum = roundFirstCache[rid] ? getDayNumber(new Date(b.wsMs).toISOString(), roundFirstCache[rid]) : 1;
+            // Items 2/5: day header with round name + colour
+            html += dayHeaderHtml(b.roundName, dayNum, b.wsMs);
+            html += b.matches.map(m => upcomingCardHtml(m, picks, players)).join('');
           });
           upcomingContent.innerHTML = html;
           upcomingCardEl.style.display = 'block';
@@ -594,7 +576,7 @@
           upcomingCardEl.style.display = 'none';
         }
 
-        // RESULTS ARCHIVE
+        // ── RESULTS ARCHIVE ────────────────────────────────
         const { data: allMatches } = await db.from('matches').select(matchSel)
           .eq('status', 'complete')
           .not('home_team_id', 'is', null)
@@ -621,20 +603,6 @@
           if (!roundFirstMap[round_id]) roundFirstMap[round_id] = await getRoundFirstKickoff(round_id);
         }
 
-        function roundBannerClass(name) {
-          const n = (name || '').toLowerCase().replace(/\s+/g, '');
-          if (n.includes('group phase 1') || n === 'gp1') return 'round-banner-gp1';
-          if (n.includes('group phase 2') || n === 'gp2') return 'round-banner-gp2';
-          if (n.includes('group phase 3') || n === 'gp3') return 'round-banner-gp3';
-          if (n.includes('round of 32')   || n === 'r32') return 'round-banner-r32';
-          if (n.includes('round of 16')   || n === 'r16') return 'round-banner-r16';
-          if (n.includes('quarter')       || n === 'qf')  return 'round-banner-qf';
-          if (n.includes('semi')          || n === 'sf')  return 'round-banner-sf';
-          if (n.includes('3rd') || n.includes('third'))   return 'round-banner-3p';
-          if (n.includes('final'))                        return 'round-banner-final';
-          return 'round-banner-gp1';
-        }
-
         resultsContent.innerHTML = sortedRounds.map(([roundName, { round_id, matches }]) => {
           const dayBuckets = {};
           matches.forEach(m => {
@@ -643,17 +611,17 @@
             dayBuckets[wsMs].matches.push(m);
           });
 
-          const roundFirst = roundFirstMap[round_id];
+          const roundFirst      = roundFirstMap[round_id];
           const dayBucketsSorted = Object.values(dayBuckets).sort((a,b) => b.wsMs - a.wsMs);
-          const bannerCls = roundBannerClass(roundName);
+          // Items 4/5: banner colour matches round
+          const bannerCls = 'round-banner ' + roundBannerClass(roundName);
 
-          return '<div class="round-banner ' + bannerCls + '">🏆 ' + roundName + '</div>' +
+          return '<div class="' + bannerCls + '">🏆 ' + roundName + '</div>' +
             dayBucketsSorted.map(b => {
               const dayNum  = roundFirst ? getDayNumber(new Date(b.wsMs).toISOString(), roundFirst) : 1;
-              const isPast  = b.wsMs < todayWindowMs;
-              const isToday = b.wsMs === todayWindowMs;
-              return dayHeaderHtml(dayNum, b.wsMs, isToday, isPast) +
-                b.matches.map(m => matchCardHtml(m, picks, players)).join('');
+              // Items 4/5: day header with round name + colour. Item 8: showVenue=false
+              return dayHeaderHtml(roundName, dayNum, b.wsMs) +
+                b.matches.map(m => matchCardHtml(m, picks, players, false)).join('');
             }).join('');
         }).join('');
 

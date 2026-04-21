@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Leaderboard — LMS 2026</title>
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Icons & PWA -->
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.json">
@@ -33,7 +31,6 @@
     .player-name a:hover { color:var(--gold); }
     .points { font-size:16px; font-weight:700; color:var(--gold); }
     .out-row { opacity:0.45; }
-    /* Playing today — purple (doesn't clash with Favourite blue dot) */
     .playing-row { background:rgba(139,92,246,0.12) !important; }
     .playing-row:hover { background:rgba(139,92,246,0.18) !important; }
     .form-pip { display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 1px; }
@@ -59,21 +56,23 @@
     .rotate-hint { display:none; }
     @media(max-width:900px) { .rotate-hint { display:block; margin-top:8px; font-size:11px; color:var(--text-muted); } }
     @media(max-width:900px) and (orientation:landscape) { .rotate-hint { display:none; } }
-    .test-date-banner { background:#7c3aed; color:#fff; text-align:center; padding:8px 16px; font-size:13px; font-weight:600; }
-    .test-date-banner a { color:#e9d5ff; text-decoration:underline; cursor:pointer; margin-left:12px; font-weight:400; }
+    /* ITEM 29: purple test banner removed */
     .proj-goals { font-size:11px; color:var(--text-muted); margin-top:2px; margin-bottom:16px; }
     @media(max-width:600px) { .proj-goals { display:none !important; } }
     .goals-diff { font-weight:700; font-size:13px; }
     .goals-diff-close { color:var(--green); }
     .goals-diff-mid { color:var(--gold); }
     .goals-diff-far { color:var(--red); }
-    .lb-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
-    .lb-tab { font-family:'Rajdhani',sans-serif; padding:7px 18px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:700; letter-spacing:0.04em; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); transition:all 0.15s; }
+    .lb-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:nowrap; }
+    .lb-tab { font-family:'Rajdhani',sans-serif; padding:7px 18px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:700; letter-spacing:0.04em; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); transition:all 0.15s; white-space:nowrap; }
     .lb-tab:hover { color:var(--text); border-color:var(--text-muted); }
     .lb-tab.active { background:var(--gold); color:#000; border-color:var(--gold); }
     .lb-view { display:none; }
     .lb-view.active { display:block; }
     .ls-pts { font-size:14px; font-weight:800; color:var(--gold); }
+
+    /* ITEM 15: "none" status — shown as red text */
+    .status-none { font-size:12px; color:var(--red); }
 
     /* ── Pick Matrix ─────────────────────────────────────────── */
     .matrix-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
@@ -103,10 +102,7 @@
 </head>
 <body>
 
-  <div class="test-date-banner" id="test-date-banner" style="display:none">
-    🧪 Test mode — date overridden to <span id="banner-date"></span>
-    <a href="/admin">Change in Admin</a>
-  </div>
+  <!-- ITEM 29: purple test banner removed -->
 
   <nav>
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
@@ -115,7 +111,6 @@
       <a href="/match-centre">Match Centre</a>
       <a href="/bracket">Bracket</a>
       <a href="/rules">Rules</a>
-      <a href="/admin">Admin</a>
       <a id="my-page-link" style="display:none">← My Page</a>
     </div>
   </nav>
@@ -129,7 +124,7 @@
       <div id="round-heading" class="round-heading"></div>
       <div id="proj-goals-label" class="proj-goals"></div>
 
-      <div class="lb-tabs" style="flex-wrap:nowrap">
+      <div class="lb-tabs">
         <div class="lb-tab active" data-view="main" onclick="switchView('main')">📊 Standings</div>
         <div class="lb-tab" data-view="matrix" onclick="switchView('matrix')">🔢 Matrix</div>
         <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Longshot</div>
@@ -149,10 +144,13 @@
                 <th>Player</th>
                 <th>Pld</th>
                 <th>Pts</th>
+                <!-- ITEM 17: Rnd column — knockout only -->
+                <th id="rnd-col-header" style="display:none">Rnd</th>
                 <th>GD</th>
-                <th class="hide-mobile">Diff from<br>proj.</th>
+                <!-- ITEM 17: renamed from "Diff from proj." -->
+                <th class="hide-mobile">Total<br>Goals</th>
                 <th class="hide-mobile">Form<br><span style="font-size:9px;color:var(--text-muted);font-weight:400">older→newer</span></th>
-                <th class="hide-mobile" id="status-col-header" style="display:none">Status</th>
+                <th id="status-col-header" style="display:none">Status</th>
               </tr>
             </thead>
             <tbody id="leaderboard-body"></tbody>
@@ -173,12 +171,8 @@
 
       <!-- LONGSHOT LEADERBOARD -->
       <div class="lb-view" id="view-longshot">
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:2px">
-          Tracks longshot bonus points earned across the tournament.
-        </p>
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px">
-          ⭐ = longshot pick that won.
-        </p>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:2px">Tracks longshot bonus points earned across the tournament.</p>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px">⭐ = longshot pick that won.</p>
         <div id="longshot-wrap" class="table-wrap">
           <div class="loading"><div class="spinner"></div></div>
         </div>
@@ -186,9 +180,7 @@
 
       <!-- PICK MATRIX -->
       <div class="lb-view" id="view-matrix">
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px">
-          Every player's pick history across all rounds. Colour = result. Right columns show teams remaining.
-        </p>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px">Every player's pick history across all rounds. Colour = result. Right columns show teams remaining.</p>
         <div style="font-size:11px; color:var(--text-muted); margin-bottom:4px; display:flex; gap:12px; align-items:center">
           <span class="m-W" style="padding:1px 6px; border-radius:4px">W</span> Win &nbsp;
           <span class="m-D" style="padding:1px 6px; border-radius:4px">D</span> Draw &nbsp;
@@ -217,8 +209,6 @@
     const TOTAL_MATCHES = 104;
     const LS_KEY = 'lms2026_test_date';
 
-    // ── My page link & row highlight ──────────────────────────
-    // Pick up slug from ?me=slug URL param, or fall back to localStorage
     const urlParams = new URLSearchParams(window.location.search);
     const mySlug = urlParams.get('me') || localStorage.getItem('lms2026_my_slug') || null;
     if (mySlug) {
@@ -227,49 +217,41 @@
       link.style.display = 'inline';
     }
 
-    // ── Day window: 11:00 UTC to 11:00 UTC (noon BST to noon BST) ──
-    const WINDOW_START_HOUR = 11; // UTC
-    const WINDOW_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+    const WINDOW_START_HOUR  = 11;
+    const WINDOW_DURATION_MS = 24 * 60 * 60 * 1000;
 
     function getEffectiveDate() {
-      const override = localStorage.getItem(LS_KEY);
-      return override ? new Date(override) : new Date();
+      const o = localStorage.getItem(LS_KEY);
+      return o ? new Date(o) : new Date();
     }
 
-    (function initBanner() {
-      const override = localStorage.getItem(LS_KEY);
-      if (override) {
-        const d = new Date(override);
-        document.getElementById('banner-date').textContent =
-          d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) +
-          ' ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-        document.getElementById('test-date-banner').style.display = 'block';
-      }
-    })();
-
-    // ── Day window helpers ────────────────────────────────────
     function toWindowStartMs(isoStr) {
-      const d = new Date(isoStr);
-      const h = d.getUTCHours();
-      if (h < WINDOW_START_HOUR) {
+      const d = new Date(isoStr), h = d.getUTCHours();
+      if (h < WINDOW_START_HOUR)
         return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, WINDOW_START_HOUR, 0, 0);
-      }
       return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), WINDOW_START_HOUR, 0, 0);
     }
 
     function getGameDayWindow(effectiveDate) {
-      const d = new Date(effectiveDate);
-      const utcHour = d.getUTCHours();
-      let windowStart;
-      if (utcHour < WINDOW_START_HOUR) {
-        windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, WINDOW_START_HOUR, 0, 0));
-      } else {
-        windowStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), WINDOW_START_HOUR, 0, 0));
-      }
-      return { windowStart, windowEnd: new Date(windowStart.getTime() + WINDOW_DURATION_MS) };
+      const d = new Date(effectiveDate), h = d.getUTCHours();
+      const ws = h < WINDOW_START_HOUR
+        ? new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, WINDOW_START_HOUR, 0, 0))
+        : new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), WINDOW_START_HOUR, 0, 0));
+      return { windowStart: ws, windowEnd: new Date(ws.getTime() + WINDOW_DURATION_MS) };
     }
 
-    let _matrixRendered = false;
+    // ITEM 17: short round label for Rnd column
+    function shortRoundName(name) {
+      if (!name) return '—';
+      const n = name.toLowerCase().replace(/\s+/g,'');
+      if (n.includes('roundof32') || n === 'r32') return 'R32';
+      if (n.includes('roundof16') || n === 'r16') return 'R16';
+      if (n.includes('quarter') || n === 'qf') return 'QF';
+      if (n.includes('semi')    || n === 'sf') return 'SF';
+      if (n.includes('final'))                  return 'F';
+      return name;
+    }
+
     function switchView(name) {
       document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
       document.querySelectorAll('.lb-view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
@@ -283,40 +265,33 @@
       if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the standings first.</p>'; return; }
       const { sorted, allPicks, rounds } = _leaderboardData;
 
-      // Only show matrix from R32 onwards (first knockout round complete)
       const completedKORounds = (rounds || []).filter(r => r.round_type === 'knockout' && r.is_complete);
       if (completedKORounds.length === 0) {
-        wrap.innerHTML = '<p style="color:var(--text-muted);padding:16px 0">Matrix available from Round of 32 onwards.</p>';
+        wrap.innerHTML = `<div style="padding:16px 0">
+          <p style="color:var(--gold);font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px">🔢 Matrix unlocks at Round of 16</p>
+          <p style="color:var(--text-muted);font-size:13px;line-height:1.5">Once the knockout stage is underway, the matrix shows every player's picks side by side — so you can see who's doubled up on the same teams, who's gone rogue, and where the danger zones are.</p>
+        </div>`;
         return;
       }
 
       const BAND_ORDER = { favourite:1, dark_horse:2, long_shot:3, no_hoper:4 };
-      const BAND_CLASS = { favourite:'m-fav', dark_horse:'m-dh', long_shot:'m-ls', no_hoper:'m-nh' };
       const BAND_LABEL = { favourite:'Fav', dark_horse:'Dark H', long_shot:'L/S', no_hoper:'No H' };
       const BAND_COLOR = { favourite:'#3b82f6', dark_horse:'#eab308', long_shot:'#f97316', no_hoper:'#ef4444' };
 
-      // Build pick lookup: player_id -> team_id -> { result, multiplier }
       const pickMap = {};
       (allPicks || []).forEach(p => {
         if (!pickMap[p.player_id]) pickMap[p.player_id] = {};
         const res = p.pick_results && p.pick_results[0];
-        pickMap[p.player_id][p.team_id] = {
-          result: res ? res.match_result : 'pending',
-          multiplier: p.multiplier,
-        };
+        pickMap[p.player_id][p.team_id] = { result: res ? res.match_result : 'pending', multiplier: p.multiplier };
       });
 
-      // Used teams per player
       const usedByPlayer = {};
       (allPicks || []).forEach(p => {
         if (!usedByPlayer[p.player_id]) usedByPlayer[p.player_id] = new Set();
         usedByPlayer[p.player_id].add(p.team_id);
       });
 
-      // All teams — use window._matrixAllTeams (set during loadLeaderboard)
       const allTeams = window._matrixAllTeams || [];
-
-      // Columns = all non-eliminated teams, sorted by band then flag
       const teamList = allTeams
         .filter(t => !t.is_eliminated)
         .sort((a, b) => {
@@ -330,67 +305,57 @@
         return;
       }
 
-      // Build table — two header rows: row1 = flags with colour underline, row2 = band label
-      let html = '<div class="matrix-wrap"><table class="matrix-table"><thead>';
-
-      // Determine band boundaries for divider lines
       const getBorderStyle = (t, i) => {
         const prevBand = i > 0 ? teamList[i-1].band : t.band;
         return prevBand !== t.band ? 'border-left:3px solid var(--border)' : '';
       };
 
-      // Row 1: position, player, flags with colour underline
+      let html = '<div class="matrix-wrap"><table class="matrix-table"><thead>';
+
       html += '<tr><th class="m-pos">#</th><th class="m-player" style="text-align:left">Player</th>';
       teamList.forEach((t, i) => {
-        const color = BAND_COLOR[t.band] || 'var(--border)';
+        const color   = BAND_COLOR[t.band] || 'var(--border)';
         const divider = getBorderStyle(t, i);
         html += `<th style="border-bottom:3px solid ${color};${divider}"><div class="m-header-wrap"><span class="m-header">${t.flag_emoji || ''}</span></div></th>`;
       });
       html += '<th class="m-summary">Good<br>Left</th><th class="m-summary">Total<br>Left</th></tr>';
 
-      // Row 2: blank, blank, band labels in colour with underline
       html += '<tr><th></th><th></th>';
       teamList.forEach((t, i) => {
-        const color = BAND_COLOR[t.band] || 'var(--border)';
+        const color   = BAND_COLOR[t.band] || 'var(--border)';
         const divider = getBorderStyle(t, i);
         html += `<th style="font-size:8px;color:${color};padding:1px 2px;border-bottom:3px solid ${color};${divider}">${BAND_LABEL[t.band] || ''}</th>`;
       });
-      html += '<th></th><th></th></tr>';
-
-      html += '</thead><tbody>';
+      html += '<th></th><th></th></tr></thead><tbody>';
 
       sorted.forEach((p, i) => {
-        const pos = i + 1;
+        const pos  = i + 1;
         const isElim = p.is_eliminated;
         const used = usedByPlayer[p.player_id] || new Set();
         const playerPicks = pickMap[p.player_id] || {};
 
-        html += `<tr>`;
-        html += `<td class="m-pos">${pos}</td>`;
+        html += `<tr><td class="m-pos">${pos}</td>`;
         html += `<td class="m-player${isElim ? ' elim' : ''}"><a href="/${p.slug}" style="color:inherit;text-decoration:none">${p.name}</a></td>`;
 
         teamList.forEach((t, i) => {
-          const pick = playerPicks[t.id];
+          const pick    = playerPicks[t.id];
           const divider = getBorderStyle(t, i);
           if (!pick) {
             html += `<td style="${divider}"></td>`;
           } else {
-            const r = pick.result;
-            const cls = r === 'win' ? 'm-W' : r === 'draw' ? 'm-D' : r === 'loss' ? 'm-L' : '';
-            const label = r === 'win' ? 'W' : r === 'draw' ? 'D' : r === 'loss' ? 'L' : '·';
+            const r      = pick.result;
+            const cls    = r === 'win' ? 'm-W' : r === 'draw' ? 'm-D' : r === 'loss' ? 'm-L' : '';
+            const label  = r === 'win' ? 'W' : r === 'draw' ? 'D' : r === 'loss' ? 'L' : '·';
             const ptLabel = pick.multiplier ? `<span style="font-size:9px;color:var(--text-muted)">${pick.multiplier}</span>` : '';
             html += `<td class="${cls}" style="${divider}" title="${t.flag_emoji || ''} ${r||'pending'}">${label}${ptLabel}</td>`;
           }
         });
 
-        // Summary cols
         const aliveTeams = teamList.filter(t => !used.has(t.id));
-        const goodLeft = aliveTeams.filter(t => t.band === 'favourite' || t.band === 'dark_horse').length;
-        const totalLeft = aliveTeams.length;
-
+        const goodLeft   = aliveTeams.filter(t => t.band === 'favourite' || t.band === 'dark_horse').length;
+        const totalLeft  = aliveTeams.length;
         html += `<td class="m-summary m-good">${isElim ? '—' : goodLeft}</td>`;
-        html += `<td class="m-summary m-total">${isElim ? '—' : totalLeft}</td>`;
-        html += '</tr>';
+        html += `<td class="m-summary m-total">${isElim ? '—' : totalLeft}</td></tr>`;
       });
 
       html += '</tbody></table></div>';
@@ -431,7 +396,6 @@
 
         const { windowStart, windowEnd } = getGameDayWindow(now);
 
-        // Projected goals
         let goalsScored = 0, matchesPlayed = 0;
         (completedMatches || []).forEach(m => { goalsScored += (m.home_score || 0) + (m.away_score || 0); matchesPlayed++; });
         const projectedTotal = matchesPlayed > 0 ? (goalsScored / matchesPlayed) * TOTAL_MATCHES : null;
@@ -439,30 +403,34 @@
         const projLabel = document.getElementById('proj-goals-label');
         if (projectedTotal !== null) projLabel.textContent = `⚽ Projected tournament goals: ${Math.round(projectedTotal)} (${goalsScored} goals in ${matchesPlayed} matches)`;
 
-        // Round context
-        const currentRound = (rounds || []).find(r => !r.is_complete);
-        const isKnockout = currentRound && currentRound.round_type === 'knockout';
+        const currentRound    = (rounds || []).find(r => !r.is_complete);
+        const isKnockout      = currentRound && currentRound.round_type === 'knockout';
         const completedRounds = (rounds || []).filter(r => r.is_complete).sort((a,b) => b.sort_order - a.sort_order);
-        const lastCompleted = completedRounds.length > 0 ? completedRounds[0] : null;
+        const lastCompleted   = completedRounds.length > 0 ? completedRounds[0] : null;
 
-        // Day label for round heading
         let dayLabel = '';
         if (currentRound && firstMatchData) {
           const roundMatches = (firstMatchData || []).filter(m => m.round_id === currentRound.id);
           if (roundMatches.length > 0) {
             const firstWindowMs = toWindowStartMs(roundMatches[0].kickoff);
-            const nowWindowMs = toWindowStartMs(now.toISOString());
+            const nowWindowMs   = toWindowStartMs(now.toISOString());
             const dayNum = Math.round((nowWindowMs - firstWindowMs) / WINDOW_DURATION_MS) + 1;
             if (dayNum >= 1) dayLabel = ' · Day ' + dayNum;
           }
         }
         if (currentRound) document.getElementById('round-heading').textContent = currentRound.name + dayLabel;
 
-        // Lookup maps
         const gdMap = {};
         (gdData || []).forEach(r => { gdMap[r.player_id] = r.gd; });
+
+        // ITEM 17: furthest round map — build short name from round sort order
         const furthestMap = {};
+        // player_furthest_round view returns furthest_round as sort_order integer
         (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
+
+        // Build sort_order -> short name map from rounds
+        const roundSortToShort = {};
+        (rounds || []).forEach(r => { roundSortToShort[r.sort_order] = shortRoundName(r.name); });
 
         const priorPosMap = {};
         if (lastCompleted && snapshots) {
@@ -475,7 +443,6 @@
           if (r.match_result) formMap[r.player_id].push(r.match_result === 'win' ? 'W' : r.match_result === 'draw' ? 'D' : 'L');
         });
 
-        // Today's picks — matches within the current game-day window
         const todayTeamRoundPairs = new Set();
         (todayMatchRows || []).forEach(m => {
           const ko = new Date(m.kickoff);
@@ -496,7 +463,6 @@
           }
         });
 
-        // Band / remaining teams
         const BAND_COLOUR = {
           favourite:  { dot:'🔵', css:'#3b82f6' },
           dark_horse: { dot:'🟡', css:'#eab308' },
@@ -513,13 +479,16 @@
           if (!usedByPlayer[pick.player_id]) usedByPlayer[pick.player_id] = new Set();
           usedByPlayer[pick.player_id].add(pick.team_id);
         });
+
         function getPlayerRemainingTeams(playerId) {
           const used = usedByPlayer[playerId] || new Set();
           return alivePoolTeams.filter(t => !used.has(t.id));
         }
+
         function remainingTeamsHtml(playerId, isQFOrLater) {
           const remaining = getPlayerRemainingTeams(playerId);
-          if (remaining.length === 0) return '<span style="color:var(--text-muted);font-size:11px">none</span>';
+          // ITEM 15: zero remaining but not marked eliminated — show red warning
+          if (remaining.length === 0) return '<span class="status-none">OUT · No picks remaining</span>';
           if (isQFOrLater) {
             return remaining.map(t => {
               const b = BAND_COLOUR[t.band] || { css:'#94a3b8' };
@@ -534,30 +503,24 @@
           }).join(' ');
           return `<span style="font-size:12px;font-weight:600">${remaining.length}</span> <span style="font-size:11px">${dots}</span>`;
         }
+
         const isQFOrLater = currentRound && ['QF','SF','Final'].includes(currentRound.name);
 
-        // Competition ended = Final complete, all eliminated, or ≤1 player still alive
-        const activePlayers = (scores || []).filter(p => !p.is_eliminated);
+        const activePlayers   = (scores || []).filter(p => !p.is_eliminated);
         const competitionEnded = (!currentRound && (rounds || []).length > 0) ||
-                                 (scores || []).every(p => p.is_eliminated) ||
-                                 activePlayers.length <= 1;
+                                  (scores || []).every(p => p.is_eliminated) ||
+                                  activePlayers.length <= 1;
 
-        // Show matrix tab only from R32 onwards (i.e. any KO round exists)
-        const showMatrix = competitionEnded || isKnockout || (rounds||[]).some(r => r.round_type === 'knockout' && r.is_complete);
-        document.querySelector('[data-view="matrix"]').style.display = showMatrix ? '' : 'none';
+        // Matrix tab always visible
 
-        // Show/hide columns
-        const koDisplay = isKnockout ? '' : 'none';
+        // ITEM 17: show Rnd column only in knockout
+        const showRndCol = isKnockout || competitionEnded;
+        document.getElementById('rnd-col-header').style.display = showRndCol ? '' : 'none';
         document.getElementById('status-col-header').style.display = (isKnockout || competitionEnded) ? '' : 'none';
-        document.querySelectorAll('.knockout-only').forEach(el => el.style.display = koDisplay);
+        document.querySelectorAll('.knockout-only').forEach(el => el.style.display = isKnockout ? '' : 'none');
         document.querySelectorAll('.group-only').forEach(el => el.style.display = isKnockout ? 'none' : '');
 
-        // Elimination reason lookup — needs picks data
-        // exit_reason stored on player record is not available here, so we derive from allPicks
-        // Three exit reasons: "[Team] pick lost", "Ran out of picks", "No default pick"
-        // We store exit_reason on the player row if is_eliminated. Fall back to generic.
         function exitReasonHtml(player) {
-          // Try to find their last pick_result with a loss
           const playerPicks = (allPicks || []).filter(p => p.player_id === player.player_id);
           const lostPick = [...playerPicks].reverse().find(p => {
             const res = p.pick_results && p.pick_results[0];
@@ -566,19 +529,19 @@
           if (lostPick && lostPick.teams) {
             return '<span style="font-size:12px;color:var(--red)">OUT · ' + (lostPick.teams.flag_emoji || '') + ' ' + (lostPick.teams.name || '') + ' pick lost</span>';
           }
-          // Check if they ran out of teams
           const remaining = getPlayerRemainingTeams(player.player_id);
-          if (remaining.length === 0) {
-            return '<span style="font-size:12px;color:var(--red)">OUT · No picks remaining</span>';
-          }
+          if (remaining.length === 0) return '<span style="font-size:12px;color:var(--red)">OUT · No picks remaining</span>';
           return '<span style="font-size:12px;color:var(--red)">OUT · No default pick</span>';
         }
 
-        // Sort
         const sorted = (scores || []).sort((a, b) => {
           if (b.total_points !== a.total_points) return b.total_points - a.total_points;
-          if (isKnockout) { const afr = furthestMap[a.player_id]||0, bfr = furthestMap[b.player_id]||0; if (bfr !== afr) return bfr - afr; }
-          const agd = gdMap[a.player_id]||0, bgd = gdMap[b.player_id]||0;
+          // ITEM 17: furthest round tiebreaker in knockout
+          if (isKnockout) {
+            const afr = furthestMap[a.player_id] || 0, bfr = furthestMap[b.player_id] || 0;
+            if (bfr !== afr) return bfr - afr;
+          }
+          const agd = gdMap[a.player_id] || 0, bgd = gdMap[b.player_id] || 0;
           if (bgd !== agd) return bgd - agd;
           if (projectedTotal !== null) {
             const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
@@ -589,18 +552,17 @@
           return 0;
         });
 
-        // Render
         const tbody = document.getElementById('leaderboard-body');
         tbody.innerHTML = '';
 
         sorted.forEach((p, i) => {
           const pos = i + 1;
           const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
-          const gd = gdMap[p.player_id] || 0;
-          const form = formMap[p.player_id] || [];
-          const todayData = playerTodayMap[p.player_id];
+          const gd    = gdMap[p.player_id] || 0;
+          const form  = formMap[p.player_id] || [];
+          const todayData      = playerTodayMap[p.player_id];
           const isPlayingToday = !!todayData;
-          const todayPicks_p = todayData ? todayData.picks : [];
+          const todayPicks_p   = todayData ? todayData.picks : [];
 
           let arrowHtml = '<span class="arrow-eq">—</span>';
           if (priorPosMap[p.player_id] !== undefined) {
@@ -611,41 +573,43 @@
 
           const recentForm = form.slice(-5);
           const formHtml = recentForm.map(f => '<span class="form-pip form-' + f + '" title="' + f + '"></span>').join('');
-          const gdHtml = gd > 0 ? '<span class="gd-pos">+' + gd + '</span>' : gd < 0 ? '<span class="gd-neg">' + gd + '</span>' : '<span class="gd-zero">0</span>';
+          const gdHtml   = gd > 0 ? '<span class="gd-pos">+' + gd + '</span>' : gd < 0 ? '<span class="gd-neg">' + gd + '</span>' : '<span class="gd-zero">0</span>';
           const flagHtml = todayPicks_p.map(pick => {
             const cls = pick.multiplier === 3 ? (pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt') : (pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt');
             return '<span class="flag-inline' + cls + '">' + pick.flag + '</span>';
           }).join('');
 
+          // ITEM 17: renamed column — still shows goals diff value
           let goalsDiffHtml = '<span style="color:var(--text-muted)">—</span>';
           if (projectedTotal !== null && p.total_goals_prediction !== null && p.total_goals_prediction !== undefined) {
             const diff = Math.round(p.total_goals_prediction - projectedTotal);
             const sign = diff >= 0 ? '+' : '';
-            const cls = Math.abs(diff) <= 10 ? 'goals-diff-close' : Math.abs(diff) <= 30 ? 'goals-diff-mid' : 'goals-diff-far';
+            const cls  = Math.abs(diff) <= 10 ? 'goals-diff-close' : Math.abs(diff) <= 30 ? 'goals-diff-mid' : 'goals-diff-far';
             goalsDiffHtml = `<span class="goals-diff ${cls}">${sign}${diff}</span>`;
           }
 
-          const koStyle = (isKnockout || competitionEnded) ? '' : 'display:none;';
+          // ITEM 17: Rnd column value
+          const furthestSortOrder = furthestMap[p.player_id];
+          const rndHtml = showRndCol
+            ? (furthestSortOrder ? roundSortToShort[furthestSortOrder] || '—' : '—')
+            : '';
+
+          let statusCellHtml = '';
+          if (isKnockout || competitionEnded) {
+            statusCellHtml = p.is_eliminated ? exitReasonHtml(p) : remainingTeamsHtml(p.player_id, isQFOrLater);
+          }
+
+          if (p.is_eliminated && !competitionEnded) {
+            // nothing extra
+          }
+
           const row = document.createElement('tr');
-          // Only dim eliminated rows during active competition; never dim when competition ended
           if (p.is_eliminated && !competitionEnded) row.classList.add('out-row');
           if (isPlayingToday && !p.is_eliminated) row.classList.add('playing-row');
-          // Highlight own row
           if (mySlug && p.slug === mySlug) {
             row.style.outline = '2px solid var(--accent)';
             row.style.outlineOffset = '-2px';
           }
-
-          // Combined status/left cell content
-          let statusCellHtml = '';
-          if (isKnockout || competitionEnded) {
-            if (p.is_eliminated) {
-              statusCellHtml = exitReasonHtml(p);
-            } else {
-              statusCellHtml = remainingTeamsHtml(p.player_id, isQFOrLater);
-            }
-          }
-          const statusColStyle = (isKnockout || competitionEnded) ? '' : 'display:none;';
 
           row.innerHTML =
             '<td class="pos">' + pos + '</td>' +
@@ -654,10 +618,12 @@
             '<td class="player-name"><a href="/' + p.slug + '">' + p.name + '</a>' + flagHtml + '</td>' +
             '<td style="color:var(--text-muted)">' + (p.rounds_played || 0) + '</td>' +
             '<td class="points">' + (p.total_points || 0) + '</td>' +
+            // ITEM 17: Rnd column — knockout only
+            (showRndCol ? '<td style="color:var(--text-muted);font-size:12px">' + rndHtml + '</td>' : '') +
             '<td>' + gdHtml + '</td>' +
             '<td class="hide-mobile tiebreak-val">' + goalsDiffHtml + '</td>' +
             '<td class="hide-mobile">' + formHtml + '</td>' +
-            '<td class="hide-mobile" style="' + statusColStyle + '">' + statusCellHtml + '</td>';
+            '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '">' + statusCellHtml + '</td>';
           tbody.appendChild(row);
         });
 
@@ -665,9 +631,7 @@
         document.getElementById('leaderboard-wrap').style.display = 'block';
         document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
-        _matrixRendered = false;
         _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds };
-        // Re-render matrix if it's currently visible
         if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
         renderLongshotView();
 
