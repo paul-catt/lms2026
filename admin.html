@@ -1602,7 +1602,18 @@ Good luck! ⚽🏆`;
       const roundMap = {};
       (rounds || []).forEach(r => { roundMap[r.id] = r.name; });
 
-      let html = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><thead><tr>
+           
+     // R32 elimination counter
+      const r32RoundId = ((rounds||[]).find(r => r.name === 'Round of 32') || {}).id;
+      const r32Count = (teams||[]).filter(t => t.is_eliminated && t.eliminated_in_round_id === r32RoundId).length;
+      const counterHtml = `<div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:14px;padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:13px">
+        <span style="color:var(--text-muted)">OUT in Round of 32:</span>
+        <span style="font-size:18px;font-weight:800;color:${r32Count===16?'var(--green)':'var(--accent)'}">${r32Count}</span>
+        <span style="color:var(--text-muted)">/ 16</span>
+        ${r32Count===16?'<span style="color:var(--green);font-weight:700">✅ Complete</span>':''}
+      </div>`;
+
+      let html = counterHtml + `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><thead><tr>
         <th style="width:160px">Team</th>
         <th style="width:50px">Pot</th>
         <th style="width:140px">Band</th>

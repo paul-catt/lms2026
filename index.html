@@ -20,41 +20,86 @@
   <meta name="apple-mobile-web-app-title" content="LMS 2026">
 
   <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: 'Inter', sans-serif; }
-    nav, .nav-logo, h1, .info-block .title { font-family: 'Rajdhani', sans-serif; }
+    nav, .nav-logo { font-family: 'Rajdhani', sans-serif; }
+
     .hero {
       text-align: center;
-      padding: 60px 16px 40px;
+      padding: 52px 16px 36px;
     }
-    .hero-emoji { font-size: 64px; margin-bottom: 16px; line-height: 1; }
-    .hero h1 { font-size: 32px; font-weight: 800; margin-bottom: 6px; }
-    .hero p { color: var(--text-muted); font-size: 15px; margin-bottom: 32px; }
-    .hero-links {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
+    .hero-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--gold);
+      margin-bottom: 4px;
+      display: block;
+      text-decoration: none;
+      cursor: default;
     }
-    .divider {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 32px 0;
+    .hero-subtitle {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 28px;
     }
-    .info-grid {
+
+    .hero-buttons {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 12px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      max-width: 400px;
+      margin: 0 auto 10px;
     }
-    .info-block {
-      background: var(--surface2);
-      border-radius: 10px;
-      padding: 16px;
+    .hero-buttons-row2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      max-width: 264px;
+      margin: 0 auto;
+    }
+    .hero-buttons .btn,
+    .hero-buttons-row2 .btn {
+      font-size: 13px;
+      padding: 10px 8px;
       text-align: center;
     }
-    .info-block .icon { font-size: 28px; margin-bottom: 8px; }
-    .info-block .title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
-    .info-block .desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    .status-strip {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin: 28px 0 0;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      font-size: 13px;
+    }
+    .status-row + .status-row {
+      border-top: 1px solid var(--border);
+    }
+    .status-label {
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .status-val {
+      font-weight: 700;
+      color: var(--text);
+    }
+    .status-val.gold  { color: var(--gold); }
+    .status-val.accent { color: var(--accent); }
   </style>
 </head>
 <body>
@@ -65,51 +110,111 @@
       <a href="/match-centre">Match Centre</a>
       <a href="/bracket">Bracket</a>
       <a href="/rules">Rules</a>
-      <a href="/admin">Admin</a>
     </div>
   </nav>
 
-  <main style="max-width:700px">
+  <main style="max-width:480px">
     <div class="hero">
-      <div class="hero-emoji"><img src="/logo.svg" alt="LMS 2026" style="height:80px;width:auto"></div>
-      <h1 style="font-family:'Rajdhani',sans-serif;font-size:42px;font-weight:700;letter-spacing:0.06em;color:var(--gold);margin-bottom:6px">LMS 2026</h1>
-      <p>World Cup Last Man Standing · June – July 2026</p>
-      <div class="hero-links">
-        <a href="/leaderboard" class="btn btn-primary">📊 Leaderboard</a>
+      <a href="/admin" class="hero-title" tabindex="-1" aria-hidden="true">LMS 2026</a>
+      <div class="hero-subtitle">World Cup Last Man Standing · June – July 2026</div>
+
+      <div class="hero-buttons">
+        <a href="/leaderboard" class="btn btn-secondary">📊 Leaderboard</a>
         <a href="/match-centre" class="btn btn-secondary">⚽ Match Centre</a>
+        <a href="/player"      class="btn btn-secondary">👤 My Page</a>
+      </div>
+      <div style="height:10px"></div>
+      <div class="hero-buttons-row2">
         <a href="/bracket" class="btn btn-secondary">🏆 Bracket</a>
-        <a href="/rules" class="btn btn-secondary">📋 Rules</a>
+        <a href="/rules"   class="btn btn-secondary">📋 Rules</a>
       </div>
     </div>
 
-    <hr class="divider">
-
-    <div class="info-grid">
-      <div class="info-block">
-        <div class="icon">🎯</div>
-        <div class="title">Pick Your Teams</div>
-        <div class="desc">Use your personal link to submit picks each round before the deadline.</div>
+    <div class="status-strip">
+      <div class="status-row">
+        <span class="status-label">🏆 Top 3</span>
+        <span class="status-val gold" id="status-leader">—</span>
       </div>
-      <div class="info-block">
-        <div class="icon">⭐</div>
-        <div class="title">Longshot Bonus</div>
-        <div class="desc">Bottom 24 teams by odds earn +1 bonus point if they win.</div>
+      <div class="status-row" id="status-p2-row" style="display:none">
+        <span class="status-label">🥈</span>
+        <span class="status-val" id="status-p2">—</span>
       </div>
-      <div class="info-block">
-        <div class="icon">🔒</div>
-        <div class="title">One Team, Once</div>
-        <div class="desc">Each team can only be used once across the entire competition.</div>
+      <div class="status-row" id="status-p3-row" style="display:none">
+        <span class="status-label">🥉</span>
+        <span class="status-val" id="status-p3">—</span>
       </div>
-      <div class="info-block">
-        <div class="icon">💀</div>
-        <div class="title">Last Man Standing</div>
-        <div class="desc">Run out of teams and you're out. The player with the most points wins.</div>
+      <div class="status-row">
+        <span class="status-label">⏰ Next Deadline</span>
+        <span class="status-val accent" id="status-deadline">—</span>
       </div>
-    </div>
-
-    <div style="text-align:center; margin-top:32px; font-size:12px; color:var(--text-muted)">
-      Have your personal link? Go directly to your dashboard. <a href="/rules" style="color:var(--accent)">Read the rules →</a>
     </div>
   </main>
+
+  <script>
+    const SUPABASE_URL     = 'https://jrdjdqjepffdcjdfuarc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZGpkcWplcGZmZGNqZGZ1YXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTczMTcsImV4cCI6MjA5MTAzMzMxN30.nzriEXXYSau-2wBElzgWw-Gwhf1crzVA2lcvPexjq0M';
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const WINDOW_START_HOUR = 11; // UTC (noon BST)
+
+    async function loadStatus() {
+      // ── Top 3 ────────────────────────────────────────────────
+      const { data: scores } = await db
+        .from('player_scores')
+        .select('total_points, players(name)')
+        .order('total_points', { ascending: false })
+        .limit(3);
+
+      const leaderEl = document.getElementById('status-leader');
+      if (scores && scores.length > 0 && scores[0].players) {
+        leaderEl.textContent = scores[0].players.name + ' · ' + scores[0].total_points + 'pts';
+        if (scores[1]) {
+          document.getElementById('status-p2-row').style.display = '';
+          document.getElementById('status-p2').textContent = scores[1].players.name + ' · ' + scores[1].total_points + 'pts';
+        }
+        if (scores[2]) {
+          document.getElementById('status-p3-row').style.display = '';
+          document.getElementById('status-p3').textContent = scores[2].players.name + ' · ' + scores[2].total_points + 'pts';
+        }
+      } else {
+        leaderEl.textContent = 'Not started yet';
+      }
+
+      // ── Next deadline ────────────────────────────────────────
+      const now = new Date();
+      const { data: nextMatches } = await db
+        .from('matches')
+        .select('kickoff')
+        .eq('status', 'scheduled')
+        .not('home_team_id', 'is', null)
+        .order('kickoff', { ascending: true })
+        .limit(1);
+
+      const deadlineEl = document.getElementById('status-deadline');
+      if (nextMatches && nextMatches.length > 0) {
+        const kickoff = new Date(nextMatches[0].kickoff);
+        // Deadline = 11:00 UTC of the day window containing this kickoff
+        let deadlineUtc = new Date(Date.UTC(
+          kickoff.getUTCFullYear(), kickoff.getUTCMonth(), kickoff.getUTCDate(),
+          WINDOW_START_HOUR, 0, 0
+        ));
+        if (kickoff.getUTCHours() < WINDOW_START_HOUR) {
+          deadlineUtc = new Date(deadlineUtc.getTime() - 86400000);
+        }
+        // If that deadline has already passed, advance one window
+        if (deadlineUtc <= now) {
+          deadlineUtc = new Date(deadlineUtc.getTime() + 86400000);
+        }
+        const label = deadlineUtc.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        const time  = deadlineUtc.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
+        deadlineEl.textContent = label + ' · ' + time + ' BST';
+      } else {
+        deadlineEl.textContent = 'No upcoming matches';
+      }
+    }
+
+    loadStatus();
+  </script>
 </body>
 </html>

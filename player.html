@@ -88,13 +88,13 @@
     .band-panel-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-right:4px; }
     .band-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px; font-size:13px; font-weight:700; background:var(--surface2); border:1px solid var(--border); }
 
-    /* Goals prediction card (above submit) */
+    /* Goals prediction card — sits between stat cards and pick section (ITEM 20) */
     .goals-inline-card {
       background: rgba(59,130,246,0.07);
       border: 1px solid rgba(59,130,246,0.3);
       border-radius: 12px;
       padding: 16px 18px;
-      margin-bottom: 14px;
+      margin-bottom: 16px;
     }
     .goals-inline-card .card-title { color: var(--accent); margin-bottom:8px; }
 
@@ -114,8 +114,6 @@
   </style>
 </head>
 <body>
-
-  <!-- ITEM 29: purple test banner removed -->
 
   <nav>
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
@@ -160,6 +158,18 @@
 
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
 
+      <!-- ITEM 20 FIX: Goals prediction card lives HERE — between stat cards and pick section.
+           initGoalsPrediction() makes it visible. Hidden after GP1 deadline. -->
+      <div id="goals-prediction-card" style="display:none" class="goals-inline-card">
+        <div class="card-title">🎯 Tournament Goals Prediction</div>
+        <p id="goals-prediction-desc" style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (104 games, including extra time)? Used as a tiebreaker. You can change this until the Group Phase 1 deadline.</p>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+          <input type="number" id="goals-prediction-input" placeholder="e.g. 142" min="0" max="500" style="max-width:140px" />
+          <button class="btn btn-primary" id="goals-prediction-btn">Save Prediction</button>
+          <span id="goals-prediction-msg" style="font-size:12px"></span>
+        </div>
+      </div>
+
       <!-- Band panel — knockout rounds only -->
       <div id="band-panel" style="display:none" class="band-panel">
         <span class="band-panel-label">🏳️ Available</span>
@@ -185,17 +195,6 @@
 
           <div id="pick-form-inner"></div>
 
-          <!-- ITEM 20: Goals prediction appears here, above submit, injected by initGoalsPrediction() -->
-          <div id="goals-prediction-card" style="display:none" class="goals-inline-card">
-            <div class="card-title">🎯 Tournament Goals Prediction</div>
-            <p id="goals-prediction-desc" style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (104 games, including extra time)? Used as a tiebreaker. You can change this until the Group Phase 1 deadline.</p>
-            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
-              <input type="number" id="goals-prediction-input" placeholder="e.g. 142" min="0" max="500" style="max-width:140px" />
-              <button class="btn btn-primary" id="goals-prediction-btn">Save Prediction</button>
-              <span id="goals-prediction-msg" style="font-size:12px"></span>
-            </div>
-          </div>
-
           <!-- Bottom submit button -->
           <div style="margin-top:14px">
             <button class="btn btn-primary" id="submit-pick-btn" style="width:100%; display:none" disabled>Select your team above</button>
@@ -211,7 +210,7 @@
         </div>
       </div>
 
-      <!-- ITEM 19: Pick history — most recent first (handled in renderHistory) -->
+      <!-- ITEM 19: Pick history — most recent first (pending picks at top) -->
       <div class="card">
         <div class="card-title">📋 Pick History</div>
         <div class="table-wrap">
@@ -238,7 +237,7 @@
 
     // Store slug in localStorage so leaderboard can offer "back" link
     const slug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
-    if (slug) localStorage.setItem('lms2026_my_slug', slug);
+    if (slug && !localStorage.getItem('lms2026_my_slug')) localStorage.setItem('lms2026_my_slug', slug);
 
     // Leaderboard link carries slug for row highlighting
     const lbLink = document.getElementById('leaderboard-link');
@@ -251,6 +250,19 @@
       { key:'no_hoper',   label:'No Hoper',   dot:'🔴', css:'#ef4444' },
     ];
     const KO_ROUNDS = ['R32','R16','QF','SF','Final'];
+
+    // FIX 1: short pill labels — R32/R16 fit on mobile portrait
+    function roundShortLabel(r) {
+      if (r.round_type === 'group') return 'GP' + r.sort_order;
+      const map = {
+        'Round of 32':   'R32',
+        'Round of 16':   'R16',
+        'Quarter-Final': 'QF',
+        'Semi-Final':    'SF',
+        'Final':         'F'
+      };
+      return map[r.name] || r.name;
+    }
 
     let player       = null;
     let allRounds    = [];
@@ -290,11 +302,6 @@
       if (n === 3) return '⚠️ Just 3 teams remaining. Pick carefully.';
       if (n === 4) return '⚠️ 4 teams left — think before you pick.';
       return '⚠️ You have ' + n + ' teams left. Pick carefully.';
-    }
-
-    // ITEM 18: correct singular/plural
-    function teamsLeftLabel(n) {
-      return n === 1 ? '1 team left' : n + ' teams left';
     }
 
     // ── Band panel (knockout only) ────────────────────────────
@@ -384,11 +391,9 @@
 
         document.getElementById('stat-points').textContent    = totalPoints;
         document.getElementById('stat-position').textContent  = position;
-        // ITEM 18: use singular/plural helper for teams-left stat label
         document.getElementById('stat-teams-left').textContent = teamsLeft;
         document.querySelector('#stat-teams-left').closest('.stat-block').querySelector('.stat-label').textContent =
           teamsLeft === 1 ? 'Team Left' : 'Teams Left';
-        // ITEM 21: goals card
         document.getElementById('stat-goals').textContent =
           (player.total_goals_prediction !== null && player.total_goals_prediction !== undefined)
             ? player.total_goals_prediction : '—';
@@ -397,7 +402,6 @@
         if (teamsLeft <= roundsRemaining + 2 && !player.is_eliminated) {
           const warn = document.getElementById('teams-warning');
           warn.style.display = 'block';
-          // ITEM 18: contextual message
           warn.textContent = teamsLeftMessage(teamsLeft);
         }
 
@@ -421,6 +425,7 @@
 
         openRounds = allRounds.filter(r => !r.is_complete && r.name !== '3rd Place');
         renderRoundStrip();
+        // ITEM 20: goals card is outside pick-section, init here
         initGoalsPrediction();
 
         if (player.is_eliminated || openRounds.length === 0) {
@@ -479,8 +484,8 @@
           (hasPick ? ' has-pick' : '') +
           (!isComplete && !openRounds.find(o => o.id === r.id) ? ' future' : '') +
           (isElimRound ? ' eliminated' : '');
-        // ITEM 22: short labels
-        const shortLabel = r.round_type === 'group' ? 'GP' + r.sort_order : r.name;
+        // FIX 1: short label so R32/R16 fit on mobile portrait
+        const shortLabel = roundShortLabel(r);
         pill.innerHTML = shortLabel + (hasPick ? ' <span class="tick">✓</span>' : '') + (isElimRound ? ' 🔴' : '');
         pill.title = r.name + (hasPick ? ' — pick submitted' : isComplete ? ' — completed' : ' — open') + (isElimRound ? ' — eliminated here' : '');
         if (!isComplete) {
@@ -808,7 +813,8 @@
       }
     }
 
-    // ITEM 20: Goals prediction only shown above submit button (not at page top)
+    // ITEM 20: Goals prediction card is now in the HTML above the pick section.
+    // initGoalsPrediction() just controls visibility and wires up the save button.
     function initGoalsPrediction() {
       const gp1 = allRounds.find(r => r.round_type === 'group' && r.sort_order === 1);
       if (!gp1) return;
@@ -817,10 +823,9 @@
       const now      = getEffectiveDate();
       const isLocked = now >= deadline;
 
-      // After deadline — hide entirely
+      // After GP1 deadline — keep hidden
       if (isLocked) return;
 
-      // Show the card above the submit button
       const card  = document.getElementById('goals-prediction-card');
       const input = document.getElementById('goals-prediction-input');
       const btn   = document.getElementById('goals-prediction-btn');
@@ -853,7 +858,7 @@
       });
     }
 
-    // ITEM 19: most recent picks first
+    // ITEM 19 + FIX 3: most recent first; pending picks at TOP not bottom
     function renderHistory() {
       const tbody = document.getElementById('history-body');
       const picksByRound = {};
@@ -862,10 +867,24 @@
         picksByRound[p.round_id].push(p);
       });
 
-      // Completed rounds newest first
-      const completedRounds = [...allRounds.filter(r => r.is_complete)].reverse();
       let rows = '';
 
+      // FIX 3: pending/upcoming picks come FIRST (most recent round first)
+      const openWithPicks = [...allRounds.filter(r => !r.is_complete && picksByRound[r.id])].reverse();
+      openWithPicks.forEach(r => {
+        (picksByRound[r.id] || []).forEach(p => {
+          rows += '<tr style="opacity:0.7">' +
+            '<td class="history-round">' + r.name + ' <span style="color:var(--accent);font-size:10px">(upcoming)</span></td>' +
+            '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
+            '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
+            '<td><span class="badge badge-grey">Pending</span></td>' +
+            '<td style="color:var(--text-muted)">—</td>' +
+            '</tr>';
+        });
+      });
+
+      // Completed rounds, newest first
+      const completedRounds = [...allRounds.filter(r => r.is_complete)].reverse();
       completedRounds.forEach(r => {
         const rPicks = picksByRound[r.id] || [];
         if (rPicks.length === 0) {
@@ -887,20 +906,6 @@
               '</tr>';
           });
         }
-      });
-
-      // Upcoming picks with pending picks (also newest first)
-      const openWithPicks = [...allRounds.filter(r => !r.is_complete && picksByRound[r.id])].reverse();
-      openWithPicks.forEach(r => {
-        (picksByRound[r.id] || []).forEach(p => {
-          rows += '<tr style="opacity:0.7">' +
-            '<td class="history-round">' + r.name + ' <span style="color:var(--accent);font-size:10px">(upcoming)</span></td>' +
-            '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
-            '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
-            '<td><span class="badge badge-grey">Pending</span></td>' +
-            '<td style="color:var(--text-muted)">—</td>' +
-            '</tr>';
-        });
       });
 
       if (!rows) rows = '<tr><td colspan="5" style="color:var(--text-muted);text-align:center;padding:20px">No picks yet.</td></tr>';

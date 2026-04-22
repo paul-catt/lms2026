@@ -49,6 +49,10 @@
     thead th { white-space:nowrap; font-size:11px; color:var(--text-muted); }
     td { font-size:13px; }
     @media(max-width:600px) { .hide-mobile { display:none; } }
+    /* Portrait-only columns hidden in landscape */
+    @media(min-width:601px) and (orientation:landscape) { .portrait-only { display:none; } }
+    /* Landscape-only columns hidden in portrait */
+    @media(max-width:600px), (orientation:portrait) { .landscape-only { display:none; } }
     .flag-3pt { border-bottom: 2px solid #f59e0b; }
     .flag-2pt { border-bottom: 2px solid #94a3b8; }
     .flag-3pt-longshot { border-bottom: 4px double #f59e0b; }
@@ -56,7 +60,6 @@
     .rotate-hint { display:none; }
     @media(max-width:900px) { .rotate-hint { display:block; margin-top:8px; font-size:11px; color:var(--text-muted); } }
     @media(max-width:900px) and (orientation:landscape) { .rotate-hint { display:none; } }
-    /* ITEM 29: purple test banner removed */
     .proj-goals { font-size:11px; color:var(--text-muted); margin-top:2px; margin-bottom:16px; }
     @media(max-width:600px) { .proj-goals { display:none !important; } }
     .goals-diff { font-weight:700; font-size:13px; }
@@ -70,8 +73,6 @@
     .lb-view { display:none; }
     .lb-view.active { display:block; }
     .ls-pts { font-size:14px; font-weight:800; color:var(--gold); }
-
-    /* ITEM 15: "none" status — shown as red text */
     .status-none { font-size:12px; color:var(--red); }
 
     /* ── Pick Matrix ─────────────────────────────────────────── */
@@ -101,8 +102,6 @@
   </style>
 </head>
 <body>
-
-  <!-- ITEM 29: purple test banner removed -->
 
   <nav>
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
@@ -140,17 +139,18 @@
               <tr>
                 <th class="pos">#</th>
                 <th class="prior">Prior</th>
-                <th class="medal"></th>
+                <!-- No medal column: medals removed from portrait, hidden in landscape via CSS -->
+                <th class="landscape-only medal"></th>
                 <th>Player</th>
                 <th>Pld</th>
                 <th>Pts</th>
-                <!-- ITEM 17: Rnd column — knockout only -->
                 <th id="rnd-col-header" style="display:none">Rnd</th>
                 <th>GD</th>
-                <!-- ITEM 17: renamed from "Diff from proj." -->
                 <th class="hide-mobile">Total<br>Goals</th>
                 <th class="hide-mobile">Form<br><span style="font-size:9px;color:var(--text-muted);font-weight:400">older→newer</span></th>
-                <th id="status-col-header" style="display:none">Status</th>
+                <!-- Status: landscape shows full reason, portrait shows dot only -->
+                <th id="status-col-header" style="display:none" class="landscape-only">Status</th>
+                <th id="status-col-portrait-header" style="display:none" class="portrait-only"></th>
               </tr>
             </thead>
             <tbody id="leaderboard-body"></tbody>
@@ -161,10 +161,10 @@
           <span class="knockout-only" style="display:none">🟢 Alive</span>
           <span class="knockout-only" style="display:none">🔴 Eliminated</span>
           <span class="knockout-only hide-mobile" style="display:none">· Pool remaining: 🔵 Favourite 🟡 Dark Horse 🟠 Long Shot 🔴 No Hoper</span>
-          <span class="group-only"><span style="display:inline-block;width:16px;border-bottom:2px solid var(--gold);margin-right:3px;vertical-align:middle"></span>3pt pick</span>
-          <span class="group-only"><span style="display:inline-block;width:16px;border-bottom:2px solid var(--text-muted);margin-right:3px;vertical-align:middle"></span>2pt pick</span>
-          <span class="group-only"><span style="display:inline-block;width:16px;border-bottom:3px double var(--gold);margin-right:3px;vertical-align:middle"></span>Longshot (4pts)</span>
-          <span class="group-only"><span style="display:inline-block;width:16px;border-bottom:3px double var(--text-muted);margin-right:3px;vertical-align:middle"></span>Longshot (3pts)</span>
+          <span class="group-only"><span style="border-bottom:2px solid #94a3b8;color:var(--text-muted);padding-bottom:1px">2pt pick</span></span>
+          <span class="group-only"><span style="border-bottom:2px solid #f59e0b;color:var(--text-muted);padding-bottom:1px">3pt pick</span></span>
+          <span class="group-only"><span style="border-bottom:3px double #94a3b8;color:var(--text-muted);padding-bottom:1px">Longshot (3pts)</span></span>
+          <span class="group-only"><span style="border-bottom:3px double #f59e0b;color:var(--text-muted);padding-bottom:1px">Longshot (4pts)</span></span>
         </div>
         <div class="rotate-hint">↔ Rotate for full table</div>
       </div>
@@ -240,7 +240,6 @@
       return { windowStart: ws, windowEnd: new Date(ws.getTime() + WINDOW_DURATION_MS) };
     }
 
-    // ITEM 17: short round label for Rnd column
     function shortRoundName(name) {
       if (!name) return '—';
       const n = name.toLowerCase().replace(/\s+/g,'');
@@ -408,6 +407,9 @@
         const completedRounds = (rounds || []).filter(r => r.is_complete).sort((a,b) => b.sort_order - a.sort_order);
         const lastCompleted   = completedRounds.length > 0 ? completedRounds[0] : null;
 
+        // Current round short name — shown for alive players in knockout
+        const currentRoundShort = currentRound ? shortRoundName(currentRound.name) : null;
+
         let dayLabel = '';
         if (currentRound && firstMatchData) {
           const roundMatches = (firstMatchData || []).filter(m => m.round_id === currentRound.id);
@@ -423,15 +425,15 @@
         const gdMap = {};
         (gdData || []).forEach(r => { gdMap[r.player_id] = r.gd; });
 
-        // ITEM 17: furthest round map — build short name from round sort order
-        const furthestMap = {};
-        // player_furthest_round view returns furthest_round as sort_order integer
-        (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
-
-        // Build sort_order -> short name map from rounds
+        // Build sort_order -> short name map from rounds (for eliminated players' furthest round)
         const roundSortToShort = {};
         (rounds || []).forEach(r => { roundSortToShort[r.sort_order] = shortRoundName(r.name); });
 
+        // furthestMap: player_id -> sort_order integer
+        const furthestMap = {};
+        (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
+
+        // --- FIX: Prior position from last completed round snapshot ---
         const priorPosMap = {};
         if (lastCompleted && snapshots) {
           snapshots.filter(s => s.round_id === lastCompleted.id).forEach(s => { priorPosMap[s.player_id] = s.position; });
@@ -480,6 +482,16 @@
           usedByPlayer[pick.player_id].add(pick.team_id);
         });
 
+        // --- FIX: pending pick detection ---
+        // A pick is "pending" if pick_results is empty or match_result is null
+        const playerHasPendingPick = {};
+        (allPicks || []).forEach(pick => {
+          const res = pick.pick_results && pick.pick_results[0];
+          if (!res || !res.match_result) {
+            playerHasPendingPick[pick.player_id] = true;
+          }
+        });
+
         function getPlayerRemainingTeams(playerId) {
           const used = usedByPlayer[playerId] || new Set();
           return alivePoolTeams.filter(t => !used.has(t.id));
@@ -487,8 +499,11 @@
 
         function remainingTeamsHtml(playerId, isQFOrLater) {
           const remaining = getPlayerRemainingTeams(playerId);
-          // ITEM 15: zero remaining but not marked eliminated — show red warning
-          if (remaining.length === 0) return '<span class="status-none">OUT · No picks remaining</span>';
+          if (remaining.length === 0) {
+            // --- FIX: only show OUT if no pending picks ---
+            if (playerHasPendingPick[playerId]) return ''; // still alive, result pending
+            return '<span class="status-none">OUT · No picks remaining</span>';
+          }
           if (isQFOrLater) {
             return remaining.map(t => {
               const b = BAND_COLOUR[t.band] || { css:'#94a3b8' };
@@ -504,19 +519,21 @@
           return `<span style="font-size:12px;font-weight:600">${remaining.length}</span> <span style="font-size:11px">${dots}</span>`;
         }
 
-        const isQFOrLater = currentRound && ['QF','SF','Final'].includes(currentRound.name);
+        const isQFOrLater = currentRound && (
+          currentRound.name === 'Quarter Finals' ||
+          currentRound.name === 'Semi Finals' ||
+          currentRound.name === 'Final'
+        );
 
         const activePlayers   = (scores || []).filter(p => !p.is_eliminated);
         const competitionEnded = (!currentRound && (rounds || []).length > 0) ||
                                   (scores || []).every(p => p.is_eliminated) ||
                                   activePlayers.length <= 1;
 
-        // Matrix tab always visible
-
-        // ITEM 17: show Rnd column only in knockout
         const showRndCol = isKnockout || competitionEnded;
         document.getElementById('rnd-col-header').style.display = showRndCol ? '' : 'none';
         document.getElementById('status-col-header').style.display = (isKnockout || competitionEnded) ? '' : 'none';
+        document.getElementById('status-col-portrait-header').style.display = (isKnockout || competitionEnded) ? '' : 'none';
         document.querySelectorAll('.knockout-only').forEach(el => el.style.display = isKnockout ? '' : 'none');
         document.querySelectorAll('.group-only').forEach(el => el.style.display = isKnockout ? 'none' : '');
 
@@ -534,9 +551,14 @@
           return '<span style="font-size:12px;color:var(--red)">OUT · No default pick</span>';
         }
 
+        // Portrait status: just a red dot for eliminated, nothing for alive
+        function portraitStatusHtml(player) {
+          if (!player.is_eliminated) return '';
+          return '<span style="color:var(--red);font-size:14px" title="Eliminated">🔴</span>';
+        }
+
         const sorted = (scores || []).sort((a, b) => {
           if (b.total_points !== a.total_points) return b.total_points - a.total_points;
-          // ITEM 17: furthest round tiebreaker in knockout
           if (isKnockout) {
             const afr = furthestMap[a.player_id] || 0, bfr = furthestMap[b.player_id] || 0;
             if (bfr !== afr) return bfr - afr;
@@ -557,6 +579,7 @@
 
         sorted.forEach((p, i) => {
           const pos = i + 1;
+          // Medals: landscape only — no medal column in portrait
           const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
           const gd    = gdMap[p.player_id] || 0;
           const form  = formMap[p.player_id] || [];
@@ -564,11 +587,13 @@
           const isPlayingToday = !!todayData;
           const todayPicks_p   = todayData ? todayData.picks : [];
 
+          // --- FIX: prior arrows ---
           let arrowHtml = '<span class="arrow-eq">—</span>';
           if (priorPosMap[p.player_id] !== undefined) {
             const prev = priorPosMap[p.player_id];
-            if (pos < prev) arrowHtml = '<span class="arrow-up">▲' + (prev - pos) + '</span>';
+            if (pos < prev)      arrowHtml = '<span class="arrow-up">▲' + (prev - pos) + '</span>';
             else if (pos > prev) arrowHtml = '<span class="arrow-dn">▼' + (pos - prev) + '</span>';
+            else                 arrowHtml = '<span class="arrow-eq">—</span>';
           }
 
           const recentForm = form.slice(-5);
@@ -579,7 +604,6 @@
             return '<span class="flag-inline' + cls + '">' + pick.flag + '</span>';
           }).join('');
 
-          // ITEM 17: renamed column — still shows goals diff value
           let goalsDiffHtml = '<span style="color:var(--text-muted)">—</span>';
           if (projectedTotal !== null && p.total_goals_prediction !== null && p.total_goals_prediction !== undefined) {
             const diff = Math.round(p.total_goals_prediction - projectedTotal);
@@ -588,19 +612,23 @@
             goalsDiffHtml = `<span class="goals-diff ${cls}">${sign}${diff}</span>`;
           }
 
-          // ITEM 17: Rnd column value
-          const furthestSortOrder = furthestMap[p.player_id];
-          const rndHtml = showRndCol
-            ? (furthestSortOrder ? roundSortToShort[furthestSortOrder] || '—' : '—')
-            : '';
+          // --- FIX: Rnd column ---
+          // Alive in knockout → current round (unless it's 3rd Place, then use furthest reached).
+          // Eliminated → furthest round reached.
+          const is3rdPlace = currentRound && currentRound.name === '3rd Place';
+          let rndHtml = '—';
+          if (showRndCol) {
+            if (!p.is_eliminated && currentRoundShort && !is3rdPlace) {
+              rndHtml = currentRoundShort;
+            } else {
+              const furthestSortOrder = furthestMap[p.player_id];
+              rndHtml = furthestSortOrder ? (roundSortToShort[furthestSortOrder] || '—') : '—';
+            }
+          }
 
           let statusCellHtml = '';
           if (isKnockout || competitionEnded) {
             statusCellHtml = p.is_eliminated ? exitReasonHtml(p) : remainingTeamsHtml(p.player_id, isQFOrLater);
-          }
-
-          if (p.is_eliminated && !competitionEnded) {
-            // nothing extra
           }
 
           const row = document.createElement('tr');
@@ -614,16 +642,19 @@
           row.innerHTML =
             '<td class="pos">' + pos + '</td>' +
             '<td class="prior">' + arrowHtml + '</td>' +
-            '<td class="medal">' + medal + '</td>' +
+            // Medal: landscape-only td
+            '<td class="medal landscape-only">' + medal + '</td>' +
             '<td class="player-name"><a href="/' + p.slug + '">' + p.name + '</a>' + flagHtml + '</td>' +
             '<td style="color:var(--text-muted)">' + (p.rounds_played || 0) + '</td>' +
             '<td class="points">' + (p.total_points || 0) + '</td>' +
-            // ITEM 17: Rnd column — knockout only
             (showRndCol ? '<td style="color:var(--text-muted);font-size:12px">' + rndHtml + '</td>' : '') +
             '<td>' + gdHtml + '</td>' +
             '<td class="hide-mobile tiebreak-val">' + goalsDiffHtml + '</td>' +
             '<td class="hide-mobile">' + formHtml + '</td>' +
-            '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '">' + statusCellHtml + '</td>';
+            // Landscape: full status reason. Portrait: dot only.
+            '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="landscape-only">' + statusCellHtml + '</td>' +
+            '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="portrait-only">' + portraitStatusHtml(p) + '</td>';
+
           tbody.appendChild(row);
         });
 
