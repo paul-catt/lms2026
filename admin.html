@@ -72,14 +72,6 @@
     .pens-row label { display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
     .pens-row input[type=checkbox] { width:auto; accent-color:var(--accent); cursor:pointer; }
 
-    .test-date-banner {
-      background: #7c3aed; color: #fff; text-align: center;
-      padding: 8px 16px; font-size: 13px; font-weight: 600; letter-spacing: 0.03em;
-    }
-    .test-date-banner a {
-      color: #e9d5ff; text-decoration: underline; cursor: pointer; margin-left: 12px; font-weight: 400;
-    }
-
     .goals-diff-pos { color: var(--green); font-weight: 600; }
     .goals-diff-neg { color: var(--red); font-weight: 600; }
     .goals-diff-zero { color: var(--text-muted); }
@@ -98,21 +90,24 @@
 </head>
 <body>
 
-  <div class="test-date-banner" id="test-date-banner" style="display:none">
-    🧪 Test mode — date overridden to <span id="banner-date"></span>
-    <a onclick="clearTestDate()">Clear override</a>
-  </div>
-
   <nav>
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
       <a href="/leaderboard">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
       <a href="/bracket">Bracket</a>
-      <a href="/admin" class="active">Admin</a>
+      <a id="nav-my-page" href="/">+ My Page</a>
       <a href="/rules">Rules</a>
     </div>
   </nav>
+  <script>
+    (function() {
+      const slug = localStorage.getItem('lms2026_player_slug');
+      const link = document.getElementById('nav-my-page');
+      if (slug) { link.href = '/' + slug; }
+      else { link.href = '/'; link.title = 'Enter your player code'; }
+    })();
+  </script>
 
   <main id="admin-panel" style="max-width:1000px">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px">
@@ -128,6 +123,7 @@
       <div class="tab" data-tab="teams">🏳️ Teams</div>
       <div class="tab" data-tab="bracket">🏆 Bracket</div>
       <div class="tab" data-tab="testdate">🧪 Test Date</div>
+      <div class="tab" data-tab="picks">👁 Picks</div>
       <a href="/whatsapp-export" class="tab" style="text-decoration:none; background:var(--surface2); color:var(--text-muted)">📱 WhatsApp</a>
     </div>
 
@@ -462,6 +458,17 @@
       </div>
     </div>
 
+    <!-- PICKS AUDIT TAB -->
+    <div class="tab-content" id="tab-picks">
+      <div class="card">
+        <div class="card-title">👁 Picks Audit</div>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
+          All players × all rounds. Most recent round on the left. <span style="color:var(--red); font-weight:600">Red = missing pick.</span> Timestamps shown where available. (auto) = admin-assigned.
+        </p>
+        <div id="picks-audit-wrap"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
   </main>
 
   <!-- Auto-assign confirmation modal -->
@@ -556,28 +563,13 @@
     function setTestDate(isoString) {
       localStorage.setItem(LS_KEY, isoString);
       updateTestDateUI();
-      updateBanner();
     }
 
     function clearTestDate() {
       localStorage.removeItem(LS_KEY);
       updateTestDateUI();
-      updateBanner();
     }
 
-    function updateBanner() {
-      const override = localStorage.getItem(LS_KEY);
-      const banner = document.getElementById('test-date-banner');
-      if (override) {
-        const d = new Date(override);
-        document.getElementById('banner-date').textContent =
-          d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) +
-          ' ' + d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-        banner.style.display = 'block';
-      } else {
-        banner.style.display = 'none';
-      }
-    }
 
     function updateTestDateUI() {
       const override = localStorage.getItem(LS_KEY);
@@ -619,10 +611,10 @@
       if (name === 'teams' && !_teamsLoaded) { _teamsLoaded = true; loadTeamsLongshot(); }
       if (name === 'bracket') loadBracketVersions();
       if (name === 'matches') loadR32Matches();
+      if (name === 'picks') loadPicksAudit();
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-      updateBanner();
       initAdmin();
 
       document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', function() { switchTab(this.dataset.tab); }));
@@ -1355,14 +1347,14 @@ Good luck! ⚽🏆`;
             result        = won ? 'win' : 'loss';
             longshotBonus = (won && team.is_longshot) ? 1 : 0;
             basePoints    = 1;
-            pointsEarned  = 1 + longshotBonus;
+            pointsEarned  = Math.min(1 + longshotBonus, 4);
           } else {
             const homeResult = homeScore > awayScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
             const awayResult = awayScore > homeScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
             result        = isHome ? homeResult : awayResult;
             basePoints    = result === 'win' ? pick.multiplier : result === 'draw' ? 1 : 0;
             longshotBonus = (result === 'win' && team.is_longshot) ? 1 : 0;
-            pointsEarned  = basePoints + longshotBonus;
+            pointsEarned  = Math.min(basePoints + longshotBonus, 4);
           }
 
           await db.from('pick_results').upsert({
@@ -1376,6 +1368,44 @@ Good luck! ⚽🏆`;
             await db.from('players')
               .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
               .eq('id', pick.player_id);
+          }
+        }
+      }
+
+      // ── Pick-exhaustion elimination: runs after every KO result ──
+      // If a non-eliminated player has zero eligible teams remaining AND
+      // no pending picks, they cannot make any future pick → eliminate them.
+      if (isKnockout) {
+        const { data: alivePlayers } = await db.from('players')
+          .select('id').eq('is_eliminated', false);
+        const { data: eliminatedTeams } = await db.from('teams')
+          .select('id').eq('is_eliminated', true);
+        const eliminatedTeamIds = new Set((eliminatedTeams || []).map(t => t.id));
+
+        const { data: aliveTeams } = await db.from('teams').select('id').eq('is_eliminated', false);
+        const aliveTeamIds = new Set((aliveTeams || []).map(t => t.id));
+
+        for (const player of (alivePlayers || [])) {
+          const { data: playerPicks } = await db.from('picks')
+            .select('team_id, pick_results(match_result)')
+            .eq('player_id', player.id);
+
+          const usedTeamIds = new Set((playerPicks || []).map(p => p.team_id));
+
+          // Pending = pick exists but no result yet
+          const hasPendingPick = (playerPicks || []).some(p =>
+            !p.pick_results || p.pick_results.length === 0 || !p.pick_results[0].match_result
+          );
+
+          if (hasPendingPick) continue; // result still outstanding — don't eliminate yet
+
+          // Remaining = alive teams not yet used by this player
+          const remaining = [...aliveTeamIds].filter(id => !usedTeamIds.has(id));
+
+          if (remaining.length === 0) {
+            await db.from('players')
+              .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
+              .eq('id', player.id);
           }
         }
       }
@@ -1560,8 +1590,7 @@ Good luck! ⚽🏆`;
         if (m.away_team_id) assignedIds.add(m.away_team_id);
       });
 
-      const { data: freshTeams } = await db.from('teams').select('id, name, flag_emoji, is_eliminated').eq('is_eliminated', false).order('name');
-      const available = (freshTeams || []).filter(t => !assignedIds.has(t.id));
+      const available = (window._allTeamsForMatch || []).filter(t => !t.is_eliminated && !assignedIds.has(t.id));
       const matchNumber = parseInt(opt.dataset.matchNumber);
       const slot = R32_SLOTS[matchNumber] || '';
       const [homeSlot, awaySlot] = slot ? slot.split(' v ') : ['Home team', 'Away team'];
@@ -1596,19 +1625,12 @@ Good luck! ⚽🏆`;
     async function loadTeamsLongshot() {
       const [{ data: teams }, { data: rounds }] = await Promise.all([
         db.from('teams').select('id, name, flag_emoji, pot, is_longshot, is_eliminated, band, eliminated_in_round_id').order('pot').order('name'),
-        db.from('rounds').select('id, name, round_type, sort_order').order('sort_order')
+        db.from('rounds').select('id, name, sort_order').order('sort_order')
       ]);
       const el = document.getElementById('teams-longshot-list');
       if (!teams) return;
       const roundMap = {};
       (rounds || []).forEach(r => { roundMap[r.id] = r.name; });
-
-      const groupPhaseRoundIds = new Set((rounds || []).filter(r => r.round_type === 'group').map(r => r.id));
-      const outAfterGroup = (teams || []).filter(t => t.is_eliminated && (!t.eliminated_in_round_id || groupPhaseRoundIds.has(t.eliminated_in_round_id))).length;
-      const outCounter = `<div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:13px">
-        🏳️ <strong>OUT after Group Stage: <span id="out-after-group-count" style="color:${outAfterGroup===16?'var(--green)':'var(--gold)'}">${outAfterGroup}</span> / 16</strong>
-        <span style="color:var(--text-muted);font-size:11px">&nbsp;· tick Eliminated + Group Phase 3 on each team below</span>
-      </div>`;
 
       let html = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><thead><tr>
         <th style="width:160px">Team</th>
@@ -1636,7 +1658,7 @@ Good luck! ⚽🏆`;
         </tr>`;
       });
       html += '</tbody></table></div>';
-      el.innerHTML = outCounter + html;
+      el.innerHTML = html;
 
       async function teamUpdate(teamId, payload) {
         const row = el.querySelector(`tr[data-team-row="${teamId}"]`);
@@ -1658,21 +1680,7 @@ Good luck! ⚽🏆`;
         cb.addEventListener('change', function() {
           const roundSel = el.querySelector(`.round-select[data-team-id="${this.dataset.teamId}"]`);
           const roundId  = roundSel ? roundSel.value || null : null;
-          if (this.checked && roundSel && !roundSel.value) {
-            const gp3 = Array.from(roundSel.options).find(o => o.text === 'Group Phase 3');
-            if (gp3) { roundSel.value = gp3.value; teamUpdate(this.dataset.teamId, { is_eliminated: true, eliminated_in_round_id: gp3.value }); }
-            else { teamUpdate(this.dataset.teamId, { is_eliminated: true, eliminated_in_round_id: null }); }
-          } else {
-            teamUpdate(this.dataset.teamId, { is_eliminated: this.checked, eliminated_in_round_id: this.checked ? roundId : null });
-          }
-          // Update counter in place without re-rendering the table
-          const counterEl = el.querySelector('#out-after-group-count');
-          if (counterEl) {
-            const current = parseInt(counterEl.textContent) || 0;
-            const next = this.checked ? current + 1 : Math.max(0, current - 1);
-            counterEl.textContent = next;
-            counterEl.style.color = next === 16 ? 'var(--green)' : 'var(--gold)';
-          }
+          teamUpdate(this.dataset.teamId, { is_eliminated: this.checked, eliminated_in_round_id: this.checked ? roundId : null });
         });
       });
       el.querySelectorAll('.round-select').forEach(sel => {
@@ -2189,6 +2197,105 @@ Good luck! ⚽🏆`;
       });
       html += '</tbody></table></div>';
       wrap.innerHTML = html;
+    }
+
+    // ── Picks Audit ───────────────────────────────────────────
+    async function loadPicksAudit() {
+      const wrap = document.getElementById('picks-audit-wrap');
+      wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      const [{ data: players }, { data: rounds }, { data: picks }] = await Promise.all([
+        db.from('players').select('id, name, is_eliminated').order('name'),
+        db.from('rounds').select('id, name, sort_order, round_type').order('sort_order'),
+        db.from('picks').select('id, player_id, round_id, team_id, multiplier, is_assigned, created_at, teams(name, flag_emoji)')
+      ]);
+
+      if (!players || !rounds || !picks) {
+        wrap.innerHTML = '<p style="color:var(--red)">Failed to load data.</p>'; return;
+      }
+
+      // Rounds in reverse order (most recent first = left), excluding 3rd place
+      const sortedRounds = [...rounds]
+        .filter(r => !r.name.toLowerCase().includes('3rd'))
+        .sort((a, b) => b.sort_order - a.sort_order);
+
+      // Index picks: player_id → round_id → [picks]
+      const pickIndex = {};
+      picks.forEach(p => {
+        if (!pickIndex[p.player_id]) pickIndex[p.player_id] = {};
+        if (!pickIndex[p.player_id][p.round_id]) pickIndex[p.player_id][p.round_id] = [];
+        pickIndex[p.player_id][p.round_id].push(p);
+      });
+
+      // Count blanks per player for summary
+      let totalBlanks = 0;
+
+      // Build header
+      let html = `<div style="overflow-x:auto"><table style="font-size:12px; min-width:800px; border-collapse:collapse">
+        <thead><tr>
+          <th style="text-align:left; padding:8px 10px; background:var(--surface2); border:1px solid var(--border); position:sticky; left:0; z-index:2; min-width:120px">Player</th>`;
+
+      sortedRounds.forEach(r => {
+        const isKO = r.round_type === 'knockout';
+        html += `<th style="padding:6px 8px; background:var(--surface2); border:1px solid var(--border); font-size:11px; min-width:110px; text-align:center">
+          ${r.name}${isKO ? '<br><span style="font-weight:400;color:var(--text-muted)">KO</span>' : ''}
+        </th>`;
+      });
+
+      html += `</tr></thead><tbody>`;
+
+      players.forEach(player => {
+        const isOut = player.is_eliminated;
+        const rowStyle = isOut ? 'opacity:0.5' : '';
+        const playerLabel = player.name + (isOut ? '<br><span style="font-size:10px;color:var(--red);font-weight:700;letter-spacing:0.05em">OUT</span>' : '');
+
+        html += `<tr style="${rowStyle}">
+          <td style="padding:8px 10px; border:1px solid var(--border); background:var(--surface); font-weight:600; position:sticky; left:0; z-index:1">${playerLabel}</td>`;
+
+        sortedRounds.forEach(r => {
+          const roundPicks = (pickIndex[player.id] || {})[r.id] || [];
+          const isGroup = r.round_type === 'group';
+
+          if (roundPicks.length === 0) {
+            if (isOut) {
+              html += `<td style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); text-align:center; color:var(--text-muted); font-size:11px">—</td>`;
+            } else {
+              totalBlanks++;
+              html += `<td style="padding:6px 8px; border:1px solid var(--border); background:rgba(239,68,68,0.12); text-align:center; color:var(--red); font-weight:600; font-size:11px">— Missing —</td>`;
+            }
+          } else {
+            // Sort: 3pt first for group
+            const sorted = isGroup ? [...roundPicks].sort((a, b) => (b.multiplier || 0) - (a.multiplier || 0)) : roundPicks;
+            let cellHtml = sorted.map(p => {
+              const flag = p.teams?.flag_emoji || '🏳';
+              const name = p.teams?.name || '?';
+              const multColor = p.multiplier === 3 ? 'var(--gold)' : 'var(--text-muted)';
+              const multLabel = isGroup ? `<span style="color:${multColor}; font-weight:700">${p.multiplier}pt</span> ` : '';
+              const auto = p.is_assigned ? ` (a)` : '';
+              const ts = p.created_at ? new Date(p.created_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : null;
+              const tsHtml = ts ? `<div style="color:var(--text-muted); font-size:10px; margin-top:2px">${ts}${auto}</div>` : (auto ? `<div style="color:var(--text-muted); font-size:10px; margin-top:2px">${auto.trim()}</div>` : '');
+              return `<div style="line-height:1.3">${multLabel}${flag} ${name}${tsHtml}</div>`;
+            }).join('<div style="border-top:1px solid var(--border); margin:3px 0"></div>');
+
+            html += `<td style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); vertical-align:top">${cellHtml}</td>`;
+          }
+        });
+
+        html += `</tr>`;
+      });
+
+      html += `</tbody></table></div>`;
+
+      // Summary bar
+      const summaryColor = totalBlanks === 0 ? 'var(--green)' : 'var(--gold)';
+      const summary = `<div style="margin-bottom:12px; padding:8px 14px; background:var(--surface2); border-radius:8px; font-size:13px; display:flex; gap:16px; flex-wrap:wrap; align-items:center">
+        <span>👥 <strong>${players.length}</strong> players</span>
+        <span>🗓 <strong>${rounds.length}</strong> rounds</span>
+        <span style="color:${summaryColor}">⚠️ <strong>${totalBlanks}</strong> missing pick${totalBlanks !== 1 ? 's' : ''}</span>
+        <button class="btn btn-secondary" style="font-size:11px; padding:3px 10px; margin-left:auto" onclick="loadPicksAudit()">🔄 Refresh</button>
+      </div>`;
+
+      wrap.innerHTML = summary + html;
     }
 
     async function deleteBracketVersion(id) {

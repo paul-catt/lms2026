@@ -26,7 +26,7 @@
     nav, .nav-logo, .card-title, thead th { font-family: 'Rajdhani', sans-serif; }
     .round-strip { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:0; }
 
-    /* ITEM 22: pills on one scrollable row, no wrap */
+    /* pills on one scrollable row, no wrap */
     .round-pills { display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; max-width:100%; padding-bottom:2px; }
     .round-pills::-webkit-scrollbar { display:none; }
 
@@ -88,7 +88,7 @@
     .band-panel-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-right:4px; }
     .band-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px; font-size:13px; font-weight:700; background:var(--surface2); border:1px solid var(--border); }
 
-    /* Goals prediction card — sits between stat cards and pick section (ITEM 20) */
+    /* Goals prediction card */
     .goals-inline-card {
       background: rgba(59,130,246,0.07);
       border: 1px solid rgba(59,130,246,0.3);
@@ -106,7 +106,7 @@
     /* History table round column */
     .history-round { font-size:12px; }
 
-    /* ITEM 21: 4-card stats row — tighter on mobile */
+    /* 4-card stats row */
     .stats-row { display:flex; gap:8px; margin-bottom:16px; }
     .stats-row .stat-block { flex:1; min-width:0; }
     .stats-row .stat-value { font-size:20px; }
@@ -121,9 +121,18 @@
       <a href="/leaderboard" id="leaderboard-link">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
       <a href="/bracket">Bracket</a>
+      <a id="nav-my-page" href="/" class="active">+ My Page</a>
       <a href="/rules">Rules</a>
     </div>
   </nav>
+  <script>
+    (function() {
+      const slug = localStorage.getItem('lms2026_my_slug');
+      const link = document.getElementById('nav-my-page');
+      if (slug) { link.href = '/' + slug; }
+      else { link.href = '/'; link.title = 'Enter your player code'; }
+    })();
+  </script>
 
   <main>
     <div id="loading" class="loading"><div class="spinner"></div>Loading your dashboard...</div>
@@ -143,12 +152,11 @@
             <h1 id="player-name" style="font-size:28px; font-weight:900; margin:0; letter-spacing:-0.02em"></h1>
             <div id="player-status" style="margin-top:4px"></div>
           </div>
-          <!-- ITEM 22: pills are nowrap / scrollable -->
           <div class="round-pills" id="round-pills"></div>
         </div>
       </div>
 
-      <!-- ITEM 21: 4 stat cards — Points / Position / Teams Left / Goals -->
+      <!-- 4 stat cards: Points / Position / Teams Left / Goals -->
       <div class="stats-row">
         <div class="stat-block"><div class="stat-value" id="stat-points">0</div><div class="stat-label">Points</div></div>
         <div class="stat-block"><div class="stat-value" id="stat-position">—</div><div class="stat-label">Position</div></div>
@@ -158,8 +166,7 @@
 
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
 
-      <!-- ITEM 20 FIX: Goals prediction card lives HERE — between stat cards and pick section.
-           initGoalsPrediction() makes it visible. Hidden after GP1 deadline. -->
+      <!-- Goals prediction card — between stat cards and pick section -->
       <div id="goals-prediction-card" style="display:none" class="goals-inline-card">
         <div class="card-title">🎯 Tournament Goals Prediction</div>
         <p id="goals-prediction-desc" style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (104 games, including extra time)? Used as a tiebreaker. You can change this until the Group Phase 1 deadline.</p>
@@ -210,7 +217,7 @@
         </div>
       </div>
 
-      <!-- ITEM 19: Pick history — most recent first (pending picks at top) -->
+      <!-- Pick history — most recent first -->
       <div class="card">
         <div class="card-title">📋 Pick History</div>
         <div class="table-wrap">
@@ -235,11 +242,9 @@
       return o ? new Date(o) : new Date();
     }
 
-    // Store slug in localStorage so leaderboard can offer "back" link
     const slug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
     if (slug && !localStorage.getItem('lms2026_my_slug')) localStorage.setItem('lms2026_my_slug', slug);
 
-    // Leaderboard link carries slug for row highlighting
     const lbLink = document.getElementById('leaderboard-link');
     if (slug) lbLink.href = '/leaderboard?me=' + slug;
 
@@ -251,28 +256,33 @@
     ];
     const KO_ROUNDS = ['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final','Quarter-Final','Semi-Final'];
 
-    // FIX 1: short pill labels — R32/R16 fit on mobile portrait
+    // FIX 1: short pill labels with catch-all for any QF/SF DB naming variant
     function roundShortLabel(r) {
       if (r.round_type === 'group') return 'GP' + r.sort_order;
       const map = {
-        'Round of 32':   'R32',
-        'Round of 16':   'R16',
+        'Round of 32':    'R32',
+        'Round of 16':    'R16',
         'Quarter Finals': 'QF',
         'Quarter-Final':  'QF',
         'Semi Finals':    'SF',
         'Semi-Final':     'SF',
         'Final':          'F'
       };
-      return map[r.name] || r.name;
+      const mapped = map[r.name];
+      if (mapped) return mapped;
+      const n = r.name;
+      if (n.toLowerCase().includes('quarter')) return 'QF';
+      if (n.toLowerCase().includes('semi'))    return 'SF';
+      return n.length > 4 ? n.slice(0, 3) : n;
     }
 
-    let player       = null;
-    let allRounds    = [];
-    let openRounds   = [];
-    let allTeams     = [];
-    let allPicks     = [];
-    let allMatches   = [];
-    let eliminatedIds = new Set();
+    let player            = null;
+    let allRounds         = [];
+    let openRounds        = [];
+    let allTeams          = [];
+    let allPicks          = [];
+    let allMatches        = [];
+    let eliminatedIds     = new Set();
     let usedTeamIdsGlobal = new Set();
     let deadlineInterval  = null;
     let selectedRoundId   = null;
@@ -296,7 +306,6 @@
       return String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
     }
 
-    // ITEM 18: contextual teams-left warning messages
     function teamsLeftMessage(n) {
       if (n <= 0) return '⚠️ You have no teams left!';
       if (n === 1) return '⚠️ 1 team left — good luck with that! 😬';
@@ -306,7 +315,6 @@
       return '⚠️ You have ' + n + ' teams left. Pick carefully.';
     }
 
-    // ── Band panel (knockout only) ────────────────────────────
     function updateBandPanel(round) {
       const panel = document.getElementById('band-panel');
       const isKO  = round && KO_ROUNDS.includes(round.name);
@@ -322,7 +330,7 @@
       document.getElementById('bc-nh').textContent  = available.filter(t => t.band === 'no_hoper').length;
 
       ['fav','dh','ls','nh'].forEach((k, i) => {
-        const chip = document.getElementById('band-chip-' + k);
+        const chip  = document.getElementById('band-chip-' + k);
         const count = parseInt(['bc-fav','bc-dh','bc-ls','bc-nh'].map(id => document.getElementById(id).textContent)[i]);
         chip.style.opacity = count === 0 ? '0.3' : '1';
       });
@@ -368,10 +376,10 @@
           db.from('matches').select('id, round_id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band)').order('kickoff')
         ]);
 
-        allPicks    = picks   || [];
-        allRounds   = rounds  || [];
-        allTeams    = teams   || [];
-        allMatches  = matches || [];
+        allPicks   = picks   || [];
+        allRounds  = rounds  || [];
+        allTeams   = teams   || [];
+        allMatches = matches || [];
         eliminatedIds = new Set((teams || []).filter(t => t.is_eliminated).map(t => t.id));
 
         usedTeamIdsGlobal = new Set(allPicks.map(p => p.team_id));
@@ -427,7 +435,6 @@
 
         openRounds = allRounds.filter(r => !r.is_complete && r.name !== '3rd Place');
         renderRoundStrip();
-        // ITEM 20: goals card is outside pick-section, init here
         initGoalsPrediction();
 
         if (player.is_eliminated || openRounds.length === 0) {
@@ -435,9 +442,24 @@
           noRound.style.display = 'block';
           if (player.is_eliminated) {
             document.getElementById('no-round-icon').textContent = '💀';
+
+            // FIX: contextual elimination message
+            const lostPick2 = [...allPicks].reverse().find(p => {
+              const res = p.pick_results && p.pick_results[0];
+              return res && res.match_result === 'loss';
+            });
+            const remaining2 = allTeams.filter(t => !usedTeamIdsGlobal.has(t.id) && !eliminatedIds.has(t.id));
+            let elimMsg;
+            if (lostPick2 && lostPick2.teams) {
+              elimMsg = lostPick2.teams.flag_emoji + ' <strong>' + lostPick2.teams.name + ' lost</strong> — you\'re out!';
+            } else if (remaining2.length === 0) {
+              elimMsg = 'You\'ve run out of teams to pick — you\'re out!';
+            } else {
+              elimMsg = 'You\'ve been eliminated.';
+            }
             document.getElementById('no-round-msg').innerHTML =
-              '<strong style="color:var(--red)">You\'ve been eliminated.</strong><br>' +
-              '<span style="font-size:13px;color:var(--text-muted)">No more picks to submit — check your pick history below.</span>';
+              '<strong style="color:var(--red); font-size:15px">' + elimMsg + '</strong><br>' +
+              '<span style="font-size:13px;color:var(--text-muted);margin-top:4px;display:block">Check your pick history below.</span>';
           }
           return;
         }
@@ -465,13 +487,11 @@
         picksByRound[p.round_id].push(p);
       });
 
+      // FIX 3: find eliminated round from loss result regardless of round completion status
       const eliminatedRoundId = (() => {
-        for (const r of [...allRounds].reverse()) {
-          const rPicks = picksByRound[r.id] || [];
-          for (const p of rPicks) {
-            const res = p.pick_results && p.pick_results[0];
-            if (res && res.match_result === 'loss') return r.id;
-          }
+        for (const p of [...allPicks].reverse()) {
+          const res = p.pick_results && p.pick_results[0];
+          if (res && res.match_result === 'loss') return p.round_id;
         }
         return null;
       })();
@@ -486,7 +506,6 @@
           (hasPick ? ' has-pick' : '') +
           (!isComplete && !openRounds.find(o => o.id === r.id) ? ' future' : '') +
           (isElimRound ? ' eliminated' : '');
-        // FIX 1: short label so R32/R16 fit on mobile portrait
         const shortLabel = roundShortLabel(r);
         pill.innerHTML = shortLabel + (hasPick ? ' <span class="tick">✓</span>' : '') + (isElimRound ? ' 🔴' : '');
         pill.title = r.name + (hasPick ? ' — pick submitted' : isComplete ? ' — completed' : ' — open') + (isElimRound ? ' — eliminated here' : '');
@@ -817,8 +836,6 @@
       }
     }
 
-    // ITEM 20: Goals prediction card is now in the HTML above the pick section.
-    // initGoalsPrediction() just controls visibility and wires up the save button.
     function initGoalsPrediction() {
       const gp1 = allRounds.find(r => r.round_type === 'group' && r.sort_order === 1);
       if (!gp1) return;
@@ -827,7 +844,6 @@
       const now      = getEffectiveDate();
       const isLocked = now >= deadline;
 
-      // After GP1 deadline — keep hidden
       if (isLocked) return;
 
       const card  = document.getElementById('goals-prediction-card');
@@ -862,7 +878,7 @@
       });
     }
 
-    // ITEM 19 + FIX 3: most recent first; pending picks at TOP not bottom
+    // FIX 2: pending/upcoming only shown if no result yet; results shown even if round not marked complete
     function renderHistory() {
       const tbody = document.getElementById('history-body');
       const picksByRound = {};
@@ -873,17 +889,32 @@
 
       let rows = '';
 
-      // FIX 3: pending/upcoming picks come FIRST (most recent round first)
+      // Picks in incomplete rounds: check result presence, not round completion
       const openWithPicks = [...allRounds.filter(r => !r.is_complete && picksByRound[r.id])].reverse();
       openWithPicks.forEach(r => {
         (picksByRound[r.id] || []).forEach(p => {
-          rows += '<tr style="opacity:0.7">' +
-            '<td class="history-round">' + r.name + ' <span style="color:var(--accent);font-size:10px">(upcoming)</span></td>' +
-            '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
-            '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
-            '<td><span class="badge badge-grey">Pending</span></td>' +
-            '<td style="color:var(--text-muted)">—</td>' +
-            '</tr>';
+          const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
+          if (res) {
+            // Result is in — render normally even if round not yet marked complete
+            const resultBadge = '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + res.match_result.toUpperCase() + '</span>';
+            const autoBadge = p.is_assigned ? '<span class="badge badge-grey" style="font-size:10px;margin-left:4px">auto</span>' : '';
+            rows += '<tr>' +
+              '<td class="history-round">' + r.name + '</td>' +
+              '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + autoBadge + '</td>' +
+              '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
+              '<td>' + resultBadge + '</td>' +
+              '<td style="font-weight:600">' + res.points_earned + '</td>' +
+              '</tr>';
+          } else {
+            // No result yet — show as upcoming
+            rows += '<tr style="opacity:0.7">' +
+              '<td class="history-round">' + r.name + ' <span style="color:var(--accent);font-size:10px">(upcoming)</span></td>' +
+              '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
+              '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
+              '<td><span class="badge badge-grey">Pending</span></td>' +
+              '<td style="color:var(--text-muted)">—</td>' +
+              '</tr>';
+          }
         });
       });
 

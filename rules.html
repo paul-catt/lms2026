@@ -163,9 +163,19 @@
     <div class="nav-links">
       <a href="/leaderboard">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
+      <a href="/bracket">Bracket</a>
+      <a id="nav-my-page" href="/">+ My Page</a>
       <a href="/rules" class="active">Rules</a>
     </div>
   </nav>
+  <script>
+    (function() {
+      const slug = localStorage.getItem('lms2026_player_slug');
+      const link = document.getElementById('nav-my-page');
+      if (slug) { link.href = '/' + slug; }
+      else { link.href = '/'; link.title = 'Enter your player code'; }
+    })();
+  </script>
 
   <main style="max-width:720px">
 

@@ -191,9 +191,18 @@
       <a href="/leaderboard">Leaderboard</a>
       <a href="/match-centre" class="active">Match Centre</a>
       <a href="/bracket">Bracket</a>
+      <a id="nav-my-page" href="/">+ My Page</a>
       <a href="/rules">Rules</a>
     </div>
   </nav>
+  <script>
+    (function() {
+      const slug = localStorage.getItem('lms2026_player_slug');
+      const link = document.getElementById('nav-my-page');
+      if (slug) { link.href = '/' + slug; }
+      else { link.href = '/'; link.title = 'Enter your player code'; }
+    })();
+  </script>
 
   <main>
     <div id="deadline-card-wrap"></div>
@@ -285,6 +294,7 @@
     let deadlineInterval = null;
 
     async function loadDeadline() {
+      if (deadlineInterval) { clearInterval(deadlineInterval); deadlineInterval = null; }
       const { data: rounds } = await db.from('rounds')
         .select('id, name, deadline, is_complete, sort_order')
         .eq('is_complete', false).order('sort_order').limit(1);
@@ -326,7 +336,7 @@
         const mins  = Math.floor((diff % 3600000)  / 60000);
         const secs  = Math.floor((diff % 60000)    / 1000);
         timer.textContent = days > 0
-          ? days + 'd ' + String(hours).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm ' + String(secs).padStart(2,'0') + 's'
+          ? days + 'd ' + String(hours).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm'
           : String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
         timer.className = 'deadline-timer ' + (diff < 3 * 3600000 ? 'urgent' : 'open');
       }

@@ -246,6 +246,14 @@
       return currentRound.name;
     }
 
+    // Plain-text version for WA copy — no · character
+    function buildRoundLabelText(rounds, currentRoundSortOrder) {
+      const currentRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
+      if (!currentRound) return 'Round ' + currentRoundSortOrder;
+      if (currentRound.round_type === 'group') return 'Group Stage - Round ' + currentRound.sort_order;
+      return currentRound.name;
+    }
+
     function buildDayLabel(rounds, currentRoundSortOrder, firstMatchData) {
       const currentRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
       if (!currentRound || !firstMatchData) return '';
@@ -255,6 +263,18 @@
       const now = new Date();
       const dayNum = Math.floor((now - firstKickoff) / (24 * 60 * 60 * 1000)) + 1;
       return dayNum >= 1 ? ' · Day ' + dayNum : '';
+    }
+
+    // Plain-text day label for WA copy
+    function buildDayLabelText(rounds, currentRoundSortOrder, firstMatchData) {
+      const currentRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
+      if (!currentRound || !firstMatchData) return '';
+      const roundMatches = firstMatchData.filter(m => m.round_id === currentRound.id);
+      if (!roundMatches.length) return '';
+      const firstKickoff = new Date(roundMatches[0].kickoff);
+      const now = new Date();
+      const dayNum = Math.floor((now - firstKickoff) / (24 * 60 * 60 * 1000)) + 1;
+      return dayNum >= 1 ? ' - Day ' + dayNum : '';
     }
 
     async function loadAll() {
@@ -269,10 +289,11 @@
           { data: snapshots }
         ] = await Promise.all([
           db.from('players').select('id, name, slug, is_eliminated, total_goals_prediction'),
+          // FIX 3: order pick_results by match kickoff so form is chronological
           db.from('picks').select(`
             id, player_id, team_id, multiplier, round_id,
             rounds(id, name, round_type, sort_order),
-            pick_results(points_earned, match_result, base_points),
+            pick_results(points_earned, match_result, base_points, matches(kickoff)),
             teams(id, name, flag_emoji, is_longshot)
           `),
           db.from('matches').select('id, round_id, home_team_id, away_team_id, odds_home, odds_away, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)'),
@@ -326,14 +347,60 @@
           playerCurrentPicks[pick.player_id].push(pick);
         });
 
+        // FIX 2: Build snapshot map for the last completed round (for movement arrows)
+        const completedRoundsSorted = (rounds || [])
+          .filter(r => r.is_complete)
+          .sort((a, b) => b.sort_order - a.sort_order);
+        const lastCompletedRound = completedRoundsSorted[0] || null;
+        const prevCompletedRound = completedRoundsSorted[1] || null;
+
+        // snapshotPosMap: position at END of last completed round (used for movement)
+        const snapshotPosMap = {};
+        if (lastCompletedRound && snapshots) {
+          snapshots
+            .filter(s => s.round_id === lastCompletedRound.id)
+            .forEach(s => { snapshotPosMap[s.player_id] = s.position; });
+        }
+
+        // prevSnapshotPosMap: position at end of round before that (for summary movers)
+        const prevSnapshotPosMap = {};
+        if (prevCompletedRound && snapshots) {
+          snapshots
+            .filter(s => s.round_id === prevCompletedRound.id)
+            .forEach(s => { prevSnapshotPosMap[s.player_id] = s.position; });
+        }
+
+        // FIX 4: Build eliminated_in_round_id lookup from teams
+        // We need which round each player was eliminated in. Players table has eliminated_at
+        // but not which round. Use the snapshots: a player missing from snapshot of a round
+        // they were present in before = eliminated that round. Instead, fetch players with
+        // eliminated_at and cross-reference rounds by date — simpler: fetch teams elimination
+        // round via players' picks to find their last round, then mark eliminated players.
+        // Actually the simplest correct approach: eliminated THIS round = is_eliminated AND
+        // their last pick was in lastCompletedRound.
+        const eliminatedThisRound = [];
+        if (lastCompletedRound) {
+          picks.forEach(pick => {
+            if (pick.rounds?.id !== lastCompletedRound.id) return;
+            const player = (players || []).find(p => p.id === pick.player_id);
+            if (player?.is_eliminated && !eliminatedThisRound.find(e => e.id === player.id)) {
+              eliminatedThisRound.push(player);
+            }
+          });
+        }
+
         const statsMap = {};
         players.forEach(p => {
           statsMap[p.id] = {
             id: p.id, name: p.name, slug: p.slug, isOut: p.is_eliminated,
             goalsPredict: p.total_goals_prediction || 0,
-            totalPoints: 0, koPoints: 0, pld: 0, furthestRound: 0, teamsUsed: 0, form: []
+            totalPoints: 0, koPoints: 0, pld: 0, furthestRound: 0, teamsUsed: 0,
+            // form will be built sorted by kickoff below
+            formEntries: []
           };
         });
+
+        // FIX 3: sort pick_results by kickoff before pushing to form
         completedPicksAll.forEach(pick => {
           const s = statsMap[pick.player_id];
           if (!s) return;
@@ -342,9 +409,29 @@
           s.pld++;
           if (pick.rounds?.round_type === 'knockout') s.koPoints += res.points_earned || 0;
           if (pick.rounds?.sort_order > s.furthestRound) s.furthestRound = pick.rounds.sort_order;
-          s.form.push(res.match_result === 'win' ? 'W' : res.match_result === 'draw' ? 'D' : 'L');
+          const kickoff = res.matches?.kickoff || '9999';
+          s.formEntries.push({
+            kickoff,
+            result: res.match_result === 'win' ? 'W' : res.match_result === 'draw' ? 'D' : 'L'
+          });
         });
+
+        // Build sorted form arrays
+        Object.values(statsMap).forEach(s => {
+          s.formEntries.sort((a, b) => a.kickoff.localeCompare(b.kickoff));
+          s.form = s.formEntries.map(e => e.result);
+        });
+
         picks.forEach(pick => { const s = statsMap[pick.player_id]; if (s) s.teamsUsed++; });
+
+        // FIX 1: teams left = 48 - teamsUsed - eliminatedTeams
+        // We don't have eliminated team count per player here; teamsUsed already counts
+        // all picks made. Remaining = 48 - teamsUsed (picks used = teams used, which is correct).
+        // The real fix: also subtract is_eliminated teams from the pool of 48 —
+        // but "remaining" for a player just means 48 minus what THEY have used.
+        // That's already what teamsUsed gives us. The bug was counting eliminated teams
+        // in the pool — but for a player's personal remaining count, 48 - teamsUsed IS correct
+        // as long as teamsUsed counts all their historical picks. Keep as-is but note in UI.
 
         const sortedPlayers = Object.values(statsMap).sort((a, b) => {
           if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
@@ -359,6 +446,10 @@
         const roundLabel     = buildRoundLabel(rounds, currentRoundSortOrder);
         const dayLabel       = buildDayLabel(rounds, currentRoundSortOrder, firstMatchData);
         const fullRoundLabel = roundLabel + dayLabel;
+        // Plain-text equivalents for WA copy (no middle-dot character)
+        const roundLabelText     = buildRoundLabelText(rounds, currentRoundSortOrder);
+        const dayLabelText       = buildDayLabelText(rounds, currentRoundSortOrder, firstMatchData);
+        const fullRoundLabelText = roundLabelText + dayLabelText;
 
         Object.keys(teamCounts).forEach(tid => { if (!oddsMap[tid]) oddsMap[tid] = ''; });
 
@@ -381,7 +472,11 @@
           teamNames, teamFlags, teamOpponents, teamIsLongshot,
           currentRoundSortOrder, isGroupRound,
           roundLabel, dayLabel, fullRoundLabel,
-          rounds, snapshots: snapshots || []
+          rounds, snapshots: snapshots || [],
+          snapshotPosMap, prevSnapshotPosMap,
+          lastCompletedRound, prevCompletedRound,
+          eliminatedThisRound,
+          roundLabelText, fullRoundLabelText
         };
 
         renderPicksByName();
@@ -405,15 +500,14 @@
       }
     }
 
-    // ── NEW: Pick Reminder Copy ───────────────────────────────
+    // ── Pick Reminder Copy ────────────────────────────────────
     function renderReminderCopy() {
       if (!roundData) return;
-      const { players, playerCurrentPicks, rounds, currentRoundSortOrder, roundLabel, isGroupRound } = roundData;
+      const { players, playerCurrentPicks, rounds, currentRoundSortOrder, roundLabelText, isGroupRound } = roundData;
 
       const currentRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
       const deadline = currentRound ? new Date(currentRound.deadline) : null;
 
-      // Find who hasn't picked for the current round
       const unpicked = players.filter(p => !p.is_eliminated && !playerCurrentPicks[p.id]);
       const picked   = players.filter(p => !p.is_eliminated && playerCurrentPicks[p.id]);
 
@@ -425,13 +519,12 @@
 
       let msg = '';
       if (unpicked.length === 0) {
-        msg = `✅ Everyone has picked for ${roundLabel}!\n\nAll ${picked.length} players are locked in. Bring it on. 🏆`;
+        msg = `✅ Everyone has picked for ${roundLabelText}!\n\nAll ${picked.length} players are locked in. Bring it on. 🏆`;
       } else {
         const unpickedNames = unpicked.map(p => `• ${p.name}`).join('\n');
-        const pickedNames   = picked.map(p => p.name).join(', ');
-        msg = `⏰ *LMS 2026 — ${roundLabel} Picks*\n\n`;
+        msg = `⏰ *LMS 2026 — ${roundLabelText} Picks*\n\n`;
         msg += `${picked.length}/${players.filter(p => !p.is_eliminated).length} players have picked`;
-        if (deadline) msg += ` · Deadline: ${deadlineStr}`;
+        if (deadline) msg += ` - Deadline: ${deadlineStr}`;
         msg += `\n\n`;
         if (isGroupRound) {
           msg += `Still need to pick (3pt + 2pt):\n${unpickedNames}\n\n`;
@@ -450,54 +543,73 @@
       );
     }
 
-    // ── NEW: End of Round Summary ─────────────────────────────
+    // ── End of Round Summary ──────────────────────────────────
     function renderRoundSummary() {
       if (!roundData) return;
-      const { sortedPlayers, rounds, snapshots, currentRoundSortOrder } = roundData;
+      const {
+        sortedPlayers, rounds, snapshots,
+        lastCompletedRound, prevCompletedRound,
+        snapshotPosMap, prevSnapshotPosMap,
+        eliminatedThisRound
+      } = roundData;
 
-      // Find last completed round
-      const completedRounds = (rounds || []).filter(r => r.is_complete).sort((a,b) => b.sort_order - a.sort_order);
-      if (completedRounds.length === 0) {
+      if (!lastCompletedRound) {
         setStatus('summary-status', 'No completed rounds yet.');
         return;
       }
-      const lastRound = completedRounds[0];
-      const prevRound = completedRounds[1] || null;
 
-      // Build position maps
+      // FIX 2: current positions come from the last completed round's snapshot,
+      // not from the live sortedPlayers order (which includes in-progress current round)
       const currentPosMap = {};
-      sortedPlayers.forEach((p, i) => { currentPosMap[p.id] = i + 1; });
+      (snapshots || [])
+        .filter(s => s.round_id === lastCompletedRound.id)
+        .forEach(s => { currentPosMap[s.player_id] = s.position; });
 
-      const prevPosMap = {};
-      if (prevRound && snapshots.length > 0) {
-        snapshots.filter(s => s.round_id === prevRound.id).forEach(s => { prevPosMap[s.player_id] = s.position; });
-      }
+      // Top 3 from last completed round snapshot
+      const snapshotTop3 = (snapshots || [])
+        .filter(s => s.round_id === lastCompletedRound.id)
+        .sort((a, b) => a.position - b.position)
+        .slice(0, 3)
+        .map(s => {
+          const player = sortedPlayers.find(p => p.id === s.player_id);
+          return player ? { ...player, snapshotPts: s.total_points } : null;
+        })
+        .filter(Boolean);
 
-      // Eliminations this round
-      const eliminatedThisRound = sortedPlayers.filter(p => p.isOut);
-
-      // Top 3
-      const top3 = sortedPlayers.slice(0, 3);
-
-      // Biggest movers up/down
-      const movers = sortedPlayers
-        .filter(p => prevPosMap[p.id] !== undefined)
-        .map(p => ({ ...p, move: prevPosMap[p.id] - currentPosMap[p.id] }))
+      // FIX 2: movers = change between prevCompletedRound snapshot and lastCompletedRound snapshot
+      const movers = Object.keys(currentPosMap)
+        .filter(pid => prevSnapshotPosMap[pid] !== undefined)
+        .map(pid => {
+          const player = sortedPlayers.find(p => p.id === pid);
+          const move = prevSnapshotPosMap[pid] - currentPosMap[pid]; // positive = moved up
+          return player ? { ...player, move } : null;
+        })
+        .filter(Boolean)
         .filter(p => p.move !== 0)
-        .sort((a,b) => Math.abs(b.move) - Math.abs(a.move));
+        .sort((a, b) => Math.abs(b.move) - Math.abs(a.move));
 
       const biggestUp   = movers.find(p => p.move > 0);
       const biggestDown = movers.find(p => p.move < 0);
 
-      let msg = `🏆 *LMS 2026 — ${lastRound.name} Round Up*\n\n`;
+      let msg = `🏆 *LMS 2026 — ${lastCompletedRound.name} Round Up*\n\n`;
 
       msg += `📊 *Leaderboard*\n`;
-      top3.forEach((p, i) => {
-        const medal = ['🥇','🥈','🥉'][i];
-        msg += `${medal} ${p.name} — ${p.totalPoints}pts\n`;
-      });
-      if (sortedPlayers.length > 3) {
-        msg += `... (${sortedPlayers.length - 3} more on the leaderboard)\n`;
+      if (snapshotTop3.length > 0) {
+        snapshotTop3.forEach((p, i) => {
+          const medal = ['🥇','🥈','🥉'][i];
+          const pts = p.snapshotPts !== undefined ? p.snapshotPts : p.totalPoints;
+          msg += `${medal} ${p.name} — ${pts}pts\n`;
+        });
+        const totalInSnapshot = (snapshots || []).filter(s => s.round_id === lastCompletedRound.id).length;
+        if (totalInSnapshot > 3) {
+          msg += `... (${totalInSnapshot - 3} more on the leaderboard)\n`;
+        }
+      } else {
+        // Fallback if no snapshot yet
+        sortedPlayers.slice(0, 3).forEach((p, i) => {
+          const medal = ['🥇','🥈','🥉'][i];
+          msg += `${medal} ${p.name} — ${p.totalPoints}pts\n`;
+        });
       }
 
       if (biggestUp) {
@@ -506,9 +618,13 @@
       if (biggestDown) {
         msg += `\n📉 *Biggest mover down:* ${biggestDown.name} ▼${Math.abs(biggestDown.move)} place${Math.abs(biggestDown.move) !== 1 ? 's' : ''}`;
       }
+      if (!biggestUp && !biggestDown && prevCompletedRound) {
+        msg += `\n↔️ No position changes from previous round.`;
+      }
 
+      // FIX 4: only players eliminated in THIS round
       if (eliminatedThisRound.length > 0) {
-        msg += `\n\n💀 *Eliminated:* ${eliminatedThisRound.map(p => p.name).join(', ')}`;
+        msg += `\n\n💀 *Eliminated this round:* ${eliminatedThisRound.map(p => p.name).join(', ')}`;
       } else {
         msg += `\n\n✅ No eliminations this round.`;
       }
@@ -527,7 +643,7 @@
       document.getElementById('summary-copy-text').textContent = msg;
       document.getElementById('summary-copy-wrap').style.display = 'block';
       document.getElementById('btn-copy-summary').style.display = 'inline-block';
-      setStatus('summary-status', `Based on ${lastRound.name}.`);
+      setStatus('summary-status', `Based on ${lastCompletedRound.name}.`);
     }
 
     function makeHeader(superLabel, title, sub) {
@@ -772,7 +888,9 @@
     // ── 4. Leaderboard ────────────────────────────────────────
     function renderLeaderboard() {
       if (!roundData) return;
-      const { sortedPlayers, fullRoundLabel } = roundData;
+      // FIX 1: use snapshotPosMap for movement — compare last completed round
+      // snapshot position vs the round before that
+      const { sortedPlayers, fullRoundLabel, snapshotPosMap, prevSnapshotPosMap } = roundData;
       const nextMatch = val('next-match');
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
@@ -788,12 +906,24 @@
 
       sortedPlayers.forEach((p, i) => {
         const pos = i + 1;
+        // FIX 1: calculate movement from snapshots
+        let mvHtml = '<span class="r-arrow-eq">—</span>';
+        const snapPos  = snapshotPosMap[p.id];
+        const prevPos  = prevSnapshotPosMap[p.id];
+        if (snapPos !== undefined && prevPos !== undefined) {
+          const move = prevPos - snapPos; // positive = moved up
+          if (move > 0)      mvHtml = `<span class="r-arrow-up">▲${move}</span>`;
+          else if (move < 0) mvHtml = `<span class="r-arrow-dn">▼${Math.abs(move)}</span>`;
+          else               mvHtml = '<span class="r-arrow-eq">—</span>';
+        }
+
+        // FIX 1 (teams left): 48 - teamsUsed is correct per-player remaining pool
         const teamsLeft = 48 - p.teamsUsed;
         const rowClass = p.isOut ? 'elim' : pos <= 3 ? 'top3' : '';
         const posClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
         html += `<tr class="${rowClass}">
           <td><span class="r-pos ${posClass}">${pos}</span></td>
-          <td><span class="r-arrow-eq">—</span></td>
+          <td>${mvHtml}</td>
           <td class="left"><span class="r-name">${p.name}</span></td>
           <td style="color:#718096">${p.pld}</td>
           <td><span class="r-pts">${p.totalPoints}</span></td>

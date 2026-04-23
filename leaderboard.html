@@ -109,10 +109,18 @@
       <a href="/leaderboard" class="active">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
       <a href="/bracket">Bracket</a>
+      <a id="nav-my-page" href="/">+ My Page</a>
       <a href="/rules">Rules</a>
-      <a id="my-page-link" style="display:none">← My Page</a>
     </div>
   </nav>
+  <script>
+    (function() {
+      const slug = localStorage.getItem('lms2026_my_slug');
+      const link = document.getElementById('nav-my-page');
+      if (slug) { link.href = '/' + slug; }
+      else { link.href = '/'; link.title = 'Enter your player code'; }
+    })();
+  </script>
 
   <main>
     <div class="card">
@@ -211,11 +219,6 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const mySlug = urlParams.get('me') || localStorage.getItem('lms2026_my_slug') || null;
-    if (mySlug) {
-      const link = document.getElementById('my-page-link');
-      link.href = '/' + mySlug;
-      link.style.display = 'inline';
-    }
 
     const WINDOW_START_HOUR  = 11;
     const WINDOW_DURATION_MS = 24 * 60 * 60 * 1000;
@@ -333,7 +336,7 @@
         const used = usedByPlayer[p.player_id] || new Set();
         const playerPicks = pickMap[p.player_id] || {};
 
-        html += `<tr><td class="m-pos">${pos}</td>`;
+        html += `<tr${isElim ? ' style="background:rgba(255,255,255,0.04);opacity:0.5;"' : ''}><td class="m-pos">${pos}</td>`;
         html += `<td class="m-player${isElim ? ' elim' : ''}"><a href="/${p.slug}" style="color:inherit;text-decoration:none">${p.name}</a></td>`;
 
         teamList.forEach((t, i) => {
@@ -536,7 +539,9 @@
 
         const isQFOrLater = currentRound && (
           currentRound.name === 'Quarter Finals' ||
+          currentRound.name === 'Quarter-Final' ||
           currentRound.name === 'Semi Finals' ||
+          currentRound.name === 'Semi-Final' ||
           currentRound.name === 'Final'
         );
 

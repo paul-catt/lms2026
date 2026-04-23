@@ -35,36 +35,71 @@
       font-weight: 700;
       letter-spacing: 0.06em;
       color: var(--gold);
-      margin-bottom: 4px;
+      margin-bottom: 2px;
       display: block;
       text-decoration: none;
       cursor: default;
     }
+    .hero-event {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
     .hero-subtitle {
       color: var(--text-muted);
-      font-size: 14px;
+      font-size: 13px;
       margin-bottom: 28px;
     }
 
+    /* 2×2 grid + solo My Page row */
     .hero-buttons {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      max-width: 400px;
-      margin: 0 auto 10px;
-    }
-    .hero-buttons-row2 {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 10px;
-      max-width: 264px;
+      max-width: 320px;
+      margin: 0 auto 10px;
+    }
+    .hero-buttons-solo {
+      display: flex;
+      justify-content: center;
+      max-width: 320px;
       margin: 0 auto;
     }
+    .hero-buttons-solo .btn {
+      width: 100%;
+    }
     .hero-buttons .btn,
-    .hero-buttons-row2 .btn {
+    .hero-buttons-solo .btn {
       font-size: 13px;
       padding: 10px 8px;
       text-align: center;
+    }
+
+    /* My Page redirect banner */
+    .mypage-banner {
+      background: var(--surface2);
+      border: 1px solid var(--gold);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 0 0 20px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .mypage-banner strong {
+      color: var(--gold);
+      display: block;
+      margin-bottom: 4px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 15px;
+      letter-spacing: 0.04em;
+    }
+    .mypage-banner code {
+      background: rgba(255,255,255,0.08);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 12px;
     }
 
     .status-strip {
@@ -100,6 +135,8 @@
     }
     .status-val.gold  { color: var(--gold); }
     .status-val.accent { color: var(--accent); }
+    .status-row--deadline { border-top: 2px solid rgba(255,255,255,0.12) !important; }
+    .status-row--deadline .status-val { text-align: right; line-height: 1.4; }
   </style>
 </head>
 <body>
@@ -109,41 +146,60 @@
       <a href="/leaderboard">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
       <a href="/bracket">Bracket</a>
+      <a id="nav-my-page" href="/">+ My Page</a>
       <a href="/rules">Rules</a>
     </div>
   </nav>
+  <script>
+    (function() {
+      const slug = localStorage.getItem('lms2026_player_slug');
+      const link = document.getElementById('nav-my-page');
+      if (slug) { link.href = '/' + slug; }
+      else { link.href = '/?ref=mypage'; link.title = 'Enter your player code'; }
+    })();
+  </script>
 
   <main style="max-width:480px">
+
+    <!-- Banner shown only when arriving via the nav My Page link with no slug set -->
+    <div id="mypage-banner" class="mypage-banner" style="display:none">
+      <strong>📎 Looking for your My Page?</strong>
+      You landed here because your personal link isn't saved on this device yet.
+      Enter your personal URL directly — e.g. <code>lms2026.netlify.app/yourname</code> —
+      and it will be remembered for next time.
+    </div>
+
     <div class="hero">
       <a href="/admin" class="hero-title" tabindex="-1" aria-hidden="true">LMS 2026</a>
-      <div class="hero-subtitle">World Cup Last Man Standing · June – July 2026</div>
+      <div class="hero-event">World Cup 2026</div>
+      <div class="hero-subtitle">11 June – 19 July</div>
 
       <div class="hero-buttons">
         <a href="/leaderboard" class="btn btn-secondary">📊 Leaderboard</a>
         <a href="/match-centre" class="btn btn-secondary">⚽ Match Centre</a>
-        <a href="/player"      class="btn btn-secondary">👤 My Page</a>
+        <a href="/bracket"      class="btn btn-secondary">🏆 Bracket</a>
+        <a href="/rules"        class="btn btn-secondary">📋 Rules</a>
       </div>
       <div style="height:10px"></div>
-      <div class="hero-buttons-row2">
-        <a href="/bracket" class="btn btn-secondary">🏆 Bracket</a>
-        <a href="/rules"   class="btn btn-secondary">📋 Rules</a>
+      <div class="hero-buttons-solo">
+        <a id="hero-my-page" href="/" class="btn btn-secondary">👤 My Page</a>
       </div>
     </div>
 
     <div class="status-strip">
       <div class="status-row">
-        <span class="status-label">🏆 Top 3</span>
-        <span class="status-val gold" id="status-leader">—</span>
+        <span class="status-label">🥇 1st</span>
+        <span class="status-val gold" id="status-p1">—</span>
       </div>
       <div class="status-row" id="status-p2-row" style="display:none">
-        <span class="status-label">🥈</span>
+        <span class="status-label">🥈 2nd</span>
         <span class="status-val" id="status-p2">—</span>
       </div>
       <div class="status-row" id="status-p3-row" style="display:none">
-        <span class="status-label">🥉</span>
+        <span class="status-label">🥉 3rd</span>
         <span class="status-val" id="status-p3">—</span>
       </div>
-      <div class="status-row">
+      <div class="status-row status-row--deadline">
         <span class="status-label">⏰ Next Deadline</span>
         <span class="status-val accent" id="status-deadline">—</span>
       </div>
@@ -151,49 +207,98 @@
   </main>
 
   <script>
-    const SUPABASE_URL     = 'https://jrdjdqjepffdcjdfuarc.supabase.co';
+    const SUPABASE_URL      = 'https://jrdjdqjepffdcjdfuarc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZGpkcWplcGZmZGNqZGZ1YXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTczMTcsImV4cCI6MjA5MTAzMzMxN30.nzriEXXYSau-2wBElzgWw-Gwhf1crzVA2lcvPexjq0M';
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const WINDOW_START_HOUR = 11; // UTC (noon BST)
 
+    // ── My Page link (hero button) ────────────────────────────
+    (function() {
+      const slug = localStorage.getItem('lms2026_player_slug');
+      const heroLink = document.getElementById('hero-my-page');
+      if (slug) {
+        heroLink.href = '/' + slug;
+      } else {
+        heroLink.href = '/?ref=mypage';
+        heroLink.title = 'Enter your player code';
+      }
+    })();
+
+    // ── Show banner if arriving via nav My Page with no slug ──
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('ref') === 'mypage') {
+        document.getElementById('mypage-banner').style.display = '';
+        // Clean the param from the URL bar without adding a history entry
+        history.replaceState(null, '', '/');
+      }
+    })();
+
     async function loadStatus() {
-      // ── Top 3 ────────────────────────────────────────────────
+      // ── Top 3 ─────────────────────────────────────────────
+      // player_scores is a view joining to players — select name + points directly
       const { data: scores } = await db
         .from('player_scores')
-        .select('total_points, players(name)')
+        .select('player_id, total_points')
         .order('total_points', { ascending: false })
         .limit(3);
 
-      const leaderEl = document.getElementById('status-leader');
-      if (scores && scores.length > 0 && scores[0].players) {
-        leaderEl.textContent = scores[0].players.name + ' · ' + scores[0].total_points + 'pts';
+      const p1El = document.getElementById('status-p1');
+      if (scores && scores.length > 0) {
+        // Fetch player names for the top 3 IDs
+        const ids = scores.map(s => s.player_id);
+        const { data: players } = await db
+          .from('players')
+          .select('id, name')
+          .in('id', ids);
+
+        const nameMap = {};
+        (players || []).forEach(p => { nameMap[p.id] = p.name; });
+
+        const fmt = s => (nameMap[s.player_id] || '?') + ' · ' + s.total_points + 'pts';
+
+        p1El.textContent = fmt(scores[0]);
         if (scores[1]) {
           document.getElementById('status-p2-row').style.display = '';
-          document.getElementById('status-p2').textContent = scores[1].players.name + ' · ' + scores[1].total_points + 'pts';
+          document.getElementById('status-p2').textContent = fmt(scores[1]);
         }
         if (scores[2]) {
           document.getElementById('status-p3-row').style.display = '';
-          document.getElementById('status-p3').textContent = scores[2].players.name + ' · ' + scores[2].total_points + 'pts';
+          document.getElementById('status-p3').textContent = fmt(scores[2]);
         }
       } else {
-        leaderEl.textContent = 'Not started yet';
+        p1El.textContent = 'Not started yet';
       }
 
-      // ── Next deadline ────────────────────────────────────────
+      // ── Next deadline ─────────────────────────────────────
       const now = new Date();
+      const THIRD_PLACE_ROUND_ID = '2fd614f4-1aa7-43d5-beeb-be06f5530a85';
       const { data: nextMatches } = await db
         .from('matches')
-        .select('kickoff')
+        .select('kickoff, round_id')
         .eq('status', 'scheduled')
-        .not('home_team_id', 'is', null)
+        .neq('round_id', THIRD_PLACE_ROUND_ID)
         .order('kickoff', { ascending: true })
         .limit(1);
 
       const deadlineEl = document.getElementById('status-deadline');
       if (nextMatches && nextMatches.length > 0) {
         const kickoff = new Date(nextMatches[0].kickoff);
+        const roundId = nextMatches[0].round_id;
+
+        // Fetch round name separately
+        let roundName = '';
+        if (roundId) {
+          const { data: roundRow } = await db
+            .from('rounds')
+            .select('name')
+            .eq('id', roundId)
+            .single();
+          if (roundRow) roundName = roundRow.name || '';
+        }
+
         // Deadline = 11:00 UTC of the day window containing this kickoff
         let deadlineUtc = new Date(Date.UTC(
           kickoff.getUTCFullYear(), kickoff.getUTCMonth(), kickoff.getUTCDate(),
@@ -202,13 +307,14 @@
         if (kickoff.getUTCHours() < WINDOW_START_HOUR) {
           deadlineUtc = new Date(deadlineUtc.getTime() - 86400000);
         }
-        // If that deadline has already passed, advance one window
         if (deadlineUtc <= now) {
           deadlineUtc = new Date(deadlineUtc.getTime() + 86400000);
         }
-        const label = deadlineUtc.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-        const time  = deadlineUtc.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
-        deadlineEl.textContent = label + ' · ' + time + ' BST';
+
+        const dateLabel = deadlineUtc.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        const time      = deadlineUtc.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
+        deadlineEl.innerHTML = (roundName ? '<span style="color:var(--text)">' + roundName + '</span><br>' : '')
+          + '<span style="font-size:12px;font-weight:500;color:var(--text-muted)">' + dateLabel + ' · ' + time + ' BST</span>';
       } else {
         deadlineEl.textContent = 'No upcoming matches';
       }

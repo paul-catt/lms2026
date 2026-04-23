@@ -283,12 +283,21 @@
   <nav>
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
-      <a href="/leaderboard" style="text-align:center">Leader-<br>board</a>
+      <a href="/leaderboard">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
       <a href="/bracket" class="active">Bracket</a>
-      <a id="my-page-link" style="display:none">← My Page</a>
+      <a id="nav-my-page" href="/">+ My Page</a>
+      <a href="/rules">Rules</a>
     </div>
   </nav>
+  <script>
+    (function() {
+      const slug = localStorage.getItem('lms2026_player_slug');
+      const link = document.getElementById('nav-my-page');
+      if (slug) { link.href = '/' + slug; }
+      else { link.href = '/'; link.title = 'Enter your player code'; }
+    })();
+  </script>
 
   <main>
     <div class="card">
@@ -348,11 +357,6 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const mySlug = urlParams.get('me') || localStorage.getItem('lms2026_my_slug') || null;
-    if (mySlug) {
-      const link = document.getElementById('my-page-link');
-      link.href = '/' + mySlug;
-      link.style.display = 'inline';
-    }
 
     const ROUND_DEFS = [
       { key: 'r32',   label: 'Round of 32',    count: 16 },
