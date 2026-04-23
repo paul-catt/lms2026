@@ -249,7 +249,7 @@
       { key:'long_shot',  label:'Long Shot',  dot:'🟠', css:'#f97316' },
       { key:'no_hoper',   label:'No Hoper',   dot:'🔴', css:'#ef4444' },
     ];
-    const KO_ROUNDS = ['R32','R16','QF','SF','Final'];
+    const KO_ROUNDS = ['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final','Quarter-Final','Semi-Final'];
 
     // FIX 1: short pill labels — R32/R16 fit on mobile portrait
     function roundShortLabel(r) {
@@ -257,9 +257,11 @@
       const map = {
         'Round of 32':   'R32',
         'Round of 16':   'R16',
-        'Quarter-Final': 'QF',
-        'Semi-Final':    'SF',
-        'Final':         'F'
+        'Quarter Finals': 'QF',
+        'Quarter-Final':  'QF',
+        'Semi Finals':    'SF',
+        'Semi-Final':     'SF',
+        'Final':          'F'
       };
       return map[r.name] || r.name;
     }
@@ -608,9 +610,11 @@
     }
 
     function allowResubmit() {
-      pick3 = null; pick2 = null; pickSingle = null;
       const round = allRounds.find(r => r.id === selectedRoundId);
-      if (round) renderPickForm(round);
+      if (!round) return;
+      if (getEffectiveDate() >= new Date(round.deadline)) return;
+      pick3 = null; pick2 = null; pickSingle = null;
+      renderPickForm(round);
     }
 
     function renderPickForm(round) {

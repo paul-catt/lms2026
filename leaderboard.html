@@ -433,10 +433,25 @@
         const furthestMap = {};
         (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
 
-        // --- FIX: Prior position from last completed round snapshot ---
+        // --- Prior position from snapshots ---
+        // If current round has no results yet, compare against second-to-last completed round
+        // so arrows persist between rounds (e.g. showing GP3 vs GP2 before R32 starts).
+        // Once results land in the current round, compare against last completed round.
+        const currentRoundHasResults = currentRound
+          ? (allPicks || []).some(pick =>
+              pick.round_id === currentRound.id &&
+              pick.pick_results && pick.pick_results.length > 0 &&
+              pick.pick_results[0].match_result !== null
+            )
+          : false;
+
+        const snapshotRound = (!currentRoundHasResults && completedRounds.length >= 2)
+          ? completedRounds[1]   // second-to-last: arrows show movement from round before last
+          : lastCompleted;       // last completed: normal intra-round behaviour
+
         const priorPosMap = {};
-        if (lastCompleted && snapshots) {
-          snapshots.filter(s => s.round_id === lastCompleted.id).forEach(s => { priorPosMap[s.player_id] = s.position; });
+        if (snapshotRound && snapshots) {
+          snapshots.filter(s => s.round_id === snapshotRound.id).forEach(s => { priorPosMap[s.player_id] = s.position; });
         }
 
         const formMap = {};

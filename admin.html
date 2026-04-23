@@ -1560,7 +1560,8 @@ Good luck! ⚽🏆`;
         if (m.away_team_id) assignedIds.add(m.away_team_id);
       });
 
-      const available = (window._allTeamsForMatch || []).filter(t => !t.is_eliminated && !assignedIds.has(t.id));
+      const { data: freshTeams } = await db.from('teams').select('id, name, flag_emoji, is_eliminated').eq('is_eliminated', false).order('name');
+      const available = (freshTeams || []).filter(t => !assignedIds.has(t.id));
       const matchNumber = parseInt(opt.dataset.matchNumber);
       const slot = R32_SLOTS[matchNumber] || '';
       const [homeSlot, awaySlot] = slot ? slot.split(' v ') : ['Home team', 'Away team'];
@@ -1595,25 +1596,21 @@ Good luck! ⚽🏆`;
     async function loadTeamsLongshot() {
       const [{ data: teams }, { data: rounds }] = await Promise.all([
         db.from('teams').select('id, name, flag_emoji, pot, is_longshot, is_eliminated, band, eliminated_in_round_id').order('pot').order('name'),
-        db.from('rounds').select('id, name, sort_order').order('sort_order')
+        db.from('rounds').select('id, name, round_type, sort_order').order('sort_order')
       ]);
       const el = document.getElementById('teams-longshot-list');
       if (!teams) return;
       const roundMap = {};
       (rounds || []).forEach(r => { roundMap[r.id] = r.name; });
 
-           
-     // R32 elimination counter
-      const r32RoundId = ((rounds||[]).find(r => r.name === 'Round of 32') || {}).id;
-      const r32Count = (teams||[]).filter(t => t.is_eliminated && t.eliminated_in_round_id === r32RoundId).length;
-      const counterHtml = `<div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:14px;padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:13px">
-        <span style="color:var(--text-muted)">OUT in Round of 32:</span>
-        <span style="font-size:18px;font-weight:800;color:${r32Count===16?'var(--green)':'var(--accent)'}">${r32Count}</span>
-        <span style="color:var(--text-muted)">/ 16</span>
-        ${r32Count===16?'<span style="color:var(--green);font-weight:700">✅ Complete</span>':''}
+      const groupPhaseRoundIds = new Set((rounds || []).filter(r => r.round_type === 'group').map(r => r.id));
+      const outAfterGroup = (teams || []).filter(t => t.is_eliminated && (!t.eliminated_in_round_id || groupPhaseRoundIds.has(t.eliminated_in_round_id))).length;
+      const outCounter = `<div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:13px">
+        🏳️ <strong>OUT after Group Stage: <span id="out-after-group-count" style="color:${outAfterGroup===16?'var(--green)':'var(--gold)'}">${outAfterGroup}</span> / 16</strong>
+        <span style="color:var(--text-muted);font-size:11px">&nbsp;· tick Eliminated + Group Phase 3 on each team below</span>
       </div>`;
 
-      let html = counterHtml + `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><thead><tr>
+      let html = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><thead><tr>
         <th style="width:160px">Team</th>
         <th style="width:50px">Pot</th>
         <th style="width:140px">Band</th>
@@ -1639,7 +1636,7 @@ Good luck! ⚽🏆`;
         </tr>`;
       });
       html += '</tbody></table></div>';
-      el.innerHTML = html;
+      el.innerHTML = outCounter + html;
 
       async function teamUpdate(teamId, payload) {
         const row = el.querySelector(`tr[data-team-row="${teamId}"]`);
@@ -1661,7 +1658,21 @@ Good luck! ⚽🏆`;
         cb.addEventListener('change', function() {
           const roundSel = el.querySelector(`.round-select[data-team-id="${this.dataset.teamId}"]`);
           const roundId  = roundSel ? roundSel.value || null : null;
-          teamUpdate(this.dataset.teamId, { is_eliminated: this.checked, eliminated_in_round_id: this.checked ? roundId : null });
+          if (this.checked && roundSel && !roundSel.value) {
+            const gp3 = Array.from(roundSel.options).find(o => o.text === 'Group Phase 3');
+            if (gp3) { roundSel.value = gp3.value; teamUpdate(this.dataset.teamId, { is_eliminated: true, eliminated_in_round_id: gp3.value }); }
+            else { teamUpdate(this.dataset.teamId, { is_eliminated: true, eliminated_in_round_id: null }); }
+          } else {
+            teamUpdate(this.dataset.teamId, { is_eliminated: this.checked, eliminated_in_round_id: this.checked ? roundId : null });
+          }
+          // Update counter in place without re-rendering the table
+          const counterEl = el.querySelector('#out-after-group-count');
+          if (counterEl) {
+            const current = parseInt(counterEl.textContent) || 0;
+            const next = this.checked ? current + 1 : Math.max(0, current - 1);
+            counterEl.textContent = next;
+            counterEl.style.color = next === 16 ? 'var(--green)' : 'var(--gold)';
+          }
         });
       });
       el.querySelectorAll('.round-select').forEach(sel => {
