@@ -164,15 +164,18 @@
             <tbody id="leaderboard-body"></tbody>
           </table>
         </div>
-        <div style="margin-top:16px; font-size:11px; color:var(--text-muted); display:flex; gap:14px; flex-wrap:wrap; padding-top:12px; border-top:1px solid var(--border)">
-          <span>🟣 Playing today</span>
-          <span class="knockout-only" style="display:none">🟢 Alive</span>
-          <span class="knockout-only" style="display:none">🔴 Eliminated</span>
-          <span class="knockout-only hide-mobile" style="display:none">· Pool remaining: 🔵 Favourite 🟡 Dark Horse 🟠 Long Shot 🔴 No Hoper</span>
-          <span class="group-only"><span style="border-bottom:2px solid #94a3b8;color:var(--text-muted);padding-bottom:1px">2pt pick</span></span>
-          <span class="group-only"><span style="border-bottom:2px solid #f59e0b;color:var(--text-muted);padding-bottom:1px">3pt pick</span></span>
-          <span class="group-only"><span style="border-bottom:3px double #94a3b8;color:var(--text-muted);padding-bottom:1px">Longshot (3pts)</span></span>
-          <span class="group-only"><span style="border-bottom:3px double #f59e0b;color:var(--text-muted);padding-bottom:1px">Longshot (4pts)</span></span>
+        <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border)">
+          <div style="display:grid; grid-template-columns:auto 1fr; gap:4px 10px; font-size:11px; color:var(--text-muted); align-items:center">
+            <span>🟣</span><span>Playing today</span>
+            <span class="knockout-only" style="display:none">🟢</span><span class="knockout-only" style="display:none">Alive</span>
+            <span class="knockout-only" style="display:none">🔴</span><span class="knockout-only" style="display:none">Eliminated</span>
+            <span class="knockout-only hide-mobile" style="display:none">·</span><span class="knockout-only hide-mobile" style="display:none">Pool remaining: 🔵 Favourite &nbsp;🟡 Dark Horse &nbsp;🟠 Long Shot &nbsp;🔴 No Hoper</span>
+            <span class="group-only"><span style="border-bottom:2px solid #94a3b8;padding-bottom:1px">&nbsp;&nbsp;&nbsp;&nbsp;</span></span><span class="group-only">2pt pick</span>
+            <span class="group-only"><span style="border-bottom:2px solid #f59e0b;padding-bottom:1px">&nbsp;&nbsp;&nbsp;&nbsp;</span></span><span class="group-only">3pt pick</span>
+            <span class="group-only"><span style="border-bottom:3px double #94a3b8;padding-bottom:1px">&nbsp;&nbsp;&nbsp;&nbsp;</span></span><span class="group-only">Longshot (3pts)</span>
+            <span class="group-only"><span style="border-bottom:3px double #f59e0b;padding-bottom:1px">&nbsp;&nbsp;&nbsp;&nbsp;</span></span><span class="group-only">Longshot (4pts)</span>
+            <span>🏆</span><span>Pick of the Round — highest scorer that round</span>
+          </div>
         </div>
         <div class="rotate-hint">↔ Rotate for full table</div>
       </div>
@@ -388,7 +391,7 @@
           db.from('rounds').select('id, name, round_type, sort_order, is_complete').order('sort_order'),
           db.from('matches').select('round_id, kickoff').order('kickoff'),
           db.from('leaderboard_snapshots').select('player_id, position, round_id'),
-          db.from('matches').select('home_score, away_score').eq('status', 'complete').not('home_score', 'is', null),
+          db.from('matches').select('round_id, home_score, away_score, home_team_id, away_team_id').eq('status', 'complete').not('home_score', 'is', null),
           db.from('matches').select('home_team_id, away_team_id, round_id, kickoff, status, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)').not('home_team_id', 'is', null),
           db.from('picks').select('player_id, team_id, multiplier, round_id, teams(flag_emoji, name, is_longshot), players(slug), pick_results(points_earned, longshot_bonus, match_result)'),
           db.from('teams').select('id, name, flag_emoji, band, is_eliminated')
@@ -437,9 +440,6 @@
         (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
 
         // --- Prior position from snapshots ---
-        // If current round has no results yet, compare against second-to-last completed round
-        // so arrows persist between rounds (e.g. showing GP3 vs GP2 before R32 starts).
-        // Once results land in the current round, compare against last completed round.
         const currentRoundHasResults = currentRound
           ? (allPicks || []).some(pick =>
               pick.round_id === currentRound.id &&
@@ -449,8 +449,8 @@
           : false;
 
         const snapshotRound = (!currentRoundHasResults && completedRounds.length >= 2)
-          ? completedRounds[1]   // second-to-last: arrows show movement from round before last
-          : lastCompleted;       // last completed: normal intra-round behaviour
+          ? completedRounds[1]
+          : lastCompleted;
 
         const priorPosMap = {};
         if (snapshotRound && snapshots) {
@@ -483,6 +483,57 @@
           }
         });
 
+        // ── Pick of the Round ─────────────────────────────────────
+        // Shows who is leading the current round as results come in.
+        // Falls back to last completed round winner until first point is scored in the new round.
+        // Tiebreak: GD of picked teams in that round. Still tied → all share trophy.
+
+        // Build GD lookup: team_id|round_id -> gd
+        const matchGdByTeamRound = {};
+        (completedMatches || []).forEach(m => {
+          if (m.home_score == null || m.away_score == null) return;
+          matchGdByTeamRound[m.home_team_id + '|' + m.round_id] = m.home_score - m.away_score;
+          matchGdByTeamRound[m.away_team_id + '|' + m.round_id] = m.away_score - m.home_score;
+        });
+
+        // Per player per round: sum points + longshot bonus, and GD
+        const playerRoundStats = {};
+        (allPicks || []).forEach(pick => {
+          const res = pick.pick_results && pick.pick_results[0];
+          if (!res || res.match_result === null) return;
+          const pts = (res.points_earned || 0) + (res.longshot_bonus || 0);
+          const gd  = matchGdByTeamRound[pick.team_id + '|' + pick.round_id] || 0;
+          if (!playerRoundStats[pick.player_id]) playerRoundStats[pick.player_id] = {};
+          if (!playerRoundStats[pick.player_id][pick.round_id]) playerRoundStats[pick.player_id][pick.round_id] = { pts: 0, gd: 0 };
+          playerRoundStats[pick.player_id][pick.round_id].pts += pts;
+          playerRoundStats[pick.player_id][pick.round_id].gd  += gd;
+        });
+
+        // Decide which round the trophy reflects:
+        // Use current round if any points have been scored in it, otherwise last completed round.
+        function getTrophyWinners(roundId) {
+          if (!roundId) return new Set();
+          const entries = [];
+          Object.entries(playerRoundStats).forEach(([playerId, roundMap]) => {
+            if (roundMap[roundId]) entries.push({ playerId, pts: roundMap[roundId].pts, gd: roundMap[roundId].gd });
+          });
+          if (entries.length === 0) return new Set();
+          const maxPts = Math.max(...entries.map(e => e.pts));
+          const leaders = entries.filter(e => e.pts === maxPts);
+          const maxGd = Math.max(...leaders.map(e => e.gd));
+          return new Set(leaders.filter(e => e.gd === maxGd).map(e => e.playerId));
+        }
+
+        const currentRoundHasPoints = currentRound
+          ? Object.values(playerRoundStats).some(rm => rm[currentRound.id] && rm[currentRound.id].pts > 0)
+          : false;
+
+        const trophyRoundId = currentRoundHasPoints
+          ? currentRound.id
+          : (lastCompleted ? lastCompleted.id : null);
+
+        const trophyPlayers = getTrophyWinners(trophyRoundId);
+
         const BAND_COLOUR = {
           favourite:  { dot:'🔵', css:'#3b82f6' },
           dark_horse: { dot:'🟡', css:'#eab308' },
@@ -501,7 +552,6 @@
         });
 
         // --- FIX: pending pick detection ---
-        // A pick is "pending" if pick_results is empty or match_result is null
         const playerHasPendingPick = {};
         (allPicks || []).forEach(pick => {
           const res = pick.pick_results && pick.pick_results[0];
@@ -518,8 +568,7 @@
         function remainingTeamsHtml(playerId, isQFOrLater) {
           const remaining = getPlayerRemainingTeams(playerId);
           if (remaining.length === 0) {
-            // --- FIX: only show OUT if no pending picks ---
-            if (playerHasPendingPick[playerId]) return ''; // still alive, result pending
+            if (playerHasPendingPick[playerId]) return '';
             return '<span class="status-none">OUT · No picks remaining</span>';
           }
           if (isQFOrLater) {
@@ -571,7 +620,6 @@
           return '<span style="font-size:12px;color:var(--red)">OUT · No default pick</span>';
         }
 
-        // Portrait status: just a red dot for eliminated, nothing for alive
         function portraitStatusHtml(player) {
           if (!player.is_eliminated) return '';
           return '<span style="color:var(--red);font-size:14px" title="Eliminated">🔴</span>';
@@ -599,7 +647,6 @@
 
         sorted.forEach((p, i) => {
           const pos = i + 1;
-          // Medals: landscape only — no medal column in portrait
           const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
           const gd    = gdMap[p.player_id] || 0;
           const form  = formMap[p.player_id] || [];
@@ -607,7 +654,6 @@
           const isPlayingToday = !!todayData;
           const todayPicks_p   = todayData ? todayData.picks : [];
 
-          // --- FIX: prior arrows ---
           let arrowHtml = '<span class="arrow-eq">—</span>';
           if (priorPosMap[p.player_id] !== undefined) {
             const prev = priorPosMap[p.player_id];
@@ -624,6 +670,11 @@
             return '<span class="flag-inline' + cls + '">' + pick.flag + '</span>';
           }).join('');
 
+          // Trophy badge — shown if player won any Pick of the Round
+          const trophyHtml = trophyPlayers.has(p.player_id)
+            ? '<span title="Pick of the Round" style="margin-left:5px;font-size:13px">🏆</span>'
+            : '';
+
           let goalsDiffHtml = '<span style="color:var(--text-muted)">—</span>';
           if (projectedTotal !== null && p.total_goals_prediction !== null && p.total_goals_prediction !== undefined) {
             const diff = Math.round(p.total_goals_prediction - projectedTotal);
@@ -632,9 +683,6 @@
             goalsDiffHtml = `<span class="goals-diff ${cls}">${sign}${diff}</span>`;
           }
 
-          // --- FIX: Rnd column ---
-          // Alive in knockout → current round (unless it's 3rd Place, then use furthest reached).
-          // Eliminated → furthest round reached.
           const is3rdPlace = currentRound && currentRound.name === '3rd Place';
           let rndHtml = '—';
           if (showRndCol) {
@@ -662,16 +710,14 @@
           row.innerHTML =
             '<td class="pos">' + pos + '</td>' +
             '<td class="prior">' + arrowHtml + '</td>' +
-            // Medal: landscape-only td
             '<td class="medal landscape-only">' + medal + '</td>' +
-            '<td class="player-name"><a href="/' + p.slug + '">' + p.name + '</a>' + flagHtml + '</td>' +
+            '<td class="player-name"><a href="/' + p.slug + '">' + p.name + '</a>' + trophyHtml + flagHtml + '</td>' +
             '<td style="color:var(--text-muted)">' + (p.rounds_played || 0) + '</td>' +
             '<td class="points">' + (p.total_points || 0) + '</td>' +
             (showRndCol ? '<td style="color:var(--text-muted);font-size:12px">' + rndHtml + '</td>' : '') +
             '<td>' + gdHtml + '</td>' +
             '<td class="hide-mobile tiebreak-val">' + goalsDiffHtml + '</td>' +
             '<td class="hide-mobile">' + formHtml + '</td>' +
-            // Landscape: full status reason. Portrait: dot only.
             '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="landscape-only">' + statusCellHtml + '</td>' +
             '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="portrait-only">' + portraitStatusHtml(p) + '</td>';
 

@@ -2214,9 +2214,25 @@ Good luck! ⚽🏆`;
         wrap.innerHTML = '<p style="color:var(--red)">Failed to load data.</p>'; return;
       }
 
-      // Rounds in reverse order (most recent first = left), excluding 3rd place
-      const sortedRounds = [...rounds]
-        .filter(r => !r.name.toLowerCase().includes('3rd'))
+      // Show rounds whose deadline has passed, plus the next upcoming round
+      const now = getEffectiveDate();
+      const eligibleRounds = [...rounds]
+        .filter(r => !r.name.toLowerCase().includes('3rd') && ROUND_START_DATES[r.name])
+        .sort((a, b) => a.sort_order - b.sort_order);
+
+      const pastRoundIds = new Set();
+      let nextRound = null;
+      for (const r of eligibleRounds) {
+        const deadline = new Date(ROUND_START_DATES[r.name] + 'T11:00:00Z');
+        if (now >= deadline) {
+          pastRoundIds.add(r.id);
+        } else if (!nextRound) {
+          nextRound = r;
+        }
+      }
+
+      const sortedRounds = eligibleRounds
+        .filter(r => pastRoundIds.has(r.id) || r === nextRound)
         .sort((a, b) => b.sort_order - a.sort_order);
 
       // Index picks: player_id → round_id → [picks]
@@ -2247,7 +2263,7 @@ Good luck! ⚽🏆`;
       players.forEach(player => {
         const isOut = player.is_eliminated;
         const rowStyle = isOut ? 'opacity:0.5' : '';
-        const playerLabel = player.name + (isOut ? '<br><span style="font-size:10px;color:var(--red);font-weight:700;letter-spacing:0.05em">OUT</span>' : '');
+        const playerLabel = player.name + (isOut ? ' <span style="font-size:10px;color:var(--red);font-weight:700">OUT</span>' : '');
 
         html += `<tr style="${rowStyle}">
           <td style="padding:8px 10px; border:1px solid var(--border); background:var(--surface); font-weight:600; position:sticky; left:0; z-index:1">${playerLabel}</td>`;

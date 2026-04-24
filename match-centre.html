@@ -297,7 +297,7 @@
       if (deadlineInterval) { clearInterval(deadlineInterval); deadlineInterval = null; }
       const { data: rounds } = await db.from('rounds')
         .select('id, name, deadline, is_complete, sort_order')
-        .eq('is_complete', false).order('sort_order').limit(1);
+        .eq('is_complete', false).neq('name', '3rd Place').order('sort_order').limit(1);
 
       const wrap = document.getElementById('deadline-card-wrap');
       if (!rounds || rounds.length === 0) { wrap.innerHTML = ''; return; }
@@ -318,7 +318,7 @@
         </div>`;
 
       function tick() {
-        const diff  = deadline - getEffectiveDate();
+        const diff  = deadline - new Date();
         const card  = document.getElementById('dl-card');
         const timer = document.getElementById('dl-timer');
         if (!card || !timer) return;

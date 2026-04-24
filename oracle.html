@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Oracle — LMS 2026</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0f1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LMS 2026">
+
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    nav, .nav-logo, .card-title { font-family: 'Rajdhani', sans-serif; }
+
+    .oracle-hero {
+      text-align: center;
+      padding: 32px 20px 24px;
+    }
+    .oracle-eye {
+      font-size: 64px;
+      line-height: 1;
+      margin-bottom: 12px;
+      display: block;
+      animation: pulse 3s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.85; }
+    }
+    .oracle-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .oracle-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .oracle-result {
+      display: none;
+      text-align: center;
+      padding: 24px 20px;
+    }
+    .oracle-team {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      line-height: 1.1;
+    }
+    .oracle-flag {
+      font-size: 52px;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .oracle-band {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 16px;
+    }
+    .oracle-verdict {
+      font-size: 15px;
+      color: var(--text);
+      line-height: 1.6;
+      max-width: 360px;
+      margin: 0 auto 20px;
+      font-style: italic;
+    }
+    .oracle-verdict::before { content: '"'; color: var(--gold); font-size: 20px; font-style: normal; }
+    .oracle-verdict::after  { content: '"'; color: var(--gold); font-size: 20px; font-style: normal; }
+
+    .oracle-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .btn-oracle {
+      background: linear-gradient(135deg, #b8860b, #f59e0b, #b8860b);
+      background-size: 200% 100%;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      padding: 14px 32px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      max-width: 320px;
+    }
+    .btn-oracle:hover:not(:disabled) {
+      background-position: 100% 0;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+    }
+    .btn-oracle:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-again {
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.15s;
+    }
+    .btn-again:hover { border-color: var(--accent); color: var(--text); }
+
+    .slug-input-wrap {
+      display: flex;
+      gap: 8px;
+      max-width: 320px;
+      margin: 0 auto 20px;
+    }
+    .slug-input-wrap input {
+      flex: 1;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .oracle-error {
+      color: var(--red);
+      font-size: 13px;
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    .oracle-thinking {
+      display: none;
+      text-align: center;
+      padding: 24px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    .oracle-thinking .spinner {
+      margin: 0 auto 12px;
+    }
+
+    .no-round-msg {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .disclaimer {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 16px;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
+    <div class="nav-links">
+      <a href="/leaderboard">Leaderboard</a>
+      <a href="/match-centre">Match Centre</a>
+      <a href="/bracket">Bracket</a>
+      <a id="nav-my-page" href="/">+ My Page</a>
+      <a href="/rules">Rules</a>
+    </div>
+  </nav>
+  <script>
+    (function() {
+      const slug = localStorage.getItem('lms2026_my_slug');
+      const link = document.getElementById('nav-my-page');
+      if (slug) { link.href = '/' + slug; }
+      else { link.href = '/'; link.title = 'Enter your player code'; }
+    })();
+  </script>
+
+  <main style="max-width: 520px">
+
+    <div class="card">
+      <div class="oracle-hero">
+        <span class="oracle-eye">🔮</span>
+        <div class="oracle-title">THE ORACLE</div>
+        <div class="oracle-subtitle">Consult the ancient wisdom. Make your pick.</div>
+      </div>
+
+      <div id="slug-section" style="text-align:center; padding: 0 20px 20px">
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px">Enter your player code so the Oracle knows who you are.</p>
+        <div class="slug-input-wrap">
+          <input type="text" id="slug-input" placeholder="your-player-code" autocomplete="off" autocapitalize="none" />
+          <button class="btn btn-primary" id="slug-btn">Go</button>
+        </div>
+        <div id="slug-error" class="oracle-error"></div>
+      </div>
+
+      <div id="oracle-thinking" class="oracle-thinking">
+        <div class="spinner"></div>
+        The Oracle gazes into the abyss...
+      </div>
+
+      <div id="oracle-result" class="oracle-result">
+        <span id="result-flag" class="oracle-flag"></span>
+        <div id="result-team" class="oracle-team"></div>
+        <div id="result-band" class="oracle-band"></div>
+        <div id="result-verdict" class="oracle-verdict"></div>
+        <div id="result-meta" class="oracle-meta"></div>
+        <br>
+        <button class="btn-oracle" id="consult-btn">🔮 Consult the Oracle</button>
+        <br>
+        <button class="btn-again" id="again-btn">Ask again</button>
+        <p class="disclaimer">The Oracle's picks are for entertainment only.<br>The Oracle accepts no responsibility for your leaderboard position.</p>
+      </div>
+
+      <div id="no-round" class="no-round-msg" style="display:none">
+        <div style="font-size:32px; margin-bottom:8px">😶</div>
+        The Oracle has nothing to say.<br>
+        <span style="font-size:12px; color:var(--text-muted)">No round is currently open for picks.</span>
+      </div>
+
+      <div id="no-teams" class="no-round-msg" style="display:none">
+        <div style="font-size:32px; margin-bottom:8px">💀</div>
+        The Oracle is silent.<br>
+        <span style="font-size:12px; color:var(--text-muted)">You have no teams left to pick.</span>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const SUPABASE_URL     = 'https://jrdjdqjepffdcjdfuarc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpyZGpkcWplcGZmZGNqZGZ1YXJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTczMTcsImV4cCI6MjA5MTAzMzMxN30.nzriEXXYSau-2wBElzgWw-Gwhf1crzVA2lcvPexjq0M';
+    const { createClient } = supabase;
+    const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const LS_KEY      = 'lms2026_test_date';
+    const SLUG_LS_KEY = 'lms2026_my_slug';
+
+    const KO_ROUNDS = ['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final','Quarter-Final','Semi-Final'];
+    const LATE_KO   = ['Quarter Finals','Semi Finals','Final','Quarter-Final','Semi-Final'];
+
+    function getEffectiveDate() {
+      const o = localStorage.getItem(LS_KEY);
+      return o ? new Date(o) : new Date();
+    }
+
+    // ── Copy ─────────────────────────────────────────────────
+    const TEMPLATES = {
+      LONGSHOT_VS_NOHOPER: [
+        '{team} are a longshot facing {opponent}, who are basically tourists. Take the bonus.',
+        'Longshot vs No Hoper. {team} vs {opponent}. This is the Oracle\'s favourite sentence.',
+        '{opponent} are here for the experience. {team} are here for your bonus point. Pick them.',
+      ],
+      LONGSHOT_VS_LONGSHOT: [
+        '{team} vs {opponent} — coin flip, but if {team} come through, you look like a genius.',
+        'Two underdogs. The Oracle backs {team}. Don\'t ask why. Just trust it.',
+        'Chaotic pick. High ceiling. The Oracle is not responsible for the outcome.',
+      ],
+      DARK_HORSE_GROUP: [
+        '{team} — quietly dangerous, not worth wasting in the knockouts. {round} is their moment.',
+        'Save the big guns. {team} are the right call for {round} and the Oracle knows it.',
+        'Dark Horse. {round}. {team}. The Oracle approves.',
+      ],
+      FAVOURITE_KO: [
+        'You\'ve been saving {team} for a moment like this. {round} is that moment.',
+        'Stop hoarding. {team} are a Favourite and it\'s {round}. The Oracle is not asking.',
+        '{team}. Favourite. {round}. The Oracle has spoken.',
+      ],
+      FAVOURITE_LATE_KO: [
+        '{round}. No heroics. {team} are a Favourite. Pick them and don\'t get clever.',
+        'The Oracle is not in the mood for experiments. {team}. Done.',
+        'This deep in the tournament, {team} are the only answer the Oracle is willing to give.',
+      ],
+      DAMAGE_LIMITATION: [
+        'Your pool has seen better days. {team} are what\'s left. The Oracle wishes you luck.',
+        '{team} it is. The Oracle has seen worse. Not much worse. But worse.',
+        'The Oracle gazed into your pool and felt mild concern. Pick {team} and pray.',
+      ],
+    };
+
+    const BAND_STYLE = {
+      favourite:  { label: '🔵 Favourite',  bg: 'rgba(59,130,246,0.15)',  color: '#3b82f6' },
+      dark_horse: { label: '🟡 Dark Horse', bg: 'rgba(234,179,8,0.15)',   color: '#eab308' },
+      long_shot:  { label: '🟠 Long Shot',  bg: 'rgba(249,115,22,0.15)',  color: '#f97316' },
+      no_hoper:   { label: '🔴 No Hoper',   bg: 'rgba(239,68,68,0.15)',   color: '#ef4444' },
+    };
+
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function fillTemplate(template, vars) {
+      return template
+        .replace(/\{team\}/g,     vars.team     || '')
+        .replace(/\{opponent\}/g, vars.opponent  || '')
+        .replace(/\{round\}/g,    vars.round     || '')
+        .replace(/\{band\}/g,     vars.band      || '');
+    }
+
+    // ── Oracle logic ─────────────────────────────────────────
+    // Returns { team, reasonCode, opponent }
+    function runOracle(available, round, matches, teamOddsMap) {
+      const isKO      = KO_ROUNDS.includes(round.name);
+      const isLateKO  = LATE_KO.includes(round.name);
+      const isGroup   = round.round_type === 'group';
+
+      // Build opponent lookup: team_id -> opponent team object
+      const opponentMap = {};
+      matches.forEach(m => {
+        if (m.home_team && m.away_team) {
+          opponentMap[m.home_team_id] = m.away_team;
+          opponentMap[m.away_team_id] = m.home_team;
+        }
+      });
+
+      // Filter available to teams that have a match in this round
+      const matchTeamIds = new Set();
+      matches.forEach(m => {
+        if (m.home_team_id) matchTeamIds.add(m.home_team_id);
+        if (m.away_team_id) matchTeamIds.add(m.away_team_id);
+      });
+
+      // In group stage, any team can be picked (not limited to today's matches)
+      // In KO stage, the round match IS the pick
+      const candidates = isKO
+        ? available.filter(t => matchTeamIds.has(t.id))
+        : available;
+
+      if (candidates.length === 0) return null;
+
+      const byBand = band => candidates.filter(t => t.band === band);
+
+      const longshots  = byBand('long_shot');
+      const noHopers   = byBand('no_hoper');
+      const darkHorses = byBand('dark_horse');
+      const favourites = byBand('favourite');
+
+      // Odds comparison helper — lower decimal = stronger team
+      function oddsOf(team) {
+        return teamOddsMap[team.id] || 999;
+      }
+
+      // ── Decision tree ────────────────────────────────────
+      // 1. Longshot vs No Hoper — oracle's favourite
+      const lsVsNH = longshots.filter(t => {
+        const opp = opponentMap[t.id];
+        return opp && opp.band === 'no_hoper';
+      });
+      if (lsVsNH.length > 0) {
+        const team = pick(lsVsNH);
+        return { team, reasonCode: 'LONGSHOT_VS_NOHOPER', opponent: opponentMap[team.id] };
+      }
+
+      // 2. Longshot vs weaker Longshot (by odds)
+      const lsVsLS = longshots.filter(t => {
+        const opp = opponentMap[t.id];
+        if (!opp || opp.band !== 'long_shot') return false;
+        return oddsOf(t) < oddsOf(opp); // our longshot is shorter priced = stronger
+      });
+      if (lsVsLS.length > 0) {
+        const team = pick(lsVsLS);
+        return { team, reasonCode: 'LONGSHOT_VS_LONGSHOT', opponent: opponentMap[team.id] };
+      }
+
+      // 3. Late KO — Favourites only
+      if (isLateKO && favourites.length > 0) {
+        return { team: pick(favourites), reasonCode: 'FAVOURITE_LATE_KO', opponent: null };
+      }
+
+      // 4. Group stage — Dark Horse is the sweet spot
+      if (isGroup && darkHorses.length > 0) {
+        return { team: pick(darkHorses), reasonCode: 'DARK_HORSE_GROUP', opponent: null };
+      }
+
+      // 5. KO stage — deploy a Favourite
+      if (isKO && favourites.length > 0) {
+        return { team: pick(favourites), reasonCode: 'FAVOURITE_KO', opponent: null };
+      }
+
+      // 6. Anything left — damage limitation
+      const team = pick(candidates);
+      return { team, reasonCode: 'DAMAGE_LIMITATION', opponent: opponentMap[team.id] || null };
+    }
+
+    // ── Data loading ─────────────────────────────────────────
+    let _playerData = null; // cached after first load
+
+    async function loadPlayerData(slug) {
+      // 1. Player
+      const { data: players, error } = await db.from('players')
+        .select('id, name, slug, is_eliminated')
+        .eq('slug', slug).limit(1);
+      if (error || !players || players.length === 0) return null;
+      const player = players[0];
+
+      // 2. All in parallel
+      const [
+        { data: picks },
+        { data: teams },
+        { data: rounds },
+        { data: teamOddsRaw }
+      ] = await Promise.all([
+        db.from('picks').select('team_id, round_id').eq('player_id', player.id),
+        db.from('teams').select('id, name, flag_emoji, band, is_eliminated, is_longshot').order('odds_rank'),
+        db.from('rounds').select('id, name, round_type, sort_order, deadline, is_complete').order('sort_order'),
+        db.from('team_odds').select('team_id, odds_decimal').order('fetched_at', { ascending: false })
+      ]);
+
+      // Most recent odds per team
+      const teamOddsMap = {};
+      (teamOddsRaw || []).forEach(r => {
+        if (!teamOddsMap[r.team_id]) teamOddsMap[r.team_id] = parseFloat(r.odds_decimal);
+      });
+
+      // Used team IDs
+      const usedIds = new Set((picks || []).map(p => p.team_id));
+
+      // Available = not used, not eliminated
+      const available = (teams || []).filter(t => !usedIds.has(t.id) && !t.is_eliminated);
+
+      // Open round = not complete, deadline in future
+      const now = getEffectiveDate();
+      const openRound = (rounds || []).find(r => !r.is_complete && new Date(r.deadline) > now);
+
+      return { player, available, openRound, rounds, teamOddsMap };
+    }
+
+    async function loadMatchesForRound(roundId) {
+      const { data } = await db.from('matches')
+        .select('id, round_id, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,band), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,band)')
+        .eq('round_id', roundId)
+        .not('home_team_id', 'is', null);
+      return data || [];
+    }
+
+    // ── UI ───────────────────────────────────────────────────
+    function showSection(id) {
+      ['slug-section','oracle-thinking','oracle-result','no-round','no-teams'].forEach(s => {
+        document.getElementById(s).style.display = s === id ? (id === 'oracle-result' ? 'block' : 'block') : 'none';
+      });
+    }
+
+    function renderResult(recommendation, round) {
+      const { team, reasonCode, opponent } = recommendation;
+      const bandInfo = BAND_STYLE[team.band] || { label: team.band || 'Unknown', bg: 'rgba(148,163,184,0.15)', color: '#94a3b8' };
+      const templates = TEMPLATES[reasonCode] || TEMPLATES.DAMAGE_LIMITATION;
+      const template  = pick(templates);
+      const verdict   = fillTemplate(template, {
+        team:     team.name,
+        opponent: opponent ? opponent.name : 'their opponent',
+        round:    round.name,
+        band:     bandInfo.label,
+      });
+
+      document.getElementById('result-flag').textContent  = team.flag_emoji || '🏳️';
+      document.getElementById('result-team').textContent  = team.name;
+
+      const bandEl = document.getElementById('result-band');
+      bandEl.textContent        = bandInfo.label;
+      bandEl.style.background   = bandInfo.bg;
+      bandEl.style.color        = bandInfo.color;
+
+      document.getElementById('result-verdict').textContent = verdict;
+
+      const metaParts = [round.name];
+      if (opponent) metaParts.push('vs ' + opponent.flag_emoji + ' ' + opponent.name);
+      document.getElementById('result-meta').textContent = metaParts.join(' · ');
+
+      showSection('oracle-result');
+    }
+
+    async function consult() {
+      if (!_playerData) return;
+      const { available, openRound, teamOddsMap } = _playerData;
+
+      document.getElementById('consult-btn').disabled = true;
+      document.getElementById('again-btn').style.display = 'none';
+      document.getElementById('oracle-result').style.display = 'block';
+      document.getElementById('result-flag').textContent  = '🔮';
+      document.getElementById('result-team').textContent  = '...';
+      document.getElementById('result-band').textContent  = '';
+      document.getElementById('result-verdict').textContent = 'The Oracle gazes into the void...';
+      document.getElementById('result-meta').textContent = '';
+
+      // Small dramatic pause
+      await new Promise(r => setTimeout(r, 900));
+
+      const matches = await loadMatchesForRound(openRound.id);
+      const recommendation = runOracle(available, openRound, matches, teamOddsMap);
+
+      if (!recommendation) {
+        showSection('no-teams');
+        return;
+      }
+
+      renderResult(recommendation, openRound);
+      document.getElementById('consult-btn').disabled = false;
+      document.getElementById('again-btn').style.display = 'inline-block';
+    }
+
+    async function initWithSlug(slug) {
+      showSection('oracle-thinking');
+      document.getElementById('slug-error').textContent = '';
+
+      const data = await loadPlayerData(slug.trim().toLowerCase());
+      if (!data) {
+        showSection('slug-section');
+        document.getElementById('slug-error').textContent = '❌ Player not found. Check your code.';
+        return;
+      }
+
+      _playerData = data;
+      localStorage.setItem(SLUG_LS_KEY, slug.trim().toLowerCase());
+
+      if (!data.openRound) {
+        showSection('no-round');
+        return;
+      }
+      if (data.available.length === 0) {
+        showSection('no-teams');
+        return;
+      }
+
+      // Show result section with consult button ready
+      document.getElementById('result-flag').textContent  = '🔮';
+      document.getElementById('result-team').textContent  = data.player.name;
+      document.getElementById('result-band').textContent  = '';
+      document.getElementById('result-verdict').textContent = 'The Oracle is ready. Press the button when you are.';
+      document.getElementById('result-meta').textContent = 'Round: ' + data.openRound.name + ' · ' + data.available.length + ' teams available';
+      document.getElementById('again-btn').style.display = 'none';
+      showSection('oracle-result');
+    }
+
+    // ── Boot ─────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+      const savedSlug = localStorage.getItem(SLUG_LS_KEY);
+
+      // Wire up slug form
+      document.getElementById('slug-btn').addEventListener('click', () => {
+        const val = document.getElementById('slug-input').value.trim();
+        if (!val) return;
+        initWithSlug(val);
+      });
+      document.getElementById('slug-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('slug-btn').click();
+      });
+
+      // Wire up consult button
+      document.getElementById('consult-btn').addEventListener('click', consult);
+
+      // Wire up again button
+      document.getElementById('again-btn').addEventListener('click', consult);
+
+      // Auto-load if slug known
+      if (savedSlug) {
+        document.getElementById('slug-input').value = savedSlug;
+        initWithSlug(savedSlug);
+      }
+    });
+  </script>
+</body>
+</html>

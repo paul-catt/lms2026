@@ -49,7 +49,98 @@
     .hero-subtitle {
       color: var(--text-muted);
       font-size: 13px;
-      margin-bottom: 28px;
+      margin-bottom: 32px;
+    }
+
+    /* ── Flip counter ── */
+    .flip-counter-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 auto 32px;
+    }
+    .flip-counter {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+    .flip-digit {
+      position: relative;
+      width: 56px;
+      height: 76px;
+      perspective: 300px;
+    }
+    /* Static card face */
+    .flip-digit .face {
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      background: #1a1d27;
+      border: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 52px;
+      font-weight: 700;
+      color: var(--gold, #f5c842);
+      line-height: 1;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+    /* Horizontal divider line */
+    .flip-digit .face::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      top: 50%;
+      height: 1px;
+      background: rgba(0,0,0,0.4);
+    }
+    /* The flipping half */
+    .flip-digit .flap {
+      position: absolute;
+      left: 0; right: 0;
+      height: 50%;
+      overflow: hidden;
+      transform-origin: bottom center;
+      transform-style: preserve-3d;
+      border-radius: 8px 8px 0 0;
+      z-index: 2;
+    }
+    .flip-digit .flap-inner {
+      position: absolute;
+      inset: 0;
+      background: #1a1d27;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 2px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 52px;
+      font-weight: 700;
+      color: var(--gold, #f5c842);
+      line-height: 1;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+    .flip-digit .flap.animate {
+      animation: flipDown 0.35s ease-in forwards;
+    }
+    @keyframes flipDown {
+      0%   { transform: rotateX(0deg); }
+      100% { transform: rotateX(-90deg); }
+    }
+
+    .flip-counter-label {
+      margin-top: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
     }
 
     /* 2×2 grid + solo My Page row */
@@ -119,9 +210,6 @@
       padding: 12px 16px;
       font-size: 13px;
     }
-    .status-row + .status-row {
-      border-top: 1px solid var(--border);
-    }
     .status-label {
       color: var(--text-muted);
       font-size: 12px;
@@ -133,9 +221,7 @@
       font-weight: 700;
       color: var(--text);
     }
-    .status-val.gold  { color: var(--gold); }
     .status-val.accent { color: var(--accent); }
-    .status-row--deadline { border-top: 2px solid rgba(255,255,255,0.12) !important; }
     .status-row--deadline .status-val { text-align: right; line-height: 1.4; }
   </style>
 </head>
@@ -174,6 +260,25 @@
       <div class="hero-event">World Cup 2026</div>
       <div class="hero-subtitle">11 June – 19 July</div>
 
+      <!-- Flip counter -->
+      <div class="flip-counter-wrap">
+        <div class="flip-counter" id="flip-counter">
+          <div class="flip-digit" id="digit-tens">
+            <div class="face" id="face-tens">2</div>
+            <div class="flap" id="flap-tens">
+              <div class="flap-inner" id="flap-inner-tens">2</div>
+            </div>
+          </div>
+          <div class="flip-digit" id="digit-ones">
+            <div class="face" id="face-ones">6</div>
+            <div class="flap" id="flap-ones">
+              <div class="flap-inner" id="flap-inner-ones">6</div>
+            </div>
+          </div>
+        </div>
+        <div class="flip-counter-label">players still standing</div>
+      </div>
+
       <div class="hero-buttons">
         <a href="/leaderboard" class="btn btn-secondary">📊 Leaderboard</a>
         <a href="/match-centre" class="btn btn-secondary">⚽ Match Centre</a>
@@ -187,18 +292,6 @@
     </div>
 
     <div class="status-strip">
-      <div class="status-row">
-        <span class="status-label">🥇 1st</span>
-        <span class="status-val gold" id="status-p1">—</span>
-      </div>
-      <div class="status-row" id="status-p2-row" style="display:none">
-        <span class="status-label">🥈 2nd</span>
-        <span class="status-val" id="status-p2">—</span>
-      </div>
-      <div class="status-row" id="status-p3-row" style="display:none">
-        <span class="status-label">🥉 3rd</span>
-        <span class="status-val" id="status-p3">—</span>
-      </div>
       <div class="status-row status-row--deadline">
         <span class="status-label">⏰ Next Deadline</span>
         <span class="status-val accent" id="status-deadline">—</span>
@@ -213,6 +306,7 @@
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const WINDOW_START_HOUR = 11; // UTC (noon BST)
+    const LS_COUNT_KEY = 'lms2026_last_player_count';
 
     // ── My Page link (hero button) ────────────────────────────
     (function() {
@@ -231,46 +325,95 @@
       const params = new URLSearchParams(window.location.search);
       if (params.get('ref') === 'mypage') {
         document.getElementById('mypage-banner').style.display = '';
-        // Clean the param from the URL bar without adding a history entry
         history.replaceState(null, '', '/');
       }
     })();
 
-    async function loadStatus() {
-      // ── Top 3 ─────────────────────────────────────────────
-      // player_scores is a view joining to players — select name + points directly
-      const { data: scores } = await db
-        .from('player_scores')
-        .select('player_id, total_points')
-        .order('total_points', { ascending: false })
-        .limit(3);
+    // ── Flip counter ──────────────────────────────────────────
+    function setDigits(n) {
+      const tens = Math.floor(n / 10);
+      const ones = n % 10;
+      document.getElementById('face-tens').textContent = tens;
+      document.getElementById('face-ones').textContent = ones;
+      document.getElementById('flap-inner-tens').textContent = tens;
+      document.getElementById('flap-inner-ones').textContent = ones;
+    }
 
-      const p1El = document.getElementById('status-p1');
-      if (scores && scores.length > 0) {
-        // Fetch player names for the top 3 IDs
-        const ids = scores.map(s => s.player_id);
-        const { data: players } = await db
-          .from('players')
-          .select('id, name')
-          .in('id', ids);
+    function flipTo(target) {
+      const stored = parseInt(localStorage.getItem(LS_COUNT_KEY), 10);
+      const from = (!isNaN(stored) && stored >= target) ? stored : target;
 
-        const nameMap = {};
-        (players || []).forEach(p => { nameMap[p.id] = p.name; });
+      // Save new count immediately
+      localStorage.setItem(LS_COUNT_KEY, target);
 
-        const fmt = s => (nameMap[s.player_id] || '?') + ' · ' + s.total_points + 'pts';
-
-        p1El.textContent = fmt(scores[0]);
-        if (scores[1]) {
-          document.getElementById('status-p2-row').style.display = '';
-          document.getElementById('status-p2').textContent = fmt(scores[1]);
-        }
-        if (scores[2]) {
-          document.getElementById('status-p3-row').style.display = '';
-          document.getElementById('status-p3').textContent = fmt(scores[2]);
-        }
-      } else {
-        p1El.textContent = 'Not started yet';
+      if (from === target) {
+        setDigits(target);
+        return;
       }
+
+      // Animate step by step
+      let current = from;
+      setDigits(current);
+
+      function step() {
+        if (current <= target) return;
+        current--;
+
+        const newTens = Math.floor(current / 10);
+        const newOnes = current % 10;
+
+        const tensChanged = newTens !== Math.floor((current + 1) / 10);
+        const onesChanged = newOnes !== (current + 1) % 10;
+
+        // Show old number on flap, animate it away, then update face
+        if (tensChanged) {
+          const oldTens = Math.floor((current + 1) / 10);
+          const flap = document.getElementById('flap-tens');
+          document.getElementById('flap-inner-tens').textContent = oldTens;
+          flap.classList.remove('animate');
+          void flap.offsetWidth; // reflow
+          flap.classList.add('animate');
+          setTimeout(() => {
+            document.getElementById('face-tens').textContent = newTens;
+            document.getElementById('flap-inner-tens').textContent = newTens;
+            flap.classList.remove('animate');
+          }, 350);
+        }
+
+        if (onesChanged) {
+          const oldOnes = (current + 1) % 10;
+          const flap = document.getElementById('flap-ones');
+          document.getElementById('flap-inner-ones').textContent = oldOnes;
+          flap.classList.remove('animate');
+          void flap.offsetWidth;
+          flap.classList.add('animate');
+          setTimeout(() => {
+            document.getElementById('face-ones').textContent = newOnes;
+            document.getElementById('flap-inner-ones').textContent = newOnes;
+            flap.classList.remove('animate');
+          }, 350);
+        }
+
+        // Pace: faster if big gap, slower for drama near the end
+        const remaining = current - target;
+        const delay = remaining > 5 ? 120 : 280;
+        setTimeout(step, delay);
+      }
+
+      // Small pause before animation starts
+      setTimeout(step, 400);
+    }
+
+    // ── Load data ─────────────────────────────────────────────
+    async function loadStatus() {
+      // Active (non-eliminated) player count
+      const { count } = await db
+        .from('players')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_eliminated', false);
+
+      const activeCount = count ?? 0;
+      flipTo(activeCount);
 
       // ── Next deadline ─────────────────────────────────────
       const now = new Date();
@@ -288,7 +431,6 @@
         const kickoff = new Date(nextMatches[0].kickoff);
         const roundId = nextMatches[0].round_id;
 
-        // Fetch round name separately
         let roundName = '';
         if (roundId) {
           const { data: roundRow } = await db
@@ -299,7 +441,6 @@
           if (roundRow) roundName = roundRow.name || '';
         }
 
-        // Deadline = 11:00 UTC of the day window containing this kickoff
         let deadlineUtc = new Date(Date.UTC(
           kickoff.getUTCFullYear(), kickoff.getUTCMonth(), kickoff.getUTCDate(),
           WINDOW_START_HOUR, 0, 0
