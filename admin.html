@@ -500,10 +500,10 @@
       'Group Phase 1': '2026-06-11',
       'Group Phase 2': '2026-06-18',
       'Group Phase 3': '2026-06-24',
-      'R32':           '2026-06-28',
-      'R16':           '2026-07-04',
-      'QF':            '2026-07-09',
-      'SF':            '2026-07-14',
+      'Round of 32':   '2026-06-28',
+      'Round of 16':   '2026-07-04',
+      'Quarter Finals':'2026-07-09',
+      'Semi Finals':   '2026-07-14',
       'Final':         '2026-07-19'
     };
 
@@ -1590,7 +1590,8 @@ Good luck! ⚽🏆`;
         if (m.away_team_id) assignedIds.add(m.away_team_id);
       });
 
-      const available = (window._allTeamsForMatch || []).filter(t => !t.is_eliminated && !assignedIds.has(t.id));
+      const { data: freshTeams } = await db.from('teams').select('id, name, flag_emoji, is_eliminated').eq('is_eliminated', false).order('name');
+      const available = (freshTeams || []).filter(t => !assignedIds.has(t.id));
       const matchNumber = parseInt(opt.dataset.matchNumber);
       const slot = R32_SLOTS[matchNumber] || '';
       const [homeSlot, awaySlot] = slot ? slot.split(' v ') : ['Home team', 'Away team'];
@@ -1632,6 +1633,14 @@ Good luck! ⚽🏆`;
       const roundMap = {};
       (rounds || []).forEach(r => { roundMap[r.id] = r.name; });
 
+      const groupRoundIds = new Set((rounds || []).filter(r => r.name.startsWith('Group')).map(r => r.id));
+      const outAfterGroup = (teams || []).filter(t => t.is_eliminated && groupRoundIds.has(t.eliminated_in_round_id)).length;
+      const outCounter = `
+        <div style="margin-bottom:12px;font-size:14px">
+          OUT after Group Stage: <strong><span style="color:${outAfterGroup===16?'var(--green)':'var(--gold)'}">${outAfterGroup}</span> / 16</strong>
+          <span style="color:var(--text-muted);font-size:11px">&nbsp;· tick Eliminated + Group Phase 3 on each team below</span>
+        </div>`;
+
       let html = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><thead><tr>
         <th style="width:160px">Team</th>
         <th style="width:50px">Pot</th>
@@ -1658,7 +1667,7 @@ Good luck! ⚽🏆`;
         </tr>`;
       });
       html += '</tbody></table></div>';
-      el.innerHTML = html;
+      el.innerHTML = outCounter + html;
 
       async function teamUpdate(teamId, payload) {
         const row = el.querySelector(`tr[data-team-row="${teamId}"]`);
@@ -2256,7 +2265,7 @@ Good luck! ⚽🏆`;
       sortedRounds.forEach(r => {
         const isKO = r.round_type === 'knockout';
         html += `<th style="padding:6px 8px; background:var(--surface2); border:1px solid var(--border); font-size:11px; min-width:110px; text-align:center">
-          ${r.name}${isKO ? '<br><span style="font-weight:400;color:var(--text-muted)">KO</span>' : ''}
+          ${r.name}${isKO && r.name !== 'Final' ? '<br><span style="font-weight:400;color:var(--text-muted)">KO</span>' : ''}
         </th>`;
       });
 

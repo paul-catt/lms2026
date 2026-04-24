@@ -114,196 +114,166 @@
 
     /* ── Oracle bottom sheet ─────────────────────────────── */
     .oracle-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 200;
-      opacity: 0;
-      transition: opacity 0.3s ease;
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55); z-index: 200;
+      opacity: 0; transition: opacity 0.3s ease;
     }
-    .oracle-backdrop.open {
-      display: block;
-      opacity: 1;
-    }
+    .oracle-backdrop.open { display: block; opacity: 1; }
+
     .oracle-sheet {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 88%;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: 95%;
       background: #0c0e16;
-      border-radius: 20px 20px 0 0;
-      border-top: 1px solid rgba(139,92,246,0.3);
+      border-radius: 18px 18px 0 0;
+      border-top: 1px solid rgba(139,92,246,0.35);
       z-index: 201;
       transform: translateY(100%);
       transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      display: flex; flex-direction: column; overflow: hidden;
     }
-    .oracle-sheet.open {
-      transform: translateY(0);
-    }
+    .oracle-sheet.open { transform: translateY(0); }
+
     .oracle-handle-bar {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 12px 0 8px;
-      flex-shrink: 0;
-      position: relative;
-      border-bottom: 1px solid rgba(139,92,246,0.12);
+      display: flex; justify-content: center; align-items: center;
+      padding: 8px 0 6px; flex-shrink: 0; position: relative;
+      border-bottom: 1px solid rgba(139,92,246,0.1);
     }
     .oracle-handle {
-      width: 36px;
-      height: 4px;
-      border-radius: 2px;
+      width: 36px; height: 4px; border-radius: 2px;
       background: rgba(139,92,246,0.4);
     }
-    .oracle-sheet-body {
-      flex: 1;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      padding: 20px 24px 40px;
-      text-align: center;
+    .oracle-close-btn {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.25);
+      color: #a78bfa; font-size: 14px; cursor: pointer;
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      line-height: 1; padding: 0;
     }
+
+    /* ── Context bar (round + teams available) ── */
+    .oracle-context {
+      display: flex; justify-content: center; align-items: center;
+      gap: 10px; padding: 6px 16px 0; flex-shrink: 0; flex-wrap: wrap;
+    }
+    .oracle-context-pill {
+      background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2);
+      border-radius: 20px; padding: 3px 10px;
+      font-size: 11px; font-weight: 600; color: #a78bfa; white-space: nowrap;
+    }
+
+    .oracle-sheet-body {
+      flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      padding: 10px 20px 28px; text-align: center;
+    }
+
+    /* ── Header ── */
     .oracle-eye {
-      font-size: 64px;
-      line-height: 1;
-      margin-bottom: 12px;
-      display: block;
+      font-size: 44px; line-height: 1; margin-bottom: 4px; display: block;
       animation: oracle-pulse 3s ease-in-out infinite;
-      filter: drop-shadow(0 0 20px rgba(139,92,246,0.5));
+      filter: drop-shadow(0 0 14px rgba(139,92,246,0.55));
     }
     @keyframes oracle-pulse {
-      0%, 100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 18px rgba(139,92,246,0.5)); }
-      50% { transform: scale(1.08); opacity: 0.9; filter: drop-shadow(0 0 32px rgba(139,92,246,0.85)); }
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 14px rgba(139,92,246,0.55)); }
+      50%       { transform: scale(1.07); filter: drop-shadow(0 0 26px rgba(139,92,246,0.9)); }
     }
     .oracle-title {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 32px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      color: #c4b5fd;
-      margin-bottom: 8px;
-      text-shadow: 0 0 24px rgba(139,92,246,0.4);
+      font-family: 'Rajdhani', sans-serif; font-size: 26px; font-weight: 700;
+      letter-spacing: 0.1em; color: #c4b5fd; margin-bottom: 4px;
+      text-shadow: 0 0 20px rgba(139,92,246,0.4);
     }
     .oracle-subtitle {
-      font-size: 12px;
-      color: rgba(148,163,184,0.65);
-      line-height: 1.6;
-      max-width: 320px;
-      margin: 0 auto 24px;
+      font-size: 11px; color: rgba(148,163,184,0.55);
+      max-width: 300px; margin: 0 auto 12px; line-height: 1.4;
     }
-    .oracle-thinking {
-      display: none;
-      padding: 20px;
-      color: var(--text-muted);
-      font-size: 13px;
+
+    /* ── Thinking ── */
+    .oracle-thinking { display:none; padding:16px; color:var(--text-muted); font-size:13px; }
+    .oracle-thinking .spinner { margin: 0 auto 8px; }
+
+    /* ── Result ── */
+    .oracle-result { display: none; animation: oracle-fadein 0.35s ease; }
+    @keyframes oracle-fadein {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
-    .oracle-thinking .spinner { margin: 0 auto 10px; }
-    .oracle-result { display: none; }
-    .oracle-flag { font-size: 60px; display: block; margin-bottom: 8px; }
+    .oracle-stars {
+      font-size: 18px; margin-bottom: 6px; letter-spacing: 4px;
+      color: var(--gold); text-shadow: 0 0 10px rgba(245,158,11,0.6); display: block;
+    }
+    .oracle-flag { font-size: 48px; display: block; margin-bottom: 4px; }
     .oracle-team-name {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 44px;
-      font-weight: 700;
-      color: #f1f5f9;
-      line-height: 1.05;
-      margin-bottom: 8px;
-      letter-spacing: -0.01em;
+      font-family: 'Rajdhani', sans-serif; font-size: 38px; font-weight: 700;
+      color: #f1f5f9; line-height: 1.05; margin-bottom: 2px; letter-spacing: -0.01em;
+    }
+    .oracle-team-longshot { font-size: 14px; margin-left: 4px; vertical-align: middle; }
+    .oracle-opponent {
+      font-size: 12px; color: rgba(148,163,184,0.6);
+      margin-bottom: 8px; line-height: 1.4;
     }
     .oracle-band-chip {
-      display: inline-block;
-      padding: 5px 16px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 16px;
-      border: 1px solid currentColor;
-      opacity: 0.9;
+      display: inline-block; padding: 3px 12px; border-radius: 20px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; margin-bottom: 10px;
+      border: 1px solid currentColor; opacity: 0.9;
+    }
+    .oracle-why {
+      font-size: 11px; font-weight: 600; color: rgba(167,139,250,0.7);
+      margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em;
     }
     .oracle-verdict {
-      font-size: 15px;
-      color: rgba(226,232,240,0.8);
-      line-height: 1.65;
-      max-width: 300px;
-      margin: 0 auto 16px;
-      font-style: italic;
+      font-size: 14px; color: rgba(226,232,240,0.78); line-height: 1.6;
+      max-width: 290px; margin: 0 auto 12px; font-style: italic;
     }
-    .oracle-verdict::before { content: '"'; color: #a78bfa; font-size: 22px; font-style: normal; vertical-align: -2px; }
-    .oracle-verdict::after  { content: '"'; color: #a78bfa; font-size: 22px; font-style: normal; vertical-align: -2px; }
-    .oracle-meta { font-size: 11px; color: rgba(148,163,184,0.55); margin-bottom: 20px; letter-spacing: 0.04em; }
+    .oracle-verdict::before { content: '"'; color: #a78bfa; font-size: 18px; font-style: normal; }
+    .oracle-verdict::after  { content: '"'; color: #a78bfa; font-size: 18px; font-style: normal; }
+
+    /* ── Recycle message ── */
+    .oracle-recycled {
+      display: none; padding: 8px 0 4px;
+      font-size: 11px; color: rgba(148,163,184,0.5); font-style: italic;
+    }
+
+    /* ── Buttons ── */
+    .oracle-btn-wrap { margin-top: 10px; }
     .btn-oracle {
       background: linear-gradient(135deg, #6d28d9, #7c3aed, #6d28d9);
-      background-size: 200% 100%;
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      padding: 14px 28px;
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      cursor: pointer;
-      width: 100%;
-      max-width: 300px;
-      transition: all 0.2s;
-      box-shadow: 0 4px 20px rgba(109,40,217,0.3);
+      background-size: 200% 100%; color: #fff; border: none;
+      border-radius: 12px; padding: 13px 28px;
+      font-family: 'Rajdhani', sans-serif; font-size: 17px; font-weight: 700;
+      letter-spacing: 0.08em; cursor: pointer; width: 100%; max-width: 280px;
+      transition: all 0.2s; box-shadow: 0 4px 18px rgba(109,40,217,0.3);
     }
-    .btn-oracle:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(109,40,217,0.45); background-position: 100% 0; }
+    .btn-oracle:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 22px rgba(109,40,217,0.45); }
     .btn-oracle:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .btn-oracle-again {
-      background: none;
-      color: var(--text-muted);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 7px 18px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 8px;
-      transition: all 0.15s;
+      display: none; background: none; color: rgba(148,163,184,0.6);
+      border: 1px solid rgba(148,163,184,0.2); border-radius: 8px;
+      padding: 6px 16px; font-size: 12px; font-weight: 600;
+      cursor: pointer; margin-top: 8px; transition: all 0.15s;
     }
-    .btn-oracle-again:hover { border-color: var(--accent); color: var(--text); }
+    .btn-oracle-again:hover { border-color: #a78bfa; color: #a78bfa; }
+
     .oracle-disclaimer {
-      font-size: 10px;
-      color: rgba(148,163,184,0.4);
-      margin-top: 16px;
-      line-height: 1.6;
+      font-size: 10px; color: rgba(148,163,184,0.3);
+      margin-top: 12px; line-height: 1.5;
     }
-    .oracle-no-round {
-      padding: 20px;
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-    /* Trigger button */
+
+    /* ── Trigger button on player page ── */
     .btn-oracle-trigger {
       width: 100%;
       background: linear-gradient(135deg, rgba(109,40,217,0.12), rgba(139,92,246,0.08));
-      border: 1px solid rgba(139,92,246,0.35);
-      color: #a78bfa;
-      border-radius: 12px;
-      padding: 13px 16px;
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      cursor: pointer;
-      margin-bottom: 16px;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      border: 1px solid rgba(139,92,246,0.35); color: #a78bfa;
+      border-radius: 12px; padding: 12px 16px;
+      font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 700;
+      letter-spacing: 0.06em; cursor: pointer; margin-bottom: 14px;
+      transition: all 0.2s; display: flex; align-items: center;
+      justify-content: center; gap: 8px;
     }
     .btn-oracle-trigger:hover {
       background: linear-gradient(135deg, rgba(109,40,217,0.2), rgba(139,92,246,0.14));
       border-color: rgba(139,92,246,0.6);
-      box-shadow: 0 0 18px rgba(139,92,246,0.18);
-      transform: translateY(-1px);
+      box-shadow: 0 0 16px rgba(139,92,246,0.18); transform: translateY(-1px);
     }
   </style>
 </head>
@@ -1172,12 +1142,17 @@
   <div class="oracle-sheet" id="oracle-sheet">
     <div class="oracle-handle-bar">
       <div class="oracle-handle"></div>
-      <button onclick="closeOracle()" style="position:absolute;right:16px;top:12px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1;padding:4px">✕</button>
+      <button class="oracle-close-btn" onclick="closeOracle()">✕</button>
+    </div>
+    <!-- Context bar: round + teams available -->
+    <div class="oracle-context" id="oracle-context" style="display:none">
+      <span class="oracle-context-pill" id="oracle-ctx-round"></span>
+      <span class="oracle-context-pill" id="oracle-ctx-teams"></span>
     </div>
     <div class="oracle-sheet-body">
       <span class="oracle-eye">🔮</span>
       <div class="oracle-title">THE ORACLE</div>
-      <div class="oracle-subtitle">There are 8.8 billion possible pick combinations in the group stage alone. The Oracle has assessed every single one. This took no time at all. You may proceed.</div>
+      <div class="oracle-subtitle">8.8 billion possible combinations. The Oracle has assessed every one. You may proceed.</div>
 
       <div id="oracle-thinking" class="oracle-thinking">
         <div class="spinner"></div>
@@ -1185,33 +1160,47 @@
       </div>
 
       <div id="oracle-result" class="oracle-result">
-        <div id="oracle-stars" style="font-size:22px; margin-bottom:6px; letter-spacing:2px"></div>
+        <div id="oracle-stars" class="oracle-stars"></div>
         <span id="oracle-flag" class="oracle-flag"></span>
         <div id="oracle-team" class="oracle-team-name"></div>
+        <div id="oracle-opponent" class="oracle-opponent"></div>
         <div id="oracle-band" class="oracle-band-chip"></div>
+        <div id="oracle-why" class="oracle-why"></div>
         <div id="oracle-verdict" class="oracle-verdict"></div>
-        <div id="oracle-meta" class="oracle-meta"></div>
       </div>
 
-      <div id="oracle-no-round" style="display:none; padding:20px; color:var(--text-muted); font-size:14px">
+      <div id="oracle-no-round" style="display:none; padding:16px; color:var(--text-muted); font-size:14px">
         😶 No round is currently open for picks.
       </div>
-      <div id="oracle-no-teams" style="display:none; padding:20px; color:var(--text-muted); font-size:14px">
+      <div id="oracle-no-teams" style="display:none; padding:16px; color:var(--text-muted); font-size:14px">
         💀 You have no teams left. The Oracle is silent.
       </div>
-      <div id="oracle-recycled" style="display:none; padding:12px 0 4px; color:var(--text-muted); font-size:12px; font-style:italic"></div>
+      <div id="oracle-recycled" class="oracle-recycled"></div>
 
-      <div style="margin-top:8px">
+      <div class="oracle-btn-wrap">
         <button class="btn-oracle" id="oracle-consult-btn">🔮 Consult the Oracle</button>
         <br>
-        <button class="btn-oracle-again" id="oracle-again-btn" style="display:none">Ask again</button>
+        <button class="btn-oracle-again" id="oracle-again-btn">Ask again</button>
       </div>
 
-      <p class="oracle-disclaimer">For entertainment only.<br>The Oracle accepts no responsibility for your leaderboard position.</p>
+      <p class="oracle-disclaimer">For entertainment only. The Oracle accepts no responsibility for your leaderboard position.</p>
     </div>
   </div>
 
   <script>
+    // ── Oracle ────────────────────────────────────────────────────────────────
+
+    // WHY labels per reason code
+    const ORACLE_WHY = {
+      DH_VS_NH:          'Dark Horse vs No Hoper — near-certain win',
+      LS_VS_NH:          'Longshot vs No Hoper — bonus + near-certain win',
+      LS_VS_LS:          'Longshot vs Longshot — coin flip, bonus if right',
+      DH_VS_LS:          'Dark Horse vs Longshot — favoured to win',
+      DH_VS_DH:          'Dark Horse vs Dark Horse — competitive pick',
+      LS_ALONE:          'Longshot — bonus eligible, upside available',
+      DAMAGE_LIMITATION: 'Best available from remaining pool',
+    };
+
     // ── Templates ─────────────────────────────────────────────────────────────
     const ORACLE_TEMPLATES = {
       // 5★
@@ -1324,9 +1313,10 @@
       });
 
       const matchTeamIds = new Set();
+      const matchKickoffMap = {};
       matches.forEach(m => {
-        if (m.home_team_id) matchTeamIds.add(m.home_team_id);
-        if (m.away_team_id) matchTeamIds.add(m.away_team_id);
+        if (m.home_team_id) { matchTeamIds.add(m.home_team_id); matchKickoffMap[m.home_team_id] = m.kickoff; }
+        if (m.away_team_id) { matchTeamIds.add(m.away_team_id); matchKickoffMap[m.away_team_id] = m.kickoff; }
       });
 
       const candidates = isKO ? available.filter(t => matchTeamIds.has(t.id)) : available;
@@ -1343,36 +1333,36 @@
 
         // 5★: Dark Horse vs No Hoper
         if (t.band === 'dark_horse' && oppBand === 'no_hoper') {
-          pool5.push({ team: t, reasonCode: 'DH_VS_NH', opponent: o, stars: 5 });
+          pool5.push({ team: t, reasonCode: 'DH_VS_NH', opponent: o, stars: 5, kickoff: matchKickoffMap[t.id] || null });
           return;
         }
         // 5★: Longshot vs No Hoper (bonus play)
         if (t.band === 'long_shot' && oppBand === 'no_hoper') {
-          pool5.push({ team: t, reasonCode: 'LS_VS_NH', opponent: o, stars: 5 });
+          pool5.push({ team: t, reasonCode: 'LS_VS_NH', opponent: o, stars: 5, kickoff: matchKickoffMap[t.id] || null });
           return;
         }
         // 4★: Longshot vs Longshot (our team shorter odds)
         if (t.band === 'long_shot' && oppBand === 'long_shot' && oddsOf(t) < oddsOf(o)) {
-          pool4.push({ team: t, reasonCode: 'LS_VS_LS', opponent: o, stars: 4 });
+          pool4.push({ team: t, reasonCode: 'LS_VS_LS', opponent: o, stars: 4, kickoff: matchKickoffMap[t.id] || null });
           return;
         }
         // 4★: Dark Horse vs Long Shot
         if (t.band === 'dark_horse' && oppBand === 'long_shot') {
-          pool4.push({ team: t, reasonCode: 'DH_VS_LS', opponent: o, stars: 4 });
+          pool4.push({ team: t, reasonCode: 'DH_VS_LS', opponent: o, stars: 4, kickoff: matchKickoffMap[t.id] || null });
           return;
         }
         // 3★: Dark Horse vs Dark Horse (shorter odds side)
         if (t.band === 'dark_horse' && oppBand === 'dark_horse' && oddsOf(t) <= oddsOf(o)) {
-          pool3.push({ team: t, reasonCode: 'DH_VS_DH', opponent: o, stars: 3 });
+          pool3.push({ team: t, reasonCode: 'DH_VS_DH', opponent: o, stars: 3, kickoff: matchKickoffMap[t.id] || null });
           return;
         }
         // 3★: Longshot with no opponent data or vs Dark Horse
         if (t.band === 'long_shot' && (!oppBand || oppBand === 'dark_horse')) {
-          pool3.push({ team: t, reasonCode: 'LS_ALONE', opponent: o, stars: 3 });
+          pool3.push({ team: t, reasonCode: 'LS_ALONE', opponent: o, stars: 3, kickoff: matchKickoffMap[t.id] || null });
           return;
         }
         // Fallback: everything else
-        poolFallback.push({ team: t, reasonCode: 'DAMAGE_LIMITATION', opponent: o, stars: 2 });
+        poolFallback.push({ team: t, reasonCode: 'DAMAGE_LIMITATION', opponent: o, stars: 2, kickoff: matchKickoffMap[t.id] || null });
       });
 
       return [...pool5, ...pool4, ...pool3, ...poolFallback];
@@ -1445,14 +1435,20 @@
         (oddsRaw || []).forEach(r => { if (!_oracleOddsMap[r.team_id]) _oracleOddsMap[r.team_id] = parseFloat(r.odds_decimal); });
 
         const { data: roundMatches } = await db.from('matches')
-          .select('id, round_id, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,band), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,band)')
+          .select('id, round_id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,band,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,band,is_longshot)')
           .eq('round_id', _oracleRound.id)
           .not('home_team_id', 'is', null);
 
-        _oraclePool     = buildOraclePool(available, _oracleRound, roundMatches || [], _oracleOddsMap);
-        _oracleShown    = [];
+        _oraclePool      = buildOraclePool(available, _oracleRound, roundMatches || [], _oracleOddsMap);
+        _oracleShown     = [];
         _oracleDataReady = true;
         _oracleConsultNum = 0;
+        _oracleAvailCount = available.length;
+
+        // Show context bar
+        document.getElementById('oracle-ctx-round').textContent = _oracleRound.name;
+        document.getElementById('oracle-ctx-teams').textContent = available.length + ' teams available';
+        document.getElementById('oracle-context').style.display = 'flex';
       }
 
       thinkEl.style.display = 'none';
@@ -1465,40 +1461,55 @@
 
       _oracleConsultNum++;
 
-      // After 5 picks — show recycle message and reset shown list
-      if (_oracleConsultNum > 5 && _oracleShown.length >= Math.min(5, _oraclePool.length)) {
+      const CAP = Math.min(5, _oraclePool.length); // max unique picks to show
+
+      // Hit the cap — show recycle message and loop back through same picks
+      if (_oracleShown.length >= CAP) {
         recycledEl.textContent = oRand(ORACLE_RECYCLE_MSGS);
         recycledEl.style.display = 'block';
-        _oracleShown = [];
+        _oracleShown = []; // reset so same CAP picks rotate again
+      } else {
+        recycledEl.style.display = 'none';
       }
 
-      const shownIds = new Set(_oracleShown.map(t => t.id));
-      const pick = weightedPick(_oraclePool, shownIds);
+      const shownIds = new Set(_oracleShown.map(p => p.team.id));
+      let pick = weightedPick(_oraclePool, shownIds);
 
       if (!pick) {
-        // All shown — reset
+        // Safety fallback
         _oracleShown = [];
-        const pick2 = weightedPick(_oraclePool, new Set());
-        if (!pick2) {
-          document.getElementById('oracle-no-teams').style.display = 'block';
-          consultBtn.disabled = false;
-          return;
-        }
-        _oracleShown.push(pick2.team);
-        renderOraclePick(pick2);
-      } else {
-        _oracleShown.push(pick.team);
-        renderOraclePick(pick);
+        pick = weightedPick(_oraclePool, new Set());
       }
 
-      consultBtn.disabled    = false;
-      againBtn.style.display = 'inline-block';
-      againBtn.textContent   = _oracleConsultNum >= 5 ? 'Still not convinced?' : 'Ask again';
+      if (!pick) {
+        document.getElementById('oracle-no-teams').style.display = 'block';
+        consultBtn.disabled = false;
+        return;
+      }
+
+      _oracleShown.push(pick);
+      renderOraclePick(pick);
+
+      // Button logic: hide consult, show ask-again after first pick
+      consultBtn.style.display = 'none';
+      againBtn.style.display   = 'inline-block';
+      const remaining = CAP - _oracleShown.length;
+      againBtn.textContent = _oracleShown.length >= CAP
+        ? 'Try again anyway'
+        : (remaining === 1 ? 'One more...' : 'Ask again');
+    }
+
+    function fmtKickoff(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const day  = d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+      const time = d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+      return day + ' · ' + time;
     }
 
     function renderOraclePick(pick) {
-      const { team, reasonCode, opponent, stars } = pick;
-      const bandInfo = ORACLE_BAND_STYLE[team.band] || { label: '?', bg: 'rgba(148,163,184,0.15)', color: '#94a3b8' };
+      const { team, reasonCode, opponent, stars, kickoff } = pick;
+      const bandInfo  = ORACLE_BAND_STYLE[team.band] || { label: '?', bg: 'rgba(148,163,184,0.15)', color: '#94a3b8' };
       const templates = ORACLE_TEMPLATES[reasonCode] || ORACLE_TEMPLATES.DAMAGE_LIMITATION;
       const verdict   = oFill(oRand(templates), {
         team:     team.name,
@@ -1506,23 +1517,46 @@
         round:    _oracleRound ? _oracleRound.name : '',
       });
 
-      document.getElementById('oracle-stars').textContent  = starStr(stars);
-      document.getElementById('oracle-flag').textContent   = team.flag_emoji || '🏳️';
-      document.getElementById('oracle-team').textContent   = team.name;
+      // Stars
+      document.getElementById('oracle-stars').textContent = starStr(stars);
+
+      // Flag + team name + longshot star
+      document.getElementById('oracle-flag').textContent = team.flag_emoji || '🏳️';
+      const lsTag = team.is_longshot ? ' ⭐' : '';
+      document.getElementById('oracle-team').innerHTML =
+        team.name + (team.is_longshot ? '<span class="oracle-team-longshot">⭐</span>' : '');
+
+      // Opponent + kickoff line
+      const oppEl = document.getElementById('oracle-opponent');
+      if (opponent) {
+        const kickoffStr = kickoff ? ' · ' + fmtKickoff(kickoff) : '';
+        oppEl.textContent = 'vs ' + opponent.flag_emoji + ' ' + opponent.name + kickoffStr;
+        oppEl.style.display = 'block';
+      } else {
+        oppEl.style.display = 'none';
+      }
+
+      // Band chip
       const bandEl = document.getElementById('oracle-band');
       bandEl.textContent      = bandInfo.label;
       bandEl.style.background = bandInfo.bg;
       bandEl.style.color      = bandInfo.color;
-      document.getElementById('oracle-verdict').textContent = verdict;
-      const metaParts = [_oracleRound ? _oracleRound.name : ''];
-      if (opponent) metaParts.push('vs ' + opponent.flag_emoji + ' ' + opponent.name);
-      document.getElementById('oracle-meta').textContent = metaParts.filter(Boolean).join(' · ');
 
-      document.getElementById('oracle-result').style.display = 'block';
+      // Why line
+      document.getElementById('oracle-why').textContent = ORACLE_WHY[reasonCode] || '';
+
+      // Verdict
+      document.getElementById('oracle-verdict').textContent = verdict;
+
+      // Trigger fade-in by re-cloning (resets animation)
+      const resultEl = document.getElementById('oracle-result');
+      resultEl.style.display = 'none';
+      // Force reflow then show
+      void resultEl.offsetWidth;
+      resultEl.style.display = 'block';
     }
 
     function openOracle() {
-      // Reset data so pool is rebuilt fresh (picks may have changed since last open)
       _oracleDataReady  = false;
       _oraclePool       = [];
       _oracleShown      = [];
@@ -1533,9 +1567,13 @@
       document.getElementById('oracle-result').style.display     = 'none';
       document.getElementById('oracle-thinking').style.display   = 'none';
       document.getElementById('oracle-recycled').style.display   = 'none';
+      document.getElementById('oracle-context').style.display    = 'none';
+      // Show consult button, hide ask-again
+      const cb = document.getElementById('oracle-consult-btn');
+      cb.style.display  = 'inline-block';
+      cb.disabled       = false;
+      cb.textContent    = '🔮 Consult the Oracle';
       document.getElementById('oracle-again-btn').style.display  = 'none';
-      document.getElementById('oracle-consult-btn').disabled     = false;
-      document.getElementById('oracle-consult-btn').textContent  = '🔮 Consult the Oracle';
       document.getElementById('oracle-backdrop').classList.add('open');
       document.getElementById('oracle-sheet').classList.add('open');
       document.body.style.overflow = 'hidden';
