@@ -61,81 +61,81 @@
     }
     .flip-counter {
       display: flex;
-      gap: 8px;
+      gap: 10px;
       justify-content: center;
     }
+
+    /* Each digit card */
     .flip-digit {
       position: relative;
-      width: 56px;
-      height: 76px;
-      perspective: 300px;
-    }
-    /* Static card face */
-    .flip-digit .face {
-      position: absolute;
-      inset: 0;
-      border-radius: 8px;
-      background: #1a1d27;
-      border: 1px solid rgba(255,255,255,0.08);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 60px;
+      height: 80px;
+      perspective: 400px;
       font-family: 'Rajdhani', sans-serif;
-      font-size: 52px;
+      font-size: 58px;
       font-weight: 700;
       color: var(--gold, #f5c842);
-      line-height: 1;
-      overflow: hidden;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
     }
-    /* Horizontal divider line */
-    .flip-digit .face::after {
-      content: '';
-      position: absolute;
-      left: 0; right: 0;
-      top: 50%;
-      height: 1px;
-      background: rgba(0,0,0,0.4);
-    }
-    /* The flipping half */
-    .flip-digit .flap {
+
+    /* Shared half-card styles */
+    .fd-top, .fd-bot,
+    .fd-flap-top, .fd-flap-bot {
       position: absolute;
       left: 0; right: 0;
       height: 50%;
       overflow: hidden;
-      transform-origin: bottom center;
-      transform-style: preserve-3d;
-      border-radius: 8px 8px 0 0;
-      z-index: 2;
-    }
-    .flip-digit .flap-inner {
-      position: absolute;
-      inset: 0;
-      background: #1a1d27;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-bottom: none;
-      border-radius: 8px 8px 0 0;
+      background: #1c1f2e;
+      border: 1px solid rgba(255,255,255,0.07);
       display: flex;
-      align-items: flex-end;
+      align-items: flex-end; /* digit anchored to centre line */
       justify-content: center;
-      padding-bottom: 2px;
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 52px;
-      font-weight: 700;
-      color: var(--gold, #f5c842);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+    /* digit offset so the centre of the numeral sits at the half-card boundary */
+    .fd-top .fd-num, .fd-flap-top .fd-num {
+      transform: translateY(50%);
       line-height: 1;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
     }
-    .flip-digit .flap.animate {
-      animation: flipDown 0.35s ease-in forwards;
+    .fd-bot, .fd-flap-bot {
+      align-items: flex-start; /* digit anchored to centre line from below */
+      top: 50%;
     }
-    @keyframes flipDown {
-      0%   { transform: rotateX(0deg); }
-      100% { transform: rotateX(-90deg); }
+    .fd-bot .fd-num, .fd-flap-bot .fd-num {
+      transform: translateY(-50%);
+      line-height: 1;
+    }
+
+    /* Rounded corners per quadrant */
+    .fd-top      { top: 0;   border-radius: 8px 8px 0 0; border-bottom: none; }
+    .fd-bot      { top: 50%; border-radius: 0 0 8px 8px; border-top: none; }
+    .fd-flap-top { top: 0;   border-radius: 8px 8px 0 0; border-bottom: none; z-index: 3; transform-origin: bottom center; }
+    .fd-flap-bot { top: 50%; border-radius: 0 0 8px 8px; border-top: none;    z-index: 2; transform-origin: top center; transform: rotateX(90deg); }
+
+    /* Divider line */
+    .fd-divider {
+      position: absolute;
+      left: 0; right: 0;
+      top: 50%;
+      height: 2px;
+      background: rgba(0,0,0,0.6);
+      z-index: 10;
+    }
+
+    /* Animations */
+    .fd-flap-top.go { animation: flapTopDown 0.3s ease-in forwards; }
+    .fd-flap-bot.go { animation: flapBotUp   0.3s ease-out 0.3s forwards; }
+
+    @keyframes flapTopDown {
+      from { transform: rotateX(0deg); }
+      to   { transform: rotateX(-90deg); }
+    }
+    @keyframes flapBotUp {
+      from { transform: rotateX(90deg); }
+      to   { transform: rotateX(0deg); }
     }
 
     .flip-counter-label {
-      margin-top: 10px;
+      margin-top: 12px;
       font-size: 11px;
       font-weight: 600;
       letter-spacing: 0.1em;
@@ -263,17 +263,21 @@
       <!-- Flip counter -->
       <div class="flip-counter-wrap">
         <div class="flip-counter" id="flip-counter">
+          <!-- Tens digit -->
           <div class="flip-digit" id="digit-tens">
-            <div class="face" id="face-tens">2</div>
-            <div class="flap" id="flap-tens">
-              <div class="flap-inner" id="flap-inner-tens">2</div>
-            </div>
+            <div class="fd-top">    <span class="fd-num" id="ft-top-cur">2</span></div>
+            <div class="fd-bot">    <span class="fd-num" id="ft-bot-cur">2</span></div>
+            <div class="fd-flap-top" id="ft-flap-top"><span class="fd-num" id="ft-flap-top-num">2</span></div>
+            <div class="fd-flap-bot" id="ft-flap-bot"><span class="fd-num" id="ft-flap-bot-num">2</span></div>
+            <div class="fd-divider"></div>
           </div>
+          <!-- Ones digit -->
           <div class="flip-digit" id="digit-ones">
-            <div class="face" id="face-ones">6</div>
-            <div class="flap" id="flap-ones">
-              <div class="flap-inner" id="flap-inner-ones">6</div>
-            </div>
+            <div class="fd-top">    <span class="fd-num" id="fo-top-cur">6</span></div>
+            <div class="fd-bot">    <span class="fd-num" id="fo-bot-cur">6</span></div>
+            <div class="fd-flap-top" id="fo-flap-top"><span class="fd-num" id="fo-flap-top-num">6</span></div>
+            <div class="fd-flap-bot" id="fo-flap-bot"><span class="fd-num" id="fo-flap-bot-num">6</span></div>
+            <div class="fd-divider"></div>
           </div>
         </div>
         <div class="flip-counter-label">players still standing</div>
@@ -330,78 +334,108 @@
     })();
 
     // ── Flip counter ──────────────────────────────────────────
-    function setDigits(n) {
-      const tens = Math.floor(n / 10);
-      const ones = n % 10;
-      document.getElementById('face-tens').textContent = tens;
-      document.getElementById('face-ones').textContent = ones;
-      document.getElementById('flap-inner-tens').textContent = tens;
-      document.getElementById('flap-inner-ones').textContent = ones;
+    const digits = {
+      tens: {
+        topCur:     document.getElementById('ft-top-cur'),
+        botCur:     document.getElementById('ft-bot-cur'),
+        flapTop:    document.getElementById('ft-flap-top'),
+        flapTopNum: document.getElementById('ft-flap-top-num'),
+        flapBot:    document.getElementById('ft-flap-bot'),
+        flapBotNum: document.getElementById('ft-flap-bot-num'),
+      },
+      ones: {
+        topCur:     document.getElementById('fo-top-cur'),
+        botCur:     document.getElementById('fo-bot-cur'),
+        flapTop:    document.getElementById('fo-flap-top'),
+        flapTopNum: document.getElementById('fo-flap-top-num'),
+        flapBot:    document.getElementById('ft-flap-bot'),  // corrected below
+        flapBotNum: document.getElementById('fo-flap-bot-num'),
+      }
+    };
+    // fix ones flapBot reference
+    digits.ones.flapBot = document.getElementById('fo-flap-bot');
+
+    function setDigit(d, n) {
+      const s = String(n);
+      d.topCur.textContent     = s;
+      d.botCur.textContent     = s;
+      d.flapTopNum.textContent = s;
+      d.flapBotNum.textContent = s;
+    }
+
+    function flipDigit(d, fromVal, toVal, done) {
+      // Flap top shows old value flying away; flap bot reveals new value
+      d.flapTopNum.textContent = String(fromVal);
+      d.flapBotNum.textContent = String(toVal);
+
+      // Static panels: top shows old (visible behind flap-top), bot shows new (hidden behind flap-bot)
+      d.topCur.textContent = String(fromVal);
+      d.botCur.textContent = String(toVal);
+
+      // Reset animation classes
+      d.flapTop.classList.remove('go');
+      d.flapBot.classList.remove('go');
+      void d.flapTop.offsetWidth;
+
+      d.flapTop.classList.add('go');
+      d.flapBot.classList.add('go');
+
+      // After animation completes, set static panels to new value and hide flaps
+      setTimeout(() => {
+        d.topCur.textContent = String(toVal);
+        d.flapTop.classList.remove('go');
+        d.flapBot.classList.remove('go');
+        if (done) done();
+      }, 650);
+    }
+
+    function setAll(n) {
+      setDigit(digits.tens, Math.floor(n / 10));
+      setDigit(digits.ones, n % 10);
     }
 
     function flipTo(target) {
       const stored = parseInt(localStorage.getItem(LS_COUNT_KEY), 10);
       const from = (!isNaN(stored) && stored >= target) ? stored : target;
-
-      // Save new count immediately
       localStorage.setItem(LS_COUNT_KEY, target);
 
-      if (from === target) {
-        setDigits(target);
-        return;
-      }
+      if (from === target) { setAll(target); return; }
 
-      // Animate step by step
       let current = from;
-      setDigits(current);
+      setAll(current);
 
       function step() {
         if (current <= target) return;
+        const prev = current;
         current--;
 
-        const newTens = Math.floor(current / 10);
-        const newOnes = current % 10;
+        const prevTens = Math.floor(prev / 10);
+        const newTens  = Math.floor(current / 10);
+        const prevOnes = prev % 10;
+        const newOnes  = current % 10;
 
-        const tensChanged = newTens !== Math.floor((current + 1) / 10);
-        const onesChanged = newOnes !== (current + 1) % 10;
+        let pending = 0;
+        const maybeDone = () => { if (--pending === 0) scheduleNext(); };
 
-        // Show old number on flap, animate it away, then update face
-        if (tensChanged) {
-          const oldTens = Math.floor((current + 1) / 10);
-          const flap = document.getElementById('flap-tens');
-          document.getElementById('flap-inner-tens').textContent = oldTens;
-          flap.classList.remove('animate');
-          void flap.offsetWidth; // reflow
-          flap.classList.add('animate');
-          setTimeout(() => {
-            document.getElementById('face-tens').textContent = newTens;
-            document.getElementById('flap-inner-tens').textContent = newTens;
-            flap.classList.remove('animate');
-          }, 350);
+        if (prevTens !== newTens) {
+          pending++;
+          flipDigit(digits.tens, prevTens, newTens, maybeDone);
         }
-
-        if (onesChanged) {
-          const oldOnes = (current + 1) % 10;
-          const flap = document.getElementById('flap-ones');
-          document.getElementById('flap-inner-ones').textContent = oldOnes;
-          flap.classList.remove('animate');
-          void flap.offsetWidth;
-          flap.classList.add('animate');
-          setTimeout(() => {
-            document.getElementById('face-ones').textContent = newOnes;
-            document.getElementById('flap-inner-ones').textContent = newOnes;
-            flap.classList.remove('animate');
-          }, 350);
+        if (prevOnes !== newOnes) {
+          pending++;
+          flipDigit(digits.ones, prevOnes, newOnes, maybeDone);
         }
+        if (pending === 0) scheduleNext();
+      }
 
-        // Pace: faster if big gap, slower for drama near the end
+      function scheduleNext() {
+        if (current <= target) return;
         const remaining = current - target;
-        const delay = remaining > 5 ? 120 : 280;
+        const delay = remaining > 5 ? 100 : 300;
         setTimeout(step, delay);
       }
 
-      // Small pause before animation starts
-      setTimeout(step, 400);
+      setTimeout(step, 500);
     }
 
     // ── Load data ─────────────────────────────────────────────

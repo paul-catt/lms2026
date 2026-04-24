@@ -2216,9 +2216,11 @@ Good luck! ⚽🏆`;
 
       // Show rounds whose deadline has passed, plus the next upcoming round
       const now = getEffectiveDate();
+      console.log('[Audit] Round names from DB:', rounds.map(r => r.name));
       const eligibleRounds = [...rounds]
         .filter(r => !r.name.toLowerCase().includes('3rd') && ROUND_START_DATES[r.name])
         .sort((a, b) => a.sort_order - b.sort_order);
+      console.log('[Audit] Eligible rounds:', eligibleRounds.map(r => r.name));
 
       const pastRoundIds = new Set();
       let nextRound = null;
@@ -2249,7 +2251,7 @@ Good luck! ⚽🏆`;
       // Build header
       let html = `<div style="overflow-x:auto"><table style="font-size:12px; min-width:800px; border-collapse:collapse">
         <thead><tr>
-          <th style="text-align:left; padding:8px 10px; background:var(--surface2); border:1px solid var(--border); position:sticky; left:0; z-index:2; min-width:120px">Player</th>`;
+          <th style="text-align:left; padding:8px 10px; background:var(--surface2); border:1px solid var(--border); position:sticky; left:0; z-index:2; min-width:100px; max-width:130px; width:130px">Player</th>`;
 
       sortedRounds.forEach(r => {
         const isKO = r.round_type === 'knockout';
@@ -2306,7 +2308,7 @@ Good luck! ⚽🏆`;
       const summaryColor = totalBlanks === 0 ? 'var(--green)' : 'var(--gold)';
       const summary = `<div style="margin-bottom:12px; padding:8px 14px; background:var(--surface2); border-radius:8px; font-size:13px; display:flex; gap:16px; flex-wrap:wrap; align-items:center">
         <span>👥 <strong>${players.length}</strong> players</span>
-        <span>🗓 <strong>${rounds.length}</strong> rounds</span>
+        <span>🗓 <strong>${sortedRounds.length}</strong> rounds</span>
         <span style="color:${summaryColor}">⚠️ <strong>${totalBlanks}</strong> missing pick${totalBlanks !== 1 ? 's' : ''}</span>
         <button class="btn btn-secondary" style="font-size:11px; padding:3px 10px; margin-left:auto" onclick="loadPicksAudit()">🔄 Refresh</button>
       </div>`;

@@ -41,19 +41,19 @@
     .round-pill .tick { font-size:10px; }
 
     /* Deadline bar inside pick card */
-    .deadline-bar { border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; font-weight:600; }
-    .deadline-bar.open   { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); color:var(--gold); }
-    .deadline-bar.locked { background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.3);  color:var(--red); }
-    .deadline-bar .countdown { font-variant-numeric:tabular-nums; font-weight:800; }
+    .deadline-bar { border-radius:10px; padding:12px 16px; font-size:13px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; font-weight:600; }
+    .deadline-bar.open   { background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:var(--gold); }
+    .deadline-bar.locked { background:rgba(239,68,68,0.05);  border:1px solid rgba(239,68,68,0.2);  color:var(--red); }
+    .deadline-bar .countdown { font-variant-numeric:tabular-nums; font-weight:900; font-size:15px; letter-spacing:-0.01em; }
 
     /* Pick slots */
     .pick-summary { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-    .pick-slot { flex:1; min-width:140px; background:var(--surface2); border:2px dashed var(--border); border-radius:8px; padding:12px; text-align:center; }
-    .pick-slot.filled-3 { border-color:var(--gold);   background:rgba(245,158,11,0.08); }
-    .pick-slot.filled-2 { border-color:var(--accent);  background:rgba(59,130,246,0.08); }
-    .pick-slot-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; }
-    .pick-slot-value { font-size:15px; font-weight:700; }
-    .longshot-tag { font-size:10px; color:var(--gold); margin-top:2px; }
+    .pick-slot { flex:1; min-width:140px; background:var(--surface2); border:2px dashed rgba(148,163,184,0.2); border-radius:12px; padding:14px 12px; text-align:center; transition:all 0.2s; }
+    .pick-slot.filled-3 { border-style:solid; border-color:var(--gold); background:rgba(245,158,11,0.07); box-shadow:0 0 0 1px rgba(245,158,11,0.08) inset; }
+    .pick-slot.filled-2 { border-style:solid; border-color:var(--accent); background:rgba(59,130,246,0.07); box-shadow:0 0 0 1px rgba(59,130,246,0.08) inset; }
+    .pick-slot-label { font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; }
+    .pick-slot-value { font-size:16px; font-weight:700; }
+    .longshot-tag { font-size:10px; color:var(--gold); margin-top:4px; }
 
     /* Fixture grid */
     .fixture-list { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
@@ -108,9 +108,9 @@
 
     /* 4-card stats row */
     .stats-row { display:flex; gap:8px; margin-bottom:16px; }
-    .stats-row .stat-block { flex:1; min-width:0; }
-    .stats-row .stat-value { font-size:20px; }
-    .stats-row .stat-label { font-size:10px; }
+    .stats-row .stat-block { flex:1; min-width:0; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 8px; text-align:center; }
+    .stats-row .stat-value { font-size:22px; font-weight:800; color:var(--text); letter-spacing:-0.02em; display:block; }
+    .stats-row .stat-label { font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:3px; display:block; }
 
     /* ── Oracle bottom sheet ─────────────────────────────── */
     .oracle-backdrop {
@@ -132,8 +132,9 @@
       left: 0;
       right: 0;
       height: 88%;
-      background: var(--surface);
+      background: #0c0e16;
       border-radius: 20px 20px 0 0;
+      border-top: 1px solid rgba(139,92,246,0.3);
       z-index: 201;
       transform: translateY(100%);
       transition: transform 0.38s cubic-bezier(0.32, 0.72, 0, 1);
@@ -148,47 +149,51 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 12px 0 6px;
+      padding: 12px 0 8px;
       flex-shrink: 0;
+      position: relative;
+      border-bottom: 1px solid rgba(139,92,246,0.12);
     }
     .oracle-handle {
       width: 36px;
       height: 4px;
       border-radius: 2px;
-      background: var(--border);
+      background: rgba(139,92,246,0.4);
     }
     .oracle-sheet-body {
       flex: 1;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding: 0 20px 32px;
+      padding: 20px 24px 40px;
       text-align: center;
     }
     .oracle-eye {
-      font-size: 56px;
+      font-size: 64px;
       line-height: 1;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       display: block;
       animation: oracle-pulse 3s ease-in-out infinite;
+      filter: drop-shadow(0 0 20px rgba(139,92,246,0.5));
     }
     @keyframes oracle-pulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.08); opacity: 0.85; }
+      0%, 100% { transform: scale(1); opacity: 1; filter: drop-shadow(0 0 18px rgba(139,92,246,0.5)); }
+      50% { transform: scale(1.08); opacity: 0.9; filter: drop-shadow(0 0 32px rgba(139,92,246,0.85)); }
     }
     .oracle-title {
       font-family: 'Rajdhani', sans-serif;
-      font-size: 28px;
+      font-size: 32px;
       font-weight: 700;
-      letter-spacing: 0.06em;
-      color: var(--gold);
-      margin-bottom: 6px;
+      letter-spacing: 0.1em;
+      color: #c4b5fd;
+      margin-bottom: 8px;
+      text-shadow: 0 0 24px rgba(139,92,246,0.4);
     }
     .oracle-subtitle {
       font-size: 12px;
-      color: var(--text-muted);
-      line-height: 1.5;
-      max-width: 340px;
-      margin: 0 auto 20px;
+      color: rgba(148,163,184,0.65);
+      line-height: 1.6;
+      max-width: 320px;
+      margin: 0 auto 24px;
     }
     .oracle-thinking {
       display: none;
@@ -198,53 +203,57 @@
     }
     .oracle-thinking .spinner { margin: 0 auto 10px; }
     .oracle-result { display: none; }
-    .oracle-flag { font-size: 48px; display: block; margin-bottom: 6px; }
+    .oracle-flag { font-size: 60px; display: block; margin-bottom: 8px; }
     .oracle-team-name {
       font-family: 'Rajdhani', sans-serif;
-      font-size: 40px;
+      font-size: 44px;
       font-weight: 700;
-      color: var(--text);
-      line-height: 1.1;
-      margin-bottom: 4px;
+      color: #f1f5f9;
+      line-height: 1.05;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
     }
     .oracle-band-chip {
       display: inline-block;
-      padding: 4px 14px;
+      padding: 5px 16px;
       border-radius: 20px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 14px;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+      border: 1px solid currentColor;
+      opacity: 0.9;
     }
     .oracle-verdict {
-      font-size: 14px;
-      color: var(--text);
-      line-height: 1.6;
-      max-width: 320px;
+      font-size: 15px;
+      color: rgba(226,232,240,0.8);
+      line-height: 1.65;
+      max-width: 300px;
       margin: 0 auto 16px;
       font-style: italic;
     }
-    .oracle-verdict::before { content: '"'; color: var(--gold); font-size: 18px; font-style: normal; }
-    .oracle-verdict::after  { content: '"'; color: var(--gold); font-size: 18px; font-style: normal; }
-    .oracle-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 18px; }
+    .oracle-verdict::before { content: '"'; color: #a78bfa; font-size: 22px; font-style: normal; vertical-align: -2px; }
+    .oracle-verdict::after  { content: '"'; color: #a78bfa; font-size: 22px; font-style: normal; vertical-align: -2px; }
+    .oracle-meta { font-size: 11px; color: rgba(148,163,184,0.55); margin-bottom: 20px; letter-spacing: 0.04em; }
     .btn-oracle {
-      background: linear-gradient(135deg, #b8860b, #f59e0b, #b8860b);
+      background: linear-gradient(135deg, #6d28d9, #7c3aed, #6d28d9);
       background-size: 200% 100%;
-      color: #000;
+      color: #fff;
       border: none;
-      border-radius: 10px;
-      padding: 13px 28px;
+      border-radius: 12px;
+      padding: 14px 28px;
       font-family: 'Rajdhani', sans-serif;
-      font-size: 17px;
+      font-size: 18px;
       font-weight: 700;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.08em;
       cursor: pointer;
       width: 100%;
       max-width: 300px;
       transition: all 0.2s;
+      box-shadow: 0 4px 20px rgba(109,40,217,0.3);
     }
-    .btn-oracle:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(245,158,11,0.3); }
+    .btn-oracle:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(109,40,217,0.45); background-position: 100% 0; }
     .btn-oracle:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .btn-oracle-again {
       background: none;
@@ -261,10 +270,9 @@
     .btn-oracle-again:hover { border-color: var(--accent); color: var(--text); }
     .oracle-disclaimer {
       font-size: 10px;
-      color: var(--text-muted);
-      margin-top: 14px;
-      opacity: 0.55;
-      line-height: 1.5;
+      color: rgba(148,163,184,0.4);
+      margin-top: 16px;
+      line-height: 1.6;
     }
     .oracle-no-round {
       padding: 20px;
@@ -274,24 +282,29 @@
     /* Trigger button */
     .btn-oracle-trigger {
       width: 100%;
-      background: rgba(245,158,11,0.08);
-      border: 1px solid rgba(245,158,11,0.3);
-      color: var(--gold);
-      border-radius: 10px;
-      padding: 12px;
+      background: linear-gradient(135deg, rgba(109,40,217,0.12), rgba(139,92,246,0.08));
+      border: 1px solid rgba(139,92,246,0.35);
+      color: #a78bfa;
+      border-radius: 12px;
+      padding: 13px 16px;
       font-family: 'Rajdhani', sans-serif;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 700;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
       cursor: pointer;
-      margin-bottom: 12px;
-      transition: all 0.15s;
+      margin-bottom: 16px;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
     }
-    .btn-oracle-trigger:hover { background: rgba(245,158,11,0.14); border-color: var(--gold); }
+    .btn-oracle-trigger:hover {
+      background: linear-gradient(135deg, rgba(109,40,217,0.2), rgba(139,92,246,0.14));
+      border-color: rgba(139,92,246,0.6);
+      box-shadow: 0 0 18px rgba(139,92,246,0.18);
+      transform: translateY(-1px);
+    }
   </style>
 </head>
 <body>
@@ -370,12 +383,13 @@
       <!-- Pick section -->
       <div id="pick-section" style="display:none">
         <div class="card">
-          <div class="card-title">🎯 Submit Your Pick</div>
+          <div class="card-title" style="font-size:17px; margin-bottom:16px">🎯 Submit Your Pick</div>
 
           <!-- Oracle trigger -->
           <button class="btn-oracle-trigger" id="oracle-trigger-btn" style="display:none" onclick="openOracle()">
             🔮 Ask the Oracle
           </button>
+          <div id="oracle-divider" style="display:none; border-top:1px solid var(--border); margin:0 0 16px;"></div>
           <div class="round-selector-wrap">
             <label>Pick for round:</label>
             <select id="round-select"></select>
@@ -653,6 +667,7 @@
         buildRoundDropdown();
         document.getElementById('pick-section').style.display = 'block';
         document.getElementById('oracle-trigger-btn').style.display = 'flex';
+        document.getElementById('oracle-divider').style.display = 'block';
 
         const now = getEffectiveDate();
         const activeRound = openRounds.find(r => new Date(r.deadline) > now) || openRounds[0];
@@ -1157,6 +1172,7 @@
   <div class="oracle-sheet" id="oracle-sheet">
     <div class="oracle-handle-bar">
       <div class="oracle-handle"></div>
+      <button onclick="closeOracle()" style="position:absolute;right:16px;top:12px;background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1;padding:4px">✕</button>
     </div>
     <div class="oracle-sheet-body">
       <span class="oracle-eye">🔮</span>
@@ -1169,6 +1185,7 @@
       </div>
 
       <div id="oracle-result" class="oracle-result">
+        <div id="oracle-stars" style="font-size:22px; margin-bottom:6px; letter-spacing:2px"></div>
         <span id="oracle-flag" class="oracle-flag"></span>
         <div id="oracle-team" class="oracle-team-name"></div>
         <div id="oracle-band" class="oracle-band-chip"></div>
@@ -1182,6 +1199,7 @@
       <div id="oracle-no-teams" style="display:none; padding:20px; color:var(--text-muted); font-size:14px">
         💀 You have no teams left. The Oracle is silent.
       </div>
+      <div id="oracle-recycled" style="display:none; padding:12px 0 4px; color:var(--text-muted); font-size:12px; font-style:italic"></div>
 
       <div style="margin-top:8px">
         <button class="btn-oracle" id="oracle-consult-btn">🔮 Consult the Oracle</button>
@@ -1194,38 +1212,71 @@
   </div>
 
   <script>
+    // ── Templates ─────────────────────────────────────────────────────────────
     const ORACLE_TEMPLATES = {
-      LONGSHOT_VS_NOHOPER: [
+      // 5★
+      DH_VS_NH: [
+        '{team} — Dark Horse against {opponent}, who are basically here for the photos. Comfortable win, decent points.',
+        'Dark Horse vs No Hoper. {team} vs {opponent}. The Oracle didn\'t even need to think about this one.',
+        '{opponent} are in over their heads. {team} are not. The Oracle has spoken.',
+        '{team} should handle {opponent} with ease. File under: obvious but necessary.',
+        'The Oracle sees {team}, sees {opponent}, sees points. Pick them.',
+      ],
+      LS_VS_NH: [
         '{team} are a longshot facing {opponent}, who are basically tourists. Take the bonus.',
         'Longshot vs No Hoper. {team} vs {opponent}. This is the Oracle\'s favourite sentence.',
         '{opponent} are here for the experience. {team} are here for your bonus point. Pick them.',
+        '{team} at longshot odds against {opponent}. Nearest thing to free money this competition offers.',
+        'The Oracle sees a bonus waiting to happen. {team} vs {opponent}. Don\'t overthink it.',
       ],
-      LONGSHOT_VS_LONGSHOT: [
+      // 4★
+      LS_VS_LS: [
         '{team} vs {opponent} — coin flip, but if {team} come through, you look like a genius.',
         'Two underdogs. The Oracle backs {team}. Don\'t ask why. Just trust it.',
         'Chaotic pick. High ceiling. The Oracle is not responsible for the outcome.',
+        'Both longshots, both bonus eligible. {team} are slightly shorter. Slightly. The Oracle notes this.',
+        '{team} vs {opponent}. Whoever wins gets the bonus. The Oracle thinks {team} wins.',
       ],
-      DARK_HORSE_GROUP: [
-        '{team} — quietly dangerous, not worth wasting in the knockouts. {round} is their moment.',
-        'Save the big guns. {team} are the right call for {round} and the Oracle knows it.',
-        'Dark Horse. {round}. {team}. The Oracle approves.',
+      DH_VS_LS: [
+        '{team} Dark Horse vs {opponent} Long Shot — {team} are favoured and {opponent} won\'t stop them.',
+        'Dark Horse with a straightforward assignment. {team} vs {opponent}. Solid points, no drama.',
+        '{team} should edge {opponent}. Not flashy, not wasteful. The Oracle\'s definition of sensible.',
+        'The Oracle rarely gets excited about this matchup. {team} win, points earned, move on.',
+        '{team} vs {opponent} — Dark Horse doing what Dark Horses do. Win quietly.',
       ],
-      FAVOURITE_KO: [
-        'You\'ve been saving {team} for a moment like this. {round} is that moment.',
-        'Stop hoarding. {team} are a Favourite and it\'s {round}. The Oracle is not asking.',
-        '{team}. Favourite. {round}. The Oracle has spoken.',
+      // 3★
+      DH_VS_DH: [
+        'Dark Horse double — {team} vs {opponent}. Competitive, no bonus, but {team} edge it on odds.',
+        'Two Dark Horses going at it. The Oracle picked {team}. Could easily be wrong.',
+        '{team} vs {opponent} — genuine contest. The Oracle has gone with {team} and is comfortable with this.',
+        'No bonus available here, but {team} are the smarter pick. The Oracle has done the maths.',
+        'Dark Horse derby. {team} vs {opponent}. {team} slightly fancied. The Oracle is cautiously confident.',
       ],
-      FAVOURITE_LATE_KO: [
-        '{round}. No heroics. {team} are a Favourite. Pick them and don\'t get clever.',
-        'The Oracle is not in the mood for experiments. {team}. Done.',
-        'This deep in the tournament, {team} are the only answer the Oracle is willing to give.',
+      LS_ALONE: [
+        '{team} are available and bonus eligible. The Oracle has seen worse ideas.',
+        'Not the Oracle\'s finest hour, but {team} are a longshot and available. That counts for something.',
+        '{team} — longshot, bonus eligible, and still in your pool. The Oracle shrugs and points.',
+        'The Oracle has found {team}. Not a dream pick. But a pick with upside.',
+        '{team} at long odds. If they win, you look prescient. If they don\'t, this conversation never happened.',
       ],
+      // fallback
       DAMAGE_LIMITATION: [
         'Your pool has seen better days. {team} are what\'s left. The Oracle wishes you luck.',
         '{team} it is. The Oracle has seen worse. Not much worse. But worse.',
         'The Oracle gazed into your pool and felt mild concern. Pick {team} and pray.',
+        'The Oracle is doing its best here. {team} are available. That\'s about all it can offer.',
+        '{team}. The Oracle considered its options carefully and arrived here. Make of that what you will.',
       ],
     };
+
+    // Recycle messages — shown on 6th+ press
+    const ORACLE_RECYCLE_MSGS = [
+      'None of those good enough for you? Fine. The Oracle is starting over. Don\'t blame it.',
+      'The Oracle has run out of fresh ideas and has absolutely no problem recycling. Here we go again.',
+      'You\'ve seen them all. The Oracle is going round again. Same picks, fresh indignation.',
+      'Honestly. The Oracle is beginning to take this personally. Round two.',
+      'The Oracle notes your dissatisfaction and has chosen to ignore it. Cycling picks from the top.',
+    ];
 
     const ORACLE_BAND_STYLE = {
       favourite:  { label: '🔵 Favourite',  bg: 'rgba(59,130,246,0.15)',  color: '#3b82f6' },
@@ -1237,19 +1288,32 @@
     const ORACLE_KO      = ['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final','Quarter-Final','Semi-Final'];
     const ORACLE_LATE_KO = ['Quarter Finals','Semi Finals','Final','Quarter-Final','Semi-Final'];
 
-    function oraclePick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    // Session state
+    let _oraclePool       = [];   // full categorised pool, built once per open
+    let _oracleShown      = [];   // teams shown this session
+    let _oracleConsultNum = 0;    // how many times consulted
+    let _oracleDataReady  = false;
+    let _oracleRound      = null;
+    let _oracleOddsMap    = {};
 
-    function oracleFill(tpl, vars) {
+    function oRand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function oFill(tpl, vars) {
       return tpl
         .replace(/\{team\}/g,     vars.team     || '')
         .replace(/\{opponent\}/g, vars.opponent  || '')
         .replace(/\{round\}/g,    vars.round     || '');
     }
 
-    function runOracleLogic(available, round, matches, teamOddsMap) {
-      const isKO     = ORACLE_KO.includes(round.name);
-      const isLateKO = ORACLE_LATE_KO.includes(round.name);
-      const isGroup  = round.round_type === 'group';
+    function starStr(n) {
+      return '★'.repeat(n) + '☆'.repeat(5 - n);
+    }
+
+    // ── Build the pick pool ───────────────────────────────────────────────────
+    // Returns array of { team, reasonCode, opponent, stars } sorted best-first
+    function buildOraclePool(available, round, matches, teamOddsMap) {
+      const isKO    = ORACLE_KO.includes(round.name);
+      const isGroup = round.round_type === 'group';
 
       const opponentMap = {};
       matches.forEach(m => {
@@ -1266,113 +1330,212 @@
       });
 
       const candidates = isKO ? available.filter(t => matchTeamIds.has(t.id)) : available;
-      if (candidates.length === 0) return null;
-
-      const byBand = b => candidates.filter(t => t.band === b);
-      const longshots  = byBand('long_shot');
-      const darkHorses = byBand('dark_horse');
-      const favourites = byBand('favourite');
+      if (candidates.length === 0) return [];
 
       function oddsOf(t) { return teamOddsMap[t.id] || 999; }
+      function opp(t)    { return opponentMap[t.id] || null; }
 
-      const lsVsNH = longshots.filter(t => { const o = opponentMap[t.id]; return o && o.band === 'no_hoper'; });
-      if (lsVsNH.length > 0) { const t = oraclePick(lsVsNH); return { team: t, reasonCode: 'LONGSHOT_VS_NOHOPER', opponent: opponentMap[t.id] }; }
+      const pool5 = [], pool4 = [], pool3 = [], poolFallback = [];
 
-      const lsVsLS = longshots.filter(t => { const o = opponentMap[t.id]; return o && o.band === 'long_shot' && oddsOf(t) < oddsOf(o); });
-      if (lsVsLS.length > 0) { const t = oraclePick(lsVsLS); return { team: t, reasonCode: 'LONGSHOT_VS_LONGSHOT', opponent: opponentMap[t.id] }; }
+      candidates.forEach(t => {
+        const o = opp(t);
+        const oppBand = o ? o.band : null;
 
-      if (isLateKO && favourites.length > 0) return { team: oraclePick(favourites), reasonCode: 'FAVOURITE_LATE_KO', opponent: null };
-      if (isGroup  && darkHorses.length > 0) return { team: oraclePick(darkHorses), reasonCode: 'DARK_HORSE_GROUP',   opponent: null };
-      if (isKO     && favourites.length > 0) return { team: oraclePick(favourites), reasonCode: 'FAVOURITE_KO',       opponent: null };
+        // 5★: Dark Horse vs No Hoper
+        if (t.band === 'dark_horse' && oppBand === 'no_hoper') {
+          pool5.push({ team: t, reasonCode: 'DH_VS_NH', opponent: o, stars: 5 });
+          return;
+        }
+        // 5★: Longshot vs No Hoper (bonus play)
+        if (t.band === 'long_shot' && oppBand === 'no_hoper') {
+          pool5.push({ team: t, reasonCode: 'LS_VS_NH', opponent: o, stars: 5 });
+          return;
+        }
+        // 4★: Longshot vs Longshot (our team shorter odds)
+        if (t.band === 'long_shot' && oppBand === 'long_shot' && oddsOf(t) < oddsOf(o)) {
+          pool4.push({ team: t, reasonCode: 'LS_VS_LS', opponent: o, stars: 4 });
+          return;
+        }
+        // 4★: Dark Horse vs Long Shot
+        if (t.band === 'dark_horse' && oppBand === 'long_shot') {
+          pool4.push({ team: t, reasonCode: 'DH_VS_LS', opponent: o, stars: 4 });
+          return;
+        }
+        // 3★: Dark Horse vs Dark Horse (shorter odds side)
+        if (t.band === 'dark_horse' && oppBand === 'dark_horse' && oddsOf(t) <= oddsOf(o)) {
+          pool3.push({ team: t, reasonCode: 'DH_VS_DH', opponent: o, stars: 3 });
+          return;
+        }
+        // 3★: Longshot with no opponent data or vs Dark Horse
+        if (t.band === 'long_shot' && (!oppBand || oppBand === 'dark_horse')) {
+          pool3.push({ team: t, reasonCode: 'LS_ALONE', opponent: o, stars: 3 });
+          return;
+        }
+        // Fallback: everything else
+        poolFallback.push({ team: t, reasonCode: 'DAMAGE_LIMITATION', opponent: o, stars: 2 });
+      });
 
-      const t = oraclePick(candidates);
-      return { team: t, reasonCode: 'DAMAGE_LIMITATION', opponent: opponentMap[t.id] || null };
+      return [...pool5, ...pool4, ...pool3, ...poolFallback];
     }
 
+    // Weighted random pick: 60% from 5★, 30% from 4★, 10% from 3★
+    function weightedPick(pool, exclude) {
+      const eligible = pool.filter(p => !exclude.has(p.team.id));
+      if (eligible.length === 0) return null;
+
+      const s5 = eligible.filter(p => p.stars === 5);
+      const s4 = eligible.filter(p => p.stars === 4);
+      const s3 = eligible.filter(p => p.stars === 3);
+      const sf = eligible.filter(p => p.stars <= 2);
+
+      // Build weighted bucket
+      const roll = Math.random();
+      let bucket;
+      if (roll < 0.60 && s5.length > 0)      bucket = s5;
+      else if (roll < 0.90 && s4.length > 0) bucket = s4;
+      else if (s3.length > 0)                 bucket = s3;
+      else if (sf.length > 0)                 bucket = sf;
+      else                                    bucket = eligible;
+
+      return oRand(bucket);
+    }
+
+    // ── Main consult function ─────────────────────────────────────────────────
     async function oracleConsult() {
-      const consultBtn = document.getElementById('oracle-consult-btn');
-      const againBtn   = document.getElementById('oracle-again-btn');
-      const resultEl   = document.getElementById('oracle-result');
-      const thinkEl    = document.getElementById('oracle-thinking');
+      const consultBtn  = document.getElementById('oracle-consult-btn');
+      const againBtn    = document.getElementById('oracle-again-btn');
+      const resultEl    = document.getElementById('oracle-result');
+      const thinkEl     = document.getElementById('oracle-thinking');
+      const recycledEl  = document.getElementById('oracle-recycled');
 
       consultBtn.disabled    = true;
       againBtn.style.display = 'none';
       resultEl.style.display = 'none';
+      recycledEl.style.display = 'none';
       thinkEl.style.display  = 'block';
       document.getElementById('oracle-no-round').style.display = 'none';
       document.getElementById('oracle-no-teams').style.display = 'none';
 
-      await new Promise(r => setTimeout(r, 900));
+      await new Promise(r => setTimeout(r, 800));
 
-      const now       = getEffectiveDate();
-      const openRound = openRounds.find(r => !r.is_complete && new Date(r.deadline) > now);
+      // First consult: load data and build pool
+      if (!_oracleDataReady) {
+        const now = getEffectiveDate();
+        _oracleRound = openRounds.find(r => !r.is_complete && new Date(r.deadline) > now);
 
-      if (!openRound) {
-        thinkEl.style.display = 'none';
-        document.getElementById('oracle-no-round').style.display = 'block';
-        consultBtn.disabled = false;
-        return;
+        if (!_oracleRound) {
+          thinkEl.style.display = 'none';
+          document.getElementById('oracle-no-round').style.display = 'block';
+          consultBtn.disabled = false;
+          return;
+        }
+
+        const usedIds   = new Set(allPicks.map(p => p.team_id));
+        const available = allTeams.filter(t => !usedIds.has(t.id) && !t.is_eliminated);
+
+        if (available.length === 0) {
+          thinkEl.style.display = 'none';
+          document.getElementById('oracle-no-teams').style.display = 'block';
+          consultBtn.disabled = false;
+          return;
+        }
+
+        const { data: oddsRaw } = await db.from('team_odds').select('team_id, odds_decimal').order('fetched_at', { ascending: false });
+        _oracleOddsMap = {};
+        (oddsRaw || []).forEach(r => { if (!_oracleOddsMap[r.team_id]) _oracleOddsMap[r.team_id] = parseFloat(r.odds_decimal); });
+
+        const { data: roundMatches } = await db.from('matches')
+          .select('id, round_id, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,band), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,band)')
+          .eq('round_id', _oracleRound.id)
+          .not('home_team_id', 'is', null);
+
+        _oraclePool     = buildOraclePool(available, _oracleRound, roundMatches || [], _oracleOddsMap);
+        _oracleShown    = [];
+        _oracleDataReady = true;
+        _oracleConsultNum = 0;
       }
 
-      const usedIds   = new Set(allPicks.map(p => p.team_id));
-      const available = allTeams.filter(t => !usedIds.has(t.id) && !t.is_eliminated);
-
-      if (available.length === 0) {
-        thinkEl.style.display = 'none';
-        document.getElementById('oracle-no-teams').style.display = 'block';
-        consultBtn.disabled = false;
-        return;
-      }
-
-      const { data: oddsRaw } = await db.from('team_odds').select('team_id, odds_decimal').order('fetched_at', { ascending: false });
-      const teamOddsMap = {};
-      (oddsRaw || []).forEach(r => { if (!teamOddsMap[r.team_id]) teamOddsMap[r.team_id] = parseFloat(r.odds_decimal); });
-
-      const { data: roundMatches } = await db.from('matches')
-        .select('id, round_id, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,band), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,band)')
-        .eq('round_id', openRound.id)
-        .not('home_team_id', 'is', null);
-
-      const recommendation = runOracleLogic(available, openRound, roundMatches || [], teamOddsMap);
       thinkEl.style.display = 'none';
 
-      if (!recommendation) {
+      if (_oraclePool.length === 0) {
         document.getElementById('oracle-no-teams').style.display = 'block';
         consultBtn.disabled = false;
         return;
       }
 
-      const { team, reasonCode, opponent } = recommendation;
+      _oracleConsultNum++;
+
+      // After 5 picks — show recycle message and reset shown list
+      if (_oracleConsultNum > 5 && _oracleShown.length >= Math.min(5, _oraclePool.length)) {
+        recycledEl.textContent = oRand(ORACLE_RECYCLE_MSGS);
+        recycledEl.style.display = 'block';
+        _oracleShown = [];
+      }
+
+      const shownIds = new Set(_oracleShown.map(t => t.id));
+      const pick = weightedPick(_oraclePool, shownIds);
+
+      if (!pick) {
+        // All shown — reset
+        _oracleShown = [];
+        const pick2 = weightedPick(_oraclePool, new Set());
+        if (!pick2) {
+          document.getElementById('oracle-no-teams').style.display = 'block';
+          consultBtn.disabled = false;
+          return;
+        }
+        _oracleShown.push(pick2.team);
+        renderOraclePick(pick2);
+      } else {
+        _oracleShown.push(pick.team);
+        renderOraclePick(pick);
+      }
+
+      consultBtn.disabled    = false;
+      againBtn.style.display = 'inline-block';
+      againBtn.textContent   = _oracleConsultNum >= 5 ? 'Still not convinced?' : 'Ask again';
+    }
+
+    function renderOraclePick(pick) {
+      const { team, reasonCode, opponent, stars } = pick;
       const bandInfo = ORACLE_BAND_STYLE[team.band] || { label: '?', bg: 'rgba(148,163,184,0.15)', color: '#94a3b8' };
-      const verdict  = oracleFill(oraclePick(ORACLE_TEMPLATES[reasonCode] || ORACLE_TEMPLATES.DAMAGE_LIMITATION), {
+      const templates = ORACLE_TEMPLATES[reasonCode] || ORACLE_TEMPLATES.DAMAGE_LIMITATION;
+      const verdict   = oFill(oRand(templates), {
         team:     team.name,
         opponent: opponent ? opponent.name : 'their opponent',
-        round:    openRound.name,
+        round:    _oracleRound ? _oracleRound.name : '',
       });
 
-      document.getElementById('oracle-flag').textContent    = team.flag_emoji || '🏳️';
-      document.getElementById('oracle-team').textContent    = team.name;
+      document.getElementById('oracle-stars').textContent  = starStr(stars);
+      document.getElementById('oracle-flag').textContent   = team.flag_emoji || '🏳️';
+      document.getElementById('oracle-team').textContent   = team.name;
       const bandEl = document.getElementById('oracle-band');
       bandEl.textContent      = bandInfo.label;
       bandEl.style.background = bandInfo.bg;
       bandEl.style.color      = bandInfo.color;
       document.getElementById('oracle-verdict').textContent = verdict;
-      const metaParts = [openRound.name];
+      const metaParts = [_oracleRound ? _oracleRound.name : ''];
       if (opponent) metaParts.push('vs ' + opponent.flag_emoji + ' ' + opponent.name);
-      document.getElementById('oracle-meta').textContent = metaParts.join(' · ');
+      document.getElementById('oracle-meta').textContent = metaParts.filter(Boolean).join(' · ');
 
-      resultEl.style.display = 'block';
-      consultBtn.disabled    = false;
-      againBtn.style.display = 'inline-block';
+      document.getElementById('oracle-result').style.display = 'block';
     }
 
     function openOracle() {
-      document.getElementById('oracle-no-round').style.display = 'none';
-      document.getElementById('oracle-no-teams').style.display = 'none';
-      document.getElementById('oracle-result').style.display   = 'none';
-      document.getElementById('oracle-thinking').style.display = 'none';
-      document.getElementById('oracle-again-btn').style.display = 'none';
-      document.getElementById('oracle-consult-btn').disabled    = false;
+      // Reset data so pool is rebuilt fresh (picks may have changed since last open)
+      _oracleDataReady  = false;
+      _oraclePool       = [];
+      _oracleShown      = [];
+      _oracleConsultNum = 0;
+
+      document.getElementById('oracle-no-round').style.display   = 'none';
+      document.getElementById('oracle-no-teams').style.display   = 'none';
+      document.getElementById('oracle-result').style.display     = 'none';
+      document.getElementById('oracle-thinking').style.display   = 'none';
+      document.getElementById('oracle-recycled').style.display   = 'none';
+      document.getElementById('oracle-again-btn').style.display  = 'none';
+      document.getElementById('oracle-consult-btn').disabled     = false;
+      document.getElementById('oracle-consult-btn').textContent  = '🔮 Consult the Oracle';
       document.getElementById('oracle-backdrop').classList.add('open');
       document.getElementById('oracle-sheet').classList.add('open');
       document.body.style.overflow = 'hidden';
