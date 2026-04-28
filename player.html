@@ -40,20 +40,20 @@
     .round-pill.eliminated { border-color:var(--red); color:var(--red); box-shadow:0 0 0 2px rgba(239,68,68,0.25); }
     .round-pill .tick { font-size:10px; }
 
-    /* Deadline bar inside pick card */
-    .deadline-bar { border-radius:10px; padding:12px 16px; font-size:13px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; font-weight:600; }
+    /* Deadline bar inside pick card — slim single line */
+    .deadline-bar { border-radius:8px; padding:7px 12px; font-size:12px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; gap:6px; font-weight:600; }
     .deadline-bar.open   { background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:var(--gold); }
     .deadline-bar.locked { background:rgba(239,68,68,0.05);  border:1px solid rgba(239,68,68,0.2);  color:var(--red); }
-    .deadline-bar .countdown { font-variant-numeric:tabular-nums; font-weight:900; font-size:15px; letter-spacing:-0.01em; }
+    .deadline-bar .countdown { font-variant-numeric:tabular-nums; font-weight:900; font-size:13px; letter-spacing:-0.01em; }
 
-    /* Pick slots */
-    .pick-summary { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
-    .pick-slot { flex:1; min-width:140px; background:var(--surface2); border:2px dashed rgba(148,163,184,0.2); border-radius:12px; padding:14px 12px; text-align:center; transition:all 0.2s; }
-    .pick-slot.filled-3 { border-style:solid; border-color:var(--gold); background:rgba(245,158,11,0.07); box-shadow:0 0 0 1px rgba(245,158,11,0.08) inset; }
-    .pick-slot.filled-2 { border-style:solid; border-color:var(--accent); background:rgba(59,130,246,0.07); box-shadow:0 0 0 1px rgba(59,130,246,0.08) inset; }
-    .pick-slot-label { font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; }
-    .pick-slot-value { font-size:16px; font-weight:700; }
-    .longshot-tag { font-size:10px; color:var(--gold); margin-top:4px; }
+    /* Pick slots — hero element, bigger and more prominent */
+    .pick-summary { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+    .pick-slot { flex:1; min-width:140px; background:var(--surface2); border:2px dashed rgba(148,163,184,0.15); border-radius:14px; padding:18px 12px; text-align:center; transition:all 0.2s; }
+    .pick-slot.filled-3 { border-style:solid; border-color:var(--gold); background:rgba(245,158,11,0.09); box-shadow:0 0 12px rgba(245,158,11,0.1), 0 0 0 1px rgba(245,158,11,0.08) inset; }
+    .pick-slot.filled-2 { border-style:solid; border-color:var(--accent); background:rgba(59,130,246,0.09); box-shadow:0 0 12px rgba(59,130,246,0.1), 0 0 0 1px rgba(59,130,246,0.08) inset; }
+    .pick-slot-label { font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; }
+    .pick-slot-value { font-size:18px; font-weight:800; letter-spacing:-0.01em; }
+    .longshot-tag { font-size:10px; color:var(--gold); margin-top:5px; }
 
     /* Fixture grid */
     .fixture-list { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
@@ -68,25 +68,74 @@
     .team-btn.selected-2 { border-color:var(--accent); background:rgba(59,130,246,0.15);  color:var(--accent); font-weight:700; }
     .team-btn:disabled { opacity:0.3; cursor:not-allowed; text-decoration:line-through; }
 
-    /* Band group headers in knockout */
+    /* Band group headers in knockout (kept for fallback) */
     .band-group { margin-bottom:14px; }
     .band-group-header { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; padding:4px 0; margin-bottom:6px; border-bottom:1px solid var(--border); }
     .band-group-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px,1fr)); gap:6px; }
 
-    /* Band breakdown panel (knockout only) */
-    .band-panel {
-      background: var(--surface);
+    /* KO fixture view */
+    .ko-fixture-list { display:flex; flex-direction:column; gap:4px; margin-top:8px; }
+    .ko-fixture-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 6px;
+      align-items: center;
+    }
+    .ko-fixture-v { text-align:center; font-size:11px; font-weight:700; color:var(--text-muted); flex-shrink:0; }
+
+    /* KO team button: full width, flex row, coloured end-cap */
+    .ko-team-btn {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      padding: 0;
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 16px;
-      margin-bottom: 16px;
+      border-radius: 8px;
+      background: var(--surface2);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      width: 100%;
+      overflow: hidden;
+      transition: all 0.15s;
+      min-height: 32px;
+    }
+    .ko-team-btn:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+    .ko-team-btn:disabled { cursor: not-allowed; }
+    .ko-team-used { text-decoration: line-through; }
+    .ko-btn-inner {
+      flex: 1;
       display: flex;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
+      justify-content: center;
+      padding: 5px 6px;
+      gap: 4px;
     }
-    .band-panel-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-right:4px; }
-    .band-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px; font-size:13px; font-weight:700; background:var(--surface2); border:1px solid var(--border); }
+    .ko-btn-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ko-band-cap {
+      width: 20px;
+      flex-shrink: 0;
+      display: block;
+    }
+
+    /* Legend */
+    .ko-band-legend { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+    .ko-legend-item { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--text-muted); }
+    .ko-legend-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+
+    /* Band availability — compact inline line */
+    .band-panel-inline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      font-size: 12px;
+    }
+    .band-panel-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; }
+    .band-chip-inline { display:inline-flex; align-items:center; gap:4px; font-weight:700; }
+    .band-count { font-size:13px; font-weight:800; margin-left:2px; }
 
     /* Goals prediction card */
     .goals-inline-card {
@@ -111,6 +160,13 @@
     .stats-row .stat-block { flex:1; min-width:0; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 8px; text-align:center; }
     .stats-row .stat-value { font-size:22px; font-weight:800; color:var(--text); letter-spacing:-0.02em; display:block; }
     .stats-row .stat-label { font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:3px; display:block; }
+    .stats-row .stat-sub { font-size:10px; color:var(--text-muted); margin-top:3px; display:block; line-height:1.3; }
+    .stat-sub-bands { display:flex; justify-content:center; gap:4px; flex-wrap:wrap; margin-top:3px; }
+    .stat-sub-band { font-size:10px; font-weight:700; }
+    /* Goals card de-emphasised */
+    .stats-row .stat-block.stat-goals-block { flex:0.7; opacity:0.65; }
+    .stats-row .stat-block.stat-goals-block .stat-value { font-size:16px; }
+    .stats-row .stat-block.stat-goals-block .stat-label { font-size:9px; }
 
     /* ── Oracle bottom sheet ─────────────────────────────── */
     .oracle-backdrop {
@@ -135,7 +191,7 @@
 
     .oracle-handle-bar {
       display: flex; justify-content: center; align-items: center;
-      padding: 8px 0 6px; flex-shrink: 0; position: relative;
+      padding: 8px 0 6px; flex-shrink: 0;
       border-bottom: 1px solid rgba(139,92,246,0.1);
     }
     .oracle-handle {
@@ -143,13 +199,14 @@
       background: rgba(139,92,246,0.4);
     }
     .oracle-close-btn {
-      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-      background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.25);
-      color: #a78bfa; font-size: 14px; cursor: pointer;
-      width: 28px; height: 28px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      line-height: 1; padding: 0;
+      position: fixed; top: 14px; right: 14px; z-index: 210;
+      background: rgba(139,92,246,0.18); border: 1px solid rgba(139,92,246,0.4);
+      color: #c4b5fd; font-size: 16px; font-weight: 700; cursor: pointer;
+      width: 32px; height: 32px; border-radius: 50%;
+      display: none; align-items: center; justify-content: center;
+      line-height: 1; padding: 0; transition: background 0.15s;
     }
+    .oracle-close-btn:hover { background: rgba(139,92,246,0.35); }
 
     /* ── Context bar (round + teams available) ── */
     .oracle-context {
@@ -322,15 +379,15 @@
 
       <!-- 4 stat cards: Points / Position / Teams Left / Goals -->
       <div class="stats-row">
-        <div class="stat-block"><div class="stat-value" id="stat-points">0</div><div class="stat-label">Points</div></div>
-        <div class="stat-block"><div class="stat-value" id="stat-position">—</div><div class="stat-label">Position</div></div>
-        <div class="stat-block"><div class="stat-value" id="stat-teams-left">—</div><div class="stat-label">Teams Left</div></div>
-        <div class="stat-block"><div class="stat-value" id="stat-goals">—</div><div class="stat-label">Goals</div></div>
+        <div class="stat-block"><div class="stat-value" id="stat-points">0</div><div class="stat-label">Points</div><div class="stat-sub" id="stat-points-sub"></div></div>
+        <div class="stat-block"><div class="stat-value" id="stat-position">—</div><div class="stat-label">Position</div><div class="stat-sub" id="stat-position-sub"></div></div>
+        <div class="stat-block"><div class="stat-value" id="stat-teams-left">—</div><div class="stat-label">Teams Left</div><div class="stat-sub-bands" id="stat-teams-sub"></div></div>
+        <div class="stat-block stat-goals-block"><div class="stat-value" id="stat-goals">—</div><div class="stat-label">Goals</div></div>
       </div>
 
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
 
-      <!-- Goals prediction card — between stat cards and pick section -->
+      <!-- Goals prediction card -->
       <div id="goals-prediction-card" style="display:none" class="goals-inline-card">
         <div class="card-title">🎯 Tournament Goals Prediction</div>
         <p id="goals-prediction-desc" style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (104 games, including extra time)? Used as a tiebreaker. You can change this until the Group Phase 1 deadline.</p>
@@ -341,42 +398,39 @@
         </div>
       </div>
 
-      <!-- Band panel — knockout rounds only -->
-      <div id="band-panel" style="display:none" class="band-panel">
-        <span class="band-panel-label">🏳️ Available</span>
-        <span id="band-chip-fav"  class="band-chip"><span>🔵</span><span style="color:#3b82f6">Favourite</span><span id="bc-fav">0</span></span>
-        <span id="band-chip-dh"   class="band-chip"><span>🟡</span><span style="color:#eab308">Dark Horse</span><span id="bc-dh">0</span></span>
-        <span id="band-chip-ls"   class="band-chip"><span>🟠</span><span style="color:#f97316">Long Shot</span><span id="bc-ls">0</span></span>
-        <span id="band-chip-nh"   class="band-chip"><span>🔴</span><span style="color:#ef4444">No Hoper</span><span id="bc-nh">0</span></span>
-      </div>
-
       <!-- Pick section -->
       <div id="pick-section" style="display:none">
         <div class="card">
-          <div class="card-title" style="font-size:17px; margin-bottom:16px">🎯 Submit Your Pick</div>
-
-          <!-- Oracle trigger -->
-          <button class="btn-oracle-trigger" id="oracle-trigger-btn" style="display:none" onclick="openOracle()">
-            🔮 Ask the Oracle
-          </button>
-          <div id="oracle-divider" style="display:none; border-top:1px solid var(--border); margin:0 0 16px;"></div>
-          <div class="round-selector-wrap">
-            <label>Pick for round:</label>
-            <select id="round-select"></select>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <div class="card-title" style="font-size:17px; margin-bottom:0">🎯 Submit Your Pick</div>
+            <div class="round-selector-wrap" style="margin-bottom:0">
+              <label>Round:</label>
+              <select id="round-select"></select>
+            </div>
           </div>
+
           <div id="deadline-bar" class="deadline-bar open"></div>
+
+          <!-- Band availability removed — shown inline in fixture list -->
+
           <div class="pick-summary" id="pick-summary"></div>
 
           <!-- Top submit button -->
-          <button class="btn btn-primary" id="submit-pick-btn-top" style="width:100%; display:none; margin-bottom:14px" disabled>Select your team above</button>
+          <button class="btn btn-primary" id="submit-pick-btn-top" style="width:100%; display:none; margin-bottom:14px" disabled>Select a team from below ↓</button>
 
           <div id="pick-form-inner"></div>
 
-          <!-- Bottom submit button -->
+          <!-- Bottom submit button + Oracle -->
           <div style="margin-top:14px">
-            <button class="btn btn-primary" id="submit-pick-btn" style="width:100%; display:none" disabled>Select your team above</button>
+            <button class="btn btn-primary" id="submit-pick-btn" style="width:100%; display:none" disabled>Select a team from above ↑</button>
             <div id="pick-msg" style="margin-top:8px; font-size:12px; text-align:center"></div>
           </div>
+
+          <!-- Oracle — below the fixture list -->
+          <div id="oracle-divider" style="display:none; border-top:1px solid var(--border); margin:16px 0 12px;"></div>
+          <button class="btn-oracle-trigger" id="oracle-trigger-btn" style="display:none" onclick="openOracle()">
+            🔮 Not sure? Ask the Oracle
+          </button>
         </div>
       </div>
 
@@ -391,8 +445,8 @@
       <div class="card">
         <div class="card-title">📋 Pick History</div>
         <div class="table-wrap">
-          <table style="font-size:12px">
-            <thead><tr><th>Round</th><th>Team</th><th style="white-space:nowrap">Pts</th><th>Result</th><th>Pts+</th></tr></thead>
+          <table style="font-size:13px">
+            <thead><tr><th>Round</th><th>Team</th><th style="white-space:nowrap">Val</th><th>Result</th><th>Pts</th></tr></thead>
             <tbody id="history-body"></tbody>
           </table>
         </div>
@@ -412,21 +466,23 @@
       return o ? new Date(o) : new Date();
     }
 
-    const slug = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
+    const _params = new URLSearchParams(window.location.search);
+    const slug = _params.get('preview')
+      ? (_params.get('preview') === '1' ? 'paul-c' : _params.get('preview'))
+      : window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
     if (slug && !localStorage.getItem('lms2026_my_slug')) localStorage.setItem('lms2026_my_slug', slug);
 
     const lbLink = document.getElementById('leaderboard-link');
     if (slug) lbLink.href = '/leaderboard?me=' + slug;
 
     const BAND_CONFIG = [
-      { key:'favourite',  label:'Favourite',  dot:'🔵', css:'#3b82f6' },
-      { key:'dark_horse', label:'Dark Horse', dot:'🟡', css:'#eab308' },
-      { key:'long_shot',  label:'Long Shot',  dot:'🟠', css:'#f97316' },
-      { key:'no_hoper',   label:'No Hoper',   dot:'🔴', css:'#ef4444' },
+      { key:'favourite',  label:'Favourite',  dot:'■', css:'#22c55e' },
+      { key:'dark_horse', label:'Dark Horse', dot:'■', css:'#f59e0b' },
+      { key:'long_shot',  label:'Long Shot',  dot:'■', css:'#f97316' },
+      { key:'no_hoper',   label:'No Hoper',   dot:'■', css:'#ef4444' },
     ];
     const KO_ROUNDS = ['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final','Quarter-Final','Semi-Final'];
 
-    // FIX 1: short pill labels with catch-all for any QF/SF DB naming variant
     function roundShortLabel(r) {
       if (r.round_type === 'group') return 'GP' + r.sort_order;
       const map = {
@@ -486,26 +542,7 @@
     }
 
     function updateBandPanel(round) {
-      const panel = document.getElementById('band-panel');
-      const isKO  = round && KO_ROUNDS.includes(round.name);
-      if (!isKO) { panel.style.display = 'none'; return; }
-
-      const currentRoundPickTeamIds = new Set(allPicks.filter(p => p.round_id === round.id).map(p => p.team_id));
-      const usedExcl = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundPickTeamIds.has(id)));
-      const available = allTeams.filter(t => !usedExcl.has(t.id) && !eliminatedIds.has(t.id));
-
-      document.getElementById('bc-fav').textContent = available.filter(t => t.band === 'favourite').length;
-      document.getElementById('bc-dh').textContent  = available.filter(t => t.band === 'dark_horse').length;
-      document.getElementById('bc-ls').textContent  = available.filter(t => t.band === 'long_shot').length;
-      document.getElementById('bc-nh').textContent  = available.filter(t => t.band === 'no_hoper').length;
-
-      ['fav','dh','ls','nh'].forEach((k, i) => {
-        const chip  = document.getElementById('band-chip-' + k);
-        const count = parseInt(['bc-fav','bc-dh','bc-ls','bc-nh'].map(id => document.getElementById(id).textContent)[i]);
-        chip.style.opacity = count === 0 ? '0.3' : '1';
-      });
-
-      panel.style.display = 'flex';
+      // Band availability now shown inline in the fixture instruction line
     }
 
     async function loadDashboard() {
@@ -564,16 +601,50 @@
         });
 
         let position = '—';
+        let positionIdx = -1;
         if (allScores && allScores.length > 0) {
-          const idx = allScores.findIndex(s => s.player_id === player.id);
-          if (idx !== -1) position = ordinal(idx + 1) + '/' + allScores.length;
+          positionIdx = allScores.findIndex(s => s.player_id === player.id);
+          if (positionIdx !== -1) position = ordinal(positionIdx + 1);
         }
 
+        // Points gap to next place
+        let pointsSub = '';
+        if (allScores && allScores.length > 0 && positionIdx !== -1) {
+          if (positionIdx === 0) {
+            const gap = allScores.length > 1 ? totalPoints - allScores[1].total_points : 0;
+            pointsSub = gap > 0 ? '+' + gap + ' ahead' : 'Leader';
+          } else {
+            const gap = allScores[positionIdx - 1].total_points - totalPoints;
+            pointsSub = gap > 0 ? gap + ' to ' + ordinal(positionIdx) : 'Level';
+          }
+        }
+
+        // Band counts for teams left subtext
+        const currentRoundPickIds = new Set(); // for teams-left we use global used
+        const usedExclGlobal = usedTeamIdsGlobal;
+        const availableTeams = allTeams.filter(t => !usedExclGlobal.has(t.id) && !eliminatedIds.has(t.id));
+        const bandCounts = {
+          favourite:  availableTeams.filter(t => t.band === 'favourite').length,
+          dark_horse: availableTeams.filter(t => t.band === 'dark_horse').length,
+          long_shot:  availableTeams.filter(t => t.band === 'long_shot').length,
+          no_hoper:   availableTeams.filter(t => t.band === 'no_hoper').length,
+        };
+        const bandColors = { favourite:'#22c55e', dark_horse:'#f59e0b', long_shot:'#f97316', no_hoper:'#ef4444' };
+
         document.getElementById('stat-points').textContent    = totalPoints;
+        document.getElementById('stat-points-sub').textContent = pointsSub;
         document.getElementById('stat-position').textContent  = position;
+        document.getElementById('stat-position-sub').textContent = allScores && allScores.length > 0 ? 'of ' + allScores.length : '';
         document.getElementById('stat-teams-left').textContent = teamsLeft;
         document.querySelector('#stat-teams-left').closest('.stat-block').querySelector('.stat-label').textContent =
           teamsLeft === 1 ? 'Team Left' : 'Teams Left';
+
+        // Band counts under teams left
+        const subEl = document.getElementById('stat-teams-sub');
+        subEl.innerHTML = Object.entries(bandCounts).map(([band, count]) =>
+          '<span class="stat-sub-band" style="color:' + bandColors[band] + '">■' + count + '</span>'
+        ).join('');
+
         document.getElementById('stat-goals').textContent =
           (player.total_goals_prediction !== null && player.total_goals_prediction !== undefined)
             ? player.total_goals_prediction : '—';
@@ -613,7 +684,6 @@
           if (player.is_eliminated) {
             document.getElementById('no-round-icon').textContent = '💀';
 
-            // FIX: contextual elimination message
             const lostPick2 = [...allPicks].reverse().find(p => {
               const res = p.pick_results && p.pick_results[0];
               return res && res.match_result === 'loss';
@@ -659,7 +729,6 @@
         picksByRound[p.round_id].push(p);
       });
 
-      // FIX 3: find eliminated round from loss result regardless of round completion status
       const eliminatedRoundId = (() => {
         for (const p of [...allPicks].reverse()) {
           const res = p.pick_results && p.pick_results[0];
@@ -864,40 +933,112 @@
         gridHtml = instrHtml + fixtureHtml + warningHtml;
 
       } else {
-        const instrHtml = '<p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Select one team. Teams you\'ve already used are crossed out.</p>';
-        let bandHtml = '';
-        BAND_CONFIG.forEach(b => {
-          const teamsInBand = allTeams.filter(t => t.band === b.key && !eliminatedIds.has(t.id));
-          if (teamsInBand.length === 0) return;
-          bandHtml += '<div class="band-group">';
-          bandHtml += '<div class="band-group-header" style="color:' + b.css + '">' + b.dot + ' ' + b.label + 's</div>';
-          bandHtml += '<div class="band-group-grid">';
-          teamsInBand.forEach(t => {
-            const isUsed      = usedExcl.has(t.id);
-            const borderStyle = isUsed ? '' : 'border-color:' + b.css + '40;';
-            bandHtml += '<button class="team-btn" style="' + borderStyle + '" ' +
-              (isUsed ? 'disabled ' : '') +
-              'data-team-id="' + t.id + '" onclick="selectTeam(\'' + t.id + '\')">' +
-              t.flag_emoji + ' ' + t.name + (t.is_longshot ? ' ⭐' : '') + '</button>';
-          });
-          bandHtml += '</div></div>';
-        });
-        const unclassified = allTeams.filter(t => !t.band && !eliminatedIds.has(t.id));
-        if (unclassified.length > 0) {
-          bandHtml += '<div class="band-group"><div class="band-group-header" style="color:var(--text-muted)">⚪ Other</div><div class="band-group-grid">';
-          unclassified.forEach(t => {
-            const isUsed = usedExcl.has(t.id);
-            bandHtml += '<button class="team-btn" ' + (isUsed ? 'disabled ' : '') + 'data-team-id="' + t.id + '" onclick="selectTeam(\'' + t.id + '\')">' + t.flag_emoji + ' ' + t.name + '</button>';
-          });
-          bandHtml += '</div></div>';
+        // ── KO pick form: fixture pairs with per-team band end-caps ──────────
+        const BAND_CSS = {
+          favourite:  { color: '#22c55e', rgba: { full: 'rgba(34,197,94,0.85)',  dim: 'rgba(34,197,94,0.18)',  border: 'rgba(34,197,94,0.27)', bg: 'rgba(34,197,94,0.05)'  }, label: 'Favourite'  },
+          dark_horse: { color: '#f59e0b', rgba: { full: 'rgba(245,158,11,0.85)', dim: 'rgba(245,158,11,0.18)', border: 'rgba(245,158,11,0.27)', bg: 'rgba(245,158,11,0.05)' }, label: 'Dark Horse' },
+          long_shot:  { color: '#f97316', rgba: { full: 'rgba(249,115,22,0.85)', dim: 'rgba(249,115,22,0.18)', border: 'rgba(249,115,22,0.27)', bg: 'rgba(249,115,22,0.05)'  }, label: 'Long Shot'  },
+          no_hoper:   { color: '#ef4444', rgba: { full: 'rgba(239,68,68,0.85)',  dim: 'rgba(239,68,68,0.18)',  border: 'rgba(239,68,68,0.27)',  bg: 'rgba(239,68,68,0.05)'  }, label: 'No Hoper'   },
+        };
+
+        function bandColor(team) {
+          return team && BAND_CSS[team.band] ? BAND_CSS[team.band].color : '#475569';
         }
-        gridHtml = instrHtml + bandHtml;
+        function bandRgba(team, type) {
+          const def = { full: 'rgba(71,85,105,0.85)', dim: 'rgba(71,85,105,0.18)', border: 'rgba(71,85,105,0.27)', bg: 'rgba(71,85,105,0.05)' };
+          return team && BAND_CSS[team.band] ? BAND_CSS[team.band].rgba[type] : def[type];
+        }
+        function bandLabel(team) {
+          return team && BAND_CSS[team.band] ? BAND_CSS[team.band].label : '';
+        }
+
+        const roundMatches = allMatches.filter(m => m.round_id === round.id && m.home_team && m.away_team);
+
+        // Show all fixtures — both teams always visible
+        // Hide only if BOTH are eliminated from the tournament entirely
+        const visibleMatches = roundMatches.filter(m =>
+          !eliminatedIds.has(m.home_team_id) || !eliminatedIds.has(m.away_team_id)
+        );
+
+        // Each button: full width, coloured right-cap (home) or left-cap (away)
+        // Used/eliminated = dimmed, still shown for context
+        function koTeamBtn(team, side) {
+          if (!team) return '<div style="flex:1"></div>';
+          const isUsed  = usedExcl.has(team.id);
+          const isElim  = eliminatedIds.has(team.id);
+          const unavail = isUsed || isElim;
+          const lsTag   = team.is_longshot ? '<span style="font-size:10px;margin-left:2px;opacity:0.9">⭐</span>' : '';
+          const deadTag = isElim ? '<span style="font-size:10px;margin-left:2px">💀</span>' : '';
+          const capColor  = unavail ? bandRgba(team, 'dim')    : bandRgba(team, 'full');
+          const bdrColor  = unavail ? bandRgba(team, 'dim')    : bandRgba(team, 'border');
+          const bgColor   = unavail ? ''                        : bandRgba(team, 'bg');
+
+          // Cap: coloured strip on the OUTER edge of each button
+          // home (left button) = left edge, away (right button) = right edge
+          const cap = '<span class="ko-band-cap" style="background:' + capColor + '; border-radius:' +
+            (side === 'home' ? '5px 0 0 5px' : '0 5px 5px 0') + ';" title="' + bandLabel(team) + '"></span>';
+
+          const inner = team.flag_emoji + '&nbsp;<span class="ko-btn-name">' + team.name + '</span>' + lsTag + deadTag;
+
+          return '<button class="ko-team-btn' + (unavail ? ' ko-team-used' : '') + '" ' +
+            'style="border-color:' + bdrColor + ';' +
+            (bgColor ? 'background:' + bgColor + ';' : '') + '" ' +
+            (unavail ? 'disabled ' : '') +
+            'data-team-id="' + team.id + '" onclick="selectTeam(\'' + team.id + '\')">' +
+            (side === 'home'
+              ? cap + '<span class="ko-btn-inner">' + inner + '</span>'
+              : '<span class="ko-btn-inner">' + inner + '</span>' + cap) +
+            '</button>';
+        }
+
+        // Compact legend
+        const legendHtml = '<div class="ko-band-legend">' +
+          Object.entries(BAND_CSS).map(([, v]) =>
+            '<span class="ko-legend-item"><span class="ko-legend-dot" style="background:' + v.color + '"></span>' + v.label + '</span>'
+          ).join('') +
+          '</div>';
+
+        let fixtureHtml = '<div class="ko-fixture-list">';
+        if (visibleMatches.length === 0) {
+          fixtureHtml += '<p style="color:var(--text-muted);text-align:center;padding:16px;font-size:13px">Fixtures not yet loaded.</p>';
+        } else {
+          visibleMatches.forEach(m => {
+            fixtureHtml +=
+              '<div class="ko-fixture-row">' +
+                koTeamBtn(m.home_team, 'home') +
+                '<div class="ko-fixture-v">v</div>' +
+                koTeamBtn(m.away_team, 'away') +
+              '</div>';
+          });
+        }
+        fixtureHtml += '</div>';
+
+        const currentRoundPickTeamIds2 = new Set(allPicks.filter(p => p.round_id === round.id).map(p => p.team_id));
+        const usedExclForBands = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundPickTeamIds2.has(id)));
+        const availForBands = allTeams.filter(t => !usedExclForBands.has(t.id) && !eliminatedIds.has(t.id));
+        const bc = {
+          favourite:  availForBands.filter(t => t.band === 'favourite').length,
+          dark_horse: availForBands.filter(t => t.band === 'dark_horse').length,
+          long_shot:  availForBands.filter(t => t.band === 'long_shot').length,
+          no_hoper:   availForBands.filter(t => t.band === 'no_hoper').length,
+        };
+        const instrHtml =
+          '<p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6">' +
+          'Select one team. Crossed out = already used. &nbsp;' +
+          '<span style="color:#22c55e;font-weight:700">■ Favourite ' + bc.favourite + '</span> &nbsp;' +
+          '<span style="color:#f59e0b;font-weight:700">■ Dark Horse ' + bc.dark_horse + '</span> &nbsp;' +
+          '<span style="color:#f97316;font-weight:700">■ Long Shot ' + bc.long_shot + '</span> &nbsp;' +
+          '<span style="color:#ef4444;font-weight:700">■ No Hoper ' + bc.no_hoper + '</span>' +
+          '</p>';
+        gridHtml = instrHtml + fixtureHtml;
       }
 
       document.getElementById('pick-form-inner').innerHTML = gridHtml;
-      document.getElementById('submit-pick-btn').style.display = 'block';
+      // Top button always shown; bottom button only for group + R32/R16
+      const showBottomBtn = isGroup || ['Round of 32','Round of 16'].includes(round.name);
+      document.getElementById('submit-pick-btn').style.display = showBottomBtn ? 'block' : 'none';
       document.getElementById('submit-pick-btn-top').style.display = 'block';
-      updateSubmitButton(isGroup);
+      updateSubmitButton(isGroup, round);
     }
 
     function selectTeam(teamId) {
@@ -949,16 +1090,23 @@
       updateSubmitButton(isGroup);
     }
 
-    function updateSubmitButton(isGroup) {
+    function updateSubmitButton(isGroup, round) {
+      if (!round) round = allRounds.find(r => r.id === selectedRoundId);
       const ready = isGroup ? (pick3 && pick2) : pickSingle;
-      const label = ready
-        ? (isGroup ? 'Submit: ' + pick3.name + ' (3pt) + ' + pick2.name + ' (2pt)' : 'Submit: ' + pickSingle.name)
-        : (isGroup ? 'Select your 3pt and 2pt picks above' : 'Select a team above');
-      ['submit-pick-btn', 'submit-pick-btn-top'].forEach(id => {
-        const btn = document.getElementById(id);
-        btn.disabled = !ready;
-        btn.textContent = label;
-      });
+      const readyLabel = isGroup
+        ? 'Submit: ' + (pick3 ? pick3.name : '?') + ' (3pt) + ' + (pick2 ? pick2.name : '?') + ' (2pt)'
+        : 'Submit: ' + (pickSingle ? pickSingle.name : '?');
+
+      const topNotReady  = isGroup ? 'Select your picks from below ↓' : 'Select a team from below ↓';
+      const botNotReady  = isGroup ? 'Select your picks from above ↑' : 'Select a team from above ↑';
+
+      const topBtn = document.getElementById('submit-pick-btn-top');
+      topBtn.disabled = !ready;
+      topBtn.textContent = ready ? readyLabel : topNotReady;
+
+      const botBtn = document.getElementById('submit-pick-btn');
+      botBtn.disabled = !ready;
+      botBtn.textContent = ready ? readyLabel : botNotReady;
     }
 
     async function submitPick() {
@@ -1056,7 +1204,6 @@
       });
     }
 
-    // FIX 2: pending/upcoming only shown if no result yet; results shown even if round not marked complete
     function renderHistory() {
       const tbody = document.getElementById('history-body');
       const picksByRound = {};
@@ -1067,13 +1214,19 @@
 
       let rows = '';
 
-      // Picks in incomplete rounds: check result presence, not round completion
+      const eliminatedRoundId = (() => {
+        for (const p of [...allPicks].reverse()) {
+          const res = p.pick_results && p.pick_results[0];
+          if (res && res.match_result === 'loss') return p.round_id;
+        }
+        return null;
+      })();
+
       const openWithPicks = [...allRounds.filter(r => !r.is_complete && picksByRound[r.id])].reverse();
       openWithPicks.forEach(r => {
         (picksByRound[r.id] || []).forEach(p => {
           const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
           if (res) {
-            // Result is in — render normally even if round not yet marked complete
             const resultBadge = '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + res.match_result.toUpperCase() + '</span>';
             const autoBadge = p.is_assigned ? '<span class="badge badge-grey" style="font-size:10px;margin-left:4px">auto</span>' : '';
             rows += '<tr>' +
@@ -1084,7 +1237,6 @@
               '<td style="font-weight:600">' + res.points_earned + '</td>' +
               '</tr>';
           } else {
-            // No result yet — show as upcoming
             rows += '<tr style="opacity:0.7">' +
               '<td class="history-round">' + r.name + ' <span style="color:var(--accent);font-size:10px">(upcoming)</span></td>' +
               '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
@@ -1096,7 +1248,6 @@
         });
       });
 
-      // Completed rounds, newest first
       const completedRounds = [...allRounds.filter(r => r.is_complete)].reverse();
       completedRounds.forEach(r => {
         const rPicks = picksByRound[r.id] || [];
@@ -1138,13 +1289,12 @@
   </script>
 
   <!-- ── Oracle bottom sheet ───────────────────────────────────────────────── -->
+  <button class="oracle-close-btn" id="oracle-close-btn" onclick="closeOracle()">✕</button>
   <div class="oracle-backdrop" id="oracle-backdrop" onclick="closeOracle()"></div>
   <div class="oracle-sheet" id="oracle-sheet">
     <div class="oracle-handle-bar">
       <div class="oracle-handle"></div>
-      <button class="oracle-close-btn" onclick="closeOracle()">✕</button>
     </div>
-    <!-- Context bar: round + teams available -->
     <div class="oracle-context" id="oracle-context" style="display:none">
       <span class="oracle-context-pill" id="oracle-ctx-round"></span>
       <span class="oracle-context-pill" id="oracle-ctx-teams"></span>
@@ -1190,100 +1340,157 @@
   <script>
     // ── Oracle ────────────────────────────────────────────────────────────────
 
-    // WHY labels per reason code
+    // ── Round mode detection ──────────────────────────────────────────────────
+    const ORACLE_KO_ROUNDS   = ['Round of 32','Round of 16','Quarter Finals','Quarter-Final','Semi Finals','Semi-Final','Final'];
+    const ORACLE_LATE_ROUNDS = ['Quarter Finals','Quarter-Final','Semi Finals','Semi-Final','Final'];
+    const ORACLE_FINAL_ROUNDS = ['Semi Finals','Semi-Final','Final'];
+
+    function getRoundMode(round) {
+      if (!round) return 'group';
+      if (ORACLE_FINAL_ROUNDS.includes(round.name)) return 'final';  // QF+: no save, survival only
+      if (ORACLE_KO_ROUNDS.includes(round.name))    return 'ko';     // R32/R16: save on, survival on
+      return 'group';                                                  // GP1-3: max save, no survival
+    }
+
+    // ── Elite save tier — bottom 6 by outright odds, dynamically computed ────
+    function getEliteIds(teams, outrightOddsMap) {
+      const withOdds = teams
+        .filter(t => outrightOddsMap[t.id])
+        .sort((a, b) => outrightOddsMap[a.id] - outrightOddsMap[b.id]);
+      return new Set(withOdds.slice(0, 6).map(t => t.id));
+    }
+
+    function starStr(n) {
+      return '★'.repeat(n) + '☆'.repeat(5 - n);
+    }
+
+    // ── WHY labels ────────────────────────────────────────────────────────────
     const ORACLE_WHY = {
-      DH_VS_NH:          'Dark Horse vs No Hoper — near-certain win',
-      LS_VS_NH:          'Longshot vs No Hoper — bonus + near-certain win',
-      LS_VS_LS:          'Longshot vs Longshot — coin flip, bonus if right',
-      DH_VS_LS:          'Dark Horse vs Longshot — favoured to win',
-      DH_VS_DH:          'Dark Horse vs Dark Horse — competitive pick',
-      LS_ALONE:          'Longshot — bonus eligible, upside available',
-      DAMAGE_LIMITATION: 'Best available from remaining pool',
+      G_LONGSHOT_WEAK: 'Longshot bonus + weak opponent — free points',
+      G_SOLID_WEAK:    'Solid pick against weak opposition',
+      G_SOLID_MID:     'Favoured to win — reliable points',
+      G_SAVE_WARNING:  'Elite team — consider saving for knockout',
+      G_COINFLIP:      'Competitive match — could go either way',
+      G_DAMAGE:        'Limited options — best of what remains',
+      K_SOLID_WEAK:    'Strong win probability — safe survival pick',
+      K_LONGSHOT_RISKY:'Bonus eligible — but this is knockout. One chance.',
+      K_MIDTIER_GOOD:  'Good win odds — sensible KO pick',
+      K_COINFLIP:      '50/50 — The Oracle will not dress this up',
+      K_ELITE_LATE:    'Late stage — time to use your best teams',
+      K_DAMAGE:        'Slim pickings — best available for survival',
     };
 
     // ── Templates ─────────────────────────────────────────────────────────────
     const ORACLE_TEMPLATES = {
-      // 5★
-      DH_VS_NH: [
-        '{team} — Dark Horse against {opponent}, who are basically here for the photos. Comfortable win, decent points.',
-        'Dark Horse vs No Hoper. {team} vs {opponent}. The Oracle didn\'t even need to think about this one.',
-        '{opponent} are in over their heads. {team} are not. The Oracle has spoken.',
-        '{team} should handle {opponent} with ease. File under: obvious but necessary.',
-        'The Oracle sees {team}, sees {opponent}, sees points. Pick them.',
+      G_LONGSHOT_WEAK: [
+        '{team} are a longshot playing {opponent}. If they come through, you get the bonus. The Oracle likes this.',
+        'Low outright odds mean {team} won\'t cost you later. Against {opponent}, they should win and bag the bonus.',
+        '{team} vs {opponent}. Underdog bonus play with genuine win chances. The Oracle is quietly pleased.',
+        'Longshot facing soft opposition. {team} vs {opponent}. Points and a bonus if it lands. Hard to argue with.',
+        'The Oracle sees {team}, sees {opponent}, sees a bonus point waiting. Pick them.',
       ],
-      LS_VS_NH: [
-        '{team} are a longshot facing {opponent}, who are basically tourists. Take the bonus.',
-        'Longshot vs No Hoper. {team} vs {opponent}. This is the Oracle\'s favourite sentence.',
-        '{opponent} are here for the experience. {team} are here for your bonus point. Pick them.',
-        '{team} at longshot odds against {opponent}. Nearest thing to free money this competition offers.',
-        'The Oracle sees a bonus waiting to happen. {team} vs {opponent}. Don\'t overthink it.',
+      G_SOLID_WEAK: [
+        '{team} should handle {opponent} comfortably. Not flashy, but points are points.',
+        'Solid pick. {team} vs {opponent} — the Oracle sees no drama here. Just wins.',
+        '{team} against {opponent}. The Oracle has seen worse ideas. This is not one of them.',
+        'No bonus, no risk. {team} vs {opponent}. The Oracle approves of sensible decisions.',
+        '{team} are favoured and {opponent} won\'t stop them. File under: reliable.',
       ],
-      // 4★
-      LS_VS_LS: [
-        '{team} vs {opponent} — coin flip, but if {team} come through, you look like a genius.',
-        'Two underdogs. The Oracle backs {team}. Don\'t ask why. Just trust it.',
-        'Chaotic pick. High ceiling. The Oracle is not responsible for the outcome.',
-        'Both longshots, both bonus eligible. {team} are slightly shorter. Slightly. The Oracle notes this.',
-        '{team} vs {opponent}. Whoever wins gets the bonus. The Oracle thinks {team} wins.',
+      G_SOLID_MID: [
+        '{team} are the better team here. {opponent} will make it interesting but {team} should edge it.',
+        'Competitive match, but {team} have the edge on {opponent}. Reasonable group stage pick.',
+        '{team} vs {opponent}. Not a gimme, but {team} are fancied. The Oracle is cautiously confident.',
+        'The Oracle has assessed {team} vs {opponent} and found {team} to be the wiser choice. Probably.',
+        '{team} slightly favoured against {opponent}. Group stage — a draw still gets you something.',
       ],
-      DH_VS_LS: [
-        '{team} Dark Horse vs {opponent} Long Shot — {team} are favoured and {opponent} won\'t stop them.',
-        'Dark Horse with a straightforward assignment. {team} vs {opponent}. Solid points, no drama.',
-        '{team} should edge {opponent}. Not flashy, not wasteful. The Oracle\'s definition of sensible.',
-        'The Oracle rarely gets excited about this matchup. {team} win, points earned, move on.',
-        '{team} vs {opponent} — Dark Horse doing what Dark Horses do. Win quietly.',
+      G_SAVE_WARNING: [
+        '{team} will win this, probably. But remember — they\'re gone from knockout if you use them now.',
+        'Strong pick. {team} vs {opponent}. Just know you\'re spending a team you\'ll want later.',
+        'The Oracle recommends {team} with one caveat: you won\'t have them in the knockout. Your call.',
+        '{team} are elite. They\'ll likely win. But there are cheaper ways to get these points.',
+        'You could pick {team}. They\'re good. They\'ll probably still be good in the Final — which you won\'t see them in.',
       ],
-      // 3★
-      DH_VS_DH: [
-        'Dark Horse double — {team} vs {opponent}. Competitive, no bonus, but {team} edge it on odds.',
-        'Two Dark Horses going at it. The Oracle picked {team}. Could easily be wrong.',
-        '{team} vs {opponent} — genuine contest. The Oracle has gone with {team} and is comfortable with this.',
-        'No bonus available here, but {team} are the smarter pick. The Oracle has done the maths.',
-        'Dark Horse derby. {team} vs {opponent}. {team} slightly fancied. The Oracle is cautiously confident.',
+      G_COINFLIP: [
+        '{team} vs {opponent}. Genuinely 50/50. The Oracle picked {team} and is not fully confident.',
+        'Competitive group match. {team} vs {opponent}. Could go either way. Oracle has a slight preference for {team}.',
+        'The Oracle sees a coin flip. {team} vs {opponent}. A draw is a real possibility here.',
+        '{team} vs {opponent} — the Oracle considered this carefully and arrived at {team}. Barely.',
+        'This one is tight. {team} vs {opponent}. If there\'s a better option, the Oracle suggests finding it.',
       ],
-      LS_ALONE: [
-        '{team} are available and bonus eligible. The Oracle has seen worse ideas.',
-        'Not the Oracle\'s finest hour, but {team} are a longshot and available. That counts for something.',
-        '{team} — longshot, bonus eligible, and still in your pool. The Oracle shrugs and points.',
-        'The Oracle has found {team}. Not a dream pick. But a pick with upside.',
-        '{team} at long odds. If they win, you look prescient. If they don\'t, this conversation never happened.',
+      G_DAMAGE: [
+        'The Oracle has surveyed your options and is mildly concerned. {team} are the best of what\'s available.',
+        '{team}. It\'s not inspired. It\'s what the pool offers. The Oracle does its best.',
+        'Your elite teams are gone or saved. {team} are what remains. Make the most of it.',
+        'The Oracle has found {team}. Not a dream pick. But a pick.',
+        '{team} it is. The Oracle is working with limited material and would like that acknowledged.',
       ],
-      // fallback
-      DAMAGE_LIMITATION: [
-        'Your pool has seen better days. {team} are what\'s left. The Oracle wishes you luck.',
-        '{team} it is. The Oracle has seen worse. Not much worse. But worse.',
-        'The Oracle gazed into your pool and felt mild concern. Pick {team} and pray.',
-        'The Oracle is doing its best here. {team} are available. That\'s about all it can offer.',
-        '{team}. The Oracle considered its options carefully and arrived here. Make of that what you will.',
+      K_SOLID_WEAK: [
+        '{team} vs {opponent}. Strong win probability. This is what knockout picks should look like.',
+        'The Oracle sees {team} beating {opponent} with reasonable confidence. Safe survival pick.',
+        '{team} are significantly fancied over {opponent}. Pick them, survive, move on.',
+        'Good odds. Weak opponent. {team} vs {opponent}. The Oracle does not hesitate.',
+        '{team} should see off {opponent}. In knockout, boring and safe is exactly right.',
+      ],
+      K_LONGSHOT_RISKY: [
+        '{team} are a longshot against {opponent}. Bonus if they win — but this is knockout. One loss and you\'re out.',
+        'The Oracle flags {team} as risky. Good bonus potential vs {opponent}, but their win odds give it pause.',
+        '{team} vs {opponent}. Bonus eligible. But there is no recovering from a KO loss.',
+        'Longshot play. {team} could win this and get you the bonus. Or you could be eliminated. The Oracle has said its piece.',
+        '{team} vs {opponent}. The upside is real. So is the downside. Knockout rules apply.',
+      ],
+      K_MIDTIER_GOOD: [
+        '{team} are well-fancied in this knockout match. Solid survival pick without burning an elite team.',
+        'Good win odds, not too precious to spend. {team} vs {opponent} is the Oracle\'s kind of knockout pick.',
+        '{team} should advance past {opponent}. Sensible use of a mid-tier team at this stage.',
+        'The Oracle likes {team} here. Favoured, available, not wasted. Exactly right for a knockout round.',
+        '{team} vs {opponent}. Win probability is on your side. The Oracle approves.',
+      ],
+      K_COINFLIP: [
+        '{team} vs {opponent}. This is a coin flip. The Oracle will not pretend otherwise.',
+        'Genuinely 50/50. {team} vs {opponent}. If you have a safer option, use it. If not — good luck.',
+        'The Oracle sees a competitive knockout match and is uncomfortable. {team} vs {opponent}. No guarantees.',
+        '{team} vs {opponent}. The Oracle has no strong conviction here. That itself is the answer.',
+        'Both teams have genuine knockout chances. {team} are marginally fancied. Marginally.',
+      ],
+      K_ELITE_LATE: [
+        'Late stage. Save logic no longer applies. {team} are strong and it\'s time to use them.',
+        '{team} vs {opponent} at this stage — the Oracle says go. No point preserving them now.',
+        'You\'ve made it this far. {team} are yours to spend. The Oracle recommends spending them.',
+        '{team}. Elite team. Late round. Good match-up. No reason to hold back.',
+        'The Oracle has been patient about {team}. That patience is no longer required. Pick them.',
+      ],
+      K_DAMAGE: [
+        'The Oracle has examined your pool and found {team}. It is what it is.',
+        '{team} are available and still in the tournament. At this stage, that counts for something.',
+        'Your options are limited. {team} give you the best survival chance from what remains.',
+        'The Oracle wishes it had better news. {team} are the pick. Stay focused.',
+        '{team}. The Oracle notes your pool has narrowed considerably. This is the call.',
       ],
     };
 
-    // Recycle messages — shown on 6th+ press
     const ORACLE_RECYCLE_MSGS = [
-      'None of those good enough for you? Fine. The Oracle is starting over. Don\'t blame it.',
-      'The Oracle has run out of fresh ideas and has absolutely no problem recycling. Here we go again.',
-      'You\'ve seen them all. The Oracle is going round again. Same picks, fresh indignation.',
+      'None of those good enough for you? Fine. The Oracle is starting over.',
+      'The Oracle has run out of fresh ideas and has no problem recycling. Here we go again.',
+      'You\'ve seen them all. The Oracle is going round again.',
       'Honestly. The Oracle is beginning to take this personally. Round two.',
-      'The Oracle notes your dissatisfaction and has chosen to ignore it. Cycling picks from the top.',
+      'The Oracle notes your dissatisfaction and has chosen to ignore it. Cycling from the top.',
     ];
 
     const ORACLE_BAND_STYLE = {
-      favourite:  { label: '🔵 Favourite',  bg: 'rgba(59,130,246,0.15)',  color: '#3b82f6' },
-      dark_horse: { label: '🟡 Dark Horse', bg: 'rgba(234,179,8,0.15)',   color: '#eab308' },
-      long_shot:  { label: '🟠 Long Shot',  bg: 'rgba(249,115,22,0.15)',  color: '#f97316' },
-      no_hoper:   { label: '🔴 No Hoper',   bg: 'rgba(239,68,68,0.15)',   color: '#ef4444' },
+      favourite:  { label: '■ Favourite',  bg: 'rgba(34,197,94,0.15)',   color: '#22c55e' },
+      dark_horse: { label: '■ Dark Horse', bg: 'rgba(245,158,11,0.15)',  color: '#f59e0b' },
+      long_shot:  { label: '■ Long Shot',  bg: 'rgba(249,115,22,0.15)',  color: '#f97316' },
+      no_hoper:   { label: '■ No Hoper',   bg: 'rgba(239,68,68,0.15)',   color: '#ef4444' },
     };
 
-    const ORACLE_KO      = ['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final','Quarter-Final','Semi-Final'];
-    const ORACLE_LATE_KO = ['Quarter Finals','Semi Finals','Final','Quarter-Final','Semi-Final'];
-
     // Session state
-    let _oraclePool       = [];   // full categorised pool, built once per open
-    let _oracleShown      = [];   // teams shown this session
-    let _oracleConsultNum = 0;    // how many times consulted
+    let _oraclePool       = [];
+    let _oracleShown      = [];
+    let _oracleConsultNum = 0;
     let _oracleDataReady  = false;
     let _oracleRound      = null;
     let _oracleOddsMap    = {};
+    let _oracleEliteIds   = new Set();
 
     function oRand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
@@ -1294,81 +1501,112 @@
         .replace(/\{round\}/g,    vars.round     || '');
     }
 
-    function starStr(n) {
-      return '★'.repeat(n) + '☆'.repeat(5 - n);
-    }
+    // ── Build pool ────────────────────────────────────────────────────────────
+    function buildOraclePool(available, round, matches, outrightOddsMap) {
+      const mode   = getRoundMode(round);
+      const isGroup = mode === 'group';
+      const isLate  = mode === 'final';  // QF+: save off
 
-    // ── Build the pick pool ───────────────────────────────────────────────────
-    // Returns array of { team, reasonCode, opponent, stars } sorted best-first
-    function buildOraclePool(available, round, matches, teamOddsMap) {
-      const isKO    = ORACLE_KO.includes(round.name);
-      const isGroup = round.round_type === 'group';
-
+      // Build opponent + h2h odds maps from fixtures
       const opponentMap = {};
+      const h2hOddsMap  = {};  // team_id -> their own win odds from h2h
+      const kickoffMap  = {};
+
       matches.forEach(m => {
         if (m.home_team && m.away_team) {
           opponentMap[m.home_team_id] = m.away_team;
           opponentMap[m.away_team_id] = m.home_team;
+          h2hOddsMap[m.home_team_id]  = parseFloat(m.odds_home) || null;
+          h2hOddsMap[m.away_team_id]  = parseFloat(m.odds_away) || null;
+          kickoffMap[m.home_team_id]  = m.kickoff;
+          kickoffMap[m.away_team_id]  = m.kickoff;
         }
       });
 
-      const matchTeamIds = new Set();
-      const matchKickoffMap = {};
-      matches.forEach(m => {
-        if (m.home_team_id) { matchTeamIds.add(m.home_team_id); matchKickoffMap[m.home_team_id] = m.kickoff; }
-        if (m.away_team_id) { matchTeamIds.add(m.away_team_id); matchKickoffMap[m.away_team_id] = m.kickoff; }
-      });
+      // KO: only teams with a fixture in this round
+      const fixtureIds = new Set(Object.keys(opponentMap));
+      const candidates = !isGroup
+        ? available.filter(t => fixtureIds.has(t.id))
+        : available;
 
-      const candidates = isKO ? available.filter(t => matchTeamIds.has(t.id)) : available;
       if (candidates.length === 0) return [];
 
-      function oddsOf(t) { return teamOddsMap[t.id] || 999; }
-      function opp(t)    { return opponentMap[t.id] || null; }
+      // Elite save tier — off for late KO (QF+)
+      const eliteIds = isLate ? new Set() : getEliteIds(allTeams, outrightOddsMap);
+      _oracleEliteIds = eliteIds;
 
-      const pool5 = [], pool4 = [], pool3 = [], poolFallback = [];
+      const pool5 = [], pool4 = [], pool3 = [], pool2 = [], poolFallback = [];
 
       candidates.forEach(t => {
-        const o = opp(t);
-        const oppBand = o ? o.band : null;
+        const opp      = opponentMap[t.id] || null;
+        const myH2h    = h2hOddsMap[t.id]  || null;
+        const oppH2h   = opp ? (h2hOddsMap[opp.id] || null) : null;
+        const kickoff  = kickoffMap[t.id]  || null;
+        const isElite  = eliteIds.has(t.id);
+        const isLS     = t.is_longshot || t.band === 'long_shot';
+        const oppBand  = opp ? opp.band : null;
 
-        // 5★: Dark Horse vs No Hoper
-        if (t.band === 'dark_horse' && oppBand === 'no_hoper') {
-          pool5.push({ team: t, reasonCode: 'DH_VS_NH', opponent: o, stars: 5, kickoff: matchKickoffMap[t.id] || null });
-          return;
+        // Win probability buckets from h2h odds (lower = more likely to win)
+        const winStrong = myH2h && myH2h < 2.0;   // near-certain
+        const winLikely = myH2h && myH2h < 2.5;   // clearly favoured
+        const winFav    = myH2h && myH2h < 3.5;   // favoured
+        const coinFlip  = myH2h && myH2h >= 3.5 && myH2h < 5.5;
+
+        // Opponent weakness
+        const oppWeak  = oppBand === 'no_hoper' || (oppH2h && oppH2h > 5.0);
+        const oppMid   = oppBand === 'long_shot' || oppBand === 'dark_horse';
+
+        const entry = (reasonCode, stars) => ({
+          team: t, reasonCode, opponent: opp, stars, kickoff, isElite, myH2h,
+        });
+
+        if (isGroup) {
+          // ── GROUP STAGE ──────────────────────────────────────
+          // Longshot vs weak: bonus + win likely = top pick, no save cost
+          if (isLS && oppWeak && winLikely) { pool5.push(entry('G_LONGSHOT_WEAK', 5)); return; }
+          if (isLS && oppWeak)              { pool4.push(entry('G_LONGSHOT_WEAK', 4)); return; }
+          // Elite: always warn, demote heavily
+          if (isElite && winStrong && oppWeak) { pool3.push(entry('G_SAVE_WARNING', 3)); return; }
+          if (isElite)                         { pool2.push(entry('G_SAVE_WARNING', 2)); return; }
+          // Solid non-elite picks
+          if (winLikely && oppWeak)  { pool5.push(entry('G_SOLID_WEAK', 5)); return; }
+          if (winFav && oppMid)      { pool4.push(entry('G_SOLID_MID',  4)); return; }
+          if (winFav)                { pool4.push(entry('G_SOLID_WEAK', 4)); return; }
+          // Coin flip
+          if (coinFlip)              { pool3.push(entry('G_COINFLIP', 3)); return; }
+          poolFallback.push(entry('G_DAMAGE', 2));
+
+        } else {
+          // ── KNOCKOUT ─────────────────────────────────────────
+          if (isLate) {
+            // QF+: no save logic, pure survival
+            if (winLikely && oppWeak)  { pool5.push(entry('K_SOLID_WEAK',   5)); return; }
+            if (winLikely)             { pool5.push(entry('K_MIDTIER_GOOD', 5)); return; }
+            if (winFav)                { pool4.push(entry('K_MIDTIER_GOOD', 4)); return; }
+            if (isElite && winFav)     { pool4.push(entry('K_ELITE_LATE',   4)); return; }
+            if (coinFlip)              { pool2.push(entry('K_COINFLIP',     2)); return; }
+            poolFallback.push(entry('K_DAMAGE', 1)); return;
+          }
+
+          // R32 / R16: save on, survival on
+          // Elite: always deprioritise in early KO regardless of opponent
+          if (isElite) { pool2.push(entry('G_SAVE_WARNING', 2)); return; }
+          // Non-elite, strong odds vs weak: ideal KO pick
+          if (!isLS && winLikely && oppWeak) { pool5.push(entry('K_SOLID_WEAK',    5)); return; }
+          if (!isLS && winFav)               { pool4.push(entry('K_MIDTIER_GOOD',  4)); return; }
+          // Longshot: flag the KO risk explicitly even vs weak opponents
+          if (isLS && winLikely && oppWeak)  { pool3.push(entry('K_LONGSHOT_RISKY', 3)); return; }
+          if (isLS && winFav)                { pool2.push(entry('K_LONGSHOT_RISKY', 2)); return; }
+          // Coin flip: serious warning in KO
+          if (coinFlip)                      { pool2.push(entry('K_COINFLIP', 2)); return; }
+          poolFallback.push(entry('K_DAMAGE', 1));
         }
-        // 5★: Longshot vs No Hoper (bonus play)
-        if (t.band === 'long_shot' && oppBand === 'no_hoper') {
-          pool5.push({ team: t, reasonCode: 'LS_VS_NH', opponent: o, stars: 5, kickoff: matchKickoffMap[t.id] || null });
-          return;
-        }
-        // 4★: Longshot vs Longshot (our team shorter odds)
-        if (t.band === 'long_shot' && oppBand === 'long_shot' && oddsOf(t) < oddsOf(o)) {
-          pool4.push({ team: t, reasonCode: 'LS_VS_LS', opponent: o, stars: 4, kickoff: matchKickoffMap[t.id] || null });
-          return;
-        }
-        // 4★: Dark Horse vs Long Shot
-        if (t.band === 'dark_horse' && oppBand === 'long_shot') {
-          pool4.push({ team: t, reasonCode: 'DH_VS_LS', opponent: o, stars: 4, kickoff: matchKickoffMap[t.id] || null });
-          return;
-        }
-        // 3★: Dark Horse vs Dark Horse (shorter odds side)
-        if (t.band === 'dark_horse' && oppBand === 'dark_horse' && oddsOf(t) <= oddsOf(o)) {
-          pool3.push({ team: t, reasonCode: 'DH_VS_DH', opponent: o, stars: 3, kickoff: matchKickoffMap[t.id] || null });
-          return;
-        }
-        // 3★: Longshot with no opponent data or vs Dark Horse
-        if (t.band === 'long_shot' && (!oppBand || oppBand === 'dark_horse')) {
-          pool3.push({ team: t, reasonCode: 'LS_ALONE', opponent: o, stars: 3, kickoff: matchKickoffMap[t.id] || null });
-          return;
-        }
-        // Fallback: everything else
-        poolFallback.push({ team: t, reasonCode: 'DAMAGE_LIMITATION', opponent: o, stars: 2, kickoff: matchKickoffMap[t.id] || null });
       });
 
-      return [...pool5, ...pool4, ...pool3, ...poolFallback];
+      return [...pool5, ...pool4, ...pool3, ...pool2, ...poolFallback];
     }
 
-    // Weighted random pick: 60% from 5★, 30% from 4★, 10% from 3★
+    // ── Weighted random pick ──────────────────────────────────────────────────
     function weightedPick(pool, exclude) {
       const eligible = pool.filter(p => !exclude.has(p.team.id));
       if (eligible.length === 0) return null;
@@ -1378,10 +1616,9 @@
       const s3 = eligible.filter(p => p.stars === 3);
       const sf = eligible.filter(p => p.stars <= 2);
 
-      // Build weighted bucket
       const roll = Math.random();
       let bucket;
-      if (roll < 0.60 && s5.length > 0)      bucket = s5;
+      if      (roll < 0.60 && s5.length > 0) bucket = s5;
       else if (roll < 0.90 && s4.length > 0) bucket = s4;
       else if (s3.length > 0)                 bucket = s3;
       else if (sf.length > 0)                 bucket = sf;
@@ -1390,25 +1627,24 @@
       return oRand(bucket);
     }
 
-    // ── Main consult function ─────────────────────────────────────────────────
+    // ── Main consult ──────────────────────────────────────────────────────────
     async function oracleConsult() {
-      const consultBtn  = document.getElementById('oracle-consult-btn');
-      const againBtn    = document.getElementById('oracle-again-btn');
-      const resultEl    = document.getElementById('oracle-result');
-      const thinkEl     = document.getElementById('oracle-thinking');
-      const recycledEl  = document.getElementById('oracle-recycled');
+      const consultBtn = document.getElementById('oracle-consult-btn');
+      const againBtn   = document.getElementById('oracle-again-btn');
+      const resultEl   = document.getElementById('oracle-result');
+      const thinkEl    = document.getElementById('oracle-thinking');
+      const recycledEl = document.getElementById('oracle-recycled');
 
-      consultBtn.disabled    = true;
-      againBtn.style.display = 'none';
-      resultEl.style.display = 'none';
+      consultBtn.style.display = 'none';
+      againBtn.style.display   = 'none';
+      resultEl.style.display   = 'none';
       recycledEl.style.display = 'none';
-      thinkEl.style.display  = 'block';
+      thinkEl.style.display    = 'block';
       document.getElementById('oracle-no-round').style.display = 'none';
       document.getElementById('oracle-no-teams').style.display = 'none';
 
       await new Promise(r => setTimeout(r, 800));
 
-      // First consult: load data and build pool
       if (!_oracleDataReady) {
         const now = getEffectiveDate();
         _oracleRound = openRounds.find(r => !r.is_complete && new Date(r.deadline) > now);
@@ -1416,38 +1652,74 @@
         if (!_oracleRound) {
           thinkEl.style.display = 'none';
           document.getElementById('oracle-no-round').style.display = 'block';
-          consultBtn.disabled = false;
           return;
         }
 
-        const usedIds   = new Set(allPicks.map(p => p.team_id));
-        const available = allTeams.filter(t => !usedIds.has(t.id) && !t.is_eliminated);
+        // Check if we already have a fixed pool for this round
+        const savedPool = loadFixedPool(_oracleRound.id);
 
-        if (available.length === 0) {
-          thinkEl.style.display = 'none';
-          document.getElementById('oracle-no-teams').style.display = 'block';
-          consultBtn.disabled = false;
-          return;
+        if (savedPool && savedPool.length > 0) {
+          // Restore from localStorage — no network calls needed
+          _oraclePool       = savedPool;
+          _oracleDataReady  = true;
+          _oracleConsultNum = 0;
+
+          const shownIds = loadShownIds(_oracleRound.id);
+          _oracleShown = _oraclePool.filter(p => shownIds.includes(p.team.id));
+        } else {
+          // First open for this round — build pool from Supabase
+          const currentRoundPickIds = new Set(allPicks.filter(p => p.round_id === _oracleRound.id).map(p => p.team_id));
+          const usedIds   = new Set([...allPicks.map(p => p.team_id)].filter(id => !currentRoundPickIds.has(id)));
+          const available = allTeams.filter(t => !usedIds.has(t.id) && !t.is_eliminated);
+
+          if (available.length === 0) {
+            thinkEl.style.display = 'none';
+            document.getElementById('oracle-no-teams').style.display = 'block';
+            return;
+          }
+
+          // Outright odds
+          const { data: oddsRaw } = await db.from('team_odds')
+            .select('team_id, odds_decimal')
+            .order('fetched_at', { ascending: false });
+          _oracleOddsMap = {};
+          (oddsRaw || []).forEach(r => {
+            if (!_oracleOddsMap[r.team_id]) _oracleOddsMap[r.team_id] = parseFloat(r.odds_decimal);
+          });
+
+          // Round matches with h2h odds
+          const { data: roundMatches } = await db.from('matches')
+            .select('id, round_id, kickoff, home_team_id, away_team_id, odds_home, odds_draw, odds_away, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,band,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,band,is_longshot)')
+            .eq('round_id', _oracleRound.id)
+            .not('home_team_id', 'is', null);
+
+          const fullPool = buildOraclePool(available, _oracleRound, roundMatches || [], _oracleOddsMap);
+
+          // Fix exactly 5 teams (weighted selection, no repeats)
+          const CAP = Math.min(5, fullPool.length);
+          const fixed = [];
+          const usedInFixed = new Set();
+          for (let i = 0; i < CAP; i++) {
+            const pick = weightedPick(fullPool, usedInFixed);
+            if (!pick) break;
+            fixed.push(pick);
+            usedInFixed.add(pick.team.id);
+          }
+
+          _oraclePool      = fixed;
+          _oracleDataReady = true;
+          _oracleConsultNum = 0;
+          _oracleShown     = [];
+
+          saveFixedPool(_oracleRound.id, fixed);
+          saveShownIds(_oracleRound.id, []);
         }
 
-        const { data: oddsRaw } = await db.from('team_odds').select('team_id, odds_decimal').order('fetched_at', { ascending: false });
-        _oracleOddsMap = {};
-        (oddsRaw || []).forEach(r => { if (!_oracleOddsMap[r.team_id]) _oracleOddsMap[r.team_id] = parseFloat(r.odds_decimal); });
-
-        const { data: roundMatches } = await db.from('matches')
-          .select('id, round_id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,band,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,band,is_longshot)')
-          .eq('round_id', _oracleRound.id)
-          .not('home_team_id', 'is', null);
-
-        _oraclePool      = buildOraclePool(available, _oracleRound, roundMatches || [], _oracleOddsMap);
-        _oracleShown     = [];
-        _oracleDataReady = true;
-        _oracleConsultNum = 0;
-        _oracleAvailCount = available.length;
-
-        // Show context bar
-        document.getElementById('oracle-ctx-round').textContent = _oracleRound.name;
-        document.getElementById('oracle-ctx-teams').textContent = available.length + ' teams available';
+        // Context bar
+        const mode = getRoundMode(_oracleRound);
+        const modeLabel = mode === 'group' ? '⚽ Group Stage' : mode === 'final' ? '🔥 Late KO' : '💀 Knockout';
+        document.getElementById('oracle-ctx-round').textContent = _oracleRound.name + ' · ' + modeLabel;
+        document.getElementById('oracle-ctx-teams').textContent = _oraclePool.length + ' picks prepared';
         document.getElementById('oracle-context').style.display = 'flex';
       }
 
@@ -1455,107 +1727,139 @@
 
       if (_oraclePool.length === 0) {
         document.getElementById('oracle-no-teams').style.display = 'block';
-        consultBtn.disabled = false;
         return;
       }
 
       _oracleConsultNum++;
+      const CAP = _oraclePool.length;
 
-      const CAP = Math.min(5, _oraclePool.length); // max unique picks to show
-
-      // Hit the cap — show recycle message and loop back through same picks
+      // Check if we've cycled through all — show recycle message, reset
+      const shownIds = new Set(_oracleShown.map(p => p.team.id));
       if (_oracleShown.length >= CAP) {
-        recycledEl.textContent = oRand(ORACLE_RECYCLE_MSGS);
+        recycledEl.textContent   = oRand(ORACLE_RECYCLE_MSGS);
         recycledEl.style.display = 'block';
-        _oracleShown = []; // reset so same CAP picks rotate again
+        _oracleShown = [];
+        saveShownIds(_oracleRound.id, []);
       } else {
         recycledEl.style.display = 'none';
       }
 
-      const shownIds = new Set(_oracleShown.map(p => p.team.id));
-      let pick = weightedPick(_oraclePool, shownIds);
-
-      if (!pick) {
-        // Safety fallback
-        _oracleShown = [];
-        pick = weightedPick(_oraclePool, new Set());
-      }
-
+      const shownIds2 = new Set(_oracleShown.map(p => p.team.id));
+      let pick = weightedPickFromFixed(_oraclePool, shownIds2);
+      if (!pick) { _oracleShown = []; pick = weightedPickFromFixed(_oraclePool, new Set()); }
       if (!pick) {
         document.getElementById('oracle-no-teams').style.display = 'block';
-        consultBtn.disabled = false;
         return;
       }
 
       _oracleShown.push(pick);
+      saveShownIds(_oracleRound.id, _oracleShown.map(p => p.team.id));
       renderOraclePick(pick);
 
-      // Button logic: hide consult, show ask-again after first pick
-      consultBtn.style.display = 'none';
-      againBtn.style.display   = 'inline-block';
       const remaining = CAP - _oracleShown.length;
-      againBtn.textContent = _oracleShown.length >= CAP
-        ? 'Try again anyway'
-        : (remaining === 1 ? 'One more...' : 'Ask again');
+      if (remaining > 0) {
+        againBtn.textContent = remaining === 1 ? 'One more...' : 'Ask again (' + remaining + ' left)';
+      } else {
+        againBtn.textContent = oRand(ORACLE_RECYCLE_MSGS).split('.')[0] + ' — try again';
+      }
+      againBtn.style.display = 'inline-block';
     }
 
+    // Pick from the fixed pool (already weighted — just avoid already-shown)
+    function weightedPickFromFixed(pool, exclude) {
+      const eligible = pool.filter(p => !exclude.has(p.team.id));
+      if (eligible.length === 0) return null;
+      return oRand(eligible);
+    }
+
+    // ── Render ────────────────────────────────────────────────────────────────
     function fmtKickoff(iso) {
       if (!iso) return '';
-      const d = new Date(iso);
-      const day  = d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-      const time = d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-      return day + ' · ' + time;
+      const d   = new Date(iso);
+      const day = d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+      const t   = d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+      return day + ' · ' + t;
     }
 
     function renderOraclePick(pick) {
-      const { team, reasonCode, opponent, stars, kickoff } = pick;
-      const bandInfo  = ORACLE_BAND_STYLE[team.band] || { label: '?', bg: 'rgba(148,163,184,0.15)', color: '#94a3b8' };
-      const templates = ORACLE_TEMPLATES[reasonCode] || ORACLE_TEMPLATES.DAMAGE_LIMITATION;
+      const { team, reasonCode, opponent, stars, kickoff, isElite, myH2h } = pick;
+      const bandInfo  = ORACLE_BAND_STYLE[team.band] || { label: '⚪ Unclassified', bg: 'rgba(148,163,184,0.15)', color: '#94a3b8' };
+      const templates = ORACLE_TEMPLATES[reasonCode] || ORACLE_TEMPLATES.K_DAMAGE;
       const verdict   = oFill(oRand(templates), {
         team:     team.name,
         opponent: opponent ? opponent.name : 'their opponent',
         round:    _oracleRound ? _oracleRound.name : '',
       });
 
-      // Stars
       document.getElementById('oracle-stars').textContent = starStr(stars);
-
-      // Flag + team name + longshot star
-      document.getElementById('oracle-flag').textContent = team.flag_emoji || '🏳️';
-      const lsTag = team.is_longshot ? ' ⭐' : '';
-      document.getElementById('oracle-team').innerHTML =
+      document.getElementById('oracle-flag').textContent  = team.flag_emoji || '🏳️';
+      document.getElementById('oracle-team').innerHTML    =
         team.name + (team.is_longshot ? '<span class="oracle-team-longshot">⭐</span>' : '');
 
-      // Opponent + kickoff line
       const oppEl = document.getElementById('oracle-opponent');
       if (opponent) {
-        const kickoffStr = kickoff ? ' · ' + fmtKickoff(kickoff) : '';
-        oppEl.textContent = 'vs ' + opponent.flag_emoji + ' ' + opponent.name + kickoffStr;
+        const oddsStr   = myH2h ? ' · ' + myH2h.toFixed(1) : '';
+        const kickStr   = kickoff ? ' · ' + fmtKickoff(kickoff) : '';
+        oppEl.textContent   = 'vs ' + opponent.flag_emoji + ' ' + opponent.name + oddsStr + kickStr;
         oppEl.style.display = 'block';
       } else {
         oppEl.style.display = 'none';
       }
 
-      // Band chip
       const bandEl = document.getElementById('oracle-band');
-      bandEl.textContent      = bandInfo.label;
-      bandEl.style.background = bandInfo.bg;
-      bandEl.style.color      = bandInfo.color;
+      if (isElite) {
+        bandEl.textContent      = '⚠️ Elite — consider saving';
+        bandEl.style.background = 'rgba(239,68,68,0.15)';
+        bandEl.style.color      = '#ef4444';
+      } else {
+        bandEl.textContent      = bandInfo.label;
+        bandEl.style.background = bandInfo.bg;
+        bandEl.style.color      = bandInfo.color;
+      }
 
-      // Why line
-      document.getElementById('oracle-why').textContent = ORACLE_WHY[reasonCode] || '';
-
-      // Verdict
+      document.getElementById('oracle-why').textContent    = ORACLE_WHY[reasonCode] || '';
       document.getElementById('oracle-verdict').textContent = verdict;
 
-      // Trigger fade-in by re-cloning (resets animation)
       const resultEl = document.getElementById('oracle-result');
       resultEl.style.display = 'none';
-      // Force reflow then show
       void resultEl.offsetWidth;
       resultEl.style.display = 'block';
     }
 
+    // ── Fixed pool per player per round ───────────────────────────────────────
+    // Pool of 5 is fixed at first open of the Oracle for that round.
+    // Stored in localStorage keyed by player+round. Resets each new round.
+    function getPoolKey(roundId) {
+      return 'lms2026_oracle_pool_' + slug + '_' + roundId;
+    }
+
+    function loadFixedPool(roundId) {
+      try {
+        const raw = localStorage.getItem(getPoolKey(roundId));
+        return raw ? JSON.parse(raw) : null;
+      } catch(e) { return null; }
+    }
+
+    function saveFixedPool(roundId, pool) {
+      try { localStorage.setItem(getPoolKey(roundId), JSON.stringify(pool)); } catch(e) {}
+    }
+
+    function getShownKey(roundId) {
+      return 'lms2026_oracle_shown_' + slug + '_' + roundId;
+    }
+
+    function loadShownIds(roundId) {
+      try {
+        const raw = localStorage.getItem(getShownKey(roundId));
+        return raw ? JSON.parse(raw) : [];
+      } catch(e) { return []; }
+    }
+
+    function saveShownIds(roundId, ids) {
+      try { localStorage.setItem(getShownKey(roundId), JSON.stringify(ids)); } catch(e) {}
+    }
+
+    // ── Open / close ──────────────────────────────────────────────────────────
     function openOracle() {
       _oracleDataReady  = false;
       _oraclePool       = [];
@@ -1568,24 +1872,30 @@
       document.getElementById('oracle-thinking').style.display   = 'none';
       document.getElementById('oracle-recycled').style.display   = 'none';
       document.getElementById('oracle-context').style.display    = 'none';
-      // Show consult button, hide ask-again
+
       const cb = document.getElementById('oracle-consult-btn');
-      cb.style.display  = 'inline-block';
-      cb.disabled       = false;
-      cb.textContent    = '🔮 Consult the Oracle';
-      document.getElementById('oracle-again-btn').style.display  = 'none';
+      cb.style.display = 'none';  // hidden — auto-fires immediately
+      cb.disabled      = false;
+      cb.textContent   = '🔮 Consult the Oracle';
+      document.getElementById('oracle-again-btn').style.display = 'none';
+
       document.getElementById('oracle-backdrop').classList.add('open');
       document.getElementById('oracle-sheet').classList.add('open');
+      document.getElementById('oracle-close-btn').style.display = 'flex';
       document.body.style.overflow = 'hidden';
+
+      // Auto-fire immediately
+      oracleConsult();
     }
 
     function closeOracle() {
       document.getElementById('oracle-sheet').classList.remove('open');
       document.getElementById('oracle-backdrop').classList.remove('open');
+      document.getElementById('oracle-close-btn').style.display = 'none';
       document.body.style.overflow = '';
     }
 
-    // Drag to dismiss
+    // ── Drag to dismiss ───────────────────────────────────────────────────────
     (function() {
       const sheet = document.getElementById('oracle-sheet');
       let startY = 0, currentY = 0, dragging = false;

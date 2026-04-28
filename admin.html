@@ -86,6 +86,49 @@
     .paid-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; cursor:pointer; border:none; }
     .paid-yes { background:rgba(16,185,129,0.15); color:var(--green); border:1px solid rgba(16,185,129,0.3); }
     .paid-no  { background:rgba(239,68,68,0.15); color:var(--red); border:1px solid rgba(239,68,68,0.3); }
+
+    /* Teams table — sticky header */
+    .teams-table-wrap {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 75vh;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .teams-table-wrap table {
+      border-collapse: collapse;
+      width: 100%;
+      table-layout: fixed;
+    }
+    .teams-table-wrap thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: var(--surface2);
+      border-bottom: 2px solid var(--border);
+      padding: 8px 6px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .teams-table-wrap td {
+      padding: 6px 6px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+    .teams-table-wrap select {
+      font-size: 11px;
+      padding: 2px 2px;
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
   </style>
 </head>
 <body>
@@ -354,9 +397,12 @@
     <div class="tab-content" id="tab-teams">
       <div class="card">
         <div class="card-title">🏳️ Teams</div>
-        <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">
-          <strong>Band</strong> — used on the leaderboard in knockout to show each player's remaining teams by quality tier.<br>
-          <strong>Longshot</strong> — teams that get the +1 bonus point for a win.
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:4px">
+          <strong>Pot</strong> — draw pot (1–4). &nbsp;
+          <strong>Band</strong> — quality tier shown on leaderboard (Fav/Dark/Long/Nope). &nbsp;
+          <strong>Lock</strong> — longshot flag; these teams earn +1 bonus point on a win. &nbsp;
+          <strong>Out</strong> — manually tick when eliminated from the tournament (group stage only — KO eliminations are automatic). &nbsp;
+          <strong>Round</strong> — which round they went out in.
         </p>
         <div id="teams-longshot-list"><div class="loading"><div class="spinner"></div></div></div>
       </div>
@@ -527,11 +573,11 @@
 
     // ── Band constants ────────────────────────────────────────
     const BAND_OPTIONS = [
-      { value: '', label: '— Unset —' },
-      { value: 'favourite', label: '🔵 Favourite' },
-      { value: 'dark_horse', label: '🟡 Dark Horse' },
-      { value: 'long_shot', label: '🟠 Long Shot' },
-      { value: 'no_hoper', label: '🔴 No Hoper' },
+      { value: '',           label: '— Unset —' },
+      { value: 'favourite',  label: '🔵 Fav' },
+      { value: 'dark_horse', label: '🟡 Dark' },
+      { value: 'long_shot',  label: '🟠 Long' },
+      { value: 'no_hoper',   label: '🔴 Nope' },
     ];
 
     let matchCache = {};
@@ -1635,35 +1681,55 @@ Good luck! ⚽🏆`;
 
       const groupRoundIds = new Set((rounds || []).filter(r => r.name.startsWith('Group')).map(r => r.id));
       const outAfterGroup = (teams || []).filter(t => t.is_eliminated && groupRoundIds.has(t.eliminated_in_round_id)).length;
+
       const outCounter = `
-        <div style="margin-bottom:12px;font-size:14px">
-          OUT after Group Stage: <strong><span style="color:${outAfterGroup===16?'var(--green)':'var(--gold)'}">${outAfterGroup}</span> / 16</strong>
-          <span style="color:var(--text-muted);font-size:11px">&nbsp;· tick Eliminated + Group Phase 3 on each team below</span>
+        <div style="margin-bottom:10px; font-size:14px">
+          OUT after Group Stage: <strong><span id="group-elim-counter" style="color:${outAfterGroup===16?'var(--green)':'var(--gold)'}">${outAfterGroup}</span> / 16</strong>
+          <span style="color:var(--text-muted); font-size:11px">&nbsp;· tick Out + Group Phase 3 on each team below</span>
         </div>`;
 
-      let html = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><thead><tr>
-        <th style="width:160px">Team</th>
-        <th style="width:50px">Pot</th>
-        <th style="width:140px">Band</th>
-        <th style="width:80px;text-align:center">Longshot (+1)</th>
-        <th style="width:80px;text-align:center">Eliminated</th>
-        <th style="width:140px">Round out</th>
-        <th style="width:30px"></th>
+      // Band options — short labels for compact dropdown
+      const BAND_OPTIONS_SHORT = [
+        { value: 'favourite',  label: '🔵 Fav' },
+        { value: 'dark_horse', label: '🟡 Dark' },
+        { value: 'long_shot',  label: '🟠 Long' },
+        { value: 'no_hoper',   label: '🔴 Nope' },
+      ];
+
+      let html = `<div class="teams-table-wrap"><table><thead><tr>
+        <th style="width:90px; text-align:left">Team</th>
+        <th style="width:32px; text-align:center">Pot</th>
+        <th style="width:80px">Band</th>
+        <th style="width:36px; text-align:center">⭐ Long</th>
+        <th style="width:36px; text-align:center">Elim</th>
+        <th style="width:80px">Round</th>
+        <th style="width:26px"></th>
       </tr></thead><tbody>`;
+
       teams.forEach(t => {
-        const bandSel = BAND_OPTIONS.map(o => `<option value="${o.value}" ${t.band === o.value ? 'selected' : ''}>${o.label}</option>`).join('');
-        // Default to Group Phase 3 for manual elimination if no round set
-        const defaultRoundId = t.eliminated_in_round_id || ((rounds||[]).find(r => r.name === 'Group Phase 3') || {}).id || '';
-        const roundSel = '<option value="">— Round —</option>' + (rounds || []).map(r => `<option value="${r.id}" ${(t.eliminated_in_round_id || defaultRoundId) === r.id ? 'selected' : ''}>${r.name}</option>`).join('');
-        const outLabel = t.is_eliminated ? ' <span style="font-size:10px;color:var(--red);font-weight:700">OUT' + (t.eliminated_in_round_id && roundMap[t.eliminated_in_round_id] ? ' (' + roundMap[t.eliminated_in_round_id] + ')' : '') + '</span>' : '';
+        const bandSel = BAND_OPTIONS_SHORT.map(o => `<option value="${o.value}" ${t.band === o.value ? 'selected' : ''}>${o.label}</option>`).join('');
+        const ROUND_ABBREV = {
+        'Group Phase 3': 'Group',
+        'Round of 32': 'R32', 'Round of 16': 'R16',
+        'Quarter Finals': 'QF', 'Semi Finals': 'SF',
+        'Final': 'Final'
+      };
+      const ELIM_ROUNDS = new Set(Object.keys(ROUND_ABBREV));
+      function abbrevRound(name) { return ROUND_ABBREV[name] || name; }
+
+      const defaultRoundId = t.eliminated_in_round_id || ((rounds||[]).find(r => r.name === 'Group Phase 3') || {}).id || '';
+        const roundSel = (rounds || []).filter(r => ELIM_ROUNDS.has(r.name)).map(r => `<option value="${r.id}" ${(t.eliminated_in_round_id || defaultRoundId) === r.id ? 'selected' : ''}>${abbrevRound(r.name)}</option>`).join('');
+        const outLabel = t.is_eliminated
+          ? ' <span style="font-size:10px; color:var(--red); font-weight:700">OUT' + (t.eliminated_in_round_id && roundMap[t.eliminated_in_round_id] ? ' (' + roundMap[t.eliminated_in_round_id] + ')' : '') + '</span>'
+          : '';
         html += `<tr data-team-row="${t.id}" style="${t.is_eliminated ? 'opacity:0.45' : ''}">
-          <td>${t.flag_emoji} ${t.name}${outLabel}</td>
-          <td style="color:var(--text-muted)">${t.pot ? 'Pot '+t.pot : '—'}</td>
-          <td><select data-team-id="${t.id}" class="band-select" style="font-size:12px; padding:2px 6px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px">${bandSel}</select></td>
-          <td><input type="checkbox" ${t.is_longshot?'checked':''} data-team-id="${t.id}" class="longshot-toggle" style="width:auto; cursor:pointer; accent-color:var(--accent)" /></td>
-          <td><input type="checkbox" ${t.is_eliminated?'checked':''} data-team-id="${t.id}" class="eliminated-toggle" style="width:auto; cursor:pointer; accent-color:var(--red)" /></td>
-          <td><select data-team-id="${t.id}" class="round-select" style="font-size:12px; padding:2px 6px; background:var(--surface2); color:var(--text); border:1px solid var(--border); border-radius:6px">${roundSel}</select></td>
-          <td class="save-indicator" style="font-size:13px; width:24px; text-align:center"></td>
+          <td style="font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:90px">${t.flag_emoji} ${t.name}${outLabel}</td>
+          <td style="text-align:center; color:var(--text-muted); font-size:12px">${t.pot || '—'}</td>
+          <td><select data-team-id="${t.id}" class="band-select">${bandSel}</select></td>
+          <td style="text-align:center"><input type="checkbox" ${t.is_longshot?'checked':''} data-team-id="${t.id}" class="longshot-toggle" style="width:auto; cursor:pointer; accent-color:var(--accent)" /></td>
+          <td style="text-align:center"><input type="checkbox" ${t.is_eliminated?'checked':''} data-team-id="${t.id}" class="eliminated-toggle" style="width:auto; cursor:pointer; accent-color:var(--red)" /></td>
+          <td><select data-team-id="${t.id}" class="round-select">${roundSel}</select></td>
+          <td class="save-indicator" style="font-size:13px; text-align:center"></td>
         </tr>`;
       });
       html += '</tbody></table></div>';
@@ -1685,11 +1751,27 @@ Good luck! ⚽🏆`;
       el.querySelectorAll('.longshot-toggle').forEach(cb => {
         cb.addEventListener('change', function() { teamUpdate(this.dataset.teamId, { is_longshot: this.checked }); });
       });
+
+      function refreshElimCounter() {
+        const counterEl = document.getElementById('group-elim-counter');
+        if (!counterEl) return;
+        let count = 0;
+        el.querySelectorAll('.eliminated-toggle').forEach(cb => {
+          if (!cb.checked) return;
+          const roundSel = el.querySelector(`.round-select[data-team-id="${cb.dataset.teamId}"]`);
+          const roundName = roundSel ? roundSel.options[roundSel.selectedIndex]?.text || '' : '';
+          if (roundName.startsWith('Group')) count++;
+        });
+        counterEl.textContent = count;
+        counterEl.style.color = count === 16 ? 'var(--green)' : 'var(--gold)';
+      }
+
       el.querySelectorAll('.eliminated-toggle').forEach(cb => {
         cb.addEventListener('change', function() {
           const roundSel = el.querySelector(`.round-select[data-team-id="${this.dataset.teamId}"]`);
           const roundId  = roundSel ? roundSel.value || null : null;
           teamUpdate(this.dataset.teamId, { is_eliminated: this.checked, eliminated_in_round_id: this.checked ? roundId : null });
+          refreshElimCounter();
         });
       });
       el.querySelectorAll('.round-select').forEach(sel => {
