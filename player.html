@@ -42,7 +42,7 @@
 
     /* Deadline bar inside pick card — slim single line */
     .deadline-bar { border-radius:8px; padding:7px 12px; font-size:12px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; gap:6px; font-weight:600; }
-    .deadline-bar.open   { background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); color:var(--gold); }
+    .deadline-bar.open   { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.75); }
     .deadline-bar.locked { background:rgba(239,68,68,0.05);  border:1px solid rgba(239,68,68,0.2);  color:var(--red); }
     .deadline-bar .countdown { font-variant-numeric:tabular-nums; font-weight:900; font-size:13px; letter-spacing:-0.01em; }
 
@@ -52,21 +52,23 @@
     .pick-slot.filled-3 { border-style:solid; border-color:var(--gold); background:rgba(245,158,11,0.09); box-shadow:0 0 12px rgba(245,158,11,0.1), 0 0 0 1px rgba(245,158,11,0.08) inset; }
     .pick-slot.filled-2 { border-style:solid; border-color:var(--accent); background:rgba(59,130,246,0.09); box-shadow:0 0 12px rgba(59,130,246,0.1), 0 0 0 1px rgba(59,130,246,0.08) inset; }
     .pick-slot-label { font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; }
+    .pick-slot-label.label-3 { color:var(--gold); }
+    .pick-slot-label.label-2 { color:var(--accent); }
     .pick-slot-value { font-size:18px; font-weight:800; letter-spacing:-0.01em; }
     .longshot-tag { font-size:10px; color:var(--gold); margin-top:5px; }
 
     /* Fixture grid */
-    .fixture-list { display:flex; flex-direction:column; gap:6px; margin-top:10px; }
+    .fixture-list { display:flex; flex-direction:column; gap:4px; margin-top:8px; }
     .fixture-row { display:grid; grid-template-columns:1fr auto 1fr; gap:6px; align-items:center; }
     .fixture-v { text-align:center; font-size:11px; font-weight:700; color:var(--text-muted); }
-    .fixture-separator { border:none; border-top:1px solid var(--border); margin:4px 0; }
+    .fixture-separator { border:none; border-top:1px solid var(--border); margin:2px 0; }
 
     /* Team buttons */
-    .team-btn { display:flex; align-items:center; gap:6px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; font-size:13px; font-weight:500; transition:all 0.15s; width:100%; justify-content:center; }
+    .team-btn { display:flex; align-items:center; gap:6px; padding:5px 8px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; font-size:12px; font-weight:600; transition:all 0.15s; width:100%; justify-content:center; min-height:32px; }
     .team-btn:hover:not(:disabled) { border-color:var(--accent); background:rgba(59,130,246,0.1); }
     .team-btn.selected-3 { border-color:var(--gold);   background:rgba(245,158,11,0.15);  color:var(--gold);   font-weight:700; }
     .team-btn.selected-2 { border-color:var(--accent); background:rgba(59,130,246,0.15);  color:var(--accent); font-weight:700; }
-    .team-btn:disabled { opacity:0.3; cursor:not-allowed; text-decoration:line-through; }
+    .team-btn:disabled { opacity:0.35; cursor:not-allowed; text-decoration:line-through; }
 
     /* Band group headers in knockout (kept for fallback) */
     .band-group { margin-bottom:14px; }
@@ -316,21 +318,38 @@
       margin-top: 12px; line-height: 1.5;
     }
 
-    /* ── Trigger button on player page ── */
+    /* ── Trigger button on player page — compact, sits beside submit ── */
+    .submit-oracle-row {
+      display: flex; gap: 8px; align-items: stretch; margin-top: 14px;
+    }
+    .submit-oracle-row .btn { flex: 1; margin: 0; }
     .btn-oracle-trigger {
-      width: 100%;
+      flex-shrink: 0;
       background: linear-gradient(135deg, rgba(109,40,217,0.12), rgba(139,92,246,0.08));
       border: 1px solid rgba(139,92,246,0.35); color: #a78bfa;
-      border-radius: 12px; padding: 12px 16px;
-      font-family: 'Rajdhani', sans-serif; font-size: 16px; font-weight: 700;
-      letter-spacing: 0.06em; cursor: pointer; margin-bottom: 14px;
+      border-radius: 10px; padding: 0 14px;
+      font-size: 18px; cursor: pointer;
       transition: all 0.2s; display: flex; align-items: center;
-      justify-content: center; gap: 8px;
+      justify-content: center;
     }
     .btn-oracle-trigger:hover {
-      background: linear-gradient(135deg, rgba(109,40,217,0.2), rgba(139,92,246,0.14));
-      border-color: rgba(139,92,246,0.6);
-      box-shadow: 0 0 16px rgba(139,92,246,0.18); transform: translateY(-1px);
+      background: linear-gradient(135deg, rgba(109,40,217,0.22), rgba(139,92,246,0.16));
+      border-color: rgba(139,92,246,0.65);
+      box-shadow: 0 0 14px rgba(139,92,246,0.2); transform: translateY(-1px);
+    }
+    /* Use this pick button inside oracle sheet */
+    .btn-oracle-use {
+      display: none; margin-top: 12px;
+      background: linear-gradient(135deg, rgba(109,40,217,0.18), rgba(139,92,246,0.12));
+      border: 1px solid rgba(139,92,246,0.5); color: #c4b5fd;
+      border-radius: 10px; padding: 10px 20px;
+      font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: 700;
+      letter-spacing: 0.04em; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-oracle-use:hover {
+      background: linear-gradient(135deg, rgba(109,40,217,0.28), rgba(139,92,246,0.2));
+      border-color: rgba(139,92,246,0.75); color: #fff;
+      box-shadow: 0 0 14px rgba(139,92,246,0.25);
     }
   </style>
 </head>
@@ -382,7 +401,7 @@
         <div class="stat-block"><div class="stat-value" id="stat-points">0</div><div class="stat-label">Points</div><div class="stat-sub" id="stat-points-sub"></div></div>
         <div class="stat-block"><div class="stat-value" id="stat-position">—</div><div class="stat-label">Position</div><div class="stat-sub" id="stat-position-sub"></div></div>
         <div class="stat-block"><div class="stat-value" id="stat-teams-left">—</div><div class="stat-label">Teams Left</div><div class="stat-sub-bands" id="stat-teams-sub"></div></div>
-        <div class="stat-block stat-goals-block"><div class="stat-value" id="stat-goals">—</div><div class="stat-label">Goals</div></div>
+        <div class="stat-block stat-goals-block"><div class="stat-value" id="stat-goals">—</div><div class="stat-label">Goals</div><div class="stat-sub" id="stat-goals-sub"></div></div>
       </div>
 
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
@@ -415,22 +434,20 @@
 
           <div class="pick-summary" id="pick-summary"></div>
 
-          <!-- Top submit button -->
-          <button class="btn btn-primary" id="submit-pick-btn-top" style="width:100%; display:none; margin-bottom:14px" disabled>Select a team from below ↓</button>
+          <!-- Top submit + Oracle trigger inline -->
+          <div class="submit-oracle-row" id="submit-oracle-row-top" style="display:none; margin-bottom:14px">
+            <button class="btn btn-primary" id="submit-pick-btn-top" disabled>Select a team from below ↓</button>
+            <button class="btn-oracle-trigger" onclick="openOracle()" title="Ask the Oracle">🔮</button>
+          </div>
 
           <div id="pick-form-inner"></div>
 
-          <!-- Bottom submit button + Oracle -->
-          <div style="margin-top:14px">
-            <button class="btn btn-primary" id="submit-pick-btn" style="width:100%; display:none" disabled>Select a team from above ↑</button>
-            <div id="pick-msg" style="margin-top:8px; font-size:12px; text-align:center"></div>
+          <!-- Bottom submit + Oracle trigger inline -->
+          <div class="submit-oracle-row" id="submit-oracle-row" style="display:none">
+            <button class="btn btn-primary" id="submit-pick-btn" disabled>Select a team above ↑</button>
+            <button class="btn-oracle-trigger" id="oracle-trigger-btn" onclick="openOracle()" title="Ask the Oracle">🔮</button>
           </div>
-
-          <!-- Oracle — below the fixture list -->
-          <div id="oracle-divider" style="display:none; border-top:1px solid var(--border); margin:16px 0 12px;"></div>
-          <button class="btn-oracle-trigger" id="oracle-trigger-btn" style="display:none" onclick="openOracle()">
-            🔮 Not sure? Ask the Oracle
-          </button>
+          <div id="pick-msg" style="margin-top:8px; font-size:12px; text-align:center"></div>
         </div>
       </div>
 
@@ -571,16 +588,18 @@
           { data: rounds },
           { data: teams },
           { data: allScores },
-          { data: matches }
+          { data: matches },
+          { data: goalsData }
         ] = await Promise.all([
           db.from('picks')
-            .select('id, multiplier, team_id, round_id, is_assigned, rounds(id, name, round_type, deadline, sort_order, is_complete), teams(id, name, flag_emoji, is_longshot), pick_results(points_earned, match_result)')
+            .select('id, multiplier, team_id, round_id, is_assigned, oracle_pick, rounds(id, name, round_type, deadline, sort_order, is_complete), teams(id, name, flag_emoji, is_longshot), pick_results(points_earned, match_result)')
             .eq('player_id', player.id)
             .order('created_at', { ascending: true }),
           db.from('rounds').select('*').order('sort_order'),
           db.from('teams').select('id, name, flag_emoji, is_longshot, is_eliminated, band, odds_rank').order('odds_rank'),
           db.from('player_scores').select('player_id, total_points').order('total_points', { ascending: false }),
-          db.from('matches').select('id, round_id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band)').order('kickoff')
+          db.from('matches').select('id, round_id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band)').order('kickoff'),
+          db.from('matches').select('home_score, away_score').not('home_score', 'is', null).not('away_score', 'is', null)
         ]);
 
         allPicks   = picks   || [];
@@ -649,6 +668,20 @@
           (player.total_goals_prediction !== null && player.total_goals_prediction !== undefined)
             ? player.total_goals_prediction : '—';
 
+        // Goals projection sub-line
+        const goalsPlayed = (goalsData || []);
+        if (goalsPlayed.length > 0 && player.total_goals_prediction != null) {
+          const goalsScored   = goalsPlayed.reduce((s, m) => s + (m.home_score || 0) + (m.away_score || 0), 0);
+          const matchesPlayed = goalsPlayed.length;
+          const projected     = Math.round((goalsScored / matchesPlayed) * 104);
+          const diff          = player.total_goals_prediction - projected;
+          const diffStr       = (diff >= 0 ? '+' : '') + diff;
+          const diffColor     = Math.abs(diff) <= 5 ? 'var(--green)' : Math.abs(diff) <= 15 ? 'var(--gold)' : 'var(--red)';
+          document.getElementById('stat-goals-sub').innerHTML =
+            '<span style="color:var(--text-muted)">' + projected + ' proj</span> ' +
+            '<span style="color:' + diffColor + ';font-weight:700">' + diffStr + '</span>';
+        }
+
         const roundsRemaining = allRounds.filter(r => !r.is_complete).length;
         if (teamsLeft <= roundsRemaining + 2 && !player.is_eliminated) {
           const warn = document.getElementById('teams-warning');
@@ -706,8 +739,8 @@
 
         buildRoundDropdown();
         document.getElementById('pick-section').style.display = 'block';
-        document.getElementById('oracle-trigger-btn').style.display = 'flex';
-        document.getElementById('oracle-divider').style.display = 'block';
+        document.getElementById('submit-oracle-row').style.display = 'flex';
+        document.getElementById('submit-oracle-row-top').style.display = 'flex';
 
         const now = getEffectiveDate();
         const activeRound = openRounds.find(r => new Date(r.deadline) > now) || openRounds[0];
@@ -778,7 +811,7 @@
 
     function selectRound(roundId) {
       selectedRoundId = roundId;
-      pick3 = null; pick2 = null; pickSingle = null;
+      pick3 = null; pick2 = null; pickSingle = null; _oracleUsed3 = false; _oracleUsed2 = false;
       document.getElementById('round-select').value = roundId;
       document.querySelectorAll('.round-pill').forEach(p => p.classList.remove('active'));
       const round = allRounds.find(r => r.id === roundId);
@@ -825,9 +858,9 @@
             '<div class="alert alert-warning" style="margin-bottom:14px">⚠️ <strong>' + names + '</strong> ' +
             (eliminatedPicks.length > 1 ? 'have' : 'has') +
             ' been eliminated from the tournament. You need to change your pick before the deadline.</div>';
-          document.getElementById('submit-pick-btn').style.display = 'block';
-          document.getElementById('submit-pick-btn-top').style.display = 'block';
-          pick3 = null; pick2 = null; pickSingle = null;
+          document.getElementById('submit-oracle-row').style.display = 'flex';
+          document.getElementById('submit-oracle-row-top').style.display = 'flex';
+          pick3 = null; pick2 = null; pickSingle = null; _oracleUsed3 = false; _oracleUsed2 = false;
           const round2 = allRounds.find(r => r.id === round.id);
           if (round2) {
             allPicks = allPicks.filter(p => p.round_id !== round.id);
@@ -844,8 +877,8 @@
         document.getElementById('pick-summary').innerHTML = '';
         document.getElementById('pick-form-inner').innerHTML =
           '<p style="color:var(--text-muted);text-align:center;padding:16px">Deadline has passed. No pick was submitted for this round.</p>';
-        document.getElementById('submit-pick-btn').style.display = 'none';
-        document.getElementById('submit-pick-btn-top').style.display = 'none';
+        document.getElementById('submit-oracle-row').style.display = 'none';
+        document.getElementById('submit-oracle-row-top').style.display = 'none';
         return;
       }
       renderPickForm(round);
@@ -859,25 +892,25 @@
         const p3 = roundPicks.find(p => p.multiplier === 3);
         const p2 = roundPicks.find(p => p.multiplier === 2);
         html += '<div class="pick-summary">';
-        if (p3) html += '<div class="pick-slot filled-3"><div class="pick-slot-label">3-Pointer</div><div class="pick-slot-value">' + (p3.teams ? p3.teams.flag_emoji + ' ' + p3.teams.name : '—') + '</div>' + (p3.teams && p3.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
-        if (p2) html += '<div class="pick-slot filled-2"><div class="pick-slot-label">2-Pointer</div><div class="pick-slot-value">' + (p2.teams ? p2.teams.flag_emoji + ' ' + p2.teams.name : '—') + '</div>' + (p2.teams && p2.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
+        if (p3) html += '<div class="pick-slot filled-3"><div class="pick-slot-label label-3">3-Pointer' + (p3.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (p3.teams ? p3.teams.flag_emoji + ' ' + p3.teams.name : '—') + '</div>' + (p3.teams && p3.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
+        if (p2) html += '<div class="pick-slot filled-2"><div class="pick-slot-label label-2">2-Pointer' + (p2.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (p2.teams ? p2.teams.flag_emoji + ' ' + p2.teams.name : '—') + '</div>' + (p2.teams && p2.teams.is_longshot ? '<div class="longshot-tag">⭐ Longshot bonus eligible</div>' : '') + '</div>';
         html += '</div>';
       } else {
         const single = roundPicks[0];
-        if (single) html += '<div style="display:flex; justify-content:center"><div class="pick-slot filled-2" style="max-width:200px"><div class="pick-slot-label">Your Pick</div><div class="pick-slot-value">' + (single.teams ? single.teams.flag_emoji + ' ' + single.teams.name : '—') + '</div></div></div>';
+        if (single) html += '<div style="display:flex; justify-content:center"><div class="pick-slot filled-2" style="max-width:200px"><div class="pick-slot-label label-2">Your Pick' + (single.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (single.teams ? single.teams.flag_emoji + ' ' + single.teams.name : '—') + '</div></div></div>';
       }
       if (!isLocked) html += '<div style="margin-top:12px;text-align:center"><button class="btn btn-secondary" onclick="allowResubmit()">Change pick</button></div>';
       document.getElementById('pick-summary').innerHTML = '';
       document.getElementById('pick-form-inner').innerHTML = html;
-      document.getElementById('submit-pick-btn').style.display = 'none';
-      document.getElementById('submit-pick-btn-top').style.display = 'none';
+      document.getElementById('submit-oracle-row').style.display = 'none';
+      document.getElementById('submit-oracle-row-top').style.display = 'none';
     }
 
     function allowResubmit() {
       const round = allRounds.find(r => r.id === selectedRoundId);
       if (!round) return;
       if (getEffectiveDate() >= new Date(round.deadline)) return;
-      pick3 = null; pick2 = null; pickSingle = null;
+      pick3 = null; pick2 = null; pickSingle = null; _oracleUsed3 = false; _oracleUsed2 = false;
       renderPickForm(round);
     }
 
@@ -890,8 +923,8 @@
       const summaryEl = document.getElementById('pick-summary');
       if (isGroup) {
         summaryEl.innerHTML =
-          '<div class="pick-slot" id="slot-3"><div class="pick-slot-label">3-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div></div>' +
-          '<div class="pick-slot" id="slot-2"><div class="pick-slot-label">2-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div></div>';
+          '<div class="pick-slot" id="slot-3"><div class="pick-slot-label label-3">3-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div></div>' +
+          '<div class="pick-slot" id="slot-2"><div class="pick-slot-label label-2">2-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div></div>';
       } else {
         summaryEl.innerHTML =
           '<div class="pick-slot" id="slot-single"><div class="pick-slot-label">Your Pick</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div></div>';
@@ -1023,11 +1056,11 @@
           no_hoper:   availForBands.filter(t => t.band === 'no_hoper').length,
         };
         const instrHtml =
-          '<p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;line-height:1.6">' +
-          'Select one team. Crossed out = already used. &nbsp;' +
-          '<span style="color:#22c55e;font-weight:700">■ Favourite ' + bc.favourite + '</span> &nbsp;' +
-          '<span style="color:#f59e0b;font-weight:700">■ Dark Horse ' + bc.dark_horse + '</span> &nbsp;' +
-          '<span style="color:#f97316;font-weight:700">■ Long Shot ' + bc.long_shot + '</span> &nbsp;' +
+          '<p style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Select one team. Crossed out = already used.</p>' +
+          '<p style="font-size:12px;margin-bottom:8px;display:flex;gap:10px;flex-wrap:wrap">' +
+          '<span style="color:#22c55e;font-weight:700">■ Favourite ' + bc.favourite + '</span>' +
+          '<span style="color:#f59e0b;font-weight:700">■ Dark Horse ' + bc.dark_horse + '</span>' +
+          '<span style="color:#f97316;font-weight:700">■ Long Shot ' + bc.long_shot + '</span>' +
           '<span style="color:#ef4444;font-weight:700">■ No Hoper ' + bc.no_hoper + '</span>' +
           '</p>';
         gridHtml = instrHtml + fixtureHtml;
@@ -1036,12 +1069,17 @@
       document.getElementById('pick-form-inner').innerHTML = gridHtml;
       // Top button always shown; bottom button only for group + R32/R16
       const showBottomBtn = isGroup || ['Round of 32','Round of 16'].includes(round.name);
-      document.getElementById('submit-pick-btn').style.display = showBottomBtn ? 'block' : 'none';
-      document.getElementById('submit-pick-btn-top').style.display = 'block';
+      document.getElementById('submit-oracle-row').style.display = showBottomBtn ? 'flex' : 'none';
+      document.getElementById('submit-oracle-row-top').style.display = 'flex';
       updateSubmitButton(isGroup, round);
     }
 
-    function selectTeam(teamId) {
+    function selectTeam(teamId, fromOracle) {
+      // Clear oracle flag for whichever slot this team was in, if manually deselected
+      if (!fromOracle) {
+        if (pick3 && pick3.id === teamId) _oracleUsed3 = false;
+        if (pick2 && pick2.id === teamId) _oracleUsed2 = false;
+      }
       const round = allRounds.find(r => r.id === selectedRoundId);
       if (!round) return;
       const team = allTeams.find(t => t.id === teamId);
@@ -1056,17 +1094,20 @@
         else                          { if (pick3.id !== teamId) pick2 = team; }
 
         const slot3 = document.getElementById('slot-3');
-        if (pick3) { slot3.className = 'pick-slot filled-3'; slot3.innerHTML = '<div class="pick-slot-label">3-Pointer</div><div class="pick-slot-value">' + pick3.flag_emoji + ' ' + pick3.name + '</div>' + (pick3.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
-        else       { slot3.className = 'pick-slot'; slot3.innerHTML = '<div class="pick-slot-label">3-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
+        const o3 = _oracleUsed3 ? ' 🔮' : '';
+        const o2 = _oracleUsed2 ? ' 🔮' : '';
+        if (pick3) { slot3.className = 'pick-slot filled-3'; slot3.innerHTML = '<div class="pick-slot-label label-3">3-Pointer' + o3 + '</div><div class="pick-slot-value">' + pick3.flag_emoji + ' ' + pick3.name + '</div>' + (pick3.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
+        else       { slot3.className = 'pick-slot'; slot3.innerHTML = '<div class="pick-slot-label label-3">3-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
 
         const slot2 = document.getElementById('slot-2');
-        if (pick2) { slot2.className = 'pick-slot filled-2'; slot2.innerHTML = '<div class="pick-slot-label">2-Pointer</div><div class="pick-slot-value">' + pick2.flag_emoji + ' ' + pick2.name + '</div>' + (pick2.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
-        else       { slot2.className = 'pick-slot'; slot2.innerHTML = '<div class="pick-slot-label">2-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
+        if (pick2) { slot2.className = 'pick-slot filled-2'; slot2.innerHTML = '<div class="pick-slot-label label-2">2-Pointer' + o2 + '</div><div class="pick-slot-value">' + pick2.flag_emoji + ' ' + pick2.name + '</div>' + (pick2.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
+        else       { slot2.className = 'pick-slot'; slot2.innerHTML = '<div class="pick-slot-label label-2">2-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
       } else {
         pickSingle = (pickSingle && pickSingle.id === teamId) ? null : team;
+        const oS = _oracleUsed2 ? ' 🔮' : '';
         const slot = document.getElementById('slot-single');
-        if (pickSingle) { slot.className = 'pick-slot filled-2'; slot.innerHTML = '<div class="pick-slot-label">Your Pick</div><div class="pick-slot-value">' + pickSingle.flag_emoji + ' ' + pickSingle.name + '</div>'; }
-        else            { slot.className = 'pick-slot'; slot.innerHTML = '<div class="pick-slot-label">Your Pick</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
+        if (pickSingle) { slot.className = 'pick-slot filled-2'; slot.innerHTML = '<div class="pick-slot-label label-2">Your Pick' + oS + '</div><div class="pick-slot-value">' + pickSingle.flag_emoji + ' ' + pickSingle.name + '</div>'; }
+        else            { slot.className = 'pick-slot'; slot.innerHTML = '<div class="pick-slot-label label-2">Your Pick</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
       }
 
       document.querySelectorAll('.team-btn').forEach(btn => {
@@ -1144,10 +1185,10 @@
         await db.from('picks').delete().eq('player_id', player.id).eq('round_id', round.id);
         const inserts = [];
         if (isGroup) {
-          inserts.push({ player_id: player.id, round_id: round.id, team_id: pick3.id, multiplier: 3 });
-          inserts.push({ player_id: player.id, round_id: round.id, team_id: pick2.id, multiplier: 2 });
+          inserts.push({ player_id: player.id, round_id: round.id, team_id: pick3.id, multiplier: 3, oracle_pick: _oracleUsed3 });
+          inserts.push({ player_id: player.id, round_id: round.id, team_id: pick2.id, multiplier: 2, oracle_pick: _oracleUsed2 });
         } else {
-          inserts.push({ player_id: player.id, round_id: round.id, team_id: pickSingle.id, multiplier: 2 });
+          inserts.push({ player_id: player.id, round_id: round.id, team_id: pickSingle.id, multiplier: 2, oracle_pick: _oracleUsed2 });
         }
         const { error } = await db.from('picks').insert(inserts);
         if (error) throw error;
@@ -1330,6 +1371,8 @@
       <div class="oracle-btn-wrap">
         <button class="btn-oracle" id="oracle-consult-btn">🔮 Consult the Oracle</button>
         <br>
+        <button class="btn-oracle-use" id="oracle-use-btn">Use this pick →</button>
+        <br>
         <button class="btn-oracle-again" id="oracle-again-btn">Ask again</button>
       </div>
 
@@ -1352,12 +1395,23 @@
       return 'group';                                                  // GP1-3: max save, no survival
     }
 
-    // ── Elite save tier — bottom 6 by outright odds, dynamically computed ────
-    function getEliteIds(teams, outrightOddsMap) {
-      const withOdds = teams
-        .filter(t => outrightOddsMap[t.id])
-        .sort((a, b) => outrightOddsMap[a.id] - outrightOddsMap[b.id]);
-      return new Set(withOdds.slice(0, 6).map(t => t.id));
+    // ── Elite save tier — stage-aware ────────────────────────────────────────
+    // Group: Favourites excluded entirely before pool is built — no elite flagging needed
+    // R32/R16: all Favourites get a save nudge
+    // QF: only top 3 by odds_rank protected
+    // SF: only top 2 protected
+    // Final: nothing protected — use what you've got
+    function getEliteIds(teams, mode, roundName) {
+      if (mode === 'final') return new Set();
+      if (mode === 'ko') {
+        if (roundName === 'Quarter Finals' || roundName === 'Quarter-Final')
+          return new Set(teams.filter(t => t.odds_rank && t.odds_rank <= 3).map(t => t.id));
+        if (roundName === 'Semi Finals' || roundName === 'Semi-Final')
+          return new Set(teams.filter(t => t.odds_rank && t.odds_rank <= 2).map(t => t.id));
+        // R32 / R16: all Favourites
+        return new Set(teams.filter(t => t.band === 'favourite').map(t => t.id));
+      }
+      return new Set(); // group stage: handled by exclusion below
     }
 
     function starStr(n) {
@@ -1366,98 +1420,146 @@
 
     // ── WHY labels ────────────────────────────────────────────────────────────
     const ORACLE_WHY = {
-      G_LONGSHOT_WEAK: 'Longshot bonus + weak opponent — free points',
-      G_SOLID_WEAK:    'Solid pick against weak opposition',
-      G_SOLID_MID:     'Favoured to win — reliable points',
-      G_SAVE_WARNING:  'Elite team — consider saving for knockout',
-      G_COINFLIP:      'Competitive match — could go either way',
-      G_DAMAGE:        'Limited options — best of what remains',
-      K_SOLID_WEAK:    'Strong win probability — safe survival pick',
-      K_LONGSHOT_RISKY:'Bonus eligible — but this is knockout. One chance.',
-      K_MIDTIER_GOOD:  'Good win odds — sensible KO pick',
-      K_COINFLIP:      '50/50 — The Oracle will not dress this up',
-      K_ELITE_LATE:    'Late stage — time to use your best teams',
-      K_DAMAGE:        'Slim pickings — best available for survival',
+      // Group stage
+      G_BONUS_STRONG:   'Bonus eligible + weak opponent + short odds — best possible group pick',
+      G_BONUS_WEAK:     'Bonus eligible + weak opponent — points and a bonus if it lands',
+      G_DH_STRONG:      'Dark Horse with short odds vs weak opposition — solid safe pick',
+      G_BONUS_MID:      'Bonus eligible — tougher match but the bonus is still on the table',
+      G_SAFE_BURN:      'Safe to burn — decent win chance, will not be missed in knockout',
+      G_DAMAGE:         'Limited options — best of what is available',
+      // KO: R32 / R16
+      K_DH_STRONG:      'Dark Horse with strong odds — ideal knockout pick',
+      K_DH_MID:         'Dark Horse favoured — good KO pick without burning anyone precious',
+      K_FAV_SAVE:       'Favourite — will likely win, but you will want them later',
+      K_FAV_WARN:       'Favourite — consider saving for later rounds',
+      K_BONUS_KO:       'Bonus eligible — upside available, but one loss ends your run',
+      K_BONUS_RISKY:    'Bonus eligible — risky in knockout, only if nothing better available',
+      K_DAMAGE:         'Slim pickings — best available for survival',
+      // QF
+      K_QF_STRONG:      'Strong win probability — right team for this stage',
+      K_QF_SAVE:        'Top team — consider whether you need them in the semis',
+      // SF / Final
+      K_LATE_STRONG:    'Strong pick — this is the time to use your best',
+      K_LATE_MID:       'Favoured to win — sensible pick at this stage',
+      K_COINFLIP:       '50/50 — The Oracle will not dress this up',
     };
 
     // ── Templates ─────────────────────────────────────────────────────────────
     const ORACLE_TEMPLATES = {
-      G_LONGSHOT_WEAK: [
-        '{team} are a longshot playing {opponent}. If they come through, you get the bonus. The Oracle likes this.',
-        'Low outright odds mean {team} won\'t cost you later. Against {opponent}, they should win and bag the bonus.',
-        '{team} vs {opponent}. Underdog bonus play with genuine win chances. The Oracle is quietly pleased.',
-        'Longshot facing soft opposition. {team} vs {opponent}. Points and a bonus if it lands. Hard to argue with.',
-        'The Oracle sees {team}, sees {opponent}, sees a bonus point waiting. Pick them.',
+      // ── Group stage ──────────────────────────────────────────────────────────
+      G_BONUS_STRONG: [
+        '{team} are bonus eligible playing {opponent}. Short odds, weak opposition, bonus on the table. The Oracle is pleased.',
+        'Bonus eligible. Weak opponent. Short H2H odds. {team} vs {opponent}. This is exactly what group stage picks should look like.',
+        '{team} tick every box — bonus eligible, favoured, facing {opponent}. The Oracle does not hesitate.',
+        'The Oracle sees {team}, sees {opponent}, sees a bonus waiting. This is the pick.',
+        '{team} vs {opponent}. Strong win chance and a bonus if it lands. Safe to use now. Pick them.',
       ],
-      G_SOLID_WEAK: [
-        '{team} should handle {opponent} comfortably. Not flashy, but points are points.',
-        'Solid pick. {team} vs {opponent} — the Oracle sees no drama here. Just wins.',
-        '{team} against {opponent}. The Oracle has seen worse ideas. This is not one of them.',
-        'No bonus, no risk. {team} vs {opponent}. The Oracle approves of sensible decisions.',
-        '{team} are favoured and {opponent} won\'t stop them. File under: reliable.',
+      G_BONUS_MID: [
+        '{team} are bonus eligible against {opponent}. Not the easiest match, but the bonus is still on the table if they win.',
+        'Tougher draw for {team}, but they are bonus eligible. A win here gets you points and a bonus.',
+        '{team} vs {opponent}. Competitive match — but {team} are bonus eligible, which changes the maths.',
+        'The Oracle notes {team} are bonus eligible. {opponent} are no pushover, but the upside is real.',
+        'Not a gimme, but {team} are bonus eligible against {opponent}. Worth considering.',
       ],
-      G_SOLID_MID: [
-        '{team} are the better team here. {opponent} will make it interesting but {team} should edge it.',
-        'Competitive match, but {team} have the edge on {opponent}. Reasonable group stage pick.',
-        '{team} vs {opponent}. Not a gimme, but {team} are fancied. The Oracle is cautiously confident.',
-        'The Oracle has assessed {team} vs {opponent} and found {team} to be the wiser choice. Probably.',
-        '{team} slightly favoured against {opponent}. Group stage — a draw still gets you something.',
+      G_BONUS_WEAK: [
+        '{team} are bonus eligible against {opponent}. Win likely, bonus possible. Good use of a team you can afford to spend.',
+        'Bonus play. {team} vs {opponent}. Not nailed on, but the bonus is there if they come through.',
+        '{team} vs {opponent}. Bonus eligible, decent win chance. The Oracle likes this more than it looks.',
+        'The Oracle sees a bonus opportunity. {team} vs {opponent}. Worth the pick in the group stage.',
+        '{team} face {opponent} and are bonus eligible. Low cost, decent upside.',
       ],
-      G_SAVE_WARNING: [
-        '{team} will win this, probably. But remember — they\'re gone from knockout if you use them now.',
-        'Strong pick. {team} vs {opponent}. Just know you\'re spending a team you\'ll want later.',
-        'The Oracle recommends {team} with one caveat: you won\'t have them in the knockout. Your call.',
-        '{team} are elite. They\'ll likely win. But there are cheaper ways to get these points.',
-        'You could pick {team}. They\'re good. They\'ll probably still be good in the Final — which you won\'t see them in.',
+      G_DH_STRONG: [
+        '{team} are a Dark Horse with strong odds against {opponent}. Solid points, no precious team burned.',
+        'Dark Horse with short H2H odds vs a weak opponent. {team} vs {opponent}. Safe to use now.',
+        '{team} should handle {opponent} comfortably. A Dark Horse well worth spending in the group stage.',
+        'The Oracle likes {team} here. Favoured against {opponent}, not too precious to use. Good pick.',
+        '{team} vs {opponent}. Dark Horse with real win probability. The Oracle approves.',
       ],
-      G_COINFLIP: [
-        '{team} vs {opponent}. Genuinely 50/50. The Oracle picked {team} and is not fully confident.',
-        'Competitive group match. {team} vs {opponent}. Could go either way. Oracle has a slight preference for {team}.',
-        'The Oracle sees a coin flip. {team} vs {opponent}. A draw is a real possibility here.',
-        '{team} vs {opponent} — the Oracle considered this carefully and arrived at {team}. Barely.',
-        'This one is tight. {team} vs {opponent}. If there\'s a better option, the Oracle suggests finding it.',
+      G_SAFE_BURN: [
+        '{team} vs {opponent}. Decent win chance, safe to spend at this stage. Nothing precious being wasted.',
+        'Not the flashiest pick, but {team} vs {opponent} is a reasonable group stage choice.',
+        '{team} should get something here. A team you can afford to use now and not regret later.',
+        'The Oracle has assessed {team} vs {opponent}. Reasonable. Not inspired. Reasonable.',
+        '{team} are available, not precious, and fancied to get a result vs {opponent}. Use them.',
       ],
       G_DAMAGE: [
-        'The Oracle has surveyed your options and is mildly concerned. {team} are the best of what\'s available.',
-        '{team}. It\'s not inspired. It\'s what the pool offers. The Oracle does its best.',
-        'Your elite teams are gone or saved. {team} are what remains. Make the most of it.',
-        'The Oracle has found {team}. Not a dream pick. But a pick.',
-        '{team} it is. The Oracle is working with limited material and would like that acknowledged.',
+        '{team} vs {opponent}. Not the Oracle\'s first choice, but there is a result to be had here.',
+        'The Oracle has assessed {team} vs {opponent}. It is not inspired. But it is a pick.',
+        '{team}. The Oracle has seen better matchups. It has also seen worse. This will do.',
+        'The Oracle settles on {team} vs {opponent}. Not glamorous. Points are points.',
+        '{team} vs {opponent}. The Oracle is not overjoyed, but it is not panicking either.',
       ],
-      K_SOLID_WEAK: [
-        '{team} vs {opponent}. Strong win probability. This is what knockout picks should look like.',
-        'The Oracle sees {team} beating {opponent} with reasonable confidence. Safe survival pick.',
-        '{team} are significantly fancied over {opponent}. Pick them, survive, move on.',
-        'Good odds. Weak opponent. {team} vs {opponent}. The Oracle does not hesitate.',
-        '{team} should see off {opponent}. In knockout, boring and safe is exactly right.',
+      // ── Knockout: R32 / R16 ──────────────────────────────────────────────────
+      K_DH_STRONG: [
+        '{team} are a Dark Horse with strong win odds against {opponent}. This is the ideal knockout pick.',
+        'Good enough to win, not too precious to spend. {team} vs {opponent}. The Oracle approves.',
+        '{team} vs {opponent}. Strong win probability without burning anyone you will regret losing.',
+        'Dark Horse. Short odds. Weak opponent. {team} vs {opponent}. Pick them and move on.',
+        'The Oracle sees {team} vs {opponent} and sees a comfortable knockout round. Use them.',
       ],
-      K_LONGSHOT_RISKY: [
-        '{team} are a longshot against {opponent}. Bonus if they win — but this is knockout. One loss and you\'re out.',
-        'The Oracle flags {team} as risky. Good bonus potential vs {opponent}, but their win odds give it pause.',
-        '{team} vs {opponent}. Bonus eligible. But there is no recovering from a KO loss.',
-        'Longshot play. {team} could win this and get you the bonus. Or you could be eliminated. The Oracle has said its piece.',
-        '{team} vs {opponent}. The upside is real. So is the downside. Knockout rules apply.',
-      ],
-      K_MIDTIER_GOOD: [
-        '{team} are well-fancied in this knockout match. Solid survival pick without burning an elite team.',
+      K_DH_MID: [
+        '{team} are favoured in this knockout match. Solid survival pick without burning anyone precious.',
         'Good win odds, not too precious to spend. {team} vs {opponent} is the Oracle\'s kind of knockout pick.',
         '{team} should advance past {opponent}. Sensible use of a mid-tier team at this stage.',
-        'The Oracle likes {team} here. Favoured, available, not wasted. Exactly right for a knockout round.',
+        'The Oracle likes {team} here. Favoured, available, not wasted. Right for this round.',
         '{team} vs {opponent}. Win probability is on your side. The Oracle approves.',
+      ],
+      K_FAV_SAVE: [
+        '{team} will likely win this. But you will want them in the later rounds. Just so you know.',
+        'Strong pick. {team} vs {opponent}. The Oracle notes — they are gone from your pool after this.',
+        '{team} are excellent here. Use them now and they are not available later. Your call.',
+        'The Oracle recommends {team} with one caveat: there are cheaper ways to get through this round.',
+        '{team} vs {opponent}. Likely win. But is this the right round to spend them? The Oracle leaves it with you.',
+      ],
+      K_FAV_WARN: [
+        '{team} are one of your best teams. The Oracle would think carefully before using them here.',
+        'You could pick {team}. They are good. They will probably still be good in the later rounds — if you still have them.',
+        '{team} will probably win this. But there are better times to use a team this good.',
+        'The Oracle sees {team} and sees a team worth saving. This matchup does not require them.',
+        '{team} vs {opponent}. The Oracle is not convinced this is the right moment for your best.',
+      ],
+      K_BONUS_KO: [
+        '{team} are bonus eligible against {opponent}. Strong win chance and a bonus available — but one loss ends your run.',
+        'Bonus play in knockout. {team} vs {opponent}. The upside is real. So is the downside.',
+        '{team} could win this and bank the bonus. Or you could be eliminated. The Oracle has said its piece.',
+        'Bonus eligible with decent odds. {team} vs {opponent}. Higher risk in knockout, but the reward is there.',
+        'The Oracle flags {team} as bonus eligible. Worth knowing before you decide.',
+      ],
+      K_BONUS_RISKY: [
+        '{team} are bonus eligible but their win odds give the Oracle pause. This is knockout — one chance.',
+        'There is no recovering from a KO loss. {team} vs {opponent}. The bonus is tempting. The risk is real.',
+        '{team}. Bonus eligible. Not strongly fancied. The Oracle recommends only if nothing better is available.',
+        'Longshot play in knockout. {team} could come through. Could also send you home.',
+        'The Oracle notes the bonus. The Oracle also notes this is not the group stage. Proceed with caution.',
+      ],
+      // ── QF / SF / Final ──────────────────────────────────────────────────────
+      K_LATE_STRONG: [
+        '{team} are strongly fancied against {opponent}. At this stage, pick the team most likely to win.',
+        'Strong win probability. {team} vs {opponent}. Late stage — no room for heroics. Pick the likely winner.',
+        '{team} vs {opponent}. The Oracle sees a clear favourite. Use them.',
+        'You have made it this far. {team} give you the best chance of going further. Pick them.',
+        '{team} are the right call here. Strong odds, right stage. The Oracle does not hesitate.',
+      ],
+      K_LATE_MID: [
+        '{team} are favoured in this match. Sensible pick at this stage of the tournament.',
+        'Good win odds. {team} vs {opponent}. In the later rounds, take what the table gives you.',
+        '{team} should get through this. A solid pick for where you are in the tournament.',
+        'The Oracle sees {team} as the safer choice here. Not nailed on, but favoured.',
+        '{team} vs {opponent}. Favoured to win. The Oracle approves of sensible decisions.',
+      ],
+      K_QF_SAVE: [
+        '{team} will likely win — but the Oracle notes you may want them in the next round too.',
+        'Strong team. Good match. Just worth asking: is there a round you would rather save them for?',
+        '{team} vs {opponent}. They will probably win. Whether to spend them now is your call.',
+        'The Oracle likes {team} here, with a gentle note: they are one of your best remaining options.',
+        '{team}. Strong pick. The Oracle simply observes they are not easy to replace at this stage.',
       ],
       K_COINFLIP: [
         '{team} vs {opponent}. This is a coin flip. The Oracle will not pretend otherwise.',
-        'Genuinely 50/50. {team} vs {opponent}. If you have a safer option, use it. If not — good luck.',
-        'The Oracle sees a competitive knockout match and is uncomfortable. {team} vs {opponent}. No guarantees.',
+        'Genuinely 50/50. {team} vs {opponent}. If there is a safer option, use it. If not — good luck.',
+        'The Oracle sees a competitive match and is uncomfortable. {team} vs {opponent}. No guarantees.',
         '{team} vs {opponent}. The Oracle has no strong conviction here. That itself is the answer.',
-        'Both teams have genuine knockout chances. {team} are marginally fancied. Marginally.',
-      ],
-      K_ELITE_LATE: [
-        'Late stage. Save logic no longer applies. {team} are strong and it\'s time to use them.',
-        '{team} vs {opponent} at this stage — the Oracle says go. No point preserving them now.',
-        'You\'ve made it this far. {team} are yours to spend. The Oracle recommends spending them.',
-        '{team}. Elite team. Late round. Good match-up. No reason to hold back.',
-        'The Oracle has been patient about {team}. That patience is no longer required. Pick them.',
+        'Both teams have genuine chances. {team} are marginally fancied. Marginally.',
       ],
       K_DAMAGE: [
         'The Oracle has examined your pool and found {team}. It is what it is.',
@@ -1491,6 +1593,8 @@
     let _oracleRound      = null;
     let _oracleOddsMap    = {};
     let _oracleEliteIds   = new Set();
+    let _oracleUsed3 = false;   // 3pt slot filled via oracle
+    let _oracleUsed2 = false;   // 2pt slot filled via oracle
 
     function oRand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
@@ -1531,74 +1635,107 @@
 
       if (candidates.length === 0) return [];
 
-      // Elite save tier — off for late KO (QF+)
-      const eliteIds = isLate ? new Set() : getEliteIds(allTeams, outrightOddsMap);
+      // Stage-aware elite ids
+      const eliteIds = getEliteIds(allTeams, mode, round.name);
       _oracleEliteIds = eliteIds;
 
       const pool5 = [], pool4 = [], pool3 = [], pool2 = [], poolFallback = [];
 
       candidates.forEach(t => {
-        const opp      = opponentMap[t.id] || null;
-        const myH2h    = h2hOddsMap[t.id]  || null;
-        const oppH2h   = opp ? (h2hOddsMap[opp.id] || null) : null;
-        const kickoff  = kickoffMap[t.id]  || null;
-        const isElite  = eliteIds.has(t.id);
-        const isLS     = t.is_longshot || t.band === 'long_shot';
-        const oppBand  = opp ? opp.band : null;
+        const opp     = opponentMap[t.id] || null;
+        const myH2h   = h2hOddsMap[t.id]  || null;
+        const oppH2h  = opp ? (h2hOddsMap[opp.id] || null) : null;
+        const kickoff = kickoffMap[t.id]   || null;
+        const isElite = eliteIds.has(t.id);
+        const isLS    = !!t.is_longshot;   // bonus eligible — separate from band
+        const oppBand = opp ? opp.band : null;
+        const myRank  = t.odds_rank || 99;
+        const oppRank = opp ? (opp.odds_rank || 99) : 99;
+        const isFav   = t.band === 'favourite';
+        const isDH    = t.band === 'dark_horse';
 
-        // Win probability buckets from h2h odds (lower = more likely to win)
-        const winStrong = myH2h && myH2h < 2.0;   // near-certain
-        const winLikely = myH2h && myH2h < 2.5;   // clearly favoured
-        const winFav    = myH2h && myH2h < 3.5;   // favoured
-        const coinFlip  = myH2h && myH2h >= 3.5 && myH2h < 5.5;
+        // Win probability — H2H odds preferred, odds_rank gap as fallback
+        let winStrong, winLikely, winFav, coinFlip;
+        if (myH2h) {
+          winStrong = myH2h < 2.0;
+          winLikely = myH2h < 2.5;
+          winFav    = myH2h < 3.5;
+          coinFlip  = myH2h >= 3.5 && myH2h < 5.5;
+        } else {
+          const rankGap = oppRank - myRank;
+          winStrong = rankGap >= 20;
+          winLikely = rankGap >= 10;
+          winFav    = rankGap >= 3;
+          coinFlip  = Math.abs(rankGap) <= 4;
+        }
 
-        // Opponent weakness
-        const oppWeak  = oppBand === 'no_hoper' || (oppH2h && oppH2h > 5.0);
-        const oppMid   = oppBand === 'long_shot' || oppBand === 'dark_horse';
+        // Opponent quality
+        const oppWeak = oppBand === 'no_hoper' || oppRank >= 36 || (oppH2h && oppH2h > 5.0);
 
         const entry = (reasonCode, stars) => ({
           team: t, reasonCode, opponent: opp, stars, kickoff, isElite, myH2h,
         });
 
         if (isGroup) {
-          // ── GROUP STAGE ──────────────────────────────────────
-          // Longshot vs weak: bonus + win likely = top pick, no save cost
-          if (isLS && oppWeak && winLikely) { pool5.push(entry('G_LONGSHOT_WEAK', 5)); return; }
-          if (isLS && oppWeak)              { pool4.push(entry('G_LONGSHOT_WEAK', 4)); return; }
-          // Elite: always warn, demote heavily
-          if (isElite && winStrong && oppWeak) { pool3.push(entry('G_SAVE_WARNING', 3)); return; }
-          if (isElite)                         { pool2.push(entry('G_SAVE_WARNING', 2)); return; }
-          // Solid non-elite picks
-          if (winLikely && oppWeak)  { pool5.push(entry('G_SOLID_WEAK', 5)); return; }
-          if (winFav && oppMid)      { pool4.push(entry('G_SOLID_MID',  4)); return; }
-          if (winFav)                { pool4.push(entry('G_SOLID_WEAK', 4)); return; }
-          // Coin flip
-          if (coinFlip)              { pool3.push(entry('G_COINFLIP', 3)); return; }
+          // ── GROUP STAGE ──────────────────────────────────────────────────────
+          // Favourites excluded entirely — save them for knockout
+          if (isFav) return;
+
+          // 5★: Bonus eligible + weak opponent + strong H2H — best possible group pick
+          if (isLS && oppWeak && winStrong) { pool5.push(entry('G_BONUS_STRONG', 5)); return; }
+
+          // 4★: Bonus eligible + weak opponent (no strong H2H)
+          //     OR Dark Horse + strong H2H + weak opponent
+          if (isLS && oppWeak)              { pool4.push(entry('G_BONUS_WEAK',  4)); return; }
+          if (isDH && winStrong && oppWeak) { pool4.push(entry('G_DH_STRONG',   4)); return; }
+
+          // 3★: Everything else safe to burn — Dark Horses, Long Shots, No Hopers
+          //     All thrown in together, random selection within pot
+          if (isLS && (winFav || winLikely || coinFlip)) { pool3.push(entry('G_BONUS_MID', 3)); return; }
+          if (isLS)                                       { pool3.push(entry('G_BONUS_MID', 3)); return; }
+          if (winFav || winLikely || coinFlip)            { pool3.push(entry('G_SAFE_BURN', 3)); return; }
+
           poolFallback.push(entry('G_DAMAGE', 2));
 
-        } else {
-          // ── KNOCKOUT ─────────────────────────────────────────
-          if (isLate) {
-            // QF+: no save logic, pure survival
-            if (winLikely && oppWeak)  { pool5.push(entry('K_SOLID_WEAK',   5)); return; }
-            if (winLikely)             { pool5.push(entry('K_MIDTIER_GOOD', 5)); return; }
-            if (winFav)                { pool4.push(entry('K_MIDTIER_GOOD', 4)); return; }
-            if (isElite && winFav)     { pool4.push(entry('K_ELITE_LATE',   4)); return; }
-            if (coinFlip)              { pool2.push(entry('K_COINFLIP',     2)); return; }
-            poolFallback.push(entry('K_DAMAGE', 1)); return;
-          }
+        } else if (mode === 'ko') {
+          // ── R32 / R16 ─────────────────────────────────────────────────────────
 
-          // R32 / R16: save on, survival on
-          // Elite: always deprioritise in early KO regardless of opponent
-          if (isElite) { pool2.push(entry('G_SAVE_WARNING', 2)); return; }
-          // Non-elite, strong odds vs weak: ideal KO pick
-          if (!isLS && winLikely && oppWeak) { pool5.push(entry('K_SOLID_WEAK',    5)); return; }
-          if (!isLS && winFav)               { pool4.push(entry('K_MIDTIER_GOOD',  4)); return; }
-          // Longshot: flag the KO risk explicitly even vs weak opponents
-          if (isLS && winLikely && oppWeak)  { pool3.push(entry('K_LONGSHOT_RISKY', 3)); return; }
-          if (isLS && winFav)                { pool2.push(entry('K_LONGSHOT_RISKY', 2)); return; }
-          // Coin flip: serious warning in KO
-          if (coinFlip)                      { pool2.push(entry('K_COINFLIP', 2)); return; }
+          // 5★: Dark Horse + strong H2H + weak opponent — ideal KO pick
+          if (isDH && winStrong && oppWeak)  { pool5.push(entry('K_DH_STRONG',   5)); return; }
+
+          // 4★: Dark Horse + decent H2H
+          //     OR Favourite + strong H2H + weak opponent (save nudge)
+          if (isDH && winLikely)             { pool4.push(entry('K_DH_MID',      4)); return; }
+          if (isFav && winStrong && oppWeak) { pool4.push(entry('K_FAV_SAVE',    4)); return; }
+
+          // 3★: Favourite + weaker matchup (save warning)
+          //     OR bonus eligible + strong H2H + weak opponent (KO risk flagged)
+          if (isFav)                         { pool3.push(entry('K_FAV_WARN',    3)); return; }
+          if (isLS && winStrong && oppWeak)  { pool3.push(entry('K_BONUS_KO',    3)); return; }
+
+          // 2★: Bonus eligible weaker H2H, or remaining teams
+          if (isLS)                          { pool2.push(entry('K_BONUS_RISKY', 2)); return; }
+          if (winFav || coinFlip)            { pool2.push(entry('K_COINFLIP',    2)); return; }
+
+          poolFallback.push(entry('K_DAMAGE', 1));
+
+        } else {
+          // ── QF / SF / FINAL (mode === 'final') ───────────────────────────────
+          // No blanket exclusions — pure survival, use your best
+
+          // 5★: Strong win probability
+          if (winStrong)              { pool5.push(entry('K_LATE_STRONG', 5)); return; }
+
+          // 4★: Favoured — with gentle save nudge for protected elites
+          if (isElite && winLikely)   { pool4.push(entry('K_QF_SAVE',    4)); return; }
+          if (winLikely || winFav)    { pool4.push(entry('K_LATE_MID',   4)); return; }
+
+          // 3★: Protected elite, or reasonable pick
+          if (isElite)                { pool3.push(entry('K_QF_SAVE',    3)); return; }
+
+          // 2★: Coin flip
+          if (coinFlip)               { pool2.push(entry('K_COINFLIP',   2)); return; }
+
           poolFallback.push(entry('K_DAMAGE', 1));
         }
       });
@@ -1689,7 +1826,7 @@
 
           // Round matches with h2h odds
           const { data: roundMatches } = await db.from('matches')
-            .select('id, round_id, kickoff, home_team_id, away_team_id, odds_home, odds_draw, odds_away, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,band,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,band,is_longshot)')
+            .select('id, round_id, kickoff, home_team_id, away_team_id, odds_home, odds_draw, odds_away, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,band,is_longshot,odds_rank), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,band,is_longshot,odds_rank)')
             .eq('round_id', _oracleRound.id)
             .not('home_team_id', 'is', null);
 
@@ -1824,6 +1961,9 @@
       resultEl.style.display = 'none';
       void resultEl.offsetWidth;
       resultEl.style.display = 'block';
+
+      const useBtn = document.getElementById('oracle-use-btn');
+      if (useBtn) { useBtn.style.display = 'inline-block'; useBtn._oracleTeam = pick.team; }
     }
 
     // ── Fixed pool per player per round ───────────────────────────────────────
@@ -1921,6 +2061,25 @@
 
     document.getElementById('oracle-consult-btn').addEventListener('click', oracleConsult);
     document.getElementById('oracle-again-btn').addEventListener('click', oracleConsult);
+
+    document.getElementById('oracle-use-btn').addEventListener('click', function() {
+      const useBtn = document.getElementById('oracle-use-btn');
+      const team = useBtn._oracleTeam;
+      if (!team) return;
+
+      // Determine which slot will be filled, set that flag
+      const round = allRounds.find(r => r.id === selectedRoundId);
+      const isGroup = round && round.round_type === 'group';
+      if (isGroup) {
+        if (!pick3)                          { _oracleUsed3 = true; }
+        else if (!pick2 && team.id !== (pick3 && pick3.id)) { _oracleUsed2 = true; }
+        else                                 { _oracleUsed3 = true; if (pick2 && pick2.id === team.id) _oracleUsed2 = false; }
+      } else {
+        _oracleUsed2 = true;
+      }
+      selectTeam(team.id, true);
+      closeOracle();
+    });
   </script>
 
 </body>

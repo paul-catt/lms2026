@@ -49,27 +49,35 @@
 
     .scoring-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 10px;
       margin-top: 12px;
     }
     .scoring-block {
       background: var(--surface2);
-      border-radius: 8px;
-      padding: 14px;
+      border-radius: 10px;
+      padding: 16px 14px;
       text-align: center;
+      border: 1px solid var(--border);
     }
     .scoring-block .val {
-      font-size: 28px;
-      font-weight: 800;
+      font-size: 32px;
+      font-weight: 900;
       line-height: 1;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
     .scoring-block .lbl {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+    .scoring-block .sub {
+      font-size: 10px;
+      color: var(--red);
+      margin-top: 3px;
+      font-weight: 600;
     }
 
     .phase-table {
@@ -149,12 +157,13 @@
       font-size: 13px;
     }
     .prizes-table td {
-      padding: 8px 12px;
+      padding: 10px 12px;
       border-bottom: 1px solid var(--border);
+      vertical-align: middle;
     }
     .prizes-table tr:last-child td { border-bottom: none; }
-    .prizes-table .place { font-weight: 600; color: var(--text); }
-    .prizes-table .prize { font-weight: 700; color: var(--green); text-align: right; }
+    .prizes-table .place { font-weight: 600; color: var(--text); width: 60%; }
+    .prizes-table .prize { font-weight: 700; color: var(--green); text-align: right; width: 40%; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -192,7 +201,7 @@
         <div class="qr-grid">
           <div class="qr-block">
             <strong>Group stages</strong>
-            3 phases of 12 matches (11–17 Jun, 18–23 Jun &amp; 24–27 Jun). Pick a <span class="gold">3-point</span> and a <span class="blue">2-point</span> team each phase. Win earns that many points.
+            3 phases of 24 matches (11–17 Jun, 18–23 Jun &amp; 24–27 Jun). Pick a <span class="gold">3-point</span> and a <span class="blue">2-point</span> team each phase. Win earns that many points.
           </div>
           <div class="qr-block">
             <strong>Knockout stages</strong>
@@ -211,8 +220,8 @@
             You have a unique personal link to submit picks and track your score. Bookmark it.
           </div>
           <div class="qr-block">
-            <strong>Pick ahead</strong>
-            You can submit picks for future rounds in advance and change them up to the deadline.
+            <strong>🔮 The Oracle</strong>
+            An algorithm assesses 8.8 billion possible pick combinations and suggests the most suitable team — with a random element to keep things interesting.
           </div>
         </div>
       </div>
@@ -251,13 +260,18 @@
             <div class="val" style="color:var(--gold)">+1</div>
             <div class="lbl">Longshot ⭐ bonus</div>
           </div>
+          <div class="scoring-block">
+            <div class="val" style="color:var(--gold)">1</div>
+            <div class="lbl">AET or Pens</div>
+            <div class="sub">Loser out</div>
+          </div>
         </div>
       </div>
 
       <!-- GROUP STAGES -->
       <div class="rules-section">
         <h2>🔵 Group Stages</h2>
-        <p>There are three group phases across 11–27 June. Each phase you pick <span class="highlight">two teams</span>: one as your <span class="gold">3-point pick</span> and one as your <span class="blue">2-point pick</span>. A win earns those points, a draw earns <span class="highlight">1pt</span> regardless of pick type, a loss earns <span class="red">0</span>. The 3-point pick is only available in group stages.</p>
+        <p>There are three group phases across 11–27 June, covering all <span class="highlight">72 matches</span> of the group stage. Each phase you pick <span class="highlight">two teams</span>: one as your <span class="gold">3-point pick</span> and one as your <span class="blue">2-point pick</span>. A win earns those points, a draw earns <span class="highlight">1pt</span> regardless of pick type, a loss earns <span class="red">0</span>. The 3-point pick is only available in group stages.</p>
         <table class="phase-table">
           <thead><tr><th>Phase</th><th>Dates</th><th>Matches</th></tr></thead>
           <tbody>
@@ -338,6 +352,15 @@
       </div>
     </div>
 
+    <!-- ORACLE -->
+    <div class="card">
+      <div class="rules-section" style="margin-bottom:0">
+        <h2>🔮 The Oracle</h2>
+        <p>Not sure who to pick? The Oracle is a built-in advisor on your personal dashboard. It assesses <span class="highlight">8.8 billion possible pick combinations</span> and uses an algorithm — with a random element — to suggest the most suitable team for your situation, rated one to five stars.</p>
+        <p style="margin-top:8px">Picks made via the Oracle are marked with 🔮. For entertainment only — the Oracle accepts no responsibility for your leaderboard position.</p>
+      </div>
+    </div>
+
     <!-- TIEBREAKERS -->
     <div class="card">
       <div class="rules-section" style="margin-bottom:0">
@@ -372,11 +395,12 @@
         <h2>💰 Entry &amp; Prizes</h2>
         <p>It costs <span class="highlight">£10 to enter</span>. Hand it over however you like — cash, bank transfer, carrier pigeon. Just make sure it arrives.</p>
         <table class="prizes-table">
+          <colgroup><col style="width:65%"><col style="width:35%"></colgroup>
           <tr><td class="place">🥇 1st place</td><td class="prize">£120</td></tr>
           <tr><td class="place">🥈 2nd place</td><td class="prize">£60</td></tr>
           <tr><td class="place">🥉 3rd place</td><td class="prize">£40</td></tr>
           <tr><td class="place">4th place</td><td class="prize">£20</td></tr>
-          <tr><td class="place">🪦 Last place</td><td class="prize" style="color:var(--text-muted)">£10 <span style="font-size:11px; font-weight:400">(your tenner back — at least you've got that)</span></td></tr>
+          <tr><td class="place">🪦 Last place</td><td class="prize" style="color:var(--text-muted); font-size:12px">£10 — your tenner back</td></tr>
         </table>
       </div>
     </div>
