@@ -321,7 +321,7 @@
       teamList.forEach((t, i) => {
         const color   = BAND_COLOR[t.band] || 'var(--border)';
         const divider = getBorderStyle(t, i);
-        html += `<th style="border-bottom:3px solid ${color};${divider}"><div class="m-header-wrap"><span class="m-header">${t.flag_emoji || ''}</span></div></th>`;
+        html += `<th style="border-bottom:3px solid ${color};${divider}"><div class="m-header-wrap"><span style="font-size:12px">${t.flag_emoji || '?'}</span></div></th>`;
       });
       html += '<th class="m-summary">Good<br>Left</th><th class="m-summary">Total<br>Left</th></tr>';
 
@@ -346,7 +346,9 @@
           const pick    = playerPicks[t.id];
           const divider = getBorderStyle(t, i);
           if (!pick) {
-            html += `<td style="${divider}"></td>`;
+            const isRemaining = !p.is_eliminated && !used.has(t.id);
+            const bg = isRemaining ? `background:rgba(255,255,255,0.11);` : '';
+            html += `<td style="${divider}${bg}"></td>`;
           } else {
             const r      = pick.result;
             const cls    = r === 'win' ? 'm-W' : r === 'draw' ? 'm-D' : r === 'loss' ? 'm-L' : '';
@@ -628,7 +630,9 @@
         const sorted = (scores || []).sort((a, b) => {
           if (b.total_points !== a.total_points) return b.total_points - a.total_points;
           if (isKnockout) {
-            const afr = furthestMap[a.player_id] || 0, bfr = furthestMap[b.player_id] || 0;
+            const currentSO = currentRound ? currentRound.sort_order : 0;
+            const afr = a.is_eliminated ? (furthestMap[a.player_id] || 0) : Math.max(furthestMap[a.player_id] || 0, currentSO);
+            const bfr = b.is_eliminated ? (furthestMap[b.player_id] || 0) : Math.max(furthestMap[b.player_id] || 0, currentSO);
             if (bfr !== afr) return bfr - afr;
           }
           const agd = gdMap[a.player_id] || 0, bgd = gdMap[b.player_id] || 0;
@@ -639,14 +643,33 @@
             if (aDiff !== bDiff) return aDiff - bDiff;
           }
           if (!isKnockout) return a.name.localeCompare(b.name);
-          return 0;
+          return a.name.localeCompare(b.name); // display-only tiebreak within tied KO groups
         });
 
         const tbody = document.getElementById('leaderboard-body');
         tbody.innerHTML = '';
 
+        // Compute tied positions for knockout stage
+        const posMap = {};
         sorted.forEach((p, i) => {
-          const pos = i + 1;
+          if (i === 0) { posMap[p.player_id] = { pos: 1, tied: false }; return; }
+          const prev = sorted[i - 1];
+          const samePts   = prev.total_points === p.total_points;
+          const sameRnd   = !isKnockout || (furthestMap[prev.player_id] || 0) === (furthestMap[p.player_id] || 0);
+          const sameGd    = (gdMap[prev.player_id] || 0) === (gdMap[p.player_id] || 0);
+          const samePrevSO = isKnockout ? (() => { const currentSO = currentRound ? currentRound.sort_order : 0; const pfr = prev.is_eliminated ? (furthestMap[prev.player_id]||0) : Math.max(furthestMap[prev.player_id]||0, currentSO); const cfr = p.is_eliminated ? (furthestMap[p.player_id]||0) : Math.max(furthestMap[p.player_id]||0, currentSO); return pfr === cfr; })() : true;
+          const sameGoals = projectedTotal === null || Math.abs((prev.total_goals_prediction||0) - projectedTotal) === Math.abs((p.total_goals_prediction||0) - projectedTotal);
+          const isTied = isKnockout && samePts && samePrevSO && sameGd && sameGoals;
+          if (isTied) {
+            posMap[prev.player_id].tied = true;
+            posMap[p.player_id] = { pos: posMap[prev.player_id].pos, tied: true };
+          } else {
+            posMap[p.player_id] = { pos: i + 1, tied: false };
+          }
+        });
+
+        sorted.forEach((p, i) => {
+          const { pos, tied } = posMap[p.player_id];
           const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
           const gd    = gdMap[p.player_id] || 0;
           const form  = formMap[p.player_id] || [];
@@ -678,9 +701,9 @@
           let goalsDiffHtml = '<span style="color:var(--text-muted)">—</span>';
           if (projectedTotal !== null && p.total_goals_prediction !== null && p.total_goals_prediction !== undefined) {
             const diff = Math.round(p.total_goals_prediction - projectedTotal);
-            const sign = diff >= 0 ? '+' : '';
-            const cls  = Math.abs(diff) <= 10 ? 'goals-diff-close' : Math.abs(diff) <= 30 ? 'goals-diff-mid' : 'goals-diff-far';
-            goalsDiffHtml = `<span class="goals-diff ${cls}">${sign}${diff}</span>`;
+            const absDiff = Math.abs(diff);
+            const cls  = absDiff <= 10 ? 'goals-diff-close' : absDiff <= 30 ? 'goals-diff-mid' : 'goals-diff-far';
+            goalsDiffHtml = `<span class="goals-diff ${cls}">${absDiff}</span>`;
           }
 
           const is3rdPlace = currentRound && currentRound.name === '3rd Place';
@@ -708,7 +731,7 @@
           }
 
           row.innerHTML =
-            '<td class="pos">' + pos + '</td>' +
+            '<td class="pos">' + pos + (tied ? '=' : '') + '</td>' +
             '<td class="prior">' + arrowHtml + '</td>' +
             '<td class="medal landscape-only">' + medal + '</td>' +
             '<td class="player-name"><a href="/' + p.slug + '">' + p.name + '</a>' + trophyHtml + flagHtml + '</td>' +

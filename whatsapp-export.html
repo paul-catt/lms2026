@@ -52,15 +52,23 @@
     .r-table tbody tr:last-child td { border-bottom: none; }
     .r-table tbody tr:nth-child(even) td { background: #f8fafc; }
     .r-table tbody tr:nth-child(odd) td { background: #ffffff; }
-    .r-table tbody tr.top3 td { background: #fff8e1 !important; }
-    .r-table tbody tr.top3:nth-child(even) td { background: #fff3cd !important; }
-    .r-table tbody tr.elim td { color: #c53030 !important; opacity: 0.7; }
+    /* Top 3: left border accent instead of row fill */
+    .r-table tbody tr.rank1 td:first-child { border-left: 3px solid #d4a017; }
+    .r-table tbody tr.rank2 td:first-child { border-left: 3px solid #8e9eab; }
+    .r-table tbody tr.rank3 td:first-child { border-left: 3px solid #a0522d; }
+    .r-table tbody tr.elim td { color: #b0b8c4 !important; }
     .r-footer { background: #f0f4f8; border-top: 1px solid #d1dbe8; padding: 5px 12px; font-size: 9px; color: #718096; text-align: center; letter-spacing: 0.05em; }
-    .r-pos { font-weight: 700; color: #718096; font-size: 11px; }
+    /* Position cell — number + inline arrow together */
+    .r-pos-cell { display: flex; align-items: center; gap: 3px; justify-content: center; white-space: nowrap; }
+    .r-pos { font-weight: 800; color: #718096; font-size: 12px; }
     .r-pos.gold   { color: #d4a017; }
     .r-pos.silver { color: #8e9eab; }
     .r-pos.bronze { color: #a0522d; }
-    .r-pts { display: inline-block; background: #1a365d; color: #fff; font-weight: 800; font-size: 13px; padding: 1px 7px; border-radius: 4px; min-width: 24px; text-align: center; }
+    /* Points badge — coloured by rank */
+    .r-pts       { display: inline-block; background: #2d3748; color: #fff; font-weight: 800; font-size: 13px; padding: 2px 8px; border-radius: 4px; min-width: 26px; text-align: center; }
+    .r-pts.gold  { background: #b7791f; }
+    .r-pts.silver{ background: #5f7080; }
+    .r-pts.bronze{ background: #7b5040; }
     .r-form { display: flex; gap: 3px; align-items: center; justify-content: center; }
     .r-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
     .r-dot.W { background: #38a169; }
@@ -78,10 +86,10 @@
     .r-bar-val   { font-size: 10px; font-weight: 700; color: #2d3748; min-width: 28px; text-align: right; }
     .r-split-2 { background: #ebf8ff; color: #2b6cb0; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; }
     .r-split-3 { background: #fffbeb; color: #b7791f; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px; }
-    .r-pick-name { font-style: italic; color: #2d3748; font-size: 11px; }
-    .r-arrow-up { color: #38a169; font-weight: 700; font-size: 10px; }
-    .r-arrow-dn { color: #e53e3e; font-weight: 700; font-size: 10px; }
-    .r-arrow-eq { color: #a0aec0; font-size: 10px; }
+    .r-pick-name { font-weight: 700; color: #1a202c; font-size: 12px; }
+    .r-arrow-up { color: #38a169; font-weight: 700; font-size: 9px; }
+    .r-arrow-dn { color: #e53e3e; font-weight: 700; font-size: 9px; }
+    .r-arrow-eq { color: #a0aec0; font-size: 9px; }
     .r-name { font-weight: 700; font-size: 12px; color: #1a202c; }
   </style>
 </head>
@@ -393,22 +401,18 @@
         players.forEach(p => {
           statsMap[p.id] = {
             id: p.id, name: p.name, slug: p.slug, isOut: p.is_eliminated,
-            goalsPredict: p.total_goals_prediction || 0,
-            totalPoints: 0, koPoints: 0, pld: 0, furthestRound: 0, teamsUsed: 0,
-            // form will be built sorted by kickoff below
+            totalPoints: 0, pld: 0, teamsUsed: 0,
             formEntries: []
           };
         });
 
-        // FIX 3: sort pick_results by kickoff before pushing to form
+        // Build per-player stats needed for the image (points, pld, form, teamsUsed)
         completedPicksAll.forEach(pick => {
           const s = statsMap[pick.player_id];
           if (!s) return;
           const res = pick.pick_results[0];
           s.totalPoints += res.points_earned || 0;
           s.pld++;
-          if (pick.rounds?.round_type === 'knockout') s.koPoints += res.points_earned || 0;
-          if (pick.rounds?.sort_order > s.furthestRound) s.furthestRound = pick.rounds.sort_order;
           const kickoff = res.matches?.kickoff || '9999';
           s.formEntries.push({
             kickoff,
@@ -416,7 +420,6 @@
           });
         });
 
-        // Build sorted form arrays
         Object.values(statsMap).forEach(s => {
           s.formEntries.sort((a, b) => a.kickoff.localeCompare(b.kickoff));
           s.form = s.formEntries.map(e => e.result);
@@ -424,24 +427,22 @@
 
         picks.forEach(pick => { const s = statsMap[pick.player_id]; if (s) s.teamsUsed++; });
 
-        // FIX 1: teams left = 48 - teamsUsed - eliminatedTeams
-        // We don't have eliminated team count per player here; teamsUsed already counts
-        // all picks made. Remaining = 48 - teamsUsed (picks used = teams used, which is correct).
-        // The real fix: also subtract is_eliminated teams from the pool of 48 —
-        // but "remaining" for a player just means 48 minus what THEY have used.
-        // That's already what teamsUsed gives us. The bug was counting eliminated teams
-        // in the pool — but for a player's personal remaining count, 48 - teamsUsed IS correct
-        // as long as teamsUsed counts all their historical picks. Keep as-is but note in UI.
-
+        // Order by snapshot (= same order as official leaderboard). Fall back to points
+        // desc for players not yet in any snapshot (pre-competition).
         const sortedPlayers = Object.values(statsMap).sort((a, b) => {
-          if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
-          if (b.koPoints !== a.koPoints) return b.koPoints - a.koPoints;
-          if (b.furthestRound !== a.furthestRound) return b.furthestRound - a.furthestRound;
-          return (a.goalsPredict || 999) - (b.goalsPredict || 999);
+          const aPos = snapshotPosMap[a.id];
+          const bPos = snapshotPosMap[b.id];
+          if (aPos !== undefined && bPos !== undefined) return aPos - bPos;
+          if (aPos !== undefined) return -1; // snapshotted players first
+          if (bPos !== undefined) return 1;
+          return b.totalPoints - a.totalPoints; // fallback: points desc
         });
 
+        // Build rankMap from snapshot positions (preserving ties as equal rank)
         const rankMap = {};
-        sortedPlayers.forEach((p, i) => { rankMap[p.id] = i + 1; });
+        sortedPlayers.forEach(p => {
+          rankMap[p.id] = snapshotPosMap[p.id] ?? (sortedPlayers.indexOf(p) + 1);
+        });
 
         const roundLabel     = buildRoundLabel(rounds, currentRoundSortOrder);
         const dayLabel       = buildDayLabel(rounds, currentRoundSortOrder, firstMatchData);
@@ -677,45 +678,43 @@
         html += `<table class="r-table"><thead><tr>
           <th style="width:28px">#</th>
           <th class="left" style="min-width:90px">Player</th>
-          <th style="min-width:110px">3pt Pick</th>
-          <th style="min-width:110px">2pt Pick</th>
+          <th style="min-width:120px">3pt Pick</th>
+          <th style="min-width:120px">2pt Pick</th>
           <th style="width:42px">Pts</th>
-          <th style="width:52px">Form</th>
         </tr></thead><tbody>`;
         sortedPlayers.forEach((p, i) => {
-          const pos = i + 1;
+          const pos = rankMap[p.id] ?? (i + 1);
           const pPicks = playerCurrentPicks[p.id] || [];
           const pick3 = pPicks.find(pk => pk.multiplier === 3) || pPicks.find(pk => (pk.multiplier||0) >= 3);
           const pick2 = pPicks.find(pk => pk.multiplier === 2) || pPicks.find(pk => pk !== pick3);
           const posClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
-          const rowClass = p.isOut ? 'elim' : pos <= 3 ? 'top3' : '';
+          const ptsClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
+          const rowClass = p.isOut ? 'elim' : pos === 1 ? 'rank1' : pos === 2 ? 'rank2' : pos === 3 ? 'rank3' : '';
           html += `<tr class="${rowClass}">
             <td><span class="r-pos ${posClass}">${pos}</span></td>
             <td class="left"><span class="r-name">${p.name}</span></td>
             <td>${teamCell(pick3)}</td><td>${teamCell(pick2)}</td>
-            <td><span class="r-pts">${p.totalPoints}</span></td>
-            <td>${formDots(p.form, 5)}</td>
+            <td><span class="r-pts ${ptsClass}">${p.totalPoints}</span></td>
           </tr>`;
         });
       } else {
         html += `<table class="r-table"><thead><tr>
           <th style="width:28px">#</th>
           <th class="left" style="min-width:90px">Player</th>
-          <th style="min-width:140px">Pick</th>
+          <th style="min-width:150px">Pick</th>
           <th style="width:42px">Pts</th>
-          <th style="width:52px">Form</th>
         </tr></thead><tbody>`;
         sortedPlayers.forEach((p, i) => {
-          const pos = i + 1;
+          const pos = rankMap[p.id] ?? (i + 1);
           const pick = (playerCurrentPicks[p.id] || [])[0] || null;
           const posClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
-          const rowClass = p.isOut ? 'elim' : pos <= 3 ? 'top3' : '';
+          const ptsClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
+          const rowClass = p.isOut ? 'elim' : pos === 1 ? 'rank1' : pos === 2 ? 'rank2' : pos === 3 ? 'rank3' : '';
           html += `<tr class="${rowClass}">
             <td><span class="r-pos ${posClass}">${pos}</span></td>
             <td class="left"><span class="r-name">${p.name}</span></td>
             <td>${teamCell(pick)}</td>
-            <td><span class="r-pts">${p.totalPoints}</span></td>
-            <td>${formDots(p.form, 5)}</td>
+            <td><span class="r-pts ${ptsClass}">${p.totalPoints}</span></td>
           </tr>`;
         });
       }
@@ -890,44 +889,49 @@
       if (!roundData) return;
       // FIX 1: use snapshotPosMap for movement — compare last completed round
       // snapshot position vs the round before that
-      const { sortedPlayers, fullRoundLabel, snapshotPosMap, prevSnapshotPosMap } = roundData;
+      const { sortedPlayers, fullRoundLabel, snapshotPosMap, prevSnapshotPosMap, rankMap } = roundData;
       const nextMatch = val('next-match');
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
       html += `<table class="r-table"><thead><tr>
-        <th style="width:30px">#</th>
-        <th style="width:32px">Mv</th>
+        <th style="width:48px">#</th>
         <th class="left" style="min-width:100px">Player</th>
-        <th style="width:30px">Pld</th>
+        <th style="width:32px">Pld</th>
         <th style="width:42px">Pts</th>
-        <th style="width:50px">Teams left</th>
         <th style="width:64px">Form</th>
       </tr></thead><tbody>`;
 
+      // Determine which positions are tied
+      const rankCounts = {};
+      sortedPlayers.forEach(p => {
+        const r = rankMap[p.id];
+        if (r !== undefined) rankCounts[r] = (rankCounts[r] || 0) + 1;
+      });
+
       sortedPlayers.forEach((p, i) => {
-        const pos = i + 1;
-        // FIX 1: calculate movement from snapshots
-        let mvHtml = '<span class="r-arrow-eq">—</span>';
-        const snapPos  = snapshotPosMap[p.id];
-        const prevPos  = prevSnapshotPosMap[p.id];
+        const pos = rankMap[p.id] ?? (i + 1);
+        const isTied = (rankCounts[pos] || 0) > 1;
+        const posLabel = isTied ? pos + '=' : String(pos);
+        const posClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
+        const ptsClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
+        const rowClass = p.isOut ? 'elim' : pos === 1 ? 'rank1' : pos === 2 ? 'rank2' : pos === 3 ? 'rank3' : '';
+
+        // Arrow inline with position number
+        let arrowHtml = '';
+        const snapPos = snapshotPosMap[p.id];
+        const prevPos = prevSnapshotPosMap[p.id];
         if (snapPos !== undefined && prevPos !== undefined) {
-          const move = prevPos - snapPos; // positive = moved up
-          if (move > 0)      mvHtml = `<span class="r-arrow-up">▲${move}</span>`;
-          else if (move < 0) mvHtml = `<span class="r-arrow-dn">▼${Math.abs(move)}</span>`;
-          else               mvHtml = '<span class="r-arrow-eq">—</span>';
+          const move = prevPos - snapPos;
+          if (move > 0)      arrowHtml = `<span class="r-arrow-up">▲${move}</span>`;
+          else if (move < 0) arrowHtml = `<span class="r-arrow-dn">▼${Math.abs(move)}</span>`;
+          else               arrowHtml = '<span class="r-arrow-eq">—</span>';
         }
 
-        // FIX 1 (teams left): 48 - teamsUsed is correct per-player remaining pool
-        const teamsLeft = 48 - p.teamsUsed;
-        const rowClass = p.isOut ? 'elim' : pos <= 3 ? 'top3' : '';
-        const posClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
         html += `<tr class="${rowClass}">
-          <td><span class="r-pos ${posClass}">${pos}</span></td>
-          <td>${mvHtml}</td>
+          <td><div class="r-pos-cell"><span class="r-pos ${posClass}">${posLabel}</span>${arrowHtml}</div></td>
           <td class="left"><span class="r-name">${p.name}</span></td>
           <td style="color:#718096">${p.pld}</td>
-          <td><span class="r-pts">${p.totalPoints}</span></td>
-          <td style="color:#718096">${p.isOut ? '<span style="color:#e53e3e;font-weight:700">OUT</span>' : teamsLeft}</td>
+          <td><span class="r-pts ${ptsClass}">${p.totalPoints}</span></td>
           <td>${formDots(p.form, 5)}</td>
         </tr>`;
       });
@@ -937,7 +941,8 @@
       document.getElementById('lb-render').innerHTML = html;
       document.getElementById('lb-preview-wrap').style.display = 'block';
       document.getElementById('btn-dl-lb').style.display = 'inline-block';
-      setStatus('lb-status', '');
+      const noSnapshot = !roundData.lastCompletedRound;
+      setStatus('lb-status', noSnapshot ? '⚠️ No completed rounds yet — order is points desc (no snapshot).' : '');
     }
 
     // ── Download ──────────────────────────────────────────────

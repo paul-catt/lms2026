@@ -1002,7 +1002,7 @@
           const unavail = isUsed || isElim;
           const lsTag   = team.is_longshot ? '<span style="font-size:10px;margin-left:2px;opacity:0.9">⭐</span>' : '';
           const deadTag = isElim ? '<span style="font-size:10px;margin-left:2px">💀</span>' : '';
-          const capColor  = unavail ? bandRgba(team, 'dim')    : bandRgba(team, 'full');
+          const capColor  = unavail ? 'transparent'             : bandRgba(team, 'full');
           const bdrColor  = unavail ? bandRgba(team, 'dim')    : bandRgba(team, 'border');
           const bgColor   = unavail ? ''                        : bandRgba(team, 'bg');
 
@@ -1833,7 +1833,16 @@
           const fullPool = buildOraclePool(available, _oracleRound, roundMatches || [], _oracleOddsMap);
 
           // Fix exactly 5 teams (weighted selection, no repeats)
-          const CAP = Math.min(5, fullPool.length);
+          function getOracleCap(round) {
+            if (!round) return 5;
+            if (round.round_type === 'group') return 5;
+            const name = round.name;
+            if (name === 'Round of 32') return 4;
+            if (name === 'Round of 16') return 3;
+            if (name === 'Quarter Finals' || name === 'Quarter-Final') return 2;
+            return 1;
+          }
+          const CAP = Math.min(getOracleCap(_oracleRound), fullPool.length);
           const fixed = [];
           const usedInFixed = new Set();
           for (let i = 0; i < CAP; i++) {
@@ -2079,6 +2088,11 @@
       }
       selectTeam(team.id, true);
       closeOracle();
+
+      // KO only: auto-trigger submit confirm after oracle pick
+      if (!isGroup) {
+        setTimeout(() => submitPick(), 150);
+      }
     });
   </script>
 

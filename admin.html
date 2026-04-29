@@ -389,8 +389,6 @@
         <button class="btn btn-primary" id="add-match-btn" style="display:none">✅ Confirm R32 Teams</button>
         <div id="match-msg" style="margin-top:8px; font-size:12px"></div>
       </div>
-
-
     </div>
 
     <!-- TEAMS TAB -->
@@ -538,7 +536,6 @@
     const TOTAL_MATCHES = 104;
 
     // ── Day window constants ──────────────────────────────────
-    // Window: 11:00 UTC to 11:00 UTC (noon BST to noon BST)
     const WINDOW_START_HOUR = 11; // UTC
     const WINDOW_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -580,6 +577,30 @@
       { value: 'no_hoper',   label: '🔴 Nope' },
     ];
 
+    // ── Group → teams map for R32 dropdown filtering ──────────
+    // Names must match exactly what is stored in the teams table.
+    const TEAM_GROUPS = {
+      'A': ['Mexico', 'South Africa', 'South Korea', 'Czech Rep'],
+      'B': ['Canada', 'Bosnia/Herzeg', 'Qatar', 'Switzerland'],
+      'C': ['Brazil', 'Morocco', 'Haiti', 'Scotland'],
+      'D': ['USA', 'Paraguay', 'Australia', 'Turkey'],
+      'E': ['Germany', 'Curaçao', 'Ivory Coast', 'Ecuador'],
+      'F': ['Netherlands', 'Japan', 'Sweden', 'Tunisia'],
+      'G': ['Belgium', 'Egypt', 'Iran', 'New Zealand'],
+      'H': ['Spain', 'Cape Verde', 'Saudi Arabia', 'Uruguay'],
+      'I': ['France', 'Senegal', 'Iraq', 'Norway'],
+      'J': ['Argentina', 'Algeria', 'Austria', 'Jordan'],
+      'K': ['Portugal', 'DR Congo', 'Uzbekistan', 'Colombia'],
+      'L': ['England', 'Croatia', 'Ghana', 'Panama'],
+    };
+
+    // Helper: given a slot half like "1st C" or "2nd F", return group letter or null.
+    // Returns null for "3rd" slots → those get the full available list.
+    function groupFromSlotHalf(half) {
+      const m = half.trim().match(/^(?:1st|2nd)\s+([A-L])$/i);
+      return m ? m[1].toUpperCase() : null;
+    }
+
     let matchCache = {};
     let completedMatchCache = {};
     let picksCache = {};
@@ -591,11 +612,9 @@
     }
 
     // ── Day window helpers ────────────────────────────────────
-    // Returns the UTC ms timestamp of the window start that contains this kickoff
     function toWindowStartMs(isoStr) {
       const d = new Date(isoStr);
       const h = d.getUTCHours();
-      // If before WINDOW_START_HOUR UTC, it belongs to the previous day's window
       if (h < WINDOW_START_HOUR) {
         return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, WINDOW_START_HOUR, 0, 0);
       }
@@ -615,7 +634,6 @@
       localStorage.removeItem(LS_KEY);
       updateTestDateUI();
     }
-
 
     function updateTestDateUI() {
       const override = localStorage.getItem(LS_KEY);
@@ -672,7 +690,6 @@
       document.getElementById('result-away-score').addEventListener('input', updatePreview);
       document.getElementById('pens-checkbox').addEventListener('change', onPensToggle);
       document.getElementById('pens-winner-select').addEventListener('change', updatePreview);
-      // R32 matches load automatically when tab is opened via switchTab → loadR32Matches()
       document.getElementById('match-number-select').addEventListener('change', onMatchNumberSelected);
       document.getElementById('btn-auto-assign').addEventListener('click', autoAssignMissingPicks);
       document.getElementById('correct-match-select').addEventListener('change', onCorrectMatchSelected);
@@ -700,7 +717,6 @@
 
       buildQuickJumps();
       updateTestDateUI();
-      // Pre-fill test date input with last used value
       const existingOverride = localStorage.getItem(LS_KEY);
       if (existingOverride) {
         const d = new Date(existingOverride);
@@ -790,7 +806,6 @@
       if (!error) loadPlayers();
     }
 
-    
     function sendWelcomeWA(name, url) {
       const msg = `Hi ${name}! 👋 Welcome to LMS 2026 — World Cup Last Man Standing!
 
@@ -821,8 +836,6 @@ Good luck! ⚽🏆`;
 
     async function deletePlayer(id, name) {
       if (!confirm('Delete ' + name + '? This will also delete all their picks and results. This cannot be undone.')) return;
-      // Delete dependent records first to avoid FK constraint errors
-      // picks -> pick_results (cascade should handle, but be explicit)
       const { data: playerPicks } = await db.from('picks').select('id').eq('player_id', id);
       if (playerPicks && playerPicks.length > 0) {
         const pickIds = playerPicks.map(p => p.id);
@@ -863,7 +876,6 @@ Good luck! ⚽🏆`;
         rounds.map(r => `<option value="${r.id}" data-type="${r.round_type}">${r.name}</option>`).join('');
     }
 
-    // ── Auto-assign pending assignments ──────────────────────
     let _pendingAssignments = [];
     let _pendingRoundId = null;
     let _pendingRoundType = null;
@@ -893,8 +905,6 @@ Good luck! ⚽🏆`;
         const aliveTeamIds = new Set();
         (aliveMatches || []).forEach(m => { aliveTeamIds.add(m.home_team_id); aliveTeamIds.add(m.away_team_id); });
         const isGroup = roundType === 'group';
-        // Group stage: filter pool to teams with live/scheduled matches
-        // Knockout: filter pool to teams not yet eliminated (KO shells may not be assigned yet)
         const alivePool = isGroup
           ? (pool || []).filter(p => aliveTeamIds.has(p.team_id))
           : (pool || []).filter(p => p.teams && !p.teams.is_eliminated);
@@ -943,7 +953,6 @@ Good luck! ⚽🏆`;
           return;
         }
 
-        // Show confirmation modal
         _pendingRoundId = roundId;
         _pendingRoundType = roundType;
         document.getElementById('assign-modal-body').innerHTML = preview.join('<br>');
@@ -1099,21 +1108,16 @@ Good luck! ⚽🏆`;
       }
     }
 
-    // ── Helper: reset eliminations caused by a specific match ──
     async function resetMatchEliminations(matchId) {
-      // Find the match to know which teams/round were involved
       const { data: match } = await db.from('matches')
         .select('round_id, home_team_id, away_team_id, rounds(round_type)')
         .eq('id', matchId).single();
       if (!match || match.rounds?.round_type !== 'knockout') return;
 
-      // Un-eliminate both teams from this match (we'll re-eliminate the correct one after)
       await db.from('teams')
         .update({ is_eliminated: false, eliminated_in_round_id: null })
         .in('id', [match.home_team_id, match.away_team_id]);
 
-      // Find players who picked either team in this round and were eliminated
-      // Un-eliminate them — they'll be re-eliminated if their new result is still a loss
       const { data: picks } = await db.from('picks')
         .select('player_id')
         .in('team_id', [match.home_team_id, match.away_team_id])
@@ -1142,21 +1146,17 @@ Good luck! ⚽🏆`;
       const isThird = match && match.is_third_place;
       const isPens = isKnockout && pensChecked && homeScore === awayScore;
 
-      // 1. Reset any eliminations caused by this match before recalculating
       if (isKnockout && !isThird) await resetMatchEliminations(matchId);
 
-      // 2. Update the match score
       const { error } = await db.from('matches').update({
         home_score: homeScore, away_score: awayScore,
         pens_winner_id: isPens && pensWinner ? pensWinner : null
       }).eq('id', matchId);
       if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; return; }
 
-      // 3. Delete and recalculate pick results (this also re-eliminates losing players)
       await db.from('pick_results').delete().eq('match_id', matchId);
       if (!isThird) await calculatePickResults(matchId, homeScore, awayScore, isKnockout, isPens, pensWinner);
 
-      // 4. Re-apply team elimination for the correct loser
       if (isKnockout && !isThird) {
         let losingTeamId = null;
         if (isPens && pensWinner) {
@@ -1180,13 +1180,9 @@ Good luck! ⚽🏆`;
       if (!confirm('This will completely undo this result — the match goes back to pending and all points are wiped. Are you sure?')) return;
       msg.style.color='var(--text-muted)'; msg.textContent='Undoing...';
 
-      // 1. Reset team and player eliminations caused by this match
       await resetMatchEliminations(matchId);
-
-      // 2. Delete pick results
       await db.from('pick_results').delete().eq('match_id', matchId);
 
-      // 3. Reset match to scheduled
       const { error } = await db.from('matches').update({
         status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null
       }).eq('id', matchId);
@@ -1409,7 +1405,6 @@ Good luck! ⚽🏆`;
             points_earned: pointsEarned, match_result: result
           }, { onConflict: 'pick_id,match_id' });
 
-          // ── Eliminate player if they lost in a knockout round ──
           if (isKnockout && result === 'loss') {
             await db.from('players')
               .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
@@ -1418,16 +1413,9 @@ Good luck! ⚽🏆`;
         }
       }
 
-      // ── Pick-exhaustion elimination: runs after every KO result ──
-      // If a non-eliminated player has zero eligible teams remaining AND
-      // no pending picks, they cannot make any future pick → eliminate them.
       if (isKnockout) {
         const { data: alivePlayers } = await db.from('players')
           .select('id').eq('is_eliminated', false);
-        const { data: eliminatedTeams } = await db.from('teams')
-          .select('id').eq('is_eliminated', true);
-        const eliminatedTeamIds = new Set((eliminatedTeams || []).map(t => t.id));
-
         const { data: aliveTeams } = await db.from('teams').select('id').eq('is_eliminated', false);
         const aliveTeamIds = new Set((aliveTeams || []).map(t => t.id));
 
@@ -1437,17 +1425,12 @@ Good luck! ⚽🏆`;
             .eq('player_id', player.id);
 
           const usedTeamIds = new Set((playerPicks || []).map(p => p.team_id));
-
-          // Pending = pick exists but no result yet
           const hasPendingPick = (playerPicks || []).some(p =>
             !p.pick_results || p.pick_results.length === 0 || !p.pick_results[0].match_result
           );
+          if (hasPendingPick) continue;
 
-          if (hasPendingPick) continue; // result still outstanding — don't eliminate yet
-
-          // Remaining = alive teams not yet used by this player
           const remaining = [...aliveTeamIds].filter(id => !usedTeamIds.has(id));
-
           if (remaining.length === 0) {
             await db.from('players')
               .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
@@ -1456,13 +1439,11 @@ Good luck! ⚽🏆`;
         }
       }
 
-      // ── Advance winner to next round match shell — always fires for KO ──
       if (isKnockout) {
         await advanceWinnerToNextMatch(matchId, match, homeScore, awayScore, isPens, pensWinnerId);
       }
     }
-    // Progression map: match_number -> { nextMatchNumber, slot ('home'|'away') }
-    // For 3rd place (103): loser of SF advances, handled separately
+
     const KO_PROGRESSION = {
       74: { next: 89, slot: 'home' },
       77: { next: 89, slot: 'away' },
@@ -1496,19 +1477,16 @@ Good luck! ⚽🏆`;
       102: { next: 104, slot: 'away' },
     };
 
-    // SF losers → 3rd place match (103)
     const THIRD_PLACE_LOSERS = {
       101: 'home',
       102: 'away',
     };
 
     async function advanceWinnerToNextMatch(matchId, match, homeScore, awayScore, isPens, pensWinnerId) {
-      // Get match_number for this match
       const { data: matchRow } = await db.from('matches').select('match_number').eq('id', matchId).single();
       if (!matchRow) return;
       const mn = matchRow.match_number;
 
-      // Determine winner and loser team IDs
       let winnerId, loserId;
       if (isPens && pensWinnerId) {
         winnerId = pensWinnerId;
@@ -1521,7 +1499,6 @@ Good luck! ⚽🏆`;
         loserId  = match.home_team_id;
       }
 
-      // Advance winner to next match
       const prog = KO_PROGRESSION[mn];
       if (prog) {
         const { data: nextMatch } = await db.from('matches')
@@ -1534,7 +1511,6 @@ Good luck! ⚽🏆`;
         }
       }
 
-      // Advance loser to 3rd place match if this is a SF
       const thirdSlot = THIRD_PLACE_LOSERS[mn];
       if (thirdSlot && loserId) {
         const { data: thirdMatch } = await db.from('matches')
@@ -1548,16 +1524,12 @@ Good luck! ⚽🏆`;
       }
     }
 
-    // ── Matches ───────────────────────────────────────────────
+    // ── Matches / R32 ─────────────────────────────────────────
     async function loadRoundsAndTeamsForMatchForm() {
       const { data: rounds } = await db.from('rounds').select('*').order('sort_order');
       const { data: teams } = await db.from('teams').select('*').order('name');
       roundsCache = rounds || [];
       groupRoundIds = (rounds || []).filter(r => r.round_type === 'group').map(r => r.id);
-
-      // round dropdown removed — R32 loaded directly via loadR32Matches()
-
-      // Build team options — alive + not already assigned to a KO fixture
       if (teams) {
         window._allTeamsForMatch = teams.filter(t => !t.is_eliminated);
       }
@@ -1600,6 +1572,7 @@ Good luck! ⚽🏆`;
       85:'1st B v 3rd',   86:'1st J v 2nd H', 87:'1st K v 3rd', 88:'2nd D v 2nd G',
     };
 
+    // ── UPDATED: filter dropdowns by group ────────────────────
     async function onMatchNumberSelected() {
       const numSel = document.getElementById('match-number-select');
       const matchId = numSel.value;
@@ -1616,6 +1589,7 @@ Good luck! ⚽🏆`;
       const opt = numSel.options[numSel.selectedIndex];
       const kickoff = opt.dataset.kickoff;
       const venue = opt.dataset.venue;
+      const matchNumber = parseInt(opt.dataset.matchNumber);
 
       // Show pre-populated details
       const d = new Date(kickoff).toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long'});
@@ -1624,7 +1598,7 @@ Good luck! ⚽🏆`;
       document.getElementById('match-prefill-venue').textContent = venue || '—';
       document.getElementById('match-prefill').style.display = 'block';
 
-      // Build team dropdowns — alive teams not already assigned to any KO match
+      // Fetch alive teams not already assigned to a KO fixture
       const { data: assignedMatches } = await db.from('matches')
         .select('home_team_id, away_team_id')
         .not('home_team_id', 'is', null)
@@ -1636,15 +1610,33 @@ Good luck! ⚽🏆`;
         if (m.away_team_id) assignedIds.add(m.away_team_id);
       });
 
-      const { data: freshTeams } = await db.from('teams').select('id, name, flag_emoji, is_eliminated').eq('is_eliminated', false).order('name');
+      const { data: freshTeams } = await db.from('teams')
+        .select('id, name, flag_emoji, is_eliminated')
+        .eq('is_eliminated', false)
+        .order('name');
+
       const available = (freshTeams || []).filter(t => !assignedIds.has(t.id));
-      const matchNumber = parseInt(opt.dataset.matchNumber);
+
+      // Parse slot string to determine which group each side comes from
       const slot = R32_SLOTS[matchNumber] || '';
       const [homeSlot, awaySlot] = slot ? slot.split(' v ') : ['Home team', 'Away team'];
-      const makeOpts = placeholder => '<option value="">' + placeholder + '...</option>' +
-        available.map(t => `<option value="${t.id}">${t.flag_emoji} ${t.name}</option>`).join('');
-      document.getElementById('match-home-select').innerHTML = makeOpts(homeSlot);
-      document.getElementById('match-away-select').innerHTML = makeOpts(awaySlot);
+      const homeGroup = groupFromSlotHalf(homeSlot);
+      const awayGroup = groupFromSlotHalf(awaySlot);
+
+      // Filter per side — null group (3rd place slot) gets all available teams
+      const homeTeams = homeGroup
+        ? available.filter(t => (TEAM_GROUPS[homeGroup] || []).some(n => n.toLowerCase() === t.name.toLowerCase()))
+        : available;
+      const awayTeams = awayGroup
+        ? available.filter(t => (TEAM_GROUPS[awayGroup] || []).some(n => n.toLowerCase() === t.name.toLowerCase()))
+        : available;
+
+      const makeOpts = (teams, placeholder) =>
+        '<option value="">' + placeholder + '...</option>' +
+        teams.map(t => `<option value="${t.id}">${t.flag_emoji} ${t.name}</option>`).join('');
+
+      document.getElementById('match-home-select').innerHTML = makeOpts(homeTeams, homeSlot.trim());
+      document.getElementById('match-away-select').innerHTML = makeOpts(awayTeams, awaySlot.trim());
       document.getElementById('match-team-fields').style.display = '';
       document.getElementById('add-match-btn').style.display = 'block';
     }
@@ -1660,7 +1652,6 @@ Good luck! ⚽🏆`;
       if (error) { msg.style.color='var(--red)'; msg.textContent=error.message; }
       else {
         msg.style.color='var(--green)'; msg.textContent='✅ Teams assigned.';
-        // Reload the match number dropdown to remove the assigned match
         loadR32Matches();
         document.getElementById('match-prefill').style.display = 'none';
         document.getElementById('match-team-fields').style.display = 'none';
@@ -1688,7 +1679,6 @@ Good luck! ⚽🏆`;
           <span style="color:var(--text-muted); font-size:11px">&nbsp;· tick Out + Group Phase 3 on each team below</span>
         </div>`;
 
-      // Band options — short labels for compact dropdown
       const BAND_OPTIONS_SHORT = [
         { value: 'favourite',  label: '🔵 Fav' },
         { value: 'dark_horse', label: '🟡 Dark' },
@@ -1709,15 +1699,15 @@ Good luck! ⚽🏆`;
       teams.forEach(t => {
         const bandSel = BAND_OPTIONS_SHORT.map(o => `<option value="${o.value}" ${t.band === o.value ? 'selected' : ''}>${o.label}</option>`).join('');
         const ROUND_ABBREV = {
-        'Group Phase 3': 'Group',
-        'Round of 32': 'R32', 'Round of 16': 'R16',
-        'Quarter Finals': 'QF', 'Semi Finals': 'SF',
-        'Final': 'Final'
-      };
-      const ELIM_ROUNDS = new Set(Object.keys(ROUND_ABBREV));
-      function abbrevRound(name) { return ROUND_ABBREV[name] || name; }
+          'Group Phase 3': 'Group',
+          'Round of 32': 'R32', 'Round of 16': 'R16',
+          'Quarter Finals': 'QF', 'Semi Finals': 'SF',
+          'Final': 'Final'
+        };
+        const ELIM_ROUNDS = new Set(Object.keys(ROUND_ABBREV));
+        function abbrevRound(name) { return ROUND_ABBREV[name] || name; }
 
-      const defaultRoundId = t.eliminated_in_round_id || ((rounds||[]).find(r => r.name === 'Group Phase 3') || {}).id || '';
+        const defaultRoundId = t.eliminated_in_round_id || ((rounds||[]).find(r => r.name === 'Group Phase 3') || {}).id || '';
         const roundSel = (rounds || []).filter(r => ELIM_ROUNDS.has(r.name)).map(r => `<option value="${r.id}" ${(t.eliminated_in_round_id || defaultRoundId) === r.id ? 'selected' : ''}>${abbrevRound(r.name)}</option>`).join('');
         const outLabel = t.is_eliminated
           ? ' <span style="font-size:10px; color:var(--red); font-weight:700">OUT' + (t.eliminated_in_round_id && roundMap[t.eliminated_in_round_id] ? ' (' + roundMap[t.eliminated_in_round_id] + ')' : '') + '</span>'
@@ -1783,31 +1773,62 @@ Good luck! ⚽🏆`;
     }
 
     // ── Snapshot ──────────────────────────────────────────────
-
     async function takeSnapshot(roundId) {
-      const [{ data: scores }, { data: gdData }, { data: furthestData }] = await Promise.all([
-        db.from('player_scores').select('player_id, total_points'),
+      const [{ data: scores }, { data: gdData }, { data: furthestData }, { data: completedMatches }] = await Promise.all([
+        db.from('player_scores').select('player_id, name, total_points, total_goals_prediction, is_eliminated'),
         db.from('player_gd').select('player_id, gd'),
-        db.from('player_furthest_round').select('player_id, furthest_round')
+        db.from('player_furthest_round').select('player_id, furthest_round'),
+        db.from('matches').select('home_score, away_score').eq('status', 'complete').not('home_score', 'is', null)
       ]);
       const gdMap = {}, furthestMap = {};
       (gdData||[]).forEach(r => { gdMap[r.player_id] = r.gd; });
       (furthestData||[]).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
       const round = roundsCache.find(r => r.id === roundId);
       const isKnockout = round && round.round_type === 'knockout';
+      let goalsScored = 0, matchesPlayed = 0;
+      (completedMatches||[]).forEach(m => { goalsScored += (m.home_score||0) + (m.away_score||0); matchesPlayed++; });
+      const projectedTotal = matchesPlayed > 0 ? (goalsScored / matchesPlayed) * 104 : null;
+      const currentSO = round ? round.sort_order : 0;
       const sorted = (scores||[]).sort((a,b) => {
         if (b.total_points !== a.total_points) return b.total_points - a.total_points;
-        if (isKnockout) { const afr = furthestMap[a.player_id]||0, bfr = furthestMap[b.player_id]||0; if (bfr !== afr) return bfr - afr; }
-        return (gdMap[b.player_id]||0) - (gdMap[a.player_id]||0);
+        if (isKnockout) {
+          const afr = a.is_eliminated ? (furthestMap[a.player_id]||0) : Math.max(furthestMap[a.player_id]||0, currentSO);
+          const bfr = b.is_eliminated ? (furthestMap[b.player_id]||0) : Math.max(furthestMap[b.player_id]||0, currentSO);
+          if (bfr !== afr) return bfr - afr;
+        }
+        const agd = gdMap[a.player_id]||0, bgd = gdMap[b.player_id]||0;
+        if (bgd !== agd) return bgd - agd;
+        if (projectedTotal !== null) {
+          const aDiff = Math.abs((a.total_goals_prediction||0) - projectedTotal);
+          const bDiff = Math.abs((b.total_goals_prediction||0) - projectedTotal);
+          if (aDiff !== bDiff) return aDiff - bDiff;
+        }
+        if (!isKnockout) return (a.name||'').localeCompare(b.name||'');
+        return (a.name||'').localeCompare(b.name||''); // display-only tiebreak within tied KO groups
       });
-      const inserts = sorted.map((p,i) => ({ round_id: roundId, player_id: p.player_id, position: i+1, total_points: p.total_points }));
+      // Compute tied positions matching leaderboard display logic
+      const posMap = {};
+      sorted.forEach((p, i) => {
+        if (i === 0) { posMap[p.player_id] = 1; return; }
+        const prev = sorted[i - 1];
+        const samePts   = prev.total_points === p.total_points;
+        const sameGd    = (gdMap[prev.player_id]||0) === (gdMap[p.player_id]||0);
+        const sameGoals = projectedTotal === null || Math.abs((prev.total_goals_prediction||0) - projectedTotal) === Math.abs((p.total_goals_prediction||0) - projectedTotal);
+        let sameFR = true;
+        if (isKnockout) {
+          const pfr = prev.is_eliminated ? (furthestMap[prev.player_id]||0) : Math.max(furthestMap[prev.player_id]||0, currentSO);
+          const cfr = p.is_eliminated   ? (furthestMap[p.player_id]||0)    : Math.max(furthestMap[p.player_id]||0,    currentSO);
+          sameFR = pfr === cfr;
+        }
+        const isTied = isKnockout && samePts && sameFR && sameGd && sameGoals;
+        posMap[p.player_id] = isTied ? posMap[prev.player_id] : i + 1;
+      });
+      const inserts = sorted.map((p) => ({ round_id: roundId, player_id: p.player_id, position: posMap[p.player_id], total_points: p.total_points }));
       const { error } = await db.from('leaderboard_snapshots').upsert(inserts, { onConflict: 'round_id,player_id' });
       return error;
     }
 
-
-
-    // ── Reset All Results (existing) ──────────────────────────
+    // ── Reset All Results ─────────────────────────────────────
     document.getElementById('btn-reset-all').addEventListener('click', async () => {
       const msg = document.getElementById('reset-msg');
       if (!confirm('WARNING: This will delete ALL pick results and reset ALL match statuses to scheduled.\n\nPlayers, picks, teams and fixtures are NOT affected.\n\nAre you sure?')) return;
@@ -1823,26 +1844,21 @@ Good luck! ⚽🏆`;
       } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message; }
     });
 
-    // ── Match Reset (keep group fixtures) ─────────────────────
+    // ── Match Reset ───────────────────────────────────────────
     document.getElementById('btn-match-reset').addEventListener('click', async () => {
       const msg = document.getElementById('match-reset-msg');
       if (!confirm('MATCH RESET: This will clear all results, points, and eliminations.\n\nKnockout fixture shells are kept but team assignments will be cleared. Group fixtures untouched.\n\nAre you sure?')) return;
       if (!confirm('Last chance — this cannot be undone. Proceed?')) return;
       msg.style.color = 'var(--text-muted)'; msg.textContent = 'Resetting...';
       try {
-        // 1. Delete all pick_results
         await db.from('pick_results').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        // 2. Reset all match scores/status
         await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
-        // 3. Clear team assignments on KO matches (keep fixture shells with date/venue/match_number)
         const { data: koRounds } = await db.from('rounds').select('id').eq('round_type', 'knockout');
         if (koRounds && koRounds.length > 0) {
           const koRoundIds = koRounds.map(r => r.id);
           await db.from('matches').update({ home_team_id: null, away_team_id: null }).in('round_id', koRoundIds);
         }
-        // 4. Clear all team eliminations
         await db.from('teams').update({ is_eliminated: false, eliminated_in_round_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
-        // 5. Clear round completion flags and snapshots
         await db.from('rounds').update({ is_complete: false }).neq('id', '00000000-0000-0000-0000-000000000000');
         await db.from('leaderboard_snapshots').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         msg.style.color = 'var(--green)'; msg.textContent = '✅ Match reset complete. KO fixture shells retained. All results, team assignments, eliminations and round progress cleared.';
@@ -1850,30 +1866,23 @@ Good luck! ⚽🏆`;
       } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message; }
     });
 
-    // ── Nuclear Reset (testing only) ─────────────────────────
+    // ── Nuclear Reset ─────────────────────────────────────────
     document.getElementById('btn-nuclear-reset').addEventListener('click', async () => {
       const msg = document.getElementById('nuclear-reset-msg');
       if (!confirm('☢️ NUCLEAR RESET — FOR TESTING ONLY ☢️\n\nThis will wipe:\n• All results and pick_results\n• ALL picks\n• All goals predictions\n• All eliminations\n• All round snapshots and completion flags\n• All KO team assignments (fixture shells kept)\n\nPlayer accounts and all fixtures are kept.\n\nAre you absolutely sure?')) return;
       if (!confirm('This is irreversible. Final confirmation — proceed with nuclear reset?')) return;
       msg.style.color = 'var(--text-muted)'; msg.textContent = '☢️ Nuking...';
       try {
-        // 1. Delete pick_results
         await db.from('pick_results').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        // 2. Delete all picks
         await db.from('picks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        // 3. Reset all matches
         await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
-        // 4. Clear team assignments on KO matches (keep fixture shells with date/venue/match_number)
         const { data: koRounds } = await db.from('rounds').select('id').eq('round_type', 'knockout');
         if (koRounds && koRounds.length > 0) {
           await db.from('matches').update({ home_team_id: null, away_team_id: null, home_score: null, away_score: null, pens_winner_id: null, status: 'scheduled' }).in('round_id', koRounds.map(r => r.id));
         }
-        // 5. Clear team eliminations
         await db.from('teams').update({ is_eliminated: false, eliminated_in_round_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
-        // 6. Clear round flags and snapshots
         await db.from('rounds').update({ is_complete: false }).neq('id', '00000000-0000-0000-0000-000000000000');
         await db.from('leaderboard_snapshots').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        // 7. Clear goals predictions and player elimination status
         await db.from('players').update({ total_goals_prediction: null, is_eliminated: false, eliminated_at: null }).neq('id', '00000000-0000-0000-0000-000000000000');
         msg.style.color = 'var(--green)'; msg.textContent = '✅ Nuclear reset complete. All data wiped. Group fixtures and player accounts retained.';
         loadMatchesForResult(); loadCompletedMatchesForCorrection(); loadTeamsLongshot(); loadPlayers();
@@ -2028,7 +2037,6 @@ Good luck! ⚽🏆`;
       const roundOpt = document.getElementById('bulk-round-select').options[document.getElementById('bulk-round-select').selectedIndex];
       const isKnockout = roundOpt && roundOpt.dataset.type === 'knockout';
 
-      // Get first kickoff of this round for Day X calculation
       const { data: firstKickoffData } = await db.from('matches').select('kickoff').eq('round_id', roundId).not('home_team_id', 'is', null).order('kickoff', { ascending: true }).limit(1);
       const roundFirstKickoff = firstKickoffData && firstKickoffData.length > 0 ? firstKickoffData[0].kickoff : null;
 
@@ -2096,7 +2104,6 @@ Good luck! ⚽🏆`;
       wrap.innerHTML = html;
     }
 
-    // ── Bulk pens helpers ─────────────────────────────────────
     function fillTestScores() {
       document.querySelectorAll('#bulk-matches-wrap input[type="number"]').forEach(input => {
         if (input.id.startsWith('bulk-home-')) {
@@ -2151,7 +2158,6 @@ Good luck! ⚽🏆`;
         const isPens      = pensChecked && homeScore === awayScore;
         const pensWinner  = isPens ? (document.getElementById('bulk-winner-' + matchId)?.value || '') : '';
 
-        // Block save if pens ticked on draw but no winner chosen
         if (isPens && !pensWinner) {
           warnings.push('⚠️ Select who won on penalties before saving.');
           skipped++;
@@ -2231,7 +2237,6 @@ Good luck! ⚽🏆`;
         msg.style.color = 'var(--red)'; msg.textContent = '❌ Invalid JSON: ' + e.message; return;
       }
 
-      // Basic structure check
       const required = ['r32','r16','qf','sf','final'];
       const missing = required.filter(k => !parsed[k]);
       if (missing.length) {
@@ -2305,13 +2310,10 @@ Good luck! ⚽🏆`;
         wrap.innerHTML = '<p style="color:var(--red)">Failed to load data.</p>'; return;
       }
 
-      // Show rounds whose deadline has passed, plus the next upcoming round
       const now = getEffectiveDate();
-      console.log('[Audit] Round names from DB:', rounds.map(r => r.name));
       const eligibleRounds = [...rounds]
         .filter(r => !r.name.toLowerCase().includes('3rd') && ROUND_START_DATES[r.name])
         .sort((a, b) => a.sort_order - b.sort_order);
-      console.log('[Audit] Eligible rounds:', eligibleRounds.map(r => r.name));
 
       const pastRoundIds = new Set();
       let nextRound = null;
@@ -2328,7 +2330,6 @@ Good luck! ⚽🏆`;
         .filter(r => pastRoundIds.has(r.id) || r === nextRound)
         .sort((a, b) => b.sort_order - a.sort_order);
 
-      // Index picks: player_id → round_id → [picks]
       const pickIndex = {};
       picks.forEach(p => {
         if (!pickIndex[p.player_id]) pickIndex[p.player_id] = {};
@@ -2336,10 +2337,8 @@ Good luck! ⚽🏆`;
         pickIndex[p.player_id][p.round_id].push(p);
       });
 
-      // Count blanks per player for summary
       let totalBlanks = 0;
 
-      // Build header
       let html = `<div style="overflow-x:auto"><table style="font-size:12px; min-width:800px; border-collapse:collapse">
         <thead><tr>
           <th style="text-align:left; padding:8px 10px; background:var(--surface2); border:1px solid var(--border); position:sticky; left:0; z-index:2; min-width:100px; max-width:130px; width:130px">Player</th>`;
@@ -2373,7 +2372,6 @@ Good luck! ⚽🏆`;
               html += `<td style="padding:6px 8px; border:1px solid var(--border); background:rgba(239,68,68,0.12); text-align:center; color:var(--red); font-weight:600; font-size:11px">— Missing —</td>`;
             }
           } else {
-            // Sort: 3pt first for group
             const sorted = isGroup ? [...roundPicks].sort((a, b) => (b.multiplier || 0) - (a.multiplier || 0)) : roundPicks;
             let cellHtml = sorted.map(p => {
               const flag = p.teams?.flag_emoji || '🏳';
@@ -2395,7 +2393,6 @@ Good luck! ⚽🏆`;
 
       html += `</tbody></table></div>`;
 
-      // Summary bar
       const summaryColor = totalBlanks === 0 ? 'var(--green)' : 'var(--gold)';
       const summary = `<div style="margin-bottom:12px; padding:8px 14px; background:var(--surface2); border-radius:8px; font-size:13px; display:flex; gap:16px; flex-wrap:wrap; align-items:center">
         <span>👥 <strong>${players.length}</strong> players</span>
