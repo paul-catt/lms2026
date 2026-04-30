@@ -57,7 +57,7 @@
     .r-table tbody tr.rank2 td:first-child { border-left: 3px solid #8e9eab; }
     .r-table tbody tr.rank3 td:first-child { border-left: 3px solid #a0522d; }
     .r-table tbody tr.elim td { color: #b0b8c4 !important; }
-    .r-footer { background: #f0f4f8; border-top: 1px solid #d1dbe8; padding: 5px 12px; font-size: 9px; color: #718096; text-align: center; letter-spacing: 0.05em; }
+    .r-footer { background: #f0f4f8; border-top: 1px solid #d1dbe8; padding: 6px 12px; font-size: 12px; font-weight: 600; color: #4a5568; text-align: center; letter-spacing: 0.03em; }
     /* Position cell — number + inline arrow together */
     .r-pos-cell { display: flex; align-items: center; gap: 3px; justify-content: center; white-space: nowrap; }
     .r-pos { font-weight: 800; color: #718096; font-size: 12px; }
@@ -90,6 +90,8 @@
     .r-arrow-up { color: #38a169; font-weight: 700; font-size: 9px; }
     .r-arrow-dn { color: #e53e3e; font-weight: 700; font-size: 9px; }
     .r-arrow-eq { color: #a0aec0; font-size: 9px; }
+    .r-table tbody tr.today td, .r-table tbody tr[style*="background:#bfdbfe"] td { background:#bfdbfe !important; }
+    .r-today-flags { font-size: 14px; line-height: 1; }
     .r-name { font-weight: 700; font-size: 12px; color: #1a202c; }
   </style>
 </head>
@@ -113,15 +115,9 @@
 
     <!-- Round Settings -->
     <div class="card" style="margin-bottom:24px">
-      <div class="card-title">Round Settings</div>
-      <div style="display:grid; grid-template-columns:1fr auto; gap:12px; align-items:end">
-        <div class="form-group" style="margin:0">
-          <label>Next Match Info</label>
-          <input type="text" id="next-match" placeholder="e.g. Next: Thu 3pm UK" />
-        </div>
-        <div>
-          <button class="btn btn-primary" id="btn-load-all">🔄 Load Round Data</button>
-        </div>
+      <div style="display:flex; align-items:center; gap:16px">
+        <button class="btn btn-primary" id="btn-load-all">🔄 Load Round Data</button>
+        <span id="current-date-indicator" style="font-size:11px;color:var(--text-muted)"></span>
       </div>
       <div class="status-msg" id="load-status"></div>
     </div>
@@ -214,6 +210,21 @@
     let roundData = null;
     let oddsMap = {};
 
+    // Default footer text to today's day (respects test date override)
+    (function() {
+      const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const testDate = localStorage.getItem('lms2026_test_date');
+      const now = testDate ? new Date(testDate) : new Date();
+      const day = days[now.getDay()];
+      const indicator = document.getElementById('current-date-indicator');
+      if (indicator) {
+        const label = testDate ? '🧪 Test date:' : '📅 Today:';
+        indicator.textContent = `${label} ${day} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+        indicator.style.color = testDate ? '#f6ad55' : 'var(--text-muted)';
+      }
+    })();
+
     document.getElementById('btn-load-all').addEventListener('click', loadAll);
     document.getElementById('btn-dl-pn').addEventListener('click', () => downloadRender('pn-render', 'Picks'));
     document.getElementById('btn-dl-tp').addEventListener('click', () => downloadRender('tp-render', 'TeamsPicked'));
@@ -294,7 +305,9 @@
           { data: matches, error: mErr },
           { data: rounds },
           { data: firstMatchData },
-          { data: snapshots }
+          { data: snapshots },
+          { data: gdData },
+          { data: furthestRoundData }
         ] = await Promise.all([
           db.from('players').select('id, name, slug, is_eliminated, total_goals_prediction'),
           // FIX 3: order pick_results by match kickoff so form is chronological
@@ -304,10 +317,12 @@
             pick_results(points_earned, match_result, base_points, matches(kickoff)),
             teams(id, name, flag_emoji, is_longshot)
           `),
-          db.from('matches').select('id, round_id, home_team_id, away_team_id, odds_home, odds_away, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)'),
+          db.from('matches').select('id, round_id, home_team_id, away_team_id, kickoff, home_score, away_score, odds_home, odds_away, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)'),
           db.from('rounds').select('id, name, round_type, sort_order, is_complete, deadline').order('sort_order'),
           db.from('matches').select('round_id, kickoff').order('kickoff'),
-          db.from('leaderboard_snapshots').select('player_id, position, round_id')
+          db.from('leaderboard_snapshots').select('player_id, position, round_id'),
+          db.from('player_gd').select('player_id, gd'),
+          db.from('player_furthest_round').select('player_id, furthest_round')
         ]);
 
         if (pErr) throw pErr;
@@ -397,11 +412,58 @@
           });
         }
 
+        // Furthest round per player
+        const furthestRoundMap = {};
+        (furthestRoundData || []).forEach(r => { furthestRoundMap[r.player_id] = r.furthest_round || 0; });
+
+        // Projected tournament total goals (completed matches scaled to 104)
+        const completedMatches = matches.filter(m => m.home_score !== null && m.away_score !== null);
+        const goalsScored = completedMatches.reduce((sum, m) => sum + (m.home_score || 0) + (m.away_score || 0), 0);
+        const projectedTotal = completedMatches.length > 0
+          ? Math.round((goalsScored / completedMatches.length) * 104)
+          : 0;
+
+        // GD per player
+        const gdMap = {};
+        (gdData || []).forEach(r => { gdMap[r.player_id] = r.gd || 0; });
+
+        // "Playing today" — noon-noon UTC window (respects test date override)
+        const testDateStr = localStorage.getItem('lms2026_test_date');
+        const nowUtc = testDateStr ? new Date(testDateStr) : new Date();
+        const todayWindowStart = new Date(Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(), 11, 0, 0));
+        if (nowUtc.getUTCHours() < 11) todayWindowStart.setUTCDate(todayWindowStart.getUTCDate() - 1);
+        const todayWindowEnd = new Date(todayWindowStart.getTime() + 24 * 60 * 60 * 1000);
+
+        // Match IDs kicking off in today's window, mapped to team IDs
+        const todayMatchTeams = new Set();
+        (matches || []).forEach(m => {
+          if (!m.kickoff) return;
+          const ko = new Date(m.kickoff);
+          if (ko >= todayWindowStart && ko < todayWindowEnd) {
+            todayMatchTeams.add(m.home_team_id);
+            todayMatchTeams.add(m.away_team_id);
+          }
+        });
+
+        // Per player: which of their current picks are playing today
+        const playerTodayFlags = {}; // player_id -> array of flag_emoji
+        currentPicks.forEach(pick => {
+          if (!todayMatchTeams.has(pick.team_id)) return;
+          if (!playerTodayFlags[pick.player_id]) playerTodayFlags[pick.player_id] = [];
+          const flag = pick.teams?.flag_emoji || '🏳️';
+          if (!playerTodayFlags[pick.player_id].includes(flag))
+            playerTodayFlags[pick.player_id].push(flag);
+        });
+
         const statsMap = {};
         players.forEach(p => {
           statsMap[p.id] = {
             id: p.id, name: p.name, slug: p.slug, isOut: p.is_eliminated,
             totalPoints: 0, pld: 0, teamsUsed: 0,
+            gd: gdMap[p.id] ?? 0,
+            furthestRound: furthestRoundMap[p.id] ?? 0,
+            goalsPredict: p.total_goals_prediction || 0,
+            todayFlags: playerTodayFlags[p.id] || [],
             formEntries: []
           };
         });
@@ -427,21 +489,55 @@
 
         picks.forEach(pick => { const s = statsMap[pick.player_id]; if (s) s.teamsUsed++; });
 
-        // Order by snapshot (= same order as official leaderboard). Fall back to points
-        // desc for players not yet in any snapshot (pre-competition).
+        // Order by snapshot (= same order as official leaderboard). Fall back to full
+        // tiebreaker chain for players not yet in any snapshot.
         const sortedPlayers = Object.values(statsMap).sort((a, b) => {
           const aPos = snapshotPosMap[a.id];
           const bPos = snapshotPosMap[b.id];
           if (aPos !== undefined && bPos !== undefined) return aPos - bPos;
-          if (aPos !== undefined) return -1; // snapshotted players first
+          if (aPos !== undefined) return -1;
           if (bPos !== undefined) return 1;
-          return b.totalPoints - a.totalPoints; // fallback: points desc
+          // Full tiebreaker fallback
+          if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+          if (!isGroupRound) {
+            // KO tiebreaker 2: furthest round (alive players floor to currentRoundSortOrder)
+            const aFR = Math.max(a.furthestRound || 0, currentRoundSortOrder);
+            const bFR = Math.max(b.furthestRound || 0, currentRoundSortOrder);
+            if (bFR !== aFR) return bFR - aFR;
+          }
+          if (b.gd !== a.gd) return b.gd - a.gd;
+          // Goals prediction: closest to projected total wins
+          const aDiff = Math.abs((a.goalsPredict || 0) - projectedTotal);
+          const bDiff = Math.abs((b.goalsPredict || 0) - projectedTotal);
+          if (aDiff !== bDiff) return aDiff - bDiff;
+          if (isGroupRound) return a.name.localeCompare(b.name); // alpha resolves group stage
+          return 0; // KO allows ties
         });
 
-        // Build rankMap from snapshot positions (preserving ties as equal rank)
+        // Build rankMap from snapshot positions.
+        // For fallback (no snapshot): group stage uses alpha so every player gets a unique
+        // sequential position; knockout allows ties.
         const rankMap = {};
-        sortedPlayers.forEach(p => {
-          rankMap[p.id] = snapshotPosMap[p.id] ?? (sortedPlayers.indexOf(p) + 1);
+        const snappedCount = sortedPlayers.filter(q => snapshotPosMap[q.id] !== undefined).length;
+        let fallbackPos = snappedCount + 1;
+        sortedPlayers.forEach((p, i) => {
+          const snapPos = snapshotPosMap[p.id];
+          if (snapPos !== undefined) {
+            rankMap[p.id] = snapPos;
+          } else {
+            if (isGroupRound) {
+              // Alpha resolves all ties — sequential positions
+              rankMap[p.id] = snappedCount + (i - snappedCount) + 1;
+            } else {
+              // Knockout — tied positions allowed
+              if (i > 0 && snapshotPosMap[sortedPlayers[i-1].id] === undefined) {
+                if (p.totalPoints !== sortedPlayers[i-1].totalPoints) {
+                  fallbackPos = i + 1;
+                }
+              }
+              rankMap[p.id] = fallbackPos;
+            }
+          }
         });
 
         const roundLabel     = buildRoundLabel(rounds, currentRoundSortOrder);
@@ -476,9 +572,30 @@
           rounds, snapshots: snapshots || [],
           snapshotPosMap, prevSnapshotPosMap,
           lastCompletedRound, prevCompletedRound,
-          eliminatedThisRound,
+          eliminatedThisRound, playerTodayFlags, gdMap,
+          todayWindowStart, todayWindowEnd, projectedTotal,
           roundLabelText, fullRoundLabelText
         };
+
+        // Compute day label and store in roundData
+        const testDateStr2 = localStorage.getItem('lms2026_test_date');
+        const nowForDay = testDateStr2 ? new Date(testDateStr2) : new Date();
+        const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        const matchesOnDay = 'Matches on ' + dayNames[nowForDay.getDay()];
+
+        roundData.matchesOnDay = matchesOnDay;
+
+        // Refresh date indicator
+        (function() {
+          const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          const day = dayNames[nowForDay.getDay()];
+          const indicator = document.getElementById('current-date-indicator');
+          if (indicator) {
+            const label = testDateStr2 ? '🧪 Test date:' : '📅 Today:';
+            indicator.textContent = `${label} ${day} ${nowForDay.getDate()} ${months[nowForDay.getMonth()]} ${nowForDay.getFullYear()}`;
+            indicator.style.color = testDateStr2 ? '#f6ad55' : 'var(--text-muted)';
+          }
+        })();
 
         renderPicksByName();
         renderTeamsPicked();
@@ -664,63 +781,85 @@
     // ── 1. Picks by Name ──────────────────────────────────────
     function renderPicksByName() {
       if (!roundData) return;
-      const { sortedPlayers, playerCurrentPicks, teamNames, teamFlags, isGroupRound, fullRoundLabel } = roundData;
-      const nextMatch = val('next-match');
+      const { sortedPlayers, playerCurrentPicks, teamNames, teamFlags, isGroupRound, fullRoundLabel, rankMap } = roundData;
 
       function teamCell(pick) {
-        if (!pick) return '<span style="color:#a0aec0">—</span>';
-        return `<span class="r-pick-name">${teamFlags[pick.team_id]||''} ${teamNames[pick.team_id]||'?'}</span>`;
+        if (!pick) return '<span style="color:#a0aec0;font-style:italic">—</span>';
+        const flag = teamFlags[pick.team_id] || '';
+        const name = teamNames[pick.team_id] || '?';
+        return `<span class="r-pick-name">${name}</span> ${flag}`;
+      }
+
+      function gdCell(gd) {
+        const val = gd ?? 0;
+        const str = val > 0 ? `+${val}` : String(val);
+        const colour = val < 0 ? '#c53030' : '#276749';
+        return `<span style="color:${colour};font-weight:700">${str}</span>`;
       }
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
 
       if (isGroupRound) {
         html += `<table class="r-table"><thead><tr>
-          <th style="width:28px">#</th>
-          <th class="left" style="min-width:90px">Player</th>
-          <th style="min-width:120px">3pt Pick</th>
-          <th style="min-width:120px">2pt Pick</th>
-          <th style="width:42px">Pts</th>
+          <th style="width:24px">#</th>
+          <th class="left" style="min-width:80px">Name</th>
+          <th class="left" style="min-width:100px">3pt Pick</th>
+          <th class="left" style="min-width:100px">2pt Pick</th>
+          <th style="width:28px">Pld</th>
+          <th style="width:28px">Pts</th>
+          <th style="width:32px">GD</th>
         </tr></thead><tbody>`;
+        const rankCounts3 = {};
+        sortedPlayers.forEach(q => { const r = rankMap[q.id]; if (r !== undefined) rankCounts3[r] = (rankCounts3[r]||0)+1; });
         sortedPlayers.forEach((p, i) => {
           const pos = rankMap[p.id] ?? (i + 1);
+          const isTied = isGroupRound ? false : (rankCounts3[pos]||0) > 1;
+          const posLabel = isTied ? pos + '=' : String(pos);
           const pPicks = playerCurrentPicks[p.id] || [];
-          const pick3 = pPicks.find(pk => pk.multiplier === 3) || pPicks.find(pk => (pk.multiplier||0) >= 3);
-          const pick2 = pPicks.find(pk => pk.multiplier === 2) || pPicks.find(pk => pk !== pick3);
-          const posClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
-          const ptsClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
-          const rowClass = p.isOut ? 'elim' : pos === 1 ? 'rank1' : pos === 2 ? 'rank2' : pos === 3 ? 'rank3' : '';
+          const pick3 = pPicks.find(pk => pk.multiplier === 3);
+          const pick2 = pPicks.find(pk => pk.multiplier === 2);
+          const rowClass = p.isOut ? 'elim' : '';
           html += `<tr class="${rowClass}">
-            <td><span class="r-pos ${posClass}">${pos}</span></td>
+            <td style="font-weight:700;color:#4a5568">${posLabel}</td>
             <td class="left"><span class="r-name">${p.name}</span></td>
-            <td>${teamCell(pick3)}</td><td>${teamCell(pick2)}</td>
-            <td><span class="r-pts ${ptsClass}">${p.totalPoints}</span></td>
+            <td class="left">${teamCell(pick3)}</td>
+            <td class="left">${teamCell(pick2)}</td>
+            <td style="color:#4a5568">${p.pld}</td>
+            <td style="font-weight:800;color:#1a202c">${p.totalPoints}</td>
+            <td>${gdCell(p.gd)}</td>
           </tr>`;
         });
       } else {
         html += `<table class="r-table"><thead><tr>
-          <th style="width:28px">#</th>
-          <th class="left" style="min-width:90px">Player</th>
-          <th style="min-width:150px">Pick</th>
-          <th style="width:42px">Pts</th>
+          <th style="width:24px">#</th>
+          <th class="left" style="min-width:80px">Name</th>
+          <th class="left" style="min-width:130px">Pick</th>
+          <th style="width:28px">Pld</th>
+          <th style="width:28px">Pts</th>
+          <th style="width:32px">GD</th>
         </tr></thead><tbody>`;
+        const rankCounts2 = {};
+        sortedPlayers.forEach(q => {
+          const r = rankMap[q.id]; if (r !== undefined) rankCounts2[r] = (rankCounts2[r]||0)+1;
+        });
         sortedPlayers.forEach((p, i) => {
           const pos = rankMap[p.id] ?? (i + 1);
+          const isTied = (rankCounts2[pos]||0) > 1;
+          const posLabel = isTied ? pos + '=' : String(pos);
           const pick = (playerCurrentPicks[p.id] || [])[0] || null;
-          const posClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
-          const ptsClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
-          const rowClass = p.isOut ? 'elim' : pos === 1 ? 'rank1' : pos === 2 ? 'rank2' : pos === 3 ? 'rank3' : '';
+          const rowClass = p.isOut ? 'elim' : '';
           html += `<tr class="${rowClass}">
-            <td><span class="r-pos ${posClass}">${pos}</span></td>
+            <td style="font-weight:700;color:#4a5568">${posLabel}</td>
             <td class="left"><span class="r-name">${p.name}</span></td>
-            <td>${teamCell(pick)}</td>
-            <td><span class="r-pts ${ptsClass}">${p.totalPoints}</span></td>
+            <td class="left">${teamCell(pick)}</td>
+            <td style="color:#4a5568">${p.pld}</td>
+            <td style="font-weight:800;color:#1a202c">${p.totalPoints}</td>
+            <td>${gdCell(p.gd)}</td>
           </tr>`;
         });
       }
 
       html += `</tbody></table>`;
-      if (nextMatch) html += `<div class="r-footer">📅 ${nextMatch}</div>`;
       document.getElementById('pn-render').innerHTML = html;
       document.getElementById('pn-preview-wrap').style.display = 'block';
       document.getElementById('btn-dl-pn').style.display = 'inline-block';
@@ -731,7 +870,6 @@
     function renderTeamsPicked() {
       if (!roundData) return;
       const { teamCounts, teamCounts2, teamCounts3, teamNames, teamFlags, teamOpponents, teamIsLongshot, isGroupRound, fullRoundLabel } = roundData;
-      const nextMatch = val('next-match');
 
       const sorted = Object.keys(teamCounts).sort((a,b) => {
         const cd = teamCounts[b] - teamCounts[a];
@@ -796,7 +934,6 @@
       }
 
       html += `</tbody></table>`;
-      if (nextMatch) html += `<div class="r-footer">📅 ${nextMatch}</div>`;
       document.getElementById('tp-render').innerHTML = html;
       document.getElementById('tp-preview-wrap').style.display = 'block';
       document.getElementById('btn-dl-tp').style.display = 'inline-block';
@@ -807,7 +944,6 @@
     function renderCombinations() {
       if (!roundData) return;
       const { playerCurrentPicks, teamNames, teamFlags, fullRoundLabel } = roundData;
-      const nextMatch = val('next-match');
 
       const comboCounts = {}, comboPickMap = {};
       Object.values(playerCurrentPicks).forEach(pPicks => {
@@ -864,7 +1000,6 @@
       });
 
       html += `</tbody></table>`;
-      if (nextMatch) html += `<div class="r-footer">📅 ${nextMatch}</div>`;
       document.getElementById('cb-render').innerHTML = html;
       document.getElementById('cb-preview-wrap').style.display = 'block';
       document.getElementById('btn-dl-cb').style.display = 'inline-block';
@@ -887,21 +1022,20 @@
     // ── 4. Leaderboard ────────────────────────────────────────
     function renderLeaderboard() {
       if (!roundData) return;
-      // FIX 1: use snapshotPosMap for movement — compare last completed round
-      // snapshot position vs the round before that
-      const { sortedPlayers, fullRoundLabel, snapshotPosMap, prevSnapshotPosMap, rankMap } = roundData;
-      const nextMatch = val('next-match');
+      const { sortedPlayers, fullRoundLabel, snapshotPosMap, prevSnapshotPosMap, rankMap, matchesOnDay, isGroupRound } = roundData;
+      const nextMatch = matchesOnDay || '';
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
       html += `<table class="r-table"><thead><tr>
-        <th style="width:48px">#</th>
-        <th class="left" style="min-width:100px">Player</th>
-        <th style="width:32px">Pld</th>
-        <th style="width:42px">Pts</th>
-        <th style="width:64px">Form</th>
+        <th style="width:28px">Pos</th>
+        <th style="width:36px">Prior</th>
+        <th class="left" style="min-width:110px">Name</th>
+        <th style="width:28px">Pld</th>
+        <th style="width:28px">Pts</th>
+        <th style="width:32px">GD</th>
       </tr></thead><tbody>`;
 
-      // Determine which positions are tied
+      // Determine tied positions
       const rankCounts = {};
       sortedPlayers.forEach(p => {
         const r = rankMap[p.id];
@@ -910,34 +1044,58 @@
 
       sortedPlayers.forEach((p, i) => {
         const pos = rankMap[p.id] ?? (i + 1);
-        const isTied = (rankCounts[pos] || 0) > 1;
+        const isTied = isGroupRound ? false : (rankCounts[pos] || 0) > 1;
         const posLabel = isTied ? pos + '=' : String(pos);
-        const posClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
-        const ptsClass = pos === 1 ? 'gold' : pos === 2 ? 'silver' : pos === 3 ? 'bronze' : '';
-        const rowClass = p.isOut ? 'elim' : pos === 1 ? 'rank1' : pos === 2 ? 'rank2' : pos === 3 ? 'rank3' : '';
 
-        // Arrow inline with position number
-        let arrowHtml = '';
+        // Prior position + arrow
         const snapPos = snapshotPosMap[p.id];
         const prevPos = prevSnapshotPosMap[p.id];
-        if (snapPos !== undefined && prevPos !== undefined) {
-          const move = prevPos - snapPos;
-          if (move > 0)      arrowHtml = `<span class="r-arrow-up">▲${move}</span>`;
-          else if (move < 0) arrowHtml = `<span class="r-arrow-dn">▼${Math.abs(move)}</span>`;
-          else               arrowHtml = '<span class="r-arrow-eq">—</span>';
+        let priorHtml = '';
+        if (prevPos !== undefined) {
+          const move = prevPos - (snapPos ?? pos);
+          const arrow = move > 0
+            ? `<span class="r-arrow-up">▲</span>`
+            : move < 0
+              ? `<span class="r-arrow-dn">▼</span>`
+              : `<span class="r-arrow-eq">=</span>`;
+          priorHtml = `[${prevPos}] ${arrow}`;
         }
 
-        html += `<tr class="${rowClass}">
-          <td><div class="r-pos-cell"><span class="r-pos ${posClass}">${posLabel}</span>${arrowHtml}</div></td>
-          <td class="left"><span class="r-name">${p.name}</span></td>
-          <td style="color:#718096">${p.pld}</td>
-          <td><span class="r-pts ${ptsClass}">${p.totalPoints}</span></td>
-          <td>${formDots(p.form, 5)}</td>
+        // Flags for picks playing today (up to 2)
+        const flags = (p.todayFlags || []).slice(0, 2).join(' ');
+        const nameHtml = flags
+          ? `<span class="r-name">${p.name}</span> <span class="r-today-flags">${flags}</span>`
+          : `<span class="r-name">${p.name}</span>`;
+
+        // GD — red if negative
+        const gd = p.gd ?? 0;
+        const gdStr = gd > 0 ? `+${gd}` : String(gd);
+        const gdHtml = `<span style="color:${gd < 0 ? '#c53030' : '#276749'};font-weight:700">${gdStr}</span>`;
+
+        // Row colour: blue if playing today, overrides zebra stripe
+        const isPlayingToday = (p.todayFlags || []).length > 0;
+        const rowStyle = isPlayingToday ? 'background:#bfdbfe' : '';
+
+        html += `<tr style="${rowStyle}">
+          <td style="font-weight:800;color:#1a202c">${posLabel}</td>
+          <td style="font-size:10px;color:#4a5568;white-space:nowrap">${priorHtml}</td>
+          <td class="left">${nameHtml}</td>
+          <td style="color:#4a5568">${p.pld}</td>
+          <td style="font-weight:800;color:#1a202c">${p.totalPoints}</td>
+          <td>${gdHtml}</td>
         </tr>`;
       });
 
       html += `</tbody></table>`;
-      if (nextMatch) html += `<div class="r-footer">📅 ${nextMatch}</div>`;
+      if (nextMatch) {
+        const dayLabel = nextMatch.replace('Matches on', '').trim();
+        const hasToday = sortedPlayers.some(p => (p.todayFlags || []).length > 0);
+        if (hasToday) {
+          html += `<div style="background:#dbeafe;border-top:1px solid #bfdbfe;padding:6px 12px;font-size:12px;font-weight:600;color:#1e40af;text-align:center">🟦 Pick playing ${dayLabel} night</div>`;
+        } else {
+          html += `<div class="r-footer">No picks playing ${dayLabel} night</div>`;
+        }
+      }
       document.getElementById('lb-render').innerHTML = html;
       document.getElementById('lb-preview-wrap').style.display = 'block';
       document.getElementById('btn-dl-lb').style.display = 'inline-block';

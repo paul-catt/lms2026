@@ -410,7 +410,25 @@
         const projLabel = document.getElementById('proj-goals-label');
         if (projectedTotal !== null) projLabel.textContent = `⚽ Projected tournament goals: ${Math.round(projectedTotal)} (${goalsScored} goals in ${matchesPlayed} matches)`;
 
-        const currentRound    = (rounds || []).find(r => !r.is_complete);
+        const currentRound = (() => {
+          // Show the round whose matches are currently being played or most recently played.
+          // Switch to the next round only when its first match has kicked off.
+          const nowMs = now.getTime();
+          const sortedRounds = (rounds || []).filter(r => r.sort_order > 0).sort((a, b) => a.sort_order - b.sort_order);
+          // Find the first round whose first match hasn't kicked off yet
+          for (const r of sortedRounds) {
+            const roundMatches = (firstMatchData || []).filter(m => m.round_id === r.id);
+            if (roundMatches.length === 0) continue;
+            const firstKickoff = Math.min(...roundMatches.map(m => new Date(m.kickoff).getTime()));
+            if (firstKickoff > nowMs) {
+              // This round hasn't started — so current round is the previous one
+              const idx = sortedRounds.indexOf(r);
+              return idx > 0 ? sortedRounds[idx - 1] : r;
+            }
+          }
+          // All rounds have started — return the last one
+          return sortedRounds[sortedRounds.length - 1] || null;
+        })();
         const isKnockout      = currentRound && currentRound.round_type === 'knockout';
         const completedRounds = (rounds || []).filter(r => r.is_complete).sort((a,b) => b.sort_order - a.sort_order);
         const lastCompleted   = completedRounds.length > 0 ? completedRounds[0] : null;
@@ -442,21 +460,16 @@
         (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
 
         // --- Prior position from snapshots ---
-        const currentRoundHasResults = currentRound
-          ? (allPicks || []).some(pick =>
-              pick.round_id === currentRound.id &&
-              pick.pick_results && pick.pick_results.length > 0 &&
-              pick.pick_results[0].match_result !== null
-            )
-          : false;
-
-        const snapshotRound = (!currentRoundHasResults && completedRounds.length >= 2)
-          ? completedRounds[1]
-          : lastCompleted;
+        // Find the snapshot for the round immediately before currentRound
+        const sortedAllRounds = (rounds || []).filter(r => r.name !== '3rd Place').sort((a, b) => a.sort_order - b.sort_order);
+        const currentRoundIdx = currentRound ? sortedAllRounds.findIndex(r => r.id === currentRound.id) : -1;
+        const priorRound = currentRoundIdx > 0 ? sortedAllRounds[currentRoundIdx - 1] : null;
 
         const priorPosMap = {};
-        if (snapshotRound && snapshots) {
-          snapshots.filter(s => s.round_id === snapshotRound.id).forEach(s => { priorPosMap[s.player_id] = s.position; });
+        if (priorRound && snapshots) {
+          snapshots
+            .filter(s => s.round_id === priorRound.id)
+            .forEach(s => { priorPosMap[s.player_id] = s.position; });
         }
 
         const formMap = {};
@@ -649,6 +662,10 @@
         const tbody = document.getElementById('leaderboard-body');
         tbody.innerHTML = '';
 
+        // Build current position map (sequential, 1-to-N)
+        const currentPosMap = {};
+        sorted.forEach((p, i) => { currentPosMap[p.player_id] = i + 1; });
+
         // Compute tied positions for knockout stage
         const posMap = {};
         sorted.forEach((p, i) => {
@@ -678,11 +695,12 @@
           const todayPicks_p   = todayData ? todayData.picks : [];
 
           let arrowHtml = '<span class="arrow-eq">—</span>';
-          if (priorPosMap[p.player_id] !== undefined) {
-            const prev = priorPosMap[p.player_id];
-            if (pos < prev)      arrowHtml = '<span class="arrow-up">▲' + (prev - pos) + '</span>';
-            else if (pos > prev) arrowHtml = '<span class="arrow-dn">▼' + (pos - prev) + '</span>';
-            else                 arrowHtml = '<span class="arrow-eq">—</span>';
+          const currentPos = currentPosMap[p.player_id];
+          const priorPos   = priorPosMap[p.player_id];
+          if (currentPos !== undefined && priorPos !== undefined) {
+            if (currentPos < priorPos)      arrowHtml = '<span class="arrow-up">▲' + (priorPos - currentPos) + '</span>';
+            else if (currentPos > priorPos) arrowHtml = '<span class="arrow-dn">▼' + (currentPos - priorPos) + '</span>';
+            else                            arrowHtml = '<span class="arrow-eq">—</span>';
           }
 
           const recentForm = form.slice(-5);
