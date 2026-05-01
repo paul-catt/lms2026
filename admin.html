@@ -715,13 +715,15 @@
       return Math.round((toWindowStartMs(kickoffIso) - toWindowStartMs(roundFirstKickoffIso)) / WINDOW_DURATION_MS) + 1;
     }
 
-    function setTestDate(isoString) {
+    async function setTestDate(isoString) {
       localStorage.setItem(LS_KEY, isoString);
+      await db.from('app_config').update({ value: isoString }).eq('key', 'test_date_override');
       updateTestDateUI();
     }
 
-    function clearTestDate() {
+    async function clearTestDate() {
       localStorage.removeItem(LS_KEY);
+      await db.from('app_config').update({ value: '' }).eq('key', 'test_date_override');
       updateTestDateUI();
     }
 
@@ -820,15 +822,25 @@
       });
 
       buildQuickJumps();
-      updateTestDateUI();
       loadSnapshotStatus();
-      const existingOverride = localStorage.getItem(LS_KEY);
-      if (existingOverride) {
-        const d = new Date(existingOverride);
+      syncTestDateFromSupabase();
+    });
+
+    async function syncTestDateFromSupabase() {
+      const { data } = await db.from('app_config').select('value').eq('key', 'test_date_override').single();
+      if (data?.value) {
+        localStorage.setItem(LS_KEY, data.value);
+      } else {
+        localStorage.removeItem(LS_KEY);
+      }
+      updateTestDateUI();
+      const override = localStorage.getItem(LS_KEY);
+      if (override) {
+        const d = new Date(override);
         const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16);
         document.getElementById('test-date-input').value = local;
       }
-    });
+    }
 
     async function initAdmin() {
       loadPlayers();
@@ -1848,11 +1860,14 @@ Good luck! ⚽🏆`;
       });
 
       const { data: freshTeams } = await db.from('teams')
-        .select('id, name, flag_emoji, is_eliminated')
+        .select('id, name, flag_emoji, is_eliminated, pot')
         .eq('is_eliminated', false)
+        .order('pot')
         .order('name');
 
-      const available = (freshTeams || []).filter(t => !assignedIds.has(t.id));
+      const available = (freshTeams || [])
+        .filter(t => !assignedIds.has(t.id))
+        .sort((a, b) => (a.pot || 99) - (b.pot || 99) || a.name.localeCompare(b.name));
 
       // Parse slot string to determine which group each side comes from
       const slot = R32_SLOTS[matchNumber] || '';
