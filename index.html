@@ -348,12 +348,10 @@
         botCur:     document.getElementById('fo-bot-cur'),
         flapTop:    document.getElementById('fo-flap-top'),
         flapTopNum: document.getElementById('fo-flap-top-num'),
-        flapBot:    document.getElementById('ft-flap-bot'),  // corrected below
+        flapBot:    document.getElementById('fo-flap-bot'),
         flapBotNum: document.getElementById('fo-flap-bot-num'),
       }
     };
-    // fix ones flapBot reference
-    digits.ones.flapBot = document.getElementById('fo-flap-bot');
 
     function setDigit(d, n) {
       const s = String(n);
@@ -364,29 +362,40 @@
     }
 
     function flipDigit(d, fromVal, toVal, done) {
-      // Flap top shows old value flying away; flap bot reveals new value
+      // Both static panels show old value before animation
+      d.topCur.textContent = String(fromVal);
+      d.botCur.textContent = String(fromVal);
+
+      // Flap top flies away showing old; flap bot sweeps up revealing new
       d.flapTopNum.textContent = String(fromVal);
       d.flapBotNum.textContent = String(toVal);
 
-      // Static panels: top shows old (visible behind flap-top), bot shows new (hidden behind flap-bot)
-      d.topCur.textContent = String(fromVal);
-      d.botCur.textContent = String(toVal);
-
-      // Reset animation classes
+      // Reset both flaps cleanly before animating
+      d.flapTop.style.animation = 'none';
+      d.flapBot.style.animation = 'none';
       d.flapTop.classList.remove('go');
       d.flapBot.classList.remove('go');
       void d.flapTop.offsetWidth;
+      void d.flapBot.offsetWidth;
+      d.flapTop.style.animation = '';
+      d.flapBot.style.animation = '';
 
       d.flapTop.classList.add('go');
       d.flapBot.classList.add('go');
 
-      // After animation completes, set static panels to new value and hide flaps
+      // flapTop is now covering topCur — safe to update it
+      d.topCur.textContent = String(toVal);
+      // botCur stays as fromVal — flapBot is still rotating into place
+
       setTimeout(() => {
-        d.topCur.textContent = String(toVal);
+        // Update both flap faces to toVal before removing 'go' so they show correct value at rest
+        d.flapTopNum.textContent = String(toVal);
+        d.flapBotNum.textContent = String(toVal);
+        d.botCur.textContent = String(toVal);
         d.flapTop.classList.remove('go');
         d.flapBot.classList.remove('go');
         if (done) done();
-      }, 650);
+      }, 800);
     }
 
     function setAll(n) {
@@ -475,14 +484,13 @@
           if (roundRow) roundName = roundRow.name || '';
         }
 
+        // Deadline = 11:00 UTC on the day of the first scheduled match.
+        // If that time is already past, advance by one day until it's in the future.
         let deadlineUtc = new Date(Date.UTC(
           kickoff.getUTCFullYear(), kickoff.getUTCMonth(), kickoff.getUTCDate(),
           WINDOW_START_HOUR, 0, 0
         ));
-        if (kickoff.getUTCHours() < WINDOW_START_HOUR) {
-          deadlineUtc = new Date(deadlineUtc.getTime() - 86400000);
-        }
-        if (deadlineUtc <= now) {
+        while (deadlineUtc <= now) {
           deadlineUtc = new Date(deadlineUtc.getTime() + 86400000);
         }
 
@@ -496,6 +504,7 @@
     }
 
     loadStatus();
+    setInterval(loadStatus, 60000);
   </script>
 </body>
 </html>

@@ -391,6 +391,7 @@
             <select id="assign-round-select"><option value="">Select round...</option></select>
           </div>
           <button class="btn btn-primary" id="btn-auto-assign">🤖 Assign Unpicked Players</button>
+          <button class="btn" id="btn-random-assign" style="background:#7c3aed; color:white; border:none;">🎲 Random Assign (test)</button>
         </div>
         <div id="assign-msg" style="margin-top:12px; font-size:13px"></div>
         <div id="assign-detail" style="margin-top:8px; font-size:12px; color:var(--text-muted); line-height:1.8"></div>
@@ -586,8 +587,13 @@
     <!-- FIXTURES TAB -->
     <div class="tab-content" id="tab-fixtures">
       <div class="card">
-        <div class="card-title">📅 Group Stage Fixtures</div>
-        <div id="fixtures-wrap"><div class="loading"><div class="spinner"></div></div></div>
+        <div class="card-title">📅 Fixtures</div>
+        <div style="display:flex; gap:6px; margin-bottom:16px;">
+          <button class="btn btn-primary" id="fixtures-sub-group" onclick="switchFixturesSubtab('group')">🌍 Group Stage</button>
+          <button class="btn btn-secondary" id="fixtures-sub-knockout" onclick="switchFixturesSubtab('knockout')">⚔️ Knockout</button>
+        </div>
+        <div id="fixtures-group-wrap"><div class="loading"><div class="spinner"></div></div></div>
+        <div id="fixtures-ko-wrap" style="display:none"><div class="loading"><div class="spinner"></div></div></div>
       </div>
     </div>
 
@@ -789,6 +795,7 @@
       document.getElementById('pens-winner-select').addEventListener('change', updatePreview);
       document.getElementById('match-number-select').addEventListener('change', onMatchNumberSelected);
       document.getElementById('btn-auto-assign').addEventListener('click', autoAssignMissingPicks);
+      document.getElementById('btn-random-assign').addEventListener('click', randomAssignMissingPicks);
       document.getElementById('correct-match-select').addEventListener('change', onCorrectMatchSelected);
       document.getElementById('correct-pens-checkbox').addEventListener('change', onCorrectPensToggle);
       document.getElementById('btn-save-correction').addEventListener('click', saveCorrection);
@@ -1089,6 +1096,101 @@ Good luck! ⚽🏆`;
       btn.disabled = false; btn.textContent = '🤖 Assign Unpicked Players';
     }
 
+    // ── Random assign (testing only) ──────────────────────────
+    async function randomAssignMissingPicks() {
+      const btn = document.getElementById('btn-random-assign');
+      const msg = document.getElementById('assign-msg');
+      const sel = document.getElementById('assign-round-select');
+      const roundId = sel.value;
+      const roundOpt = sel.options[sel.selectedIndex];
+      const roundType = roundOpt ? roundOpt.dataset.type : null;
+      if (!roundId) { msg.style.color = 'var(--red)'; msg.textContent = 'Select a round first.'; return; }
+
+      btn.disabled = true; btn.textContent = 'Calculating...';
+      msg.style.color = 'var(--text-muted)'; msg.textContent = 'Calculating random assignments...';
+
+      try {
+        const isGroup = roundType === 'group';
+        const { data: players } = await db.from('players').select('id, name').eq('is_eliminated', false);
+        const { data: existingPicks } = await db.from('picks').select('player_id, multiplier').eq('round_id', roundId);
+        const { data: allPicks } = await db.from('picks').select('player_id, team_id');
+        const { data: allTeams } = await db.from('teams').select('id, name, flag_emoji').eq('is_eliminated', false);
+
+        // Build used-teams-per-player map
+        const usedByPlayer = {};
+        (allPicks || []).forEach(p => {
+          if (!usedByPlayer[p.player_id]) usedByPlayer[p.player_id] = new Set();
+          usedByPlayer[p.player_id].add(p.team_id);
+        });
+
+        const preview = [];
+        const pendingAssignments = [];
+
+        for (const player of (players || [])) {
+          const myPicks = (existingPicks || []).filter(p => p.player_id === player.id);
+          const has3pt = myPicks.some(p => p.multiplier === 3);
+          const has2pt = myPicks.some(p => p.multiplier === 2);
+          if (isGroup && has3pt && has2pt) continue;
+          if (!isGroup && myPicks.length > 0) continue;
+
+          const usedTeams = new Set(usedByPlayer[player.id] || []);
+          const eligible = (allTeams || []).filter(t => !usedTeams.has(t.id));
+          if (eligible.length === 0) { preview.push(`⚠️ ${player.name} — no eligible teams`); continue; }
+
+          const toAssign = [];
+          if (isGroup) {
+            if (!has3pt) {
+              const pick = eligible[Math.floor(Math.random() * eligible.length)];
+              toAssign.push({ team_id: pick.id, flag: pick.flag_emoji, name: pick.name, multiplier: 3 });
+              usedTeams.add(pick.id);
+            }
+            if (!has2pt) {
+              const remaining = eligible.filter(t => !usedTeams.has(t.id));
+              if (remaining.length > 0) {
+                const pick = remaining[Math.floor(Math.random() * remaining.length)];
+                toAssign.push({ team_id: pick.id, flag: pick.flag_emoji, name: pick.name, multiplier: 2 });
+              }
+            }
+          } else {
+            const pick = eligible[Math.floor(Math.random() * eligible.length)];
+            toAssign.push({ team_id: pick.id, flag: pick.flag_emoji, name: pick.name, multiplier: 2 });
+          }
+
+          toAssign.forEach(a => {
+            preview.push(`🎲 ${player.name} → ${a.flag} ${a.name} (${a.multiplier}pt)`);
+            pendingAssignments.push({ player_id: player.id, round_id: roundId, team_id: a.team_id, multiplier: a.multiplier });
+          });
+        }
+
+        if (pendingAssignments.length === 0) {
+          msg.style.color = 'var(--text-muted)';
+          msg.textContent = 'No missing picks — everyone already has a pick for this round.';
+          btn.disabled = false; btn.textContent = '🎲 Random Assign (test)';
+          return;
+        }
+
+        // Show modal preview
+        document.getElementById('assign-modal-body').innerHTML = preview.join('<br>');
+        document.getElementById('assign-modal').classList.add('open');
+        document.getElementById('assign-modal-confirm').onclick = async () => {
+          closeAssignModal();
+          msg.style.color = 'var(--text-muted)'; msg.textContent = 'Applying...';
+          let assignCount = 0;
+          for (const a of pendingAssignments) {
+            const { error } = await db.from('picks').insert({
+              player_id: a.player_id, round_id: a.round_id,
+              team_id: a.team_id, multiplier: a.multiplier, is_assigned: true
+            });
+            if (!error) assignCount++;
+          }
+          msg.style.color = 'var(--green)';
+          msg.textContent = `✅ ${assignCount} random pick(s) assigned.`;
+        };
+
+      } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message; }
+      btn.disabled = false; btn.textContent = '🎲 Random Assign (test)';
+    }
+
     // ── Goals predictor tab ───────────────────────────────────
     async function loadGoalsTab() {
       const wrap = document.getElementById('goals-table-wrap');
@@ -1257,6 +1359,9 @@ Good luck! ⚽🏆`;
       const isThird = match && match.is_third_place;
       const isPens = isKnockout && pensChecked && homeScore === awayScore;
 
+      if (isKnockout && !isThird && homeScore === awayScore && !pensChecked) { msg.style.color='var(--red)'; msg.textContent='KO matches cannot end in a draw — tick "Match went to extra time / penalties" and select the winner.'; return; }
+      if (isKnockout && !isThird && pensChecked && homeScore === awayScore && !pensWinner) { msg.style.color='var(--red)'; msg.textContent='Select who won on penalties.'; return; }
+
       if (isKnockout && !isThird) await resetMatchEliminations(matchId);
 
       const { error } = await db.from('matches').update({
@@ -1266,7 +1371,7 @@ Good luck! ⚽🏆`;
       if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; return; }
 
       await db.from('pick_results').delete().eq('match_id', matchId);
-      if (!isThird) await calculatePickResults(matchId, homeScore, awayScore, isKnockout, isPens, pensWinner);
+      if (!isThird) await calculatePickResults(matchId, homeScore, awayScore, isKnockout, isPens, pensWinner, match);
 
       if (isKnockout && !isThird) {
         let losingTeamId = null;
@@ -1437,13 +1542,14 @@ Good luck! ⚽🏆`;
       const match = matchCache[matchId];
       const isKnockout = match && match.rounds.round_type === 'knockout';
       const isThird = match && match.is_third_place;
+      if (isKnockout && !isThird && homeScore === awayScore && !pensChecked) { msg.style.color='var(--red)'; msg.textContent='KO matches cannot end in a draw — tick "Match went to extra time / penalties" and select the winner.'; return; }
       if (isKnockout && !isThird && pensChecked && homeScore === awayScore && !pensWinner) { msg.style.color='var(--red)'; msg.textContent='Select who won on penalties.'; return; }
       const { error } = await db.from('matches').update({
         home_score: homeScore, away_score: awayScore, status: 'complete',
         pens_winner_id: (isKnockout && !isThird && pensChecked && homeScore === awayScore && pensWinner) ? pensWinner : null
       }).eq('id', matchId);
       if (error) { msg.style.color='var(--red)'; msg.textContent=error.message; return; }
-      if (!isThird) await calculatePickResults(matchId, homeScore, awayScore, isKnockout, pensChecked && homeScore === awayScore, pensWinner);
+      if (!isThird) await calculatePickResults(matchId, homeScore, awayScore, isKnockout, pensChecked && homeScore === awayScore, pensWinner, match);
       if (isKnockout && !isThird) {
         const isPens = pensChecked && homeScore === awayScore;
         let losingTeamId = isPens ? (pensWinner === match.home_team_id ? match.away_team_id : match.home_team_id) : (homeScore > awayScore ? match.away_team_id : match.home_team_id);
@@ -1466,18 +1572,26 @@ Good luck! ⚽🏆`;
       if (!isThird && match && match.round_id) await maybeAutoSnapshot(match.round_id, msg);
     }
 
-    async function calculatePickResults(matchId, homeScore, awayScore, isKnockout, isPens, pensWinnerId) {
-      const { data: match } = await db.from('matches')
-        .select('home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, is_longshot), away_team:teams!matches_away_team_id_fkey(id, is_longshot)')
-        .eq('id', matchId).single();
+    async function calculatePickResults(matchId, homeScore, awayScore, isKnockout, isPens, pensWinnerId, matchData) {
+      // matchData can be passed in from bulk submit to avoid re-fetching
+      const match = matchData || await (async () => {
+        const { data } = await db.from('matches')
+          .select('round_id, match_number, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, is_longshot), away_team:teams!matches_away_team_id_fkey(id, is_longshot)')
+          .eq('id', matchId).single();
+        return data;
+      })();
       if (!match) return;
-      const { data: matchFull } = await db.from('matches').select('round_id').eq('id', matchId).single();
-      const roundId = matchFull ? matchFull.round_id : null;
+
+      const roundId = match.round_id;
       let picksQuery = db.from('picks').select('*').in('team_id', [match.home_team_id, match.away_team_id]);
       if (roundId) picksQuery = picksQuery.eq('round_id', roundId);
       const { data: picks } = await picksQuery;
 
       if (picks && picks.length > 0) {
+        // Compute all results in memory
+        const pickResultRows = [];
+        const eliminatedPlayerIds = [];
+
         for (const pick of picks) {
           const isHome = pick.team_id === match.home_team_id;
           const team   = isHome ? match.home_team : match.away_team;
@@ -1498,47 +1612,64 @@ Good luck! ⚽🏆`;
             pointsEarned  = Math.min(basePoints + longshotBonus, 4);
           }
 
-          await db.from('pick_results').upsert({
+          pickResultRows.push({
             pick_id: pick.id, match_id: matchId, base_points: basePoints,
             longshot_bonus: longshotBonus, multiplier_applied: pick.multiplier,
             points_earned: pointsEarned, match_result: result
-          }, { onConflict: 'pick_id,match_id' });
+          });
 
           if (isKnockout && result === 'loss') {
-            await db.from('players')
-              .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
-              .eq('id', pick.player_id);
+            eliminatedPlayerIds.push(pick.player_id);
           }
+        }
+
+        // Batch upsert all pick results in one call
+        await db.from('pick_results').upsert(pickResultRows, { onConflict: 'pick_id,match_id' });
+
+        // Batch eliminate players in one call
+        if (eliminatedPlayerIds.length > 0) {
+          await db.from('players')
+            .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
+            .in('id', [...new Set(eliminatedPlayerIds)]);
         }
       }
 
       if (isKnockout) {
-        const { data: alivePlayers } = await db.from('players')
-          .select('id').eq('is_eliminated', false);
-        const { data: aliveTeams } = await db.from('teams').select('id').eq('is_eliminated', false);
+        // Fetch alive players and all their picks+results in two queries, process in memory
+        const [{ data: alivePlayers }, { data: aliveTeams }, { data: allPlayerPicks }] = await Promise.all([
+          db.from('players').select('id').eq('is_eliminated', false),
+          db.from('teams').select('id').eq('is_eliminated', false),
+          db.from('picks').select('player_id, team_id, pick_results(match_result)')
+        ]);
+
         const aliveTeamIds = new Set((aliveTeams || []).map(t => t.id));
+        const alivePlayerIds = new Set((alivePlayers || []).map(p => p.id));
 
+        // Group all picks by player
+        const picksByPlayer = {};
+        (allPlayerPicks || []).forEach(p => {
+          if (!picksByPlayer[p.player_id]) picksByPlayer[p.player_id] = [];
+          picksByPlayer[p.player_id].push(p);
+        });
+
+        const toEliminate = [];
         for (const player of (alivePlayers || [])) {
-          const { data: playerPicks } = await db.from('picks')
-            .select('team_id, pick_results(match_result)')
-            .eq('player_id', player.id);
-
-          const usedTeamIds = new Set((playerPicks || []).map(p => p.team_id));
-          const hasPendingPick = (playerPicks || []).some(p =>
+          const playerPicks = picksByPlayer[player.id] || [];
+          const hasPendingPick = playerPicks.some(p =>
             !p.pick_results || p.pick_results.length === 0 || !p.pick_results[0].match_result
           );
           if (hasPendingPick) continue;
-
+          const usedTeamIds = new Set(playerPicks.map(p => p.team_id));
           const remaining = [...aliveTeamIds].filter(id => !usedTeamIds.has(id));
-          if (remaining.length === 0) {
-            await db.from('players')
-              .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
-              .eq('id', player.id);
-          }
+          if (remaining.length === 0) toEliminate.push(player.id);
         }
-      }
 
-      if (isKnockout) {
+        if (toEliminate.length > 0) {
+          await db.from('players')
+            .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
+            .in('id', toEliminate);
+        }
+
         await advanceWinnerToNextMatch(matchId, match, homeScore, awayScore, isPens, pensWinnerId);
       }
     }
@@ -1582,9 +1713,13 @@ Good luck! ⚽🏆`;
     };
 
     async function advanceWinnerToNextMatch(matchId, match, homeScore, awayScore, isPens, pensWinnerId) {
-      const { data: matchRow } = await db.from('matches').select('match_number').eq('id', matchId).single();
-      if (!matchRow) return;
-      const mn = matchRow.match_number;
+      // match_number is included when matchData is passed from bulk/single submit
+      let mn = match.match_number;
+      if (!mn) {
+        const { data: matchRow } = await db.from('matches').select('match_number').eq('id', matchId).single();
+        if (!matchRow) return;
+        mn = matchRow.match_number;
+      }
 
       let winnerId, loserId;
       if (isPens && pensWinnerId) {
@@ -1840,6 +1975,10 @@ Good luck! ⚽🏆`;
       const groupRoundIds = new Set((rounds || []).filter(r => r.name.startsWith('Group')).map(r => r.id));
       const outAfterGroup = (teams || []).filter(t => t.is_eliminated && groupRoundIds.has(t.eliminated_in_round_id)).length;
 
+      // GP3 round ID used to auto-select round when Elim is ticked
+      const gp3Round = (rounds || []).find(r => r.name === 'Group Phase 3');
+      const gp3RoundId = gp3Round ? gp3Round.id : null;
+
       const outCounter = `
         <div style="margin-bottom:10px; font-size:14px">
           OUT after Group Stage: <strong><span id="group-elim-counter" style="color:${outAfterGroup===16?'var(--green)':'var(--gold)'}">${outAfterGroup}</span> / 16</strong>
@@ -1926,8 +2065,14 @@ Good luck! ⚽🏆`;
       el.querySelectorAll('.eliminated-toggle').forEach(cb => {
         cb.addEventListener('change', function() {
           const roundSel = el.querySelector(`.round-select[data-team-id="${this.dataset.teamId}"]`);
-          const roundId  = roundSel ? roundSel.value || null : null;
-          teamUpdate(this.dataset.teamId, { is_eliminated: this.checked, eliminated_in_round_id: this.checked ? roundId : null });
+          if (this.checked && roundSel && gp3RoundId) {
+            // Auto-select Group Phase 3 if no round is set yet
+            if (!roundSel.value) {
+              roundSel.value = gp3RoundId;
+            }
+          }
+          const roundId = roundSel ? (this.checked ? roundSel.value || null : null) : null;
+          teamUpdate(this.dataset.teamId, { is_eliminated: this.checked, eliminated_in_round_id: roundId });
           refreshElimCounter();
         });
       });
@@ -2410,6 +2555,16 @@ Good luck! ⚽🏆`;
       const rows = document.querySelectorAll('[id^="bulk-row-"]');
       let saved = 0, skipped = 0, errors = 0, warnings = [];
 
+      // Pre-fetch all match data we need in one query rather than per-match re-fetches
+      const matchIds = [...rows].map(r => r.id.replace('bulk-row-', ''));
+      const { data: bulkMatchData } = await db.from('matches')
+        .select('id, round_id, match_number, is_third_place, home_team_id, away_team_id, rounds(round_type), home_team:teams!matches_home_team_id_fkey(id, is_longshot), away_team:teams!matches_away_team_id_fkey(id, is_longshot)')
+        .in('id', matchIds);
+      const matchDataById = {};
+      (bulkMatchData || []).forEach(m => { matchDataById[m.id] = m; });
+
+      // Collect all valid rows first
+      const toProcess = [];
       for (const row of rows) {
         const matchId   = row.id.replace('bulk-row-', '');
         const homeInput = document.getElementById('bulk-home-' + matchId);
@@ -2430,19 +2585,29 @@ Good luck! ⚽🏆`;
           continue;
         }
 
-        const { error } = await db.from('matches').update({
-          home_score: homeScore, away_score: awayScore, status: 'complete',
-          pens_winner_id: isPens && pensWinner ? pensWinner : null
-        }).eq('id', matchId);
-        if (error) { errors++; continue; }
+        toProcess.push({ matchId, homeScore, awayScore, isPens, pensWinner, row });
+      }
 
-        const { data: matchFull } = await db.from('matches')
-          .select('round_id, is_third_place, home_team_id, away_team_id, rounds(round_type), home_team:teams!matches_home_team_id_fkey(id,is_longshot), away_team:teams!matches_away_team_id_fkey(id,is_longshot)')
-          .eq('id', matchId).single();
+      // Parallelise all match score updates
+      const updateResults = await Promise.all(
+        toProcess.map(({ matchId, homeScore, awayScore, isPens, pensWinner }) =>
+          db.from('matches').update({
+            home_score: homeScore, away_score: awayScore, status: 'complete',
+            pens_winner_id: isPens && pensWinner ? pensWinner : null
+          }).eq('id', matchId)
+        )
+      );
 
+      // Process pick results sequentially (order matters for KO progression)
+      for (let i = 0; i < toProcess.length; i++) {
+        const { matchId, homeScore, awayScore, isPens, pensWinner, row } = toProcess[i];
+        if (updateResults[i].error) { errors++; continue; }
+
+        const matchFull = matchDataById[matchId];
         if (matchFull && !matchFull.is_third_place) {
           const isKO = matchFull.rounds?.round_type === 'knockout';
-          await calculatePickResults(matchId, homeScore, awayScore, isKO, isPens, pensWinner || null);
+          // Pass matchFull so calculatePickResults doesn't need to re-fetch it
+          await calculatePickResults(matchId, homeScore, awayScore, isKO, isPens, pensWinner || null, matchFull);
 
           if (isKO) {
             let losingTeamId = null;
@@ -2663,10 +2828,81 @@ Good luck! ⚽🏆`;
 
     // ── Fixtures ──────────────────────────────────────────────
     let _fixturesLoaded = false;
+    let _fixturesKOLoaded = false;
+
+    function switchFixturesSubtab(name) {
+      document.getElementById('fixtures-group-wrap').style.display = name === 'group' ? '' : 'none';
+      document.getElementById('fixtures-ko-wrap').style.display    = name === 'knockout' ? '' : 'none';
+      document.getElementById('fixtures-sub-group').className    = name === 'group'    ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('fixtures-sub-knockout').className  = name === 'knockout' ? 'btn btn-primary' : 'btn btn-secondary';
+      if (name === 'knockout' && !_fixturesKOLoaded) loadKOFixtures();
+    }
+
+    // ── Shared fixture table renderer ─────────────────────────
+    function renderFixtureRounds(rounds, matches, wrapEl) {
+      function windowKey(isoStr) {
+        const d = new Date(isoStr), h = d.getUTCHours();
+        const base = h < 11
+          ? new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 11, 0, 0))
+          : new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 11, 0, 0));
+        return base.toISOString();
+      }
+
+      const byRound = {};
+      rounds.forEach(r => { byRound[r.id] = { name: r.name, matches: [] }; });
+      matches.forEach(m => { if (byRound[m.round_id]) byRound[m.round_id].matches.push(m); });
+
+      let html = '';
+      rounds.forEach(r => {
+        const group = byRound[r.id];
+        if (!group || !group.matches.length) return;
+
+        html += `<div style="margin-bottom:24px">
+          <div style="font-size:12px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px">${group.name}</div>
+          <table style="width:100%; border-collapse:collapse; font-size:13px">
+            <thead><tr>
+              <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; width:80px">Date</th>
+              <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; width:44px">Time</th>
+              <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em">Match</th>
+              <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; width:60px">Score</th>
+            </tr></thead>
+            <tbody>`;
+
+        let prevWindowKey = null;
+        group.matches.forEach(m => {
+          const ko = new Date(m.kickoff);
+          const currWindowKey = windowKey(m.kickoff);
+          const divider = (prevWindowKey && currWindowKey !== prevWindowKey) ? ' border-top:3px solid rgba(255,255,255,0.35);' : '';
+          prevWindowKey = currWindowKey;
+
+          const date = ko.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+          const time = ko.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+          const home = m.home_team ? `${m.home_team.flag_emoji} ${m.home_team.name}` : '<span style="color:var(--text-muted)">TBD</span>';
+          const away = m.away_team ? `${m.away_team.flag_emoji} ${m.away_team.name}` : '<span style="color:var(--text-muted)">TBD</span>';
+
+          let scoreHtml = '<span style="color:var(--text-muted)">—</span>';
+          if (m.status === 'complete' && m.home_score !== null && m.away_score !== null) {
+            const pens = m.pens_winner_id ? ' <span style="font-size:10px;color:var(--text-muted)">(pens)</span>' : '';
+            scoreHtml = `<span style="font-weight:700;color:var(--green)">${m.home_score}–${m.away_score}${pens}</span>`;
+          }
+
+          html += `<tr style="border-bottom:1px solid var(--border);${divider}">
+            <td style="padding:7px 6px; white-space:nowrap; font-size:12px">${date}</td>
+            <td style="padding:7px 6px; white-space:nowrap; color:var(--text-muted); font-size:12px">${time}</td>
+            <td style="padding:7px 6px; font-weight:600; font-size:13px">${home} <span style="color:var(--text-muted); font-weight:400">v</span> ${away}</td>
+            <td style="padding:7px 6px; font-size:13px; white-space:nowrap">${scoreHtml}</td>
+          </tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+      });
+      return html;
+    }
+
     async function loadFixtures() {
       if (_fixturesLoaded) return;
       _fixturesLoaded = true;
-      const wrap = document.getElementById('fixtures-wrap');
+      const wrap = document.getElementById('fixtures-group-wrap');
 
       const { data: rounds, error: rErr } = await db.from('rounds')
         .select('id, name, sort_order')
@@ -2676,68 +2912,43 @@ Good luck! ⚽🏆`;
       if (rErr || !rounds) { wrap.innerHTML = '<p style="color:var(--red)">Error loading rounds.</p>'; return; }
 
       const { data: matches, error: mErr } = await db.from('matches')
-        .select('id, kickoff, round_id, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji)')
+        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji)')
         .in('round_id', rounds.map(r => r.id))
         .order('kickoff');
 
       if (mErr || !matches) { wrap.innerHTML = '<p style="color:var(--red)">Error loading matches.</p>'; return; }
 
-      // Day window: 11:00 UTC to 11:00 UTC
-      function windowKey(isoStr) {
-        const d = new Date(isoStr);
-        const h = d.getUTCHours();
-        const base = h < 11
-          ? new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 11, 0, 0))
-          : new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 11, 0, 0));
-        return base.toISOString();
+      const html = renderFixtureRounds(rounds, matches, wrap);
+      wrap.innerHTML = html || '<p style="color:var(--text-muted)">No group fixtures found.</p>';
+    }
+
+    async function loadKOFixtures() {
+      _fixturesKOLoaded = true;
+      const wrap = document.getElementById('fixtures-ko-wrap');
+
+      const { data: rounds, error: rErr } = await db.from('rounds')
+        .select('id, name, sort_order')
+        .eq('round_type', 'knockout')
+        .not('name', 'eq', '3rd Place')
+        .order('sort_order');
+
+      if (rErr || !rounds) { wrap.innerHTML = '<p style="color:var(--red)">Error loading rounds.</p>'; return; }
+
+      const { data: matches, error: mErr } = await db.from('matches')
+        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, is_third_place, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji)')
+        .in('round_id', rounds.map(r => r.id))
+        .not('home_team_id', 'is', null)
+        .order('kickoff');
+
+      if (mErr || !matches) { wrap.innerHTML = '<p style="color:var(--red)">Error loading KO matches.</p>'; return; }
+
+      if (!matches.length) {
+        wrap.innerHTML = '<p style="color:var(--text-muted); padding:8px 0">No knockout fixtures assigned yet — use the R32 tab to assign teams.</p>';
+        return;
       }
 
-      // Group matches by round
-      const byRound = {};
-      rounds.forEach(r => { byRound[r.id] = { name: r.name, matches: [] }; });
-      matches.forEach(m => { if (byRound[m.round_id]) byRound[m.round_id].matches.push(m); });
-
-      let html = '';
-      rounds.forEach(r => {
-        const group = byRound[r.id];
-        if (!group.matches.length) return;
-
-        html += `<div style="margin-bottom:24px">
-          <div style="font-size:12px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px">${group.name}</div>
-          <table style="width:100%; border-collapse:collapse; font-size:13px">
-            <thead>
-              <tr>
-                <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; width:80px">Date</th>
-                <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; width:44px">Time</th>
-                <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em">Match</th>
-              </tr>
-            </thead>
-            <tbody>`;
-
-        let prevWindowKey = null;
-        group.matches.forEach(m => {
-          const ko = new Date(m.kickoff);
-          const currWindowKey = windowKey(m.kickoff);
-          const divider = (prevWindowKey && currWindowKey !== prevWindowKey)
-            ? ' border-top:3px solid rgba(255,255,255,0.35);'
-            : '';
-          prevWindowKey = currWindowKey;
-
-          const date = ko.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-          const time = ko.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-          const home = m.home_team ? `${m.home_team.flag_emoji} ${m.home_team.name}` : '—';
-          const away = m.away_team ? `${m.away_team.flag_emoji} ${m.away_team.name}` : '—';
-          html += `<tr style="border-bottom:1px solid var(--border);${divider}">
-            <td style="padding:7px 6px; white-space:nowrap; font-size:12px">${date}</td>
-            <td style="padding:7px 6px; white-space:nowrap; color:var(--text-muted); font-size:12px">${time}</td>
-            <td style="padding:7px 6px; font-weight:600; font-size:13px">${home} <span style="color:var(--text-muted); font-weight:400">v</span> ${away}</td>
-          </tr>`;
-        });
-
-        html += `</tbody></table></div>`;
-      });
-
-      wrap.innerHTML = html || '<p style="color:var(--text-muted)">No group fixtures found.</p>';
+      const html = renderFixtureRounds(rounds, matches, wrap);
+      wrap.innerHTML = html || '<p style="color:var(--text-muted)">No knockout fixtures found.</p>';
     }
 
     async function deleteBracketVersion(id) {

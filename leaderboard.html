@@ -62,10 +62,7 @@
     @media(max-width:900px) and (orientation:landscape) { .rotate-hint { display:none; } }
     .proj-goals { font-size:11px; color:var(--text-muted); margin-top:2px; margin-bottom:16px; }
     @media(max-width:600px) { .proj-goals { display:none !important; } }
-    .goals-diff { font-weight:700; font-size:13px; }
-    .goals-diff-close { color:var(--green); }
-    .goals-diff-mid { color:var(--gold); }
-    .goals-diff-far { color:var(--red); }
+    .goals-diff { font-size:13px; }
     .lb-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:nowrap; }
     .lb-tab { font-family:'Rajdhani',sans-serif; padding:7px 18px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:700; letter-spacing:0.04em; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); transition:all 0.15s; white-space:nowrap; }
     .lb-tab:hover { color:var(--text); border-color:var(--text-muted); }
@@ -135,6 +132,7 @@
         <div class="lb-tab active" data-view="main" onclick="switchView('main')">📊 Standings</div>
         <div class="lb-tab" data-view="matrix" onclick="switchView('matrix')">🔢 Matrix</div>
         <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Longshot</div>
+        <div class="lb-tab" data-view="fallen" onclick="switchView('fallen')">💀 Fallen</div>
       </div>
 
       <div id="loading" class="loading"><div class="spinner"></div>Loading standings...</div>
@@ -208,6 +206,14 @@
         </div>
       </div>
 
+      <!-- FALLEN TAB -->
+      <div class="lb-view" id="view-fallen">
+        <div id="fallen-header" style="margin-bottom:16px"></div>
+        <div id="fallen-wrap">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      </div>
+
     </div>
   </main>
 
@@ -261,6 +267,7 @@
       document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
       document.querySelectorAll('.lb-view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
       if (name === 'matrix' && _leaderboardData) renderMatrixView();
+      if (name === 'fallen') renderFallenView();
     }
 
     let _leaderboardData = null;
@@ -389,11 +396,11 @@
           db.from('player_scores').select('*'),
           db.from('player_gd').select('*'),
           db.from('player_furthest_round').select('*'),
-          db.from('player_teams_used').select('player_id, match_result'),
+          db.from('player_teams_used').select('player_id, match_result, round_id'),
           db.from('rounds').select('id, name, round_type, sort_order, is_complete').order('sort_order'),
           db.from('matches').select('round_id, kickoff').order('kickoff'),
           db.from('leaderboard_snapshots').select('player_id, position, round_id'),
-          db.from('matches').select('round_id, home_score, away_score, home_team_id, away_team_id').eq('status', 'complete').not('home_score', 'is', null),
+          db.from('matches').select('round_id, home_score, away_score, home_team_id, away_team_id, pens_winner_id, kickoff, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji)').eq('status', 'complete').not('home_score', 'is', null),
           db.from('matches').select('home_team_id, away_team_id, round_id, kickoff, status, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)').not('home_team_id', 'is', null),
           db.from('picks').select('player_id, team_id, multiplier, round_id, teams(flag_emoji, name, is_longshot), players(slug), pick_results(points_earned, longshot_bonus, match_result)'),
           db.from('teams').select('id, name, flag_emoji, band, is_eliminated')
@@ -472,10 +479,16 @@
             .forEach(s => { priorPosMap[s.player_id] = s.position; });
         }
 
+        const roundTypeMap = {};
+        (rounds || []).forEach(r => { roundTypeMap[r.id] = r.round_type; });
+
         const formMap = {};
         (teamsUsed || []).forEach(r => {
           if (!formMap[r.player_id]) formMap[r.player_id] = [];
-          if (r.match_result) formMap[r.player_id].push(r.match_result === 'win' ? 'W' : r.match_result === 'draw' ? 'D' : 'L');
+          if (r.match_result) formMap[r.player_id].push({
+            result: r.match_result === 'win' ? 'W' : r.match_result === 'draw' ? 'D' : 'L',
+            isKO: roundTypeMap[r.round_id] === 'knockout'
+          });
         });
 
         const todayTeamRoundPairs = new Set();
@@ -703,8 +716,12 @@
             else                            arrowHtml = '<span class="arrow-eq">—</span>';
           }
 
-          const recentForm = form.slice(-5);
-          const formHtml = recentForm.map(f => '<span class="form-pip form-' + f + '" title="' + f + '"></span>').join('');
+          const formHtml = form.map((f, i) => {
+            const divider = (i > 0 && f.isKO && !form[i-1].isKO)
+              ? '<span style="display:inline-block;width:1px;height:10px;background:var(--border);margin:0 3px;vertical-align:middle;opacity:0.5"></span>'
+              : '';
+            return divider + '<span class="form-pip form-' + f.result + '" title="' + f.result + '"></span>';
+          }).join('');
           const gdHtml   = gd > 0 ? '<span class="gd-pos">+' + gd + '</span>' : gd < 0 ? '<span class="gd-neg">' + gd + '</span>' : '<span class="gd-zero">0</span>';
           const flagHtml = todayPicks_p.map(pick => {
             const cls = pick.multiplier === 3 ? (pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt') : (pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt');
@@ -718,10 +735,8 @@
 
           let goalsDiffHtml = '<span style="color:var(--text-muted)">—</span>';
           if (projectedTotal !== null && p.total_goals_prediction !== null && p.total_goals_prediction !== undefined) {
-            const diff = Math.round(p.total_goals_prediction - projectedTotal);
-            const absDiff = Math.abs(diff);
-            const cls  = absDiff <= 10 ? 'goals-diff-close' : absDiff <= 30 ? 'goals-diff-mid' : 'goals-diff-far';
-            goalsDiffHtml = `<span class="goals-diff ${cls}">${absDiff}</span>`;
+            const diff = Math.abs(Math.round(p.total_goals_prediction - projectedTotal));
+            goalsDiffHtml = `<span style="color:var(--text-muted)">${diff}</span>`;
           }
 
           const is3rdPlace = currentRound && currentRound.name === '3rd Place';
@@ -769,8 +784,9 @@
         document.getElementById('leaderboard-wrap').style.display = 'block';
         document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
-        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds };
+        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches };
         if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
+        if (document.getElementById('view-fallen').classList.contains('active')) renderFallenView();
         renderLongshotView();
 
       } catch(err) {
@@ -811,6 +827,169 @@
       });
       html += '</tbody></table>';
       wrap.innerHTML = html;
+    }
+
+    function renderFallenView() {
+      const wrap   = document.getElementById('fallen-wrap');
+      const header = document.getElementById('fallen-header');
+      if (!_leaderboardData) {
+        wrap.innerHTML = '<p style="color:var(--text-muted)">Load the standings first.</p>';
+        return;
+      }
+
+      const { sorted, allPicks, rounds, completedMatches } = _leaderboardData;
+
+      const eliminated = sorted.filter(p => p.is_eliminated);
+      const alive      = sorted.filter(p => !p.is_eliminated);
+
+      header.innerHTML = `
+        <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; font-size:13px;">
+          <span style="font-size:22px">🟢</span>
+          <div>
+            <div style="font-weight:700; font-size:16px; color:var(--green)">${alive.length} still standing</div>
+            <div style="color:var(--text-muted); font-size:12px">${eliminated.length} eliminated so far</div>
+          </div>
+        </div>`;
+
+      if (eliminated.length === 0) {
+        wrap.innerHTML = '<p style="color:var(--text-muted); padding:16px 0">No eliminations yet — everyone is still in it.</p>';
+        return;
+      }
+
+      // Build last-kickoff-per-round map for no-picks players
+      const lastKickoffByRound = {};
+      (completedMatches || []).forEach(m => {
+        if (!m.kickoff) return;
+        const ko = new Date(m.kickoff).getTime();
+        if (!lastKickoffByRound[m.round_id] || ko > lastKickoffByRound[m.round_id]) {
+          lastKickoffByRound[m.round_id] = ko;
+        }
+      });
+
+      // Build round lookup: id -> { name, sort_order }
+      const roundMap = {};
+      (rounds || []).forEach(r => { roundMap[r.id] = r; });
+
+      // Build match lookup keyed by team_id|round_id
+      const matchByTeam = {};
+      (completedMatches || []).forEach(m => {
+        if (m.home_team_id) matchByTeam[m.home_team_id + '|' + m.round_id] = m;
+        if (m.away_team_id) matchByTeam[m.away_team_id + '|' + m.round_id] = m;
+      });
+
+      // Build picks by player
+      const picksByPlayer = {};
+      (allPicks || []).forEach(p => {
+        if (!picksByPlayer[p.player_id]) picksByPlayer[p.player_id] = [];
+        picksByPlayer[p.player_id].push(p);
+      });
+
+      function getEliminationInfo(player) {
+        const playerPicks = picksByPlayer[player.player_id] || [];
+        const losingPick = [...playerPicks].reverse().find(p => {
+          const res = p.pick_results && p.pick_results[0];
+          return res && res.match_result === 'loss';
+        });
+        if (losingPick) {
+          const match = matchByTeam[losingPick.team_id + '|' + losingPick.round_id] || null;
+          return { pick: losingPick, match, noPicks: false };
+        }
+        // No losing pick — ran out of teams. Use eliminated_in_round or furthest round
+        // Find which round they were eliminated in via their elimination round
+        const elimRoundId = player.eliminated_in_round_id || null;
+        return { pick: null, match: null, noPicks: true, elimRoundId };
+      }
+
+      const fallenWithInfo = eliminated.map(p => ({
+        player: p,
+        info: getEliminationInfo(p)
+      }));
+
+      // Sort ascending: first eliminated = rank 1 = displayed at TOP
+      // Use kickoff for loss-based; use last kickoff of round for no-picks
+      fallenWithInfo.sort((a, b) => {
+        const aRoundSO = a.info.match
+          ? (roundMap[a.info.match.round_id]?.sort_order || 0)
+          : a.info.elimRoundId ? (roundMap[a.info.elimRoundId]?.sort_order || 0) : 0;
+        const bRoundSO = b.info.match
+          ? (roundMap[b.info.match.round_id]?.sort_order || 0)
+          : b.info.elimRoundId ? (roundMap[b.info.elimRoundId]?.sort_order || 0) : 0;
+        if (aRoundSO !== bRoundSO) return aRoundSO - bRoundSO;
+
+        const aKickoff = a.info.match?.kickoff
+          ? new Date(a.info.match.kickoff).getTime()
+          : a.info.elimRoundId ? (lastKickoffByRound[a.info.elimRoundId] || 0) : 0;
+        const bKickoff = b.info.match?.kickoff
+          ? new Date(b.info.match.kickoff).getTime()
+          : b.info.elimRoundId ? (lastKickoffByRound[b.info.elimRoundId] || 0) : 0;
+        if (aKickoff !== bKickoff) return aKickoff - bKickoff;
+        return 0; // tied
+      });
+
+      // Pre-compute sort keys for tie detection
+      const sortKeys = fallenWithInfo.map(({ info }) => {
+        if (info.match?.kickoff) return info.match.kickoff;
+        if (info.elimRoundId) return 'round:' + info.elimRoundId;
+        return null;
+      });
+
+      // Assign ranks (ascending, ties share rank)
+      const ranks = [];
+      let currentRank = 1;
+      for (let i = 0; i < fallenWithInfo.length; i++) {
+        if (i > 0 && sortKeys[i] !== sortKeys[i - 1]) currentRank = i + 1;
+        ranks.push(currentRank);
+      }
+      const hasTie = i => ranks[i] === ranks[i - 1] || ranks[i] === ranks[i + 1];
+
+      // Render — display reversed so #1 (first out) is at BOTTOM
+      const reversed = [...fallenWithInfo.keys()].reverse();
+      let html = '';
+
+      reversed.forEach((origIdx, displayPos) => {
+        const { player: p, info } = fallenWithInfo[origIdx];
+        const isLast = displayPos === reversed.length - 1;
+        const match = info.match;
+        const pick  = info.pick;
+        const rank  = ranks[origIdx];
+        const tied  = (origIdx > 0 && ranks[origIdx] === ranks[origIdx - 1]) ||
+                      (origIdx < fallenWithInfo.length - 1 && ranks[origIdx] === ranks[origIdx + 1]);
+        const rankLabel = rank + (tied ? '=' : '');
+
+        let storyHtml = '';
+        if (match && pick) {
+          const isHome = match.home_team_id === pick.team_id;
+          const pickedTeam   = isHome ? match.home_team : match.away_team;
+          const opponentTeam = isHome ? match.away_team : match.home_team;
+          const pickedScore  = isHome ? match.home_score : match.away_score;
+          const oppScore     = isHome ? match.away_score : match.home_score;
+          const pens = match.pens_winner_id ? ' <span style="color:var(--text-muted);font-size:11px">(pens)</span>' : '';
+          const roundName = roundMap[match.round_id]?.name || '';
+          storyHtml = `
+            <span style="color:var(--red);font-weight:600">${pickedTeam?.flag_emoji || ''} ${pickedTeam?.name || ''}</span>
+            <span style="color:var(--text-muted)"> lost ${pickedScore}–${oppScore}${pens} to </span>
+            <span style="font-weight:600">${opponentTeam?.flag_emoji || ''} ${opponentTeam?.name || ''}</span>
+            ${roundName ? `<span style="color:var(--text-muted)"> · ${roundName}</span>` : ''}`;
+        } else if (info.noPicks) {
+          const roundName = info.elimRoundId ? (roundMap[info.elimRoundId]?.name || '') : '';
+          storyHtml = `<span style="color:var(--text-muted)">Ran out of eligible teams${roundName ? ' · ' + roundName : ''}</span>`;
+        } else {
+          storyHtml = '<span style="color:var(--text-muted)">Eliminated</span>';
+        }
+
+        html += `
+          <div style="display:flex; align-items:center; gap:12px; padding:11px 0; ${!isLast ? 'border-bottom:1px solid var(--border);' : ''}">
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted); min-width:22px; text-align:right; flex-shrink:0">${rankLabel}</span>
+            <div>
+              <div style="font-weight:700; font-size:14px;">
+                <a href="/${p.slug}" style="color:var(--text); text-decoration:none;">${p.name}</a>
+              </div>
+              <div style="font-size:12px; margin-top:3px; line-height:1.5">${storyHtml}</div>
+            </div>
+          </div>`;
+      });
+
+      wrap.innerHTML = `<div>${html}</div>`;
     }
 
     loadLeaderboard();

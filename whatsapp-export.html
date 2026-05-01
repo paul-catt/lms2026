@@ -28,7 +28,7 @@
       font-family: 'Segoe UI', system-ui, sans-serif;
       font-size: 13px; color: #1a1a2e; background: #ffffff;
       border-radius: 6px; overflow: hidden;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.18); min-width: 420px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18); min-width: 300px;
     }
     .r-header {
       background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
@@ -56,7 +56,7 @@
     .r-table tbody tr.rank1 td:first-child { border-left: 3px solid #d4a017; }
     .r-table tbody tr.rank2 td:first-child { border-left: 3px solid #8e9eab; }
     .r-table tbody tr.rank3 td:first-child { border-left: 3px solid #a0522d; }
-    .r-table tbody tr.elim td { color: #b0b8c4 !important; }
+    .r-table tbody tr.elim td { color: #a0aec0 !important; background: #fff5f5 !important; }
     .r-footer { background: #f0f4f8; border-top: 1px solid #d1dbe8; padding: 6px 12px; font-size: 12px; font-weight: 600; color: #4a5568; text-align: center; letter-spacing: 0.03em; }
     /* Position cell — number + inline arrow together */
     .r-pos-cell { display: flex; align-items: center; gap: 3px; justify-content: center; white-space: nowrap; }
@@ -540,6 +540,31 @@
           }
         });
 
+        // Post-process rankMap: if two players are genuinely equal on all KO tiebreakers,
+        // give them the same rank regardless of snapshot order.
+        if (!isGroupRound) {
+          const genuinelyEqual = (a, b) => {
+            if (a.totalPoints !== b.totalPoints) return false;
+            if ((a.furthestRound || 0) !== (b.furthestRound || 0)) return false;
+            if (a.gd !== b.gd) return false;
+            const aDiff = Math.abs((a.goalsPredict || 0) - projectedTotal);
+            const bDiff = Math.abs((b.goalsPredict || 0) - projectedTotal);
+            if (aDiff !== bDiff) return false;
+            return true;
+          };
+          // Walk sorted order; assign same rank to runs of equal players
+          let groupStart = 0;
+          for (let i = 1; i <= sortedPlayers.length; i++) {
+            if (i === sortedPlayers.length || !genuinelyEqual(sortedPlayers[groupStart], sortedPlayers[i])) {
+              if (i - groupStart > 1) {
+                const tiedRank = rankMap[sortedPlayers[groupStart].id] ?? (groupStart + 1);
+                for (let j = groupStart; j < i; j++) rankMap[sortedPlayers[j].id] = tiedRank;
+              }
+              groupStart = i;
+            }
+          }
+        }
+
         const roundLabel     = buildRoundLabel(rounds, currentRoundSortOrder);
         const dayLabel       = buildDayLabel(rounds, currentRoundSortOrder, firstMatchData);
         const fullRoundLabel = roundLabel + dayLabel;
@@ -800,14 +825,12 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
 
       if (isGroupRound) {
-        html += `<table class="r-table"><thead><tr>
-          <th style="width:24px">#</th>
-          <th class="left" style="min-width:80px">Name</th>
-          <th class="left" style="min-width:100px">3pt Pick</th>
-          <th class="left" style="min-width:100px">2pt Pick</th>
+        html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
+          <th style="width:20px">#</th>
+          <th class="left" style="width:75px">Name</th>
+          <th class="left">Picks</th>
           <th style="width:28px">Pld</th>
           <th style="width:28px">Pts</th>
-          <th style="width:32px">GD</th>
         </tr></thead><tbody>`;
         const rankCounts3 = {};
         sortedPlayers.forEach(q => { const r = rankMap[q.id]; if (r !== undefined) rankCounts3[r] = (rankCounts3[r]||0)+1; });
@@ -819,24 +842,27 @@
           const pick3 = pPicks.find(pk => pk.multiplier === 3);
           const pick2 = pPicks.find(pk => pk.multiplier === 2);
           const rowClass = p.isOut ? 'elim' : '';
+          const pick3Html = pick3
+            ? `<div style="font-size:12px;font-weight:700;color:#1a202c">${teamFlags[pick3.team_id]||''} ${teamNames[pick3.team_id]||'?'} <span style="font-size:10px;color:#b7791f;font-weight:700">3pt</span></div>`
+            : `<div style="font-size:11px;color:#a0aec0;font-style:italic">No 3pt pick</div>`;
+          const pick2Html = pick2
+            ? `<div style="font-size:12px;font-weight:700;color:#1a202c;margin-top:2px">${teamFlags[pick2.team_id]||''} ${teamNames[pick2.team_id]||'?'} <span style="font-size:10px;color:#2b6cb0;font-weight:700">2pt</span></div>`
+            : `<div style="font-size:11px;color:#a0aec0;font-style:italic;margin-top:2px">No 2pt pick</div>`;
           html += `<tr class="${rowClass}">
             <td style="font-weight:700;color:#4a5568">${posLabel}</td>
             <td class="left"><span class="r-name">${p.name}</span></td>
-            <td class="left">${teamCell(pick3)}</td>
-            <td class="left">${teamCell(pick2)}</td>
+            <td class="left">${pick3Html}${pick2Html}</td>
             <td style="color:#4a5568">${p.pld}</td>
             <td style="font-weight:800;color:#1a202c">${p.totalPoints}</td>
-            <td>${gdCell(p.gd)}</td>
           </tr>`;
         });
       } else {
-        html += `<table class="r-table"><thead><tr>
-          <th style="width:24px">#</th>
-          <th class="left" style="min-width:80px">Name</th>
-          <th class="left" style="min-width:130px">Pick</th>
+        html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
+          <th style="width:20px">#</th>
+          <th class="left" style="width:100px">Name</th>
+          <th class="left" style="width:120px">Pick</th>
           <th style="width:28px">Pld</th>
           <th style="width:28px">Pts</th>
-          <th style="width:32px">GD</th>
         </tr></thead><tbody>`;
         const rankCounts2 = {};
         sortedPlayers.forEach(q => {
@@ -854,7 +880,6 @@
             <td class="left">${teamCell(pick)}</td>
             <td style="color:#4a5568">${p.pld}</td>
             <td style="font-weight:800;color:#1a202c">${p.totalPoints}</td>
-            <td>${gdCell(p.gd)}</td>
           </tr>`;
         });
       }
@@ -884,50 +909,48 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
 
       if (isGroupRound) {
-        html += `<table class="r-table"><thead><tr>
-          <th style="width:28px">#</th>
+        html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
+          <th style="width:20px">#</th>
           <th class="left">Team &amp; Opponent</th>
-          <th style="width:80px">Odds</th>
+          <th style="width:36px">Odds</th>
           <th style="width:32px">2pt</th>
           <th style="width:32px">3pt</th>
-          <th style="width:40px">Total</th>
+          <th style="width:38px">Total</th>
         </tr></thead><tbody>`;
         sorted.forEach((tid, i) => {
           const count = teamCounts[tid], count2 = teamCounts2[tid]||0, count3 = teamCounts3[tid]||0;
           const odds = parseFloat(oddsMap[tid]);
           const hasOdds = !isNaN(odds) && odds > 0;
-          const barPct = hasOdds ? Math.round((odds / maxOdds) * 100) : 0;
           const badgeCls = count >= maxCount*0.7 ? 'hi' : count >= maxCount*0.35 ? 'mid' : 'lo';
           const lsTag = teamIsLongshot[tid] ? ' ⭐' : '';
           html += `<tr>
             <td class="r-pos">${i+1}</td>
             <td class="left"><strong>${teamFlags[tid]||''} ${teamNames[tid]||'?'}${lsTag}</strong>
               <span style="color:#718096;font-size:10px"> v ${teamOpponents[tid]||'?'}</span></td>
-            <td>${hasOdds ? `<div class="r-bar-wrap"><div class="r-bar-track"><div class="r-bar-fill" style="width:${barPct}%"></div></div><span class="r-bar-val">${odds.toFixed(1)}</span></div>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+            <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
             <td>${count2 ? `<span class="r-split-2">${count2}</span>` : '<span style="color:#cbd5e0">—</span>'}</td>
             <td>${count3 ? `<span class="r-split-3">${count3}</span>` : '<span style="color:#cbd5e0">—</span>'}</td>
             <td><span class="r-badge ${badgeCls}">${count}</span></td>
           </tr>`;
         });
       } else {
-        html += `<table class="r-table"><thead><tr>
-          <th style="width:28px">#</th>
+        html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
+          <th style="width:20px">#</th>
           <th class="left">Team &amp; Opponent</th>
-          <th style="width:100px">Odds</th>
+          <th style="width:38px">Odds</th>
           <th style="width:44px">Picks</th>
         </tr></thead><tbody>`;
         sorted.forEach((tid, i) => {
           const count = teamCounts[tid];
           const odds = parseFloat(oddsMap[tid]);
           const hasOdds = !isNaN(odds) && odds > 0;
-          const barPct = hasOdds ? Math.round((odds / maxOdds) * 100) : 0;
           const badgeCls = count >= maxCount*0.7 ? 'hi' : count >= maxCount*0.35 ? 'mid' : 'lo';
           const lsTag = teamIsLongshot[tid] ? ' ⭐' : '';
           html += `<tr>
             <td class="r-pos">${i+1}</td>
             <td class="left"><strong>${teamFlags[tid]||''} ${teamNames[tid]||'?'}${lsTag}</strong>
               <span style="color:#718096;font-size:10px"> v ${teamOpponents[tid]||'?'}</span></td>
-            <td>${hasOdds ? `<div class="r-bar-wrap"><div class="r-bar-track"><div class="r-bar-fill" style="width:${barPct}%"></div></div><span class="r-bar-val">${odds.toFixed(1)}</span></div>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+            <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
             <td><span class="r-badge ${badgeCls}">${count}</span></td>
           </tr>`;
         });
@@ -973,12 +996,12 @@
       const maxOdds  = oddsVals.length ? Math.max(...oddsVals) : 10;
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Top Combinations', fullRoundLabel);
-      html += `<table class="r-table"><thead><tr>
-        <th style="width:28px">#</th>
-        <th class="left" style="min-width:200px">Teams</th>
-        <th style="width:100px">Combo Odds</th>
-        <th style="width:40px">Picks</th>
-        <th style="width:56px">Result</th>
+      html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
+        <th style="width:20px">#</th>
+        <th class="left">Teams</th>
+        <th style="width:38px">Odds</th>
+        <th style="width:38px">Picks</th>
+        <th style="width:46px">Result</th>
       </tr></thead><tbody>`;
 
       sortedCombos.forEach((key, i) => {
@@ -988,12 +1011,14 @@
         const count = comboCounts[key];
         const odds  = comboOdds(key);
         const hasOdds = odds > 0;
-        const barPct  = hasOdds ? Math.round((odds / maxOdds) * 100) : 0;
         const badgeCls = count >= maxCount*0.7 ? 'hi' : count >= maxCount*0.35 ? 'mid' : 'lo';
         html += `<tr>
           <td class="r-pos">${i+1}</td>
-          <td class="left"><strong>${nameA}</strong> <span style="color:#a0aec0;font-size:10px">&amp;</span> <strong>${nameB}</strong></td>
-          <td>${hasOdds ? `<div class="r-bar-wrap"><div class="r-bar-track"><div class="r-bar-fill" style="width:${barPct}%"></div></div><span class="r-bar-val">${odds.toFixed(1)}</span></div>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+          <td class="left">
+            <div style="font-size:12px;font-weight:700;color:#1a202c">${nameA}</div>
+            <div style="font-size:12px;font-weight:700;color:#1a202c;margin-top:2px">${nameB}</div>
+          </td>
+          <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
           <td><span class="r-badge ${badgeCls}">${count}</span></td>
           <td><div class="res-dots">${resultDot(tidA)}${resultDot(tidB)}</div></td>
         </tr>`;
@@ -1022,17 +1047,34 @@
     // ── 4. Leaderboard ────────────────────────────────────────
     function renderLeaderboard() {
       if (!roundData) return;
-      const { sortedPlayers, fullRoundLabel, snapshotPosMap, prevSnapshotPosMap, rankMap, matchesOnDay, isGroupRound } = roundData;
+      const { sortedPlayers, fullRoundLabel, snapshotPosMap, prevSnapshotPosMap, rankMap, matchesOnDay, isGroupRound, rounds, currentRoundSortOrder } = roundData;
       const nextMatch = matchesOnDay || '';
 
+      // Build sort_order → short label map for KO rounds
+      const koRoundLabels = {};
+      (rounds || []).filter(r => r.round_type === 'knockout').forEach(r => {
+        const n = r.name.toLowerCase();
+        if (n.includes('final') && !n.includes('semi') && !n.includes('3rd') && !n.includes('quarter')) koRoundLabels[r.sort_order] = 'F';
+        else if (n.includes('semi')) koRoundLabels[r.sort_order] = 'SF';
+        else if (n.includes('quarter')) koRoundLabels[r.sort_order] = 'QF';
+        else if (n.includes('16')) koRoundLabels[r.sort_order] = 'R16';
+        else if (n.includes('32')) koRoundLabels[r.sort_order] = 'R32';
+        else koRoundLabels[r.sort_order] = r.name.substring(0, 3);
+      });
+
+      // Show goals column from R16 onwards (not R32)
+      const currentRoundName = (rounds || []).find(r => r.sort_order === currentRoundSortOrder)?.name || '';
+      const showGoals = !isGroupRound && !currentRoundName.toLowerCase().includes('32');
+
       let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
-      html += `<table class="r-table"><thead><tr>
-        <th style="width:28px">Pos</th>
-        <th style="width:36px">Prior</th>
-        <th class="left" style="min-width:110px">Name</th>
-        <th style="width:28px">Pld</th>
-        <th style="width:28px">Pts</th>
-        <th style="width:32px">GD</th>
+      html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
+        <th style="width:36px">Pos</th>
+        <th class="left">Name</th>
+        <th style="width:22px">Pld</th>
+        <th style="width:26px">Pts</th>
+        ${!isGroupRound ? '<th style="width:26px">Rnd</th>' : ''}
+        <th style="width:26px">GD</th>
+        ${showGoals ? '<th style="width:24px">Gls</th>' : ''}
       </tr></thead><tbody>`;
 
       // Determine tied positions
@@ -1047,18 +1089,15 @@
         const isTied = isGroupRound ? false : (rankCounts[pos] || 0) > 1;
         const posLabel = isTied ? pos + '=' : String(pos);
 
-        // Prior position + arrow
+        // Prior position + arrow (compressed: ▲3, ▼2, =)
         const snapPos = snapshotPosMap[p.id];
         const prevPos = prevSnapshotPosMap[p.id];
         let priorHtml = '';
         if (prevPos !== undefined) {
           const move = prevPos - (snapPos ?? pos);
-          const arrow = move > 0
-            ? `<span class="r-arrow-up">▲</span>`
-            : move < 0
-              ? `<span class="r-arrow-dn">▼</span>`
-              : `<span class="r-arrow-eq">=</span>`;
-          priorHtml = `[${prevPos}] ${arrow}`;
+          if (move > 0) priorHtml = `<span class="r-arrow-up">▲${move}</span>`;
+          else if (move < 0) priorHtml = `<span class="r-arrow-dn">▼${Math.abs(move)}</span>`;
+          // no movement = blank
         }
 
         // Flags for picks playing today (up to 2)
@@ -1075,14 +1114,29 @@
         // Row colour: blue if playing today, overrides zebra stripe
         const isPlayingToday = (p.todayFlags || []).length > 0;
         const rowStyle = isPlayingToday ? 'background:#bfdbfe' : '';
+        const rowClass = p.isOut ? 'elim' : '';
 
-        html += `<tr style="${rowStyle}">
-          <td style="font-weight:800;color:#1a202c">${posLabel}</td>
-          <td style="font-size:10px;color:#4a5568;white-space:nowrap">${priorHtml}</td>
-          <td class="left">${nameHtml}</td>
-          <td style="color:#4a5568">${p.pld}</td>
-          <td style="font-weight:800;color:#1a202c">${p.totalPoints}</td>
+        const nameWithOut = p.isOut
+          ? `<span class="r-name">${p.name}</span>${flags ? ' <span class="r-today-flags">' + flags + '</span>' : ''} <span style="font-size:9px;font-weight:800;color:#e53e3e;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:3px;padding:1px 4px;vertical-align:middle">OUT</span>`
+          : nameHtml;
+
+        // Pos cell: number + inline arrow
+        const posCellHtml = `<div style="display:flex;align-items:center;justify-content:center;gap:2px">
+          <span style="font-weight:800;color:#1a202c;font-size:12px">${posLabel}</span>
+          ${priorHtml ? `<span style="font-size:10px;line-height:1">${priorHtml}</span>` : ''}
+        </div>`;
+
+        // Furthest round label (KO only)
+        const frLabel = !isGroupRound ? (koRoundLabels[p.furthestRound] || '—') : '';
+
+        html += `<tr class="${rowClass}" style="${rowStyle}">
+          <td>${posCellHtml}</td>
+          <td class="left">${nameWithOut}</td>
+          <td style="color:#9aa5b4;font-size:10px">${p.pld}</td>
+          <td style="font-weight:800;font-size:14px;color:#1a202c">${p.totalPoints}</td>
+          ${!isGroupRound ? `<td style="color:#4a5568;font-size:10px;font-weight:600">${frLabel}</td>` : ''}
           <td>${gdHtml}</td>
+          ${showGoals ? `<td style="color:#9aa5b4;font-size:10px">${p.goalsPredict ?? '—'}</td>` : ''}
         </tr>`;
       });
 

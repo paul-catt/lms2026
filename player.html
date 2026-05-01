@@ -38,6 +38,7 @@
     .round-pill.active { border-color:var(--accent); background:rgba(59,130,246,0.12); color:var(--accent); }
     .round-pill.future { opacity:0.45; cursor:default; }
     .round-pill.eliminated { border-color:var(--red); color:var(--red); box-shadow:0 0 0 2px rgba(239,68,68,0.25); }
+    .round-pill.post-elim { border-color:var(--red); color:var(--red); }
     .round-pill .tick { font-size:10px; }
 
     /* Deadline bar inside pick card — slim single line */
@@ -351,6 +352,31 @@
       border-color: rgba(139,92,246,0.75); color: #fff;
       box-shadow: 0 0 14px rgba(139,92,246,0.25);
     }
+
+    /* ── Pick confirm modal ────────────────────────────────────────────────── */
+    .pick-modal-backdrop {
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6);
+      z-index:300; opacity:0; transition:opacity 0.2s ease; align-items:center; justify-content:center;
+    }
+    .pick-modal-backdrop.open { display:flex; opacity:1; }
+    .pick-modal {
+      background:#0f1117; border:1px solid var(--border); border-radius:16px;
+      padding:24px 20px; max-width:360px; width:90%; position:relative;
+      animation:modal-in 0.2s ease;
+    }
+    @keyframes modal-in { from { transform:scale(0.94); opacity:0; } to { transform:scale(1); opacity:1; } }
+    .pick-modal-title { font-family:'Rajdhani',sans-serif; font-size:20px; font-weight:700; margin-bottom:16px; color:var(--text); }
+    .pick-modal-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; margin-bottom:8px; }
+    .pick-modal-row.row-3 { background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); }
+    .pick-modal-row.row-2 { background:rgba(59,130,246,0.1);  border:1px solid rgba(59,130,246,0.25); }
+    .pick-modal-row.row-ko { background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.25); }
+    .pick-modal-badge { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; padding:2px 8px; border-radius:20px; flex-shrink:0; }
+    .pick-modal-badge.b3 { background:rgba(245,158,11,0.2); color:var(--gold); }
+    .pick-modal-badge.b2 { background:rgba(59,130,246,0.2);  color:var(--accent); }
+    .pick-modal-team { font-size:15px; font-weight:700; }
+    .pick-modal-warning { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:8px 12px; font-size:12px; color:var(--red); margin-bottom:14px; }
+    .pick-modal-btns { display:flex; gap:8px; margin-top:16px; }
+    .pick-modal-btns .btn { flex:1; margin:0; }
   </style>
 </head>
 <body>
@@ -409,7 +435,7 @@
       <!-- Goals prediction card -->
       <div id="goals-prediction-card" style="display:none" class="goals-inline-card">
         <div class="card-title">🎯 Tournament Goals Prediction</div>
-        <p id="goals-prediction-desc" style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (104 games, including extra time)? Used as a tiebreaker. You can change this until the Group Phase 1 deadline.</p>
+        <p id="goals-prediction-desc" style="font-size:13px; color:var(--text-muted); margin-bottom:12px">How many total goals will be scored in the 2026 World Cup (104 games, including extra time)? Used as a tiebreaker.</p>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
           <input type="number" id="goals-prediction-input" placeholder="e.g. 142" min="0" max="500" style="max-width:140px; font-size:16px" />
           <button class="btn btn-primary" id="goals-prediction-btn">Save Prediction</button>
@@ -527,6 +553,7 @@
     let allMatches        = [];
     let eliminatedIds     = new Set();
     let usedTeamIdsGlobal = new Set();
+    let eliminatedRoundId = null;
     let deadlineInterval  = null;
     let selectedRoundId   = null;
     let pick3      = null;
@@ -609,6 +636,11 @@
         eliminatedIds = new Set((teams || []).filter(t => t.is_eliminated).map(t => t.id));
 
         usedTeamIdsGlobal = new Set(allPicks.map(p => p.team_id));
+        eliminatedRoundId = null;
+        for (const p of [...allPicks].reverse()) {
+          const res = p.pick_results && p.pick_results[0];
+          if (res && res.match_result === 'loss') { eliminatedRoundId = p.round_id; break; }
+        }
 
         const eliminatedNotUsed = [...eliminatedIds].filter(id => !usedTeamIdsGlobal.has(id)).length;
         const teamsLeft = 48 - usedTeamIdsGlobal.size - eliminatedNotUsed;
@@ -730,9 +762,22 @@
             } else {
               elimMsg = 'You\'ve been eliminated.';
             }
+            const elimPoints = totalPoints;
+            const elimPos    = position;
             document.getElementById('no-round-msg').innerHTML =
               '<strong style="color:var(--red); font-size:15px">' + elimMsg + '</strong><br>' +
-              '<span style="font-size:13px;color:var(--text-muted);margin-top:4px;display:block">Check your pick history below.</span>';
+              '<div style="display:flex;gap:12px;justify-content:center;margin:14px 0;flex-wrap:wrap">' +
+                '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;text-align:center">' +
+                  '<div style="font-size:22px;font-weight:800">' + elimPoints + '</div>' +
+                  '<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Points</div>' +
+                '</div>' +
+                '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;text-align:center">' +
+                  '<div style="font-size:22px;font-weight:800">' + elimPos + '</div>' +
+                  '<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Final Position</div>' +
+                '</div>' +
+              '</div>' +
+              '<a href="/leaderboard' + (slug ? '?me=' + slug : '') + '" class="btn btn-secondary" style="display:inline-block;margin-top:4px">View Leaderboard</a><br>' +
+              '<span style="font-size:13px;color:var(--text-muted);margin-top:12px;display:block">Your pick history is below.</span>';
           }
           return;
         }
@@ -762,24 +807,27 @@
         picksByRound[p.round_id].push(p);
       });
 
-      const eliminatedRoundId = (() => {
-        for (const p of [...allPicks].reverse()) {
-          const res = p.pick_results && p.pick_results[0];
-          if (res && res.match_result === 'loss') return p.round_id;
-        }
-        return null;
-      })();
+      const inKOStage = allRounds.filter(r => r.round_type === 'group').every(r => r.is_complete);
+      const elimRoundObj = eliminatedRoundId ? allRounds.find(r => r.id === eliminatedRoundId) : null;
 
-      allRounds.filter(r => r.name !== '3rd Place').forEach(r => {
+      allRounds.filter(r => {
+        if (r.name === '3rd Place') return false;
+        if (r.sort_order === 0) return false;
+        if (inKOStage && r.round_type === 'group') return false;
+        return true;
+      }).forEach(r => {
         const hasPick     = !!(picksByRound[r.id] && picksByRound[r.id].length > 0);
         const isComplete  = r.is_complete;
         const isElimRound = player.is_eliminated && r.id === eliminatedRoundId;
+        const isPostElim  = player.is_eliminated && elimRoundObj && r.sort_order > elimRoundObj.sort_order;
         const pill = document.createElement('div');
+        pill.dataset.roundId = r.id;
         pill.className = 'round-pill' +
           (isComplete ? ' complete' : '') +
           (hasPick ? ' has-pick' : '') +
           (!isComplete && !openRounds.find(o => o.id === r.id) ? ' future' : '') +
-          (isElimRound ? ' eliminated' : '');
+          (isElimRound ? ' eliminated' : '') +
+          (isPostElim ? ' post-elim' : '');
         const shortLabel = roundShortLabel(r);
         pill.innerHTML = shortLabel + (hasPick ? ' <span class="tick">✓</span>' : '') + (isElimRound ? ' 🔴' : '');
         pill.title = r.name + (hasPick ? ' — pick submitted' : isComplete ? ' — completed' : ' — open') + (isElimRound ? ' — eliminated here' : '');
@@ -816,8 +864,9 @@
       document.querySelectorAll('.round-pill').forEach(p => p.classList.remove('active'));
       const round = allRounds.find(r => r.id === roundId);
       if (!round) return;
-      const pills = document.querySelectorAll('.round-pill');
-      allRounds.forEach((r, i) => { if (r.id === roundId && pills[i]) pills[i].classList.add('active'); });
+      document.querySelectorAll('.round-pill').forEach(p => {
+        if (p.dataset.roundId === roundId) p.classList.add('active');
+      });
       updateBandPanel(round);
       renderPickSection(round);
     }
@@ -887,7 +936,8 @@
     function showSubmittedPicks(round, roundPicks, isLocked, isKO) {
       const isGroup  = round.round_type === 'group';
       const pickWord = isKO ? 'Pick' : 'Picks';
-      let html = '<div style="text-align:center; padding:8px 0 16px; color:var(--green); font-weight:600">✅ ' + pickWord + ' submitted for ' + round.name + '</div>';
+      const deadlineStr = !isLocked ? (' · Deadline: <strong>' + getTimeLeftStr(new Date(round.deadline)) + '</strong>') : '';
+      let html = '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--green)">✅ ' + pickWord + ' locked in for ' + round.name + '<span style="font-weight:400;color:var(--text-muted);margin-left:auto;font-size:12px">' + (isLocked ? '🔒 Locked' : '⏰' + deadlineStr) + '</span></div>';
       if (isGroup) {
         const p3 = roundPicks.find(p => p.multiplier === 3);
         const p2 = roundPicks.find(p => p.multiplier === 2);
@@ -1171,17 +1221,23 @@
          (m.home_team_id === pick2.id && m.away_team_id === pick3.id))
       );
 
-      const confirmText = isGroup
-        ? '3pt: ' + pick3.name + '\n2pt: ' + pick2.name +
-          (sameMatch ? '\n\n⚠️ These two teams are playing each other — you can only earn points from one result.' : '') +
-          '\n\nConfirm these picks?'
-        : 'Pick: ' + pickSingle.name + '\n\nConfirm?';
-      if (!confirm(confirmText)) return;
+      // Build modal body
+      let modalBody = '';
+      if (isGroup) {
+        modalBody += '<div class="pick-modal-row row-3"><span class="pick-modal-badge b3">3pt</span><span class="pick-modal-team">' + pick3.flag_emoji + ' ' + pick3.name + '</span></div>';
+        modalBody += '<div class="pick-modal-row row-2"><span class="pick-modal-badge b2">2pt</span><span class="pick-modal-team">' + pick2.flag_emoji + ' ' + pick2.name + '</span></div>';
+        if (sameMatch) modalBody += '<div class="pick-modal-warning">⚠️ These two teams play each other — you can only earn points from one result.</div>';
+      } else {
+        modalBody += '<div class="pick-modal-row row-ko"><span class="pick-modal-team">' + pickSingle.flag_emoji + ' ' + pickSingle.name + '</span></div>';
+      }
+      document.getElementById('pick-modal-body').innerHTML = modalBody;
+      document.getElementById('pick-modal-backdrop').classList.add('open');
 
-      [btn, btnT].forEach(b => { b.disabled = true; b.textContent = 'Submitting...'; });
-      msg.textContent = '';
-
-      try {
+      document.getElementById('pick-modal-confirm').onclick = async function() {
+        closePickModal();
+        [btn, btnT].forEach(b => { b.disabled = true; b.textContent = 'Submitting...'; });
+        msg.textContent = '';
+        try {
         await db.from('picks').delete().eq('player_id', player.id).eq('round_id', round.id);
         const inserts = [];
         if (isGroup) {
@@ -1199,7 +1255,12 @@
         console.error(err);
         msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message;
         updateSubmitButton(isGroup);
-      }
+        }
+      };  // end confirm onclick
+    }
+
+    function closePickModal() {
+      document.getElementById('pick-modal-backdrop').classList.remove('open');
     }
 
     function initGoalsPrediction() {
@@ -1224,7 +1285,7 @@
       if (hasEntered) {
         input.value = player.total_goals_prediction;
         btn.textContent = 'Change Prediction';
-        desc.innerHTML = '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> goals. You can change this until the Group Phase 1 deadline.';
+        desc.innerHTML = '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> goals. You can update this until ' + deadline.toLocaleDateString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '.';
       }
 
       btn.addEventListener('click', async () => {
@@ -1240,7 +1301,7 @@
           document.getElementById('stat-goals').textContent = val;
           msg.style.color='var(--green)'; msg.textContent='✅ Saved!';
           btn.disabled=false; btn.textContent='Change Prediction';
-          desc.innerHTML = '✅ You predicted <strong>' + val + '</strong> goals. You can change this until the Group Phase 1 deadline.';
+          desc.innerHTML = '✅ You predicted <strong>' + val + '</strong> goals. You can update this until ' + deadline.toLocaleDateString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '.';
         }
       });
     }
@@ -1254,14 +1315,6 @@
       });
 
       let rows = '';
-
-      const eliminatedRoundId = (() => {
-        for (const p of [...allPicks].reverse()) {
-          const res = p.pick_results && p.pick_results[0];
-          if (res && res.match_result === 'loss') return p.round_id;
-        }
-        return null;
-      })();
 
       const openWithPicks = [...allRounds.filter(r => !r.is_complete && picksByRound[r.id])].reverse();
       openWithPicks.forEach(r => {
@@ -1289,7 +1342,7 @@
         });
       });
 
-      const completedRounds = [...allRounds.filter(r => r.is_complete)].reverse();
+      const completedRounds = [...allRounds.filter(r => r.is_complete && r.sort_order > 0)].reverse();
       completedRounds.forEach(r => {
         const rPicks = picksByRound[r.id] || [];
         if (rPicks.length === 0) {
@@ -1328,6 +1381,18 @@
       loadDashboard();
     });
   </script>
+
+  <!-- ── Pick confirm modal ──────────────────────────────────────────────────── -->
+  <div class="pick-modal-backdrop" id="pick-modal-backdrop">
+    <div class="pick-modal">
+      <div class="pick-modal-title">Confirm your pick</div>
+      <div id="pick-modal-body"></div>
+      <div class="pick-modal-btns">
+        <button class="btn btn-secondary" onclick="closePickModal()">Cancel</button>
+        <button class="btn btn-primary" id="pick-modal-confirm">Confirm ✓</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ── Oracle bottom sheet ───────────────────────────────────────────────── -->
   <button class="oracle-close-btn" id="oracle-close-btn" onclick="closeOracle()">✕</button>
