@@ -239,6 +239,11 @@
       const o = localStorage.getItem(LS_KEY);
       return o ? new Date(o) : new Date();
     }
+    async function syncTestDateFromSupabase() {
+      const { data } = await db.from('app_config').select('value').eq('key', 'test_date_override').single();
+      if (data?.value) { localStorage.setItem(LS_KEY, data.value); }
+      else { localStorage.removeItem(LS_KEY); }
+    }
 
     function toWindowStartMs(isoStr) {
       const d = new Date(isoStr), h = d.getUTCHours();
@@ -643,8 +648,11 @@
       }
     }
 
-    loadAll();
-    setInterval(loadAll, 60000);
+    (async () => {
+      await syncTestDateFromSupabase();
+      loadAll();
+      setInterval(loadAll, 60000);
+    })();
   </script>
 </body>
 </html>

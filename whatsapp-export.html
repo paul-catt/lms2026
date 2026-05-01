@@ -28,24 +28,24 @@
       font-family: 'Segoe UI', system-ui, sans-serif;
       font-size: 13px; color: #1a1a2e; background: #ffffff;
       border-radius: 6px; overflow: hidden;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.18); min-width: 300px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.18); width: 380px; min-width: 380px; max-width: 380px;
     }
     .r-header {
       background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
-      color: #fff; padding: 12px 16px 10px; display: flex; flex-direction: column; gap: 2px;
+      color: #fff; padding: 8px 12px 7px; display: flex; flex-direction: column; gap: 2px;
     }
     .r-header-top { font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #7ecfff; opacity: 0.85; }
     .r-header-title { font-size: 17px; font-weight: 800; letter-spacing: 0.02em; line-height: 1.15; }
     .r-header-sub { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 2px; }
     .r-table { width: 100%; border-collapse: collapse; }
     .r-table thead th {
-      background: #eef2f7; color: #4a5568; font-size: 9px; font-weight: 700;
-      letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 8px;
+      background: #eef2f7; color: #4a5568; font-size: 8px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 5px;
       text-align: center; border-bottom: 1px solid #d1dbe8; white-space: nowrap;
     }
     .r-table thead th.left { text-align: left; }
     .r-table tbody td {
-      padding: 6px 8px; font-size: 12px; text-align: center;
+      padding: 3px 5px; font-size: 11px; text-align: center;
       border-bottom: 1px solid #edf0f5; vertical-align: middle; color: #1a1a2e;
     }
     .r-table tbody td.left { text-align: left; }
@@ -65,7 +65,7 @@
     .r-pos.silver { color: #8e9eab; }
     .r-pos.bronze { color: #a0522d; }
     /* Points badge — coloured by rank */
-    .r-pts       { display: inline-block; background: #2d3748; color: #fff; font-weight: 800; font-size: 13px; padding: 2px 8px; border-radius: 4px; min-width: 26px; text-align: center; }
+    .r-pts       { display: inline-block; background: #2d3748; color: #fff; font-weight: 800; font-size: 11px; padding: 1px 5px; border-radius: 3px; min-width: 20px; text-align: center; }
     .r-pts.gold  { background: #b7791f; }
     .r-pts.silver{ background: #5f7080; }
     .r-pts.bronze{ background: #7b5040; }
@@ -92,7 +92,7 @@
     .r-arrow-eq { color: #a0aec0; font-size: 9px; }
     .r-table tbody tr.today td, .r-table tbody tr[style*="background:#bfdbfe"] td { background:#bfdbfe !important; }
     .r-today-flags { font-size: 14px; line-height: 1; }
-    .r-name { font-weight: 700; font-size: 12px; color: #1a202c; }
+    .r-name { font-weight: 700; font-size: 11px; color: #1a202c; display: inline-block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
   </style>
 </head>
 <body>
@@ -102,10 +102,19 @@
     <div class="nav-links">
       <a href="/leaderboard">Leaderboard</a>
       <a href="/match-centre">Match Centre</a>
-      <a href="/admin">Admin</a>
+      <a href="/bracket">Bracket</a>
+      <a id="nav-my-page" href="/">+ My Page</a>
       <a href="/rules">Rules</a>
     </div>
   </nav>
+  <script>
+    (function() {
+      const slug = localStorage.getItem('lms2026_player_slug');
+      const link = document.getElementById('nav-my-page');
+      if (slug) { link.href = '/' + slug; }
+      else { link.href = '/'; link.title = 'Enter your player code'; }
+    })();
+  </script>
 
   <main style="max-width:1100px">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px">
@@ -210,20 +219,22 @@
     let roundData = null;
     let oddsMap = {};
 
-    // Default footer text to today's day (respects test date override)
-    (function() {
+    async function syncTestDateFromSupabase() {
+      const { data } = await db.from('app_config').select('value').eq('key', 'test_date_override').single();
+      if (data?.value) { localStorage.setItem('lms2026_test_date', data.value); }
+      else { localStorage.removeItem('lms2026_test_date'); }
+      // Update date indicator after sync
       const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
       const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
       const testDate = localStorage.getItem('lms2026_test_date');
       const now = testDate ? new Date(testDate) : new Date();
-      const day = days[now.getDay()];
       const indicator = document.getElementById('current-date-indicator');
       if (indicator) {
         const label = testDate ? '🧪 Test date:' : '📅 Today:';
-        indicator.textContent = `${label} ${day} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+        indicator.textContent = `${label} ${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
         indicator.style.color = testDate ? '#f6ad55' : 'var(--text-muted)';
       }
-    })();
+    }
 
     document.getElementById('btn-load-all').addEventListener('click', loadAll);
     document.getElementById('btn-dl-pn').addEventListener('click', () => downloadRender('pn-render', 'Picks'));
@@ -249,6 +260,9 @@
 
     function val(id) { return document.getElementById(id).value.trim(); }
     function setStatus(id, msg) { document.getElementById(id).innerHTML = msg; }
+
+    // Sync test date from Supabase on load
+    syncTestDateFromSupabase();
 
     function comboOdds(key) {
       const [tidA, tidB] = key.split('|');
@@ -279,7 +293,8 @@
       const roundMatches = firstMatchData.filter(m => m.round_id === currentRound.id);
       if (!roundMatches.length) return '';
       const firstKickoff = new Date(roundMatches[0].kickoff);
-      const now = new Date();
+      const testDateStr = localStorage.getItem('lms2026_test_date');
+      const now = testDateStr ? new Date(testDateStr) : new Date();
       const dayNum = Math.floor((now - firstKickoff) / (24 * 60 * 60 * 1000)) + 1;
       return dayNum >= 1 ? ' · Day ' + dayNum : '';
     }
@@ -291,7 +306,8 @@
       const roundMatches = firstMatchData.filter(m => m.round_id === currentRound.id);
       if (!roundMatches.length) return '';
       const firstKickoff = new Date(roundMatches[0].kickoff);
-      const now = new Date();
+      const testDateStr = localStorage.getItem('lms2026_test_date');
+      const now = testDateStr ? new Date(testDateStr) : new Date();
       const dayNum = Math.floor((now - firstKickoff) / (24 * 60 * 60 * 1000)) + 1;
       return dayNum >= 1 ? ' - Day ' + dayNum : '';
     }
@@ -1068,13 +1084,13 @@
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
       html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
-        <th style="width:36px">Pos</th>
-        <th class="left">Name</th>
-        <th style="width:22px">Pld</th>
-        <th style="width:26px">Pts</th>
-        ${!isGroupRound ? '<th style="width:26px">Rnd</th>' : ''}
-        <th style="width:26px">GD</th>
-        ${showGoals ? '<th style="width:24px">Gls</th>' : ''}
+        <th style="width:50px;text-align:left">Pos</th>
+        <th class="left" style="width:154px">Name</th>
+        <th style="width:28px">Pld</th>
+        <th style="width:34px">Pts</th>
+        ${!isGroupRound ? '<th style="width:32px">Rnd</th>' : ''}
+        <th style="width:34px">GD</th>
+        ${showGoals ? '<th style="width:28px">Gls</th>' : ''}
       </tr></thead><tbody>`;
 
       // Determine tied positions
@@ -1120,10 +1136,10 @@
           ? `<span class="r-name">${p.name}</span>${flags ? ' <span class="r-today-flags">' + flags + '</span>' : ''} <span style="font-size:9px;font-weight:800;color:#e53e3e;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:3px;padding:1px 4px;vertical-align:middle">OUT</span>`
           : nameHtml;
 
-        // Pos cell: number + inline arrow
-        const posCellHtml = `<div style="display:flex;align-items:center;justify-content:center;gap:2px">
-          <span style="font-weight:800;color:#1a202c;font-size:12px">${posLabel}</span>
-          ${priorHtml ? `<span style="font-size:10px;line-height:1">${priorHtml}</span>` : ''}
+        // Pos cell: number + inline arrow — fixed width slots so they always align
+        const posCellHtml = `<div style="display:flex;align-items:center;justify-content:flex-start;gap:0">
+          <span style="font-weight:800;color:#1a202c;font-size:11px;min-width:22px;text-align:left">${posLabel}</span>
+          <span style="font-size:9px;line-height:1;min-width:16px;text-align:left;padding-left:2px">${priorHtml || ''}</span>
         </div>`;
 
         // Furthest round label (KO only)
@@ -1133,7 +1149,7 @@
           <td>${posCellHtml}</td>
           <td class="left">${nameWithOut}</td>
           <td style="color:#9aa5b4;font-size:10px">${p.pld}</td>
-          <td style="font-weight:800;font-size:14px;color:#1a202c">${p.totalPoints}</td>
+          <td style="font-weight:800;font-size:12px;color:#1a202c">${p.totalPoints}</td>
           ${!isGroupRound ? `<td style="color:#4a5568;font-size:10px;font-weight:600">${frLabel}</td>` : ''}
           <td>${gdHtml}</td>
           ${showGoals ? `<td style="color:#9aa5b4;font-size:10px">${p.goalsPredict ?? '—'}</td>` : ''}
@@ -1164,7 +1180,20 @@
       btn.disabled = true;
       try {
         const el = document.getElementById(elId);
-        const canvas = await html2canvas(el, { scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false });
+
+        // Wrap in padded container for capture only — keeps on-screen preview unchanged
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'display:inline-block;padding:12px;background:#ffffff';
+        const parent = el.parentNode;
+        parent.insertBefore(wrapper, el);
+        wrapper.appendChild(el);
+
+        const canvas = await html2canvas(wrapper, { scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false });
+
+        // Restore DOM
+        parent.insertBefore(el, wrapper);
+        parent.removeChild(wrapper);
+
         const link = document.createElement('a');
         const rnd  = (roundData?.fullRoundLabel || 'Round').replace(/[\s·]+/g,'_');
         link.download = `LMS2026_${rnd}_${label}.png`;

@@ -508,6 +508,11 @@
       const o = localStorage.getItem(LS_KEY);
       return o ? new Date(o) : new Date();
     }
+    async function syncTestDateFromSupabase() {
+      const { data } = await db.from('app_config').select('value').eq('key', 'test_date_override').single();
+      if (data?.value) { localStorage.setItem(LS_KEY, data.value); }
+      else { localStorage.removeItem(LS_KEY); }
+    }
 
     const _params = new URLSearchParams(window.location.search);
     const slug = _params.get('preview')
@@ -788,7 +793,13 @@
         document.getElementById('submit-oracle-row-top').style.display = 'flex';
 
         const now = getEffectiveDate();
-        const activeRound = openRounds.find(r => new Date(r.deadline) > now) || openRounds[0];
+        // Prefer the most recent round that has started (deadline passed but not complete),
+        // falling back to the next upcoming round, then the first open round.
+        const inProgress = openRounds.filter(r => new Date(r.deadline) <= now);
+        const upcoming   = openRounds.filter(r => new Date(r.deadline) > now);
+        const activeRound = (inProgress.length ? inProgress[inProgress.length - 1] : null)
+                         || upcoming[0]
+                         || openRounds[0];
         selectRound(activeRound.id);
 
       } catch(err) {
@@ -874,7 +885,7 @@
     function renderPickSection(round) {
       const now      = getEffectiveDate();
       const deadline = new Date(round.deadline);
-      const isLocked = now >= deadline;
+      const isLocked = now >= deadline || !!round.is_complete;
       const roundPicks   = allPicks.filter(p => p.round_id === round.id);
       const hasSubmitted = roundPicks.length > 0;
       const isKO        = KO_ROUNDS.includes(round.name);
@@ -888,8 +899,9 @@
       } else {
         deadlineBar.className = 'deadline-bar open';
         const tick = () => {
+          // Deadline is 1 hour before first kick-off of each round
           deadlineBar.innerHTML =
-            '<span>⏰ ' + round.name + ' deadline</span>' +
+            '<span>⏰ ' + round.name + ' deadline <span style="font-weight:400;font-size:11px;opacity:0.7">(1hr before first kick-off)</span></span>' +
             '<span class="countdown">' + getTimeLeftStr(deadline) + '</span>';
         };
         tick();
@@ -1267,11 +1279,34 @@
       const gp1 = allRounds.find(r => r.round_type === 'group' && r.sort_order === 1);
       if (!gp1) return;
 
-      const deadline = new Date(gp1.deadline);
+      // Lock when GP1 starts (first kickoff), not when it ends
+      const gp1Matches = allMatches.filter(m => m.round_id === gp1.id && m.kickoff).sort((a,b) => new Date(a.kickoff) - new Date(b.kickoff));
+      const lockDate = gp1Matches.length ? new Date(gp1Matches[0].kickoff) : new Date(gp1.deadline);
       const now      = getEffectiveDate();
-      const isLocked = now >= deadline;
+      const isLocked = now >= lockDate;
 
-      if (isLocked) return;
+      const card  = document.getElementById('goals-prediction-card');
+      const input = document.getElementById('goals-prediction-input');
+      const btn   = document.getElementById('goals-prediction-btn');
+      const msg   = document.getElementById('goals-prediction-msg');
+      const desc  = document.getElementById('goals-prediction-desc');
+
+      const hasEntered = player.total_goals_prediction !== null && player.total_goals_prediction !== undefined;
+
+      card.style.display = 'block';
+
+      if (isLocked) {
+        // Show read-only view
+        input.disabled = true;
+        btn.style.display = 'none';
+        if (hasEntered) {
+          input.value = player.total_goals_prediction;
+          desc.innerHTML = '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> goals. Prediction locked — tournament has started.';
+        } else {
+          desc.innerHTML = '❌ No prediction entered. The window closed when the tournament started.';
+        }
+        return;
+      }
 
       const card  = document.getElementById('goals-prediction-card');
       const input = document.getElementById('goals-prediction-input');
@@ -1285,7 +1320,7 @@
       if (hasEntered) {
         input.value = player.total_goals_prediction;
         btn.textContent = 'Change Prediction';
-        desc.innerHTML = '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> goals. You can update this until ' + deadline.toLocaleDateString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '.';
+        desc.innerHTML = '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> goals. You can update this until ' + lockDate.toLocaleDateString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '.';
       }
 
       btn.addEventListener('click', async () => {
@@ -1301,7 +1336,7 @@
           document.getElementById('stat-goals').textContent = val;
           msg.style.color='var(--green)'; msg.textContent='✅ Saved!';
           btn.disabled=false; btn.textContent='Change Prediction';
-          desc.innerHTML = '✅ You predicted <strong>' + val + '</strong> goals. You can update this until ' + deadline.toLocaleDateString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '.';
+          desc.innerHTML = '✅ You predicted <strong>' + val + '</strong> goals. You can update this until ' + lockDate.toLocaleDateString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '.';
         }
       });
     }
@@ -1375,9 +1410,10 @@
       tbody.innerHTML = rows;
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', async function() {
       document.getElementById('submit-pick-btn').addEventListener('click', submitPick);
       document.getElementById('submit-pick-btn-top').addEventListener('click', submitPick);
+      await syncTestDateFromSupabase();
       loadDashboard();
     });
   </script>
