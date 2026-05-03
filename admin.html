@@ -163,6 +163,7 @@
       <div class="tab" data-tab="players">👥 Players</div>
       <div class="tab" data-tab="picks">👁 Picks</div>
       <div class="tab" data-tab="fixtures">📅 Fixtures</div>
+      <div class="tab" data-tab="livescores">📡 Live Scores</div>
       <a href="/whatsapp-export" class="tab" style="text-decoration:none; background:var(--surface2); color:var(--text-muted)">📱 WhatsApp</a>
     </div>
 
@@ -597,6 +598,23 @@
       </div>
     </div>
 
+    <!-- LIVE SCORES TAB -->
+    <div class="tab-content" id="tab-livescores">
+      <div class="card">
+        <div class="card-title">📡 Live Scores</div>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px">
+          Scores are fetched automatically every 10 minutes during match windows. Use the button below to pull now. Confirm a result to trigger points calculation.
+        </p>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px">
+          <button class="btn btn-primary" id="btn-fetch-scores" onclick="fetchLiveScores()">⚡ Fetch Now</button>
+          <span id="livescores-fetch-status" style="font-size:12px; color:var(--text-muted)"></span>
+        </div>
+        <div id="livescores-wrap">
+          <p style="font-size:13px; color:var(--text-muted)">Click "Fetch Now" or wait for the next auto-pull.</p>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <!-- Auto-assign confirmation modal -->
@@ -779,6 +797,7 @@
       if (name === 'matches') loadR32Matches();
       if (name === 'picks') loadPicksAudit();
       if (name === 'fixtures') loadFixtures();
+      if (name === 'livescores') initLiveScores();
       if (name === 'results') loadSnapshotStatus();
     }
 
@@ -3111,6 +3130,224 @@ Good luck! ⚽🏆`;
       const auto = pick.is_assigned ? ' <span style="font-size:10px; color:var(--text-muted)">(auto)</span>' : '';
       const oracle = pick.oracle_pick ? ' 🔮' : '';
       return '<td style="padding:8px 10px; font-size:13px">' + flag + ' ' + name + oracle + auto + '</td>';
+    }
+
+    // ── LIVE SCORES ───────────────────────────────────────────
+    const LIVE_SCORES_TEAM_MAP = {
+      'Korea Republic':         'South Korea',
+      'Bosnia and Herzegovina': 'Bosnia/Herzeg',
+      'Czech Republic':         'Czech Rep',
+      'United States':          'USA',
+      'IR Iran':                'Iran',
+      "Côte d'Ivoire":          'Ivory Coast',
+      'Republic of Ireland':    'Ireland',
+    };
+
+    function normaliseTeamName(name) {
+      return LIVE_SCORES_TEAM_MAP[name] || name;
+    }
+
+    let _liveScoresInitDone = false;
+
+    function initLiveScores() {
+      if (!_liveScoresInitDone) {
+        _liveScoresInitDone = true;
+        // Auto-poll every 10 minutes
+        setInterval(() => fetchLiveScores(true), 10 * 60 * 1000);
+      }
+      fetchLiveScores();
+    }
+
+    async function fetchLiveScores(silent = false) {
+      const btn = document.getElementById('btn-fetch-scores');
+      const status = document.getElementById('livescores-fetch-status');
+      const wrap = document.getElementById('livescores-wrap');
+
+      if (!silent) { btn.disabled = true; btn.textContent = '⏳ Fetching...'; }
+      status.textContent = 'Fetching...';
+      status.style.color = 'var(--text-muted)';
+
+      try {
+        const res = await fetch('/.netlify/functions/fetch-scores');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        const fixtures = data.response || [];
+        await renderLiveScores(fixtures, wrap);
+
+        const now = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        status.textContent = 'Last fetched ' + now + ' · ' + fixtures.length + ' match(es)';
+      } catch (err) {
+        status.style.color = 'var(--red)';
+        status.textContent = 'Error: ' + err.message;
+        if (!silent) wrap.innerHTML = '<p style="color:var(--red); font-size:13px">Failed to fetch scores. Check Netlify function logs.</p>';
+      } finally {
+        if (!silent) { btn.disabled = false; btn.textContent = '⚡ Fetch Now'; }
+      }
+    }
+
+    async function renderLiveScores(fixtures, wrap) {
+      if (!fixtures.length) {
+        wrap.innerHTML = '<p style="font-size:13px; color:var(--text-muted)">No World Cup matches found today.</p>';
+        return;
+      }
+
+      // Load today's DB matches
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+      const { data: dbMatches } = await db.from('matches')
+        .select('id, confirmed, is_third_place, round_id, home_team_id, away_team_id, rounds(round_type), home_team:teams!matches_home_team_id_fkey(id, name), away_team:teams!matches_away_team_id_fkey(id, name)')
+        .gte('kickoff', today + 'T00:00:00Z')
+        .lt('kickoff', tomorrowStr + 'T00:00:00Z');
+
+      const dbByTeams = {};
+      (dbMatches || []).forEach(m => {
+        if (!m.home_team || !m.away_team) return;
+        const key = [m.home_team.name, m.away_team.name].sort().join('|');
+        dbByTeams[key] = m;
+      });
+
+      // Pulse animation
+      if (!document.getElementById('live-pulse-style')) {
+        const s = document.createElement('style');
+        s.id = 'live-pulse-style';
+        s.textContent = '@keyframes livepulse { 0%,100%{opacity:1} 50%{opacity:0.25} }';
+        document.head.appendChild(s);
+      }
+
+      let html = '';
+      for (const f of fixtures) {
+        const apiHome  = normaliseTeamName(f.teams?.home?.name || '');
+        const apiAway  = normaliseTeamName(f.teams?.away?.name || '');
+        const homeGoals = f.goals?.home;   // running total incl. AET
+        const awayGoals = f.goals?.away;
+        const apiStatus = f.fixture?.status?.short || '?';
+        const elapsed   = f.fixture?.status?.elapsed;
+
+        // Penalty shootout scores from API
+        const penHome = f.score?.penalty?.home;
+        const penAway = f.score?.penalty?.away;
+        const hasPenData = typeof penHome === 'number' && typeof penAway === 'number';
+
+        const statusLabel =
+          apiStatus === 'FT'  ? (hasPenData ? 'Full Time (AET)' : 'Full Time') :
+          apiStatus === 'FT_PEN' ? 'Full Time (Pens)' :
+          apiStatus === 'HT'  ? 'Half Time' :
+          apiStatus === '1H'  ? (elapsed ? elapsed + '\'' : 'Live') :
+          apiStatus === '2H'  ? (elapsed ? elapsed + '\'' : 'Live') :
+          apiStatus === 'ET'  ? 'Extra Time' :
+          apiStatus === 'BT'  ? 'Extra Time Break' :
+          apiStatus === 'P'   ? 'Penalties' :
+          apiStatus === 'NS'  ? 'Not Started' :
+          apiStatus === 'PST' ? 'Postponed' : apiStatus;
+
+        const isLive = ['1H','2H','HT','ET','BT','P'].includes(apiStatus);
+        const isFT   = apiStatus === 'FT' || apiStatus === 'FT_PEN';
+
+        const statusColor = isLive ? 'var(--green)' : isFT ? 'var(--gold)' : 'var(--text-muted)';
+        const liveDot = isLive
+          ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:5px;animation:livepulse 1.4s infinite"></span>'
+          : '';
+
+        const key = [apiHome, apiAway].sort().join('|');
+        const dbMatch = dbByTeams[key];
+        const confirmed = dbMatch?.confirmed === true;
+        const isKO = dbMatch?.rounds?.round_type === 'knockout';
+        const isThird = dbMatch?.is_third_place;
+
+        // Score display — show pens separately if available
+        let scoreDisplay = '';
+        if (typeof homeGoals === 'number') {
+          scoreDisplay = homeGoals + ' – ' + awayGoals;
+          if (hasPenData) scoreDisplay += ' <span style="font-size:13px; color:var(--text-muted)">(pens ' + penHome + '–' + penAway + ')</span>';
+        } else {
+          scoreDisplay = '— – —';
+        }
+
+        html += '<div style="padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--surface2)">';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">';
+        html += '<div style="font-size:17px;font-weight:700;font-family:\'Rajdhani\',sans-serif">';
+        html += apiHome + '  <span style="color:var(--accent)">' + scoreDisplay + '</span>  ' + apiAway;
+        html += '</div>';
+        html += '<div style="font-size:12px;font-weight:700;color:' + statusColor + '">' + liveDot + statusLabel + '</div>';
+        html += '</div>';
+
+        if (confirmed) {
+          html += '<div style="margin-top:8px;font-size:12px;color:var(--green);font-weight:600">✅ Confirmed</div>';
+        } else if (!dbMatch) {
+          html += '<div style="margin-top:8px;font-size:12px;color:var(--text-muted)">⚠️ No matching fixture in DB — check team name mapping</div>';
+        } else if (isFT && typeof homeGoals === 'number') {
+          const isDraw = homeGoals === awayGoals;
+          const needsPensWinner = isKO && !isThird && isDraw;
+
+          html += '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+
+          if (needsPensWinner && hasPenData) {
+            // We know who won on pens from the API — auto-confirm available
+            const pensWinnerSide = penHome > penAway ? 'home' : 'away';
+            const pensWinnerId = pensWinnerSide === 'home' ? dbMatch.home_team_id : dbMatch.away_team_id;
+            const pensWinnerName = pensWinnerSide === 'home' ? apiHome : apiAway;
+            html += '<span style="font-size:12px;color:var(--text-muted)">Pens winner: <strong>' + pensWinnerName + '</strong></span>';
+            html += '<button class="btn btn-primary btn-sm" onclick="confirmLiveScore(\'' + dbMatch.id + '\',' + homeGoals + ',' + awayGoals + ',\'' + (dbMatch.rounds?.round_type || 'group') + '\',' + (isThird ? 'true' : 'false') + ',\'' + pensWinnerId + '\')">✅ Confirm Result</button>';
+          } else if (needsPensWinner && !hasPenData) {
+            // Pens data not yet available — send to Results tab
+            html += '<span style="font-size:12px;color:var(--gold)">⚠️ KO draw — pens data not yet available</span>';
+            html += '<button class="btn btn-secondary btn-sm" onclick="switchTab(\'results\')">Enter manually →</button>';
+          } else {
+            // Normal confirm (group stage or KO with outright winner)
+            html += '<button class="btn btn-primary btn-sm" onclick="confirmLiveScore(\'' + dbMatch.id + '\',' + homeGoals + ',' + awayGoals + ',\'' + (dbMatch.rounds?.round_type || 'group') + '\',' + (isThird ? 'true' : 'false') + ',null)">✅ Confirm Result</button>';
+          }
+
+          html += '</div>';
+        }
+
+        html += '</div>';
+      }
+
+      wrap.innerHTML = html;
+    }
+
+    async function confirmLiveScore(matchId, homeScore, awayScore, roundType, isThird, pensWinnerId) {
+      const isKnockout = roundType === 'knockout';
+      const isPens = pensWinnerId !== null;
+      const btn = event.target;
+      btn.disabled = true; btn.textContent = 'Saving...';
+
+      const { data: match, error: mErr } = await db.from('matches')
+        .select('id, round_id, home_team_id, away_team_id, match_number, is_third_place, home_team:teams!matches_home_team_id_fkey(id, is_longshot), away_team:teams!matches_away_team_id_fkey(id, is_longshot), rounds(round_type)')
+        .eq('id', matchId).single();
+
+      if (mErr || !match) { btn.disabled = false; btn.textContent = '✅ Confirm Result'; alert('Error: ' + (mErr?.message || 'match not found')); return; }
+
+      const { error } = await db.from('matches').update({
+        home_score: homeScore,
+        away_score: awayScore,
+        status: 'complete',
+        confirmed: true,
+        pens_winner_id: (isKnockout && !isThird && isPens) ? pensWinnerId : null
+      }).eq('id', matchId);
+
+      if (error) { btn.disabled = false; btn.textContent = '✅ Confirm Result'; alert('Save error: ' + error.message); return; }
+
+      if (!isThird) {
+        await calculatePickResults(matchId, homeScore, awayScore, isKnockout, isPens, pensWinnerId, match);
+        if (isKnockout) {
+          let loserId;
+          if (isPens) {
+            loserId = pensWinnerId === match.home_team_id ? match.away_team_id : match.home_team_id;
+          } else {
+            loserId = homeScore > awayScore ? match.away_team_id : match.home_team_id;
+          }
+          if (loserId) await db.from('teams').update({ is_eliminated: true, eliminated_in_round_id: match.round_id }).eq('id', loserId);
+          await advanceWinnerToNextMatch(matchId, match, homeScore, awayScore, isPens, pensWinnerId);
+        }
+        await maybeAutoSnapshot(match.round_id, { style: {}, textContent: '' });
+      }
+
+      fetchLiveScores();
     }
   </script>
 </body>
