@@ -23,8 +23,9 @@
     body { font-family: 'Inter', sans-serif; }
     nav, .nav-logo, .lb-tab, .card-title, thead th, .round-heading { font-family: 'Rajdhani', sans-serif; }
     .nav-links a { font-size: 13px; }
-    .pos { font-weight:700; color:var(--text-muted); width:24px; }
-    .prior { width:32px; text-align:center; font-size:11px; }
+    .pos { font-weight:700; color:var(--text-muted); width:16px; padding-right:0; }
+    .prior { width:28px; text-align:center; font-size:11px; padding-left:2px; padding-right:2px; }
+    .tight-col { padding-left:4px !important; padding-right:4px !important; }
     .medal { width:24px; text-align:center; }
     .player-name { font-weight:600; }
     .player-name a { color:var(--text); text-decoration:none; }
@@ -49,6 +50,7 @@
     thead th { white-space:nowrap; font-size:11px; color:var(--text-muted); }
     td { font-size:13px; }
     @media(max-width:600px) { .hide-mobile { display:none; } }
+    @media(max-width:600px) { .hide-portrait-ko { display:none; } }
     /* Portrait-only columns hidden in landscape */
     @media(min-width:601px) and (orientation:landscape) { .portrait-only { display:none; } }
     /* Landscape-only columns hidden in portrait */
@@ -148,7 +150,7 @@
                 <!-- No medal column: medals removed from portrait, hidden in landscape via CSS -->
                 <th class="landscape-only medal"></th>
                 <th>Player</th>
-                <th>Pld</th>
+                <th id="pld-col-header">Pld</th>
                 <th>Pts</th>
                 <th id="rnd-col-header" style="display:none">Rnd</th>
                 <th>GD</th>
@@ -638,6 +640,9 @@
         document.getElementById('status-col-portrait-header').style.display = (isKnockout || competitionEnded) ? '' : 'none';
         document.querySelectorAll('.knockout-only').forEach(el => el.style.display = isKnockout ? '' : 'none');
         document.querySelectorAll('.group-only').forEach(el => el.style.display = isKnockout ? 'none' : '');
+        // Hide Pld header on portrait in KO (cells handled via hide-portrait-ko class)
+        const pldHeader = document.getElementById('pld-col-header');
+        if (pldHeader) pldHeader.classList.toggle('hide-portrait-ko', !!isKnockout);
 
         function exitReasonHtml(player) {
           const playerPicks = (allPicks || []).filter(p => p.player_id === player.player_id);
@@ -773,14 +778,14 @@
             '<td class="prior">' + arrowHtml + '</td>' +
             '<td class="medal landscape-only">' + medal + '</td>' +
             '<td class="player-name"><a href="/' + p.slug + '">' + p.name + '</a>' + trophyHtml + flagHtml + '</td>' +
-            '<td style="color:var(--text-muted)">' + (p.rounds_played || 0) + '</td>' +
-            '<td class="points">' + (p.total_points || 0) + '</td>' +
-            (showRndCol ? '<td style="color:var(--text-muted);font-size:12px">' + rndHtml + '</td>' : '') +
-            '<td>' + gdHtml + '</td>' +
+            '<td style="color:var(--text-muted)" class="' + (isKnockout ? 'hide-portrait-ko' : '') + '">' + (p.rounds_played || 0) + '</td>' +
+            '<td class="points tight-col">' + (p.total_points || 0) + '</td>' +
+            (showRndCol ? '<td style="color:var(--text-muted);font-size:12px" class="tight-col">' + rndHtml + '</td>' : '') +
+            '<td class="tight-col">' + gdHtml + '</td>' +
             '<td class="hide-mobile tiebreak-val">' + goalsDiffHtml + '</td>' +
             '<td class="hide-mobile">' + formHtml + '</td>' +
             '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="landscape-only">' + statusCellHtml + '</td>' +
-            '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="portrait-only">' + portraitStatusHtml(p) + '</td>';
+            '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="portrait-only tight-col">' + portraitStatusHtml(p) + '</td>';
 
           tbody.appendChild(row);
         });
@@ -947,6 +952,13 @@
       }
       const hasTie = i => ranks[i] === ranks[i - 1] || ranks[i] === ranks[i + 1];
 
+      // Determine the highest rank (last eliminated) for the LMS pill
+      const maxRank = ranks.length > 0 ? Math.max(...ranks) : null;
+      const lastMenIndices = maxRank !== null ? fallenWithInfo.map((_, i) => i).filter(i => ranks[i] === maxRank) : [];
+      const lmsPill = lastMenIndices.length > 1
+        ? '<span style="font-family:\'Rajdhani\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.06em;padding:2px 8px;border-radius:20px;white-space:nowrap;text-transform:uppercase;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);margin-left:8px">💀 Last Men Standing</span>'
+        : '<span style="font-family:\'Rajdhani\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.06em;padding:2px 8px;border-radius:20px;white-space:nowrap;text-transform:uppercase;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);margin-left:8px">💀 Last Man Standing</span>';
+
       // Render — display reversed so #1 (first out) is at BOTTOM
       const reversed = [...fallenWithInfo.keys()].reverse();
       let html = '';
@@ -986,8 +998,8 @@
           <div style="display:flex; align-items:center; gap:12px; padding:11px 0; ${!isLast ? 'border-bottom:1px solid var(--border);' : ''}">
             <span style="font-size:11px; font-weight:700; color:var(--text-muted); min-width:22px; text-align:right; flex-shrink:0">${rankLabel}</span>
             <div>
-              <div style="font-weight:700; font-size:14px;">
-                <a href="/${p.slug}" style="color:var(--text); text-decoration:none;">${p.name}</a>
+              <div style="font-weight:700; font-size:14px; display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+                <a href="/${p.slug}" style="color:var(--text); text-decoration:none;">${p.name}</a>${lastMenIndices.includes(origIdx) ? lmsPill : ''}
               </div>
               <div style="font-size:12px; margin-top:3px; line-height:1.5">${storyHtml}</div>
             </div>

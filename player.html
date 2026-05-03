@@ -1308,15 +1308,8 @@
         return;
       }
 
-      const card  = document.getElementById('goals-prediction-card');
-      const input = document.getElementById('goals-prediction-input');
-      const btn   = document.getElementById('goals-prediction-btn');
-      const msg   = document.getElementById('goals-prediction-msg');
-      const desc  = document.getElementById('goals-prediction-desc');
-
       card.style.display = 'block';
 
-      const hasEntered = player.total_goals_prediction !== null && player.total_goals_prediction !== undefined;
       if (hasEntered) {
         input.value = player.total_goals_prediction;
         btn.textContent = 'Change Prediction';
