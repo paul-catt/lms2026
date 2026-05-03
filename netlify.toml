@@ -1,11 +1,5 @@
-# Add this [functions] block to your existing netlify.toml
-# If you don't have a netlify.toml yet, use this as your full file.
-
 [build]
   publish = "."
-
-[[plugins]]
-  # (any existing plugins stay here)
 
 [functions]
   node_bundler = "esbuild"
