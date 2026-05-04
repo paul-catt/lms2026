@@ -292,7 +292,7 @@
   </nav>
   <script>
     (function() {
-      const slug = localStorage.getItem('lms2026_my_slug');
+      const slug = localStorage.getItem('lms2026_player_slug');
       const link = document.getElementById('nav-my-page');
       if (slug) { link.href = '/' + slug; }
       else { link.href = '/'; link.title = 'Enter your player code'; }
@@ -617,9 +617,50 @@
       return derived;
     }
 
+    // ── Sort a round's match array by R32 root position ──────────
+    // Traces each match back through the progression map to its R32
+    // ancestor(s), then sorts by the earliest R32 index in the r32 array.
+    // Upload order no longer matters — bracket always renders correctly.
+    function sortRoundByProgression(matchNums, r32Array, progression) {
+      const feedsInto = {};
+      Object.entries(progression).forEach(([src, p]) => {
+        const child = p.next;
+        if (!feedsInto[child]) feedsInto[child] = [];
+        feedsInto[child].push(parseInt(src));
+      });
+
+      function r32Roots(matchNum, visited = new Set()) {
+        if (visited.has(matchNum)) return [];
+        visited.add(matchNum);
+        const parents = feedsInto[matchNum] || [];
+        if (parents.length === 0) return [matchNum];
+        const roots = [];
+        parents.forEach(p => r32Roots(p, visited).forEach(r => roots.push(r)));
+        return roots;
+      }
+
+      const r32Index = {};
+      r32Array.forEach((n, i) => { r32Index[n] = i; });
+
+      return [...matchNums].sort((a, b) => {
+        const aMin = Math.min(...r32Roots(a).map(r => r32Index[r] ?? 999));
+        const bMin = Math.min(...r32Roots(b).map(r => r32Index[r] ?? 999));
+        return aMin - bMin;
+      });
+    }
+
     function renderBracket(bracketData, matchMap, predTeams, oddsMap, nameToId) {
       const grid = document.getElementById('bracket-grid');
       grid.innerHTML = '';
+
+      // Re-sort r16/qf/sf by progression so upload order can never misalign connectors
+      const progression = bracketData.progression || {};
+      const r32Array    = bracketData.r32 || [];
+      ['r16','qf','sf'].forEach(key => {
+        if (bracketData[key]) {
+          bracketData[key] = sortRoundByProgression(bracketData[key], r32Array, progression);
+        }
+      });
 
       // In live view, hide rounds where ALL matches are complete
       // Find the first round that has at least one incomplete or unplayed match
@@ -638,7 +679,7 @@
         const QF_IDX = ROUND_DEFS.findIndex(r => r.key === 'qf');
         const startIdx = firstIncompleteIdx >= 0
           ? Math.min(firstIncompleteIdx, QF_IDX)
-          : QF_IDX;
+          : 0;
         roundsToShow = ROUND_DEFS.slice(startIdx);
       }
 

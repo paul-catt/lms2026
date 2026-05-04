@@ -1414,6 +1414,35 @@ Good luck! ⚽🏆`;
         if (losingTeamId) {
           await db.from('teams').update({ is_eliminated: true, eliminated_in_round_id: match.round_id }).eq('id', losingTeamId);
         }
+
+        // Re-run no-teams check — calculatePickResults may have skipped it due to pending picks timing
+        const [{ data: alivePlayers }, { data: aliveTeams }, { data: allPlayerPicks }] = await Promise.all([
+          db.from('players').select('id').eq('is_eliminated', false),
+          db.from('teams').select('id').eq('is_eliminated', false),
+          db.from('picks').select('player_id, team_id, pick_results(match_result)')
+        ]);
+        const aliveTeamIds = new Set((aliveTeams || []).map(t => t.id));
+        const picksByPlayer = {};
+        (allPlayerPicks || []).forEach(p => {
+          if (!picksByPlayer[p.player_id]) picksByPlayer[p.player_id] = [];
+          picksByPlayer[p.player_id].push(p);
+        });
+        const toEliminate = [];
+        for (const player of (alivePlayers || [])) {
+          const playerPicks = picksByPlayer[player.id] || [];
+          const hasPendingPick = playerPicks.some(p =>
+            !p.pick_results || p.pick_results.length === 0 || !p.pick_results[0].match_result
+          );
+          if (hasPendingPick) continue;
+          const usedTeamIds = new Set(playerPicks.map(p => p.team_id));
+          const remaining = [...aliveTeamIds].filter(id => !usedTeamIds.has(id));
+          if (remaining.length === 0) toEliminate.push(player.id);
+        }
+        if (toEliminate.length > 0) {
+          await db.from('players')
+            .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
+            .in('id', toEliminate);
+        }
       }
 
       msg.style.color='var(--green)'; msg.textContent='✅ Correction saved and points recalculated.';
@@ -2940,6 +2969,14 @@ Good luck! ⚽🏆`;
       if (_fixturesLoaded) return;
       _fixturesLoaded = true;
       const wrap = document.getElementById('fixtures-group-wrap');
+
+      // Default to knockout tab if any KO match has a result
+      const { data: koCheck } = await db.from('matches')
+        .select('id, rounds!inner(round_type)')
+        .eq('rounds.round_type', 'knockout')
+        .not('home_score', 'is', null)
+        .limit(1);
+      if (koCheck && koCheck.length > 0) switchFixturesSubtab('knockout');
 
       const { data: rounds, error: rErr } = await db.from('rounds')
         .select('id, name, sort_order')

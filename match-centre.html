@@ -482,6 +482,7 @@
 
     // ── Upcoming card (item 1: show picks) ──────────────
     function upcomingCardHtml(match, picks, allPlayers) {
+      if (!match.home_team || !match.away_team) return '';
       // venue now rendered inline in match-meta row
 
       // Item 1: picks for upcoming matches
@@ -592,6 +593,7 @@
           .gte('kickoff', windowEnd.toISOString())
           .lt('kickoff',  upcoming2End.toISOString())
           .not('home_team_id', 'is', null)
+          .not('away_team_id', 'is', null)
           .neq('status', 'complete')
           .order('kickoff', { ascending: true });
 

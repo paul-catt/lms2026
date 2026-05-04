@@ -704,7 +704,7 @@
 
         document.getElementById('stat-goals').textContent =
           (player.total_goals_prediction !== null && player.total_goals_prediction !== undefined)
-            ? player.total_goals_prediction : (isLocked ? 'No pick' : '—');
+            ? player.total_goals_prediction : '—';
 
         // Goals projection sub-line
         const goalsPlayed = (goalsData || []);
@@ -1043,7 +1043,9 @@
           if (!team) return '';
           const isUsed     = usedExcl.has(team.id);
           const isElim     = eliminatedIds.has(team.id);
-          const isDisabled = isUsed || isElim;
+          const isOtherSlot = (pick3 && pick3.id === team.id && pick2 && pick2.id !== team.id) ||
+                              (pick2 && pick2.id === team.id && pick3 && pick3.id !== team.id);
+          const isDisabled = isUsed || isElim || isOtherSlot;
           const label      = team.flag_emoji + ' ' + team.name + (team.is_longshot ? ' ⭐' : '') + (isElim ? ' 💀' : '');
           return '<button class="team-btn" ' +
             (isDisabled ? 'disabled ' : '') +
@@ -1175,6 +1177,41 @@
       updateSubmitButton(isGroup, round);
     }
 
+    function clearPick(slot) {
+      const round = allRounds.find(r => r.id === selectedRoundId);
+      if (!round) return;
+      const isGroup = round.round_type === 'group';
+      if (slot === 3) { pick3 = null; _oracleUsed3 = false; }
+      if (slot === 2) { pick2 = null; _oracleUsed2 = false; }
+      // Re-render by calling selectTeam with a dummy no-op — just update slots directly
+      // Trigger a re-render via the existing selectTeam path with current pick state
+      const fakeId = '__clear__';
+      // Manually update slots without toggling
+      const o3 = _oracleUsed3 ? ' 🔮' : '';
+      const o2 = _oracleUsed2 ? ' 🔮' : '';
+      const slot3el = document.getElementById('slot-3');
+      if (slot3el) {
+        if (pick3) { slot3el.className = 'pick-slot filled-3'; slot3el.style.cursor = 'pointer'; slot3el.title = 'Tap to deselect'; slot3el.onclick = () => clearPick(3); slot3el.innerHTML = '<div class="pick-slot-label label-3">3-Pointer' + o3 + ' <span style="font-weight:400;opacity:0.5;font-size:10px">✕</span></div><div class="pick-slot-value">' + pick3.flag_emoji + ' ' + pick3.name + '</div>' + (pick3.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
+        else       { slot3el.className = 'pick-slot'; slot3el.style.cursor = ''; slot3el.title = ''; slot3el.onclick = null; slot3el.innerHTML = '<div class="pick-slot-label label-3">3-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
+      }
+      const slot2el = document.getElementById('slot-2');
+      if (slot2el) {
+        if (pick2) { slot2el.className = 'pick-slot filled-2'; slot2el.style.cursor = 'pointer'; slot2el.title = 'Tap to deselect'; slot2el.onclick = () => clearPick(2); slot2el.innerHTML = '<div class="pick-slot-label label-2">2-Pointer' + o2 + ' <span style="font-weight:400;opacity:0.5;font-size:10px">✕</span></div><div class="pick-slot-value">' + pick2.flag_emoji + ' ' + pick2.name + '</div>' + (pick2.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
+        else       { slot2el.className = 'pick-slot'; slot2el.style.cursor = ''; slot2el.title = ''; slot2el.onclick = null; slot2el.innerHTML = '<div class="pick-slot-label label-2">2-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
+      }
+      document.querySelectorAll('.team-btn').forEach(btn => {
+        const id = btn.dataset.teamId;
+        btn.classList.remove('selected-3', 'selected-2');
+        if (pick3 && pick3.id === id) btn.classList.add('selected-3');
+        if (pick2 && pick2.id === id) btn.classList.add('selected-2');
+        const inOtherSlot = (pick3 && pick3.id === id && !(pick2 && pick2.id === id)) ||
+                            (pick2 && pick2.id === id && !(pick3 && pick3.id === id));
+        if (inOtherSlot) btn.disabled = true;
+        else if (!btn.classList.contains('ko-team-used')) btn.disabled = false;
+      });
+      updateSubmitButton(isGroup, round);
+    }
+
     function selectTeam(teamId, fromOracle) {
       // Clear oracle flag for whichever slot this team was in, if manually deselected
       if (!fromOracle) {
@@ -1197,12 +1234,12 @@
         const slot3 = document.getElementById('slot-3');
         const o3 = _oracleUsed3 ? ' 🔮' : '';
         const o2 = _oracleUsed2 ? ' 🔮' : '';
-        if (pick3) { slot3.className = 'pick-slot filled-3'; slot3.innerHTML = '<div class="pick-slot-label label-3">3-Pointer' + o3 + '</div><div class="pick-slot-value">' + pick3.flag_emoji + ' ' + pick3.name + '</div>' + (pick3.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
-        else       { slot3.className = 'pick-slot'; slot3.innerHTML = '<div class="pick-slot-label label-3">3-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
+        if (pick3) { slot3.className = 'pick-slot filled-3'; slot3.style.cursor = 'pointer'; slot3.title = 'Tap to deselect'; slot3.onclick = () => clearPick(3); slot3.innerHTML = '<div class="pick-slot-label label-3">3-Pointer' + o3 + ' <span style="font-weight:400;opacity:0.5;font-size:10px">✕</span></div><div class="pick-slot-value">' + pick3.flag_emoji + ' ' + pick3.name + '</div>' + (pick3.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
+        else       { slot3.className = 'pick-slot'; slot3.style.cursor = ''; slot3.title = ''; slot3.onclick = null; slot3.innerHTML = '<div class="pick-slot-label label-3">3-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
 
         const slot2 = document.getElementById('slot-2');
-        if (pick2) { slot2.className = 'pick-slot filled-2'; slot2.innerHTML = '<div class="pick-slot-label label-2">2-Pointer' + o2 + '</div><div class="pick-slot-value">' + pick2.flag_emoji + ' ' + pick2.name + '</div>' + (pick2.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
-        else       { slot2.className = 'pick-slot'; slot2.innerHTML = '<div class="pick-slot-label label-2">2-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
+        if (pick2) { slot2.className = 'pick-slot filled-2'; slot2.style.cursor = 'pointer'; slot2.title = 'Tap to deselect'; slot2.onclick = () => clearPick(2); slot2.innerHTML = '<div class="pick-slot-label label-2">2-Pointer' + o2 + ' <span style="font-weight:400;opacity:0.5;font-size:10px">✕</span></div><div class="pick-slot-value">' + pick2.flag_emoji + ' ' + pick2.name + '</div>' + (pick2.is_longshot ? '<div class="longshot-tag">⭐ Longshot eligible</div>' : ''); }
+        else       { slot2.className = 'pick-slot'; slot2.style.cursor = ''; slot2.title = ''; slot2.onclick = null; slot2.innerHTML = '<div class="pick-slot-label label-2">2-Pointer</div><div class="pick-slot-value" style="color:var(--text-muted)">Not selected</div>'; }
       } else {
         pickSingle = (pickSingle && pickSingle.id === teamId) ? null : team;
         const oS = _oracleUsed2 ? ' 🔮' : '';
@@ -1217,6 +1254,10 @@
         if (pick3 && pick3.id === id)           btn.classList.add('selected-3');
         if (pick2 && pick2.id === id)           btn.classList.add('selected-2');
         if (pickSingle && pickSingle.id === id) btn.classList.add('selected-2');
+        // Disable buttons that are locked in the other slot (prevents double-pick)
+        const inOtherSlot = (pick3 && pick3.id === id && !(pick2 && pick2.id === id)) ||
+                            (pick2 && pick2.id === id && !(pick3 && pick3.id === id));
+        if (inOtherSlot) btn.disabled = true;
       });
 
       if (isGroup && pick3 && pick2) {
@@ -2029,10 +2070,19 @@
       }
 
       _oracleConsultNum++;
-      const CAP = _oraclePool.length;
+      const currentlySelected = new Set([pick3 && pick3.id, pick2 && pick2.id, pickSingle && pickSingle.id].filter(Boolean));
+      const availablePool = _oraclePool.filter(p => !currentlySelected.has(p.team.id));
+      const CAP = availablePool.length;
 
-      // Check if we've cycled through all — show recycle message, reset
-      const shownIds = new Set(_oracleShown.map(p => p.team.id));
+      if (CAP === 0) {
+        document.getElementById('oracle-no-teams').style.display = 'block';
+        return;
+      }
+
+      // Shown list scoped to available pool only
+      _oracleShown = _oracleShown.filter(p => !currentlySelected.has(p.team.id));
+
+      // Check if we've cycled through all available — show recycle message, reset
       if (_oracleShown.length >= CAP) {
         recycledEl.textContent   = oRand(ORACLE_RECYCLE_MSGS);
         recycledEl.style.display = 'block';
@@ -2043,8 +2093,8 @@
       }
 
       const shownIds2 = new Set(_oracleShown.map(p => p.team.id));
-      let pick = weightedPickFromFixed(_oraclePool, shownIds2);
-      if (!pick) { _oracleShown = []; pick = weightedPickFromFixed(_oraclePool, new Set()); }
+      let pick = weightedPickFromFixed(availablePool, shownIds2);
+      if (!pick) { _oracleShown = []; pick = weightedPickFromFixed(availablePool, new Set()); }
       if (!pick) {
         document.getElementById('oracle-no-teams').style.display = 'block';
         return;
@@ -2163,6 +2213,7 @@
     // ── Open / close ──────────────────────────────────────────────────────────
     function openOracle() {
       _oracleDataReady  = false;
+      _oracleRound      = null;
       _oraclePool       = [];
       _oracleShown      = [];
       _oracleConsultNum = 0;
@@ -2232,6 +2283,8 @@
       const round = allRounds.find(r => r.id === selectedRoundId);
       const isGroup = round && round.round_type === 'group';
       if (isGroup) {
+        const alreadyPicked = (pick3 && pick3.id === team.id) || (pick2 && pick2.id === team.id);
+        if (alreadyPicked) { closeOracle(); return; }
         if (!pick3)                          { _oracleUsed3 = true; }
         else if (!pick2 && team.id !== (pick3 && pick3.id)) { _oracleUsed2 = true; }
         else                                 { _oracleUsed3 = true; if (pick2 && pick2.id === team.id) _oracleUsed2 = false; }

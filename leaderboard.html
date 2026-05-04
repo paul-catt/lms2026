@@ -167,7 +167,6 @@
         <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border)">
           <div style="display:grid; grid-template-columns:auto 1fr; gap:4px 10px; font-size:11px; color:var(--text-muted); align-items:center">
             <span>🟣</span><span>Playing today</span>
-            <span class="knockout-only" style="display:none">🟢</span><span class="knockout-only" style="display:none">Alive</span>
             <span class="knockout-only" style="display:none">🔴</span><span class="knockout-only" style="display:none">Eliminated</span>
             <span class="knockout-only hide-mobile" style="display:none">·</span><span class="knockout-only hide-mobile" style="display:none">Pool remaining: 🔵 Favourite &nbsp;🟡 Dark Horse &nbsp;🟠 Long Shot &nbsp;🔴 No Hoper</span>
             <span class="group-only"><span style="border-bottom:2px solid #94a3b8;padding-bottom:1px">&nbsp;&nbsp;&nbsp;&nbsp;</span></span><span class="group-only">2pt pick</span>
@@ -748,12 +747,11 @@
             else                            arrowHtml = '<span class="arrow-eq">—</span>';
           }
 
-          const formHtml = form.map((f, i) => {
-            const divider = (i > 0 && f.isKO && !form[i-1].isKO)
-              ? '<span style="display:inline-block;width:1px;height:10px;background:var(--border);margin:0 3px;vertical-align:middle;opacity:0.5"></span>'
-              : '';
-            return divider + '<span class="form-pip form-' + f.result + '" title="' + f.result + '"></span>';
-          }).join('');
+          const groupForm = form.filter(f => !f.isKO);
+          const koForm    = form.filter(f => f.isKO);
+          const groupPips = groupForm.map(f => '<span class="form-pip form-' + f.result + '" title="' + f.result + '"></span>').join('');
+          const koPips    = koForm.map(f => '<span class="form-pip form-' + f.result + '" title="' + f.result + '"></span>').join('');
+          const formHtml  = '<div style="line-height:1.6">' + (groupPips || '') + (koPips ? '<br>' + koPips : '') + '</div>';
           const gdHtml   = gd > 0 ? '<span class="gd-pos">+' + gd + '</span>' : gd < 0 ? '<span class="gd-neg">' + gd + '</span>' : '<span class="gd-zero">0</span>';
           const flagHtml = todayPicks_p.map(pick => {
             const cls = pick.multiplier === 3 ? (pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt') : (pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt');
@@ -888,12 +886,12 @@
         return;
       }
 
-      // Build last-kickoff-per-round map for no-picks players
+      // Build first-kickoff-per-round map for no-picks players
       const lastKickoffByRound = {};
       (completedMatches || []).forEach(m => {
         if (!m.kickoff) return;
         const ko = new Date(m.kickoff).getTime();
-        if (!lastKickoffByRound[m.round_id] || ko > lastKickoffByRound[m.round_id]) {
+        if (!lastKickoffByRound[m.round_id] || ko < lastKickoffByRound[m.round_id]) {
           lastKickoffByRound[m.round_id] = ko;
         }
       });
