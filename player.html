@@ -671,7 +671,7 @@
             pointsSub = gap > 0 ? '+' + gap + ' ahead' : 'Leader';
           } else {
             const gap = allScores[positionIdx - 1].total_points - totalPoints;
-            pointsSub = gap > 0 ? gap + ' to ' + ordinal(positionIdx) : 'Level';
+            pointsSub = gap > 0 ? gap + ' to ' + ordinal(positionIdx) : '';
           }
         }
 
@@ -697,13 +697,14 @@
 
         // Band counts under teams left
         const subEl = document.getElementById('stat-teams-sub');
+        subEl.style.whiteSpace = 'nowrap';
         subEl.innerHTML = Object.entries(bandCounts).map(([band, count]) =>
           '<span class="stat-sub-band" style="color:' + bandColors[band] + '">■' + count + '</span>'
         ).join('');
 
         document.getElementById('stat-goals').textContent =
           (player.total_goals_prediction !== null && player.total_goals_prediction !== undefined)
-            ? player.total_goals_prediction : '—';
+            ? player.total_goals_prediction : (isLocked ? 'No pick' : '—');
 
         // Goals projection sub-line
         const goalsPlayed = (goalsData || []);
@@ -715,7 +716,7 @@
           const diffStr       = (diff >= 0 ? '+' : '') + diff;
           const diffColor     = Math.abs(diff) <= 5 ? 'var(--green)' : Math.abs(diff) <= 15 ? 'var(--gold)' : 'var(--red)';
           document.getElementById('stat-goals-sub').innerHTML =
-            '<span style="color:var(--text-muted)">' + projected + ' proj</span> ' +
+            '<span style="color:var(--text-muted)">' + projected + ' proj</span><br>' +
             '<span style="color:' + diffColor + ';font-weight:700">' + diffStr + '</span>';
         }
 
@@ -731,15 +732,24 @@
         if (player.is_eliminated) {
           const badge = document.getElementById('elim-badge');
           if (badge) {
-            const lostPick = [...allPicks].reverse().find(p => {
+            const koRoundNames = new Set(['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final']);
+            const koRoundIds = new Set(allRounds.filter(r => koRoundNames.has(r.name)).map(r => r.id));
+            const koLostPick = [...allPicks].reverse().find(p => {
               const res = p.pick_results && p.pick_results[0];
-              return res && res.match_result === 'loss';
+              return res && res.match_result === 'loss' && koRoundIds.has(p.round_id);
             });
-            if (lostPick && lostPick.teams) {
-              badge.textContent = '❌ OUT · ' + lostPick.teams.flag_emoji + ' ' + lostPick.teams.name + ' pick lost';
+            const finalRoundB = allRounds.find(r => r.name === 'Final');
+            const finalPickB  = finalRoundB ? allPicks.find(p => p.round_id === finalRoundB.id) : null;
+            const finalResB   = finalPickB && finalPickB.pick_results && finalPickB.pick_results[0];
+            const isFinalistB = finalRoundB && finalRoundB.is_complete && finalPickB && finalPickB.teams &&
+                                finalResB && finalResB.match_result === 'win';
+            if (isFinalistB) {
+              badge.textContent = '🎉 Finalist — ' + finalPickB.teams.flag_emoji + ' ' + finalPickB.teams.name + ' won the Final';
+              badge.style.color = 'var(--green)';
+            } else if (koLostPick && koLostPick.teams) {
+              badge.textContent = '❌ OUT · ' + koLostPick.teams.flag_emoji + ' ' + koLostPick.teams.name + ' pick lost';
             } else {
-              const remaining = allTeams.filter(t => !usedTeamIdsGlobal.has(t.id) && !eliminatedIds.has(t.id));
-              badge.textContent = remaining.length === 0 ? '❌ OUT · No picks remaining' : '❌ OUT · No default pick';
+              badge.textContent = '❌ OUT · No picks remaining';
             }
           }
         }
@@ -752,37 +762,61 @@
           const noRound = document.getElementById('no-round');
           noRound.style.display = 'block';
           if (player.is_eliminated) {
-            document.getElementById('no-round-icon').textContent = '💀';
+            // Detect finalist: eliminated (pick exhaustion) but has a winning Final pick
+            const finalRound = allRounds.find(r => r.name === 'Final');
+            const finalPick  = finalRound ? allPicks.find(p => p.round_id === finalRound.id) : null;
+            const finalRes   = finalPick && finalPick.pick_results && finalPick.pick_results[0];
+            const isFinalist = finalRound && finalRound.is_complete && finalPick && finalPick.teams &&
+                               finalRes && finalRes.match_result === 'win';
 
-            const lostPick2 = [...allPicks].reverse().find(p => {
-              const res = p.pick_results && p.pick_results[0];
-              return res && res.match_result === 'loss';
-            });
-            const remaining2 = allTeams.filter(t => !usedTeamIdsGlobal.has(t.id) && !eliminatedIds.has(t.id));
-            let elimMsg;
-            if (lostPick2 && lostPick2.teams) {
-              elimMsg = lostPick2.teams.flag_emoji + ' <strong>' + lostPick2.teams.name + ' lost</strong> — you\'re out!';
-            } else if (remaining2.length === 0) {
-              elimMsg = 'You\'ve run out of teams to pick — you\'re out!';
+            if (isFinalist) {
+              // Celebration screen
+              document.getElementById('no-round-icon').textContent = '🎉';
+              document.getElementById('no-round-msg').innerHTML =
+                '<strong style="color:var(--green); font-size:15px">' + finalPick.teams.flag_emoji + ' ' + finalPick.teams.name + ' won the Final — you went the distance!</strong><br>' +
+                '<div style="display:flex;gap:12px;justify-content:center;margin:14px 0;flex-wrap:wrap">' +
+                  '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;text-align:center">' +
+                    '<div style="font-size:22px;font-weight:800">' + totalPoints + '</div>' +
+                    '<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Points</div>' +
+                  '</div>' +
+                  '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;text-align:center">' +
+                    '<div style="font-size:22px;font-weight:800">' + position + '</div>' +
+                    '<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Final Position</div>' +
+                  '</div>' +
+                '</div>' +
+                '<a href="/leaderboard' + (slug ? '?me=' + slug : '') + '" class="btn btn-secondary" style="display:inline-block;margin-top:4px">View Leaderboard</a><br>' +
+                '<span style="font-size:13px;color:var(--text-muted);margin-top:12px;display:block">Your pick history is below.</span>';
             } else {
-              elimMsg = 'You\'ve been eliminated.';
+              // Elimination screen
+              document.getElementById('no-round-icon').textContent = '💀';
+
+              const koRoundNames2 = new Set(['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final']);
+              const koRoundIds2 = new Set(allRounds.filter(r => koRoundNames2.has(r.name)).map(r => r.id));
+              const koLostPick2 = [...allPicks].reverse().find(p => {
+                const res = p.pick_results && p.pick_results[0];
+                return res && res.match_result === 'loss' && koRoundIds2.has(p.round_id);
+              });
+              let elimMsg;
+              if (koLostPick2 && koLostPick2.teams) {
+                elimMsg = koLostPick2.teams.flag_emoji + ' <strong>' + koLostPick2.teams.name + ' lost</strong> — you\'re out!';
+              } else {
+                elimMsg = 'No eligible teams remaining — you\'re out!';
+              }
+              document.getElementById('no-round-msg').innerHTML =
+                '<strong style="color:var(--red); font-size:15px">' + elimMsg + '</strong><br>' +
+                '<div style="display:flex;gap:12px;justify-content:center;margin:14px 0;flex-wrap:wrap">' +
+                  '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;text-align:center">' +
+                    '<div style="font-size:22px;font-weight:800">' + totalPoints + '</div>' +
+                    '<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Points</div>' +
+                  '</div>' +
+                  '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;text-align:center">' +
+                    '<div style="font-size:22px;font-weight:800">' + position + '</div>' +
+                    '<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Final Position</div>' +
+                  '</div>' +
+                '</div>' +
+                '<a href="/leaderboard' + (slug ? '?me=' + slug : '') + '" class="btn btn-secondary" style="display:inline-block;margin-top:4px">View Leaderboard</a><br>' +
+                '<span style="font-size:13px;color:var(--text-muted);margin-top:12px;display:block">Your pick history is below.</span>';
             }
-            const elimPoints = totalPoints;
-            const elimPos    = position;
-            document.getElementById('no-round-msg').innerHTML =
-              '<strong style="color:var(--red); font-size:15px">' + elimMsg + '</strong><br>' +
-              '<div style="display:flex;gap:12px;justify-content:center;margin:14px 0;flex-wrap:wrap">' +
-                '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;text-align:center">' +
-                  '<div style="font-size:22px;font-weight:800">' + elimPoints + '</div>' +
-                  '<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Points</div>' +
-                '</div>' +
-                '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;text-align:center">' +
-                  '<div style="font-size:22px;font-weight:800">' + elimPos + '</div>' +
-                  '<div style="font-size:10px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em">Final Position</div>' +
-                '</div>' +
-              '</div>' +
-              '<a href="/leaderboard' + (slug ? '?me=' + slug : '') + '" class="btn btn-secondary" style="display:inline-block;margin-top:4px">View Leaderboard</a><br>' +
-              '<span style="font-size:13px;color:var(--text-muted);margin-top:12px;display:block">Your pick history is below.</span>';
           }
           return;
         }
@@ -893,15 +927,21 @@
       const deadlineBar = document.getElementById('deadline-bar');
       if (deadlineInterval) clearInterval(deadlineInterval);
 
-      if (isLocked) {
+      if (hasSubmitted) {
+        deadlineBar.style.display = 'none';
+      } else if (isLocked) {
+        deadlineBar.style.display = '';
         deadlineBar.className = 'deadline-bar locked';
         deadlineBar.innerHTML = '🔒 ' + round.name + ' — Picks Locked';
       } else {
+        deadlineBar.style.display = '';
         deadlineBar.className = 'deadline-bar open';
         const tick = () => {
-          // Deadline is 1 hour before first kick-off of each round
           deadlineBar.innerHTML =
-            '<span>⏰ ' + round.name + ' deadline <span style="font-weight:400;font-size:11px;opacity:0.7">(1hr before first kick-off)</span></span>' +
+            '<span style="display:flex;flex-direction:column;gap:1px">' +
+              '<span>⏰ <strong>' + round.name + ' deadline</strong></span>' +
+              '<span style="font-weight:400;font-size:11px;opacity:0.7">(1hr before first kick-off)</span>' +
+            '</span>' +
             '<span class="countdown">' + getTimeLeftStr(deadline) + '</span>';
         };
         tick();
@@ -948,8 +988,7 @@
     function showSubmittedPicks(round, roundPicks, isLocked, isKO) {
       const isGroup  = round.round_type === 'group';
       const pickWord = isKO ? 'Pick' : 'Picks';
-      const deadlineStr = !isLocked ? (' · Deadline: <strong>' + getTimeLeftStr(new Date(round.deadline)) + '</strong>') : '';
-      let html = '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--green)">✅ ' + pickWord + ' locked in for ' + round.name + '<span style="font-weight:400;color:var(--text-muted);margin-left:auto;font-size:12px">' + (isLocked ? '🔒 Locked' : '⏰' + deadlineStr) + '</span></div>';
+      let html = '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--green);white-space:nowrap;overflow:hidden">✅ Pick locked in for ' + round.name + '<span style="font-weight:400;color:var(--text-muted);margin-left:auto;font-size:12px;flex-shrink:0">' + (isLocked ? '🔒 Locked' : '') + '</span></div>';
       if (isGroup) {
         const p3 = roundPicks.find(p => p.multiplier === 3);
         const p2 = roundPicks.find(p => p.multiplier === 2);
@@ -1226,6 +1265,20 @@
       if (isGroup && pick3.id === pick2.id) {
         msg.style.color = 'var(--red)'; msg.textContent = '❌ You cannot pick the same team twice.'; return;
       }
+      // Check against previously used teams (excluding current round's existing picks)
+      const currentRoundExistingIds = new Set(allPicks.filter(p => p.round_id === round.id).map(p => p.team_id));
+      const prevUsedIds = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundExistingIds.has(id)));
+      const picksToCheck = isGroup ? [pick3, pick2] : [pickSingle];
+      for (const t of picksToCheck) {
+        if (t && t.id && prevUsedIds.has(t.id)) {
+          msg.style.color = 'var(--red)';
+          msg.textContent = '❌ You\'ve already used ' + (t.name || 'that team') + ' in a previous round.';
+          // Reset picks so they can reselect
+          pick3 = null; pick2 = null; pickSingle = null;
+          updateSubmitButton(isGroup);
+          return;
+        }
+      }
 
       const sameMatch = isGroup && allMatches.some(m =>
         m.round_id === selectedRoundId &&
@@ -1265,7 +1318,8 @@
         setTimeout(() => location.reload(), 800);
       } catch(err) {
         console.error(err);
-        msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message;
+        msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message + ' — please re-select your pick.';
+        pick3 = null; pick2 = null; pickSingle = null;
         updateSubmitButton(isGroup);
         }
       };  // end confirm onclick
@@ -1296,15 +1350,8 @@
       card.style.display = 'block';
 
       if (isLocked) {
-        // Show read-only view
-        input.disabled = true;
-        btn.style.display = 'none';
-        if (hasEntered) {
-          input.value = player.total_goals_prediction;
-          desc.innerHTML = '✅ You predicted <strong>' + player.total_goals_prediction + '</strong> goals. Prediction locked — tournament has started.';
-        } else {
-          desc.innerHTML = '❌ No prediction entered. The window closed when the tournament started.';
-        }
+        // Hide card — info is in the stat block above
+        card.style.display = 'none';
         return;
       }
 
@@ -1334,6 +1381,15 @@
       });
     }
 
+    function shortRoundName(name) {
+      const map = {
+        'Group Phase 1': 'GP1', 'Group Phase 2': 'GP2', 'Group Phase 3': 'GP3',
+        'Round of 32': 'R32', 'Round of 16': 'R16',
+        'Quarter Finals': 'QF', 'Semi Finals': 'SF', 'Final': 'F'
+      };
+      return map[name] || name;
+    }
+
     function renderHistory() {
       const tbody = document.getElementById('history-body');
       const picksByRound = {};
@@ -1352,16 +1408,16 @@
             const resultBadge = '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + res.match_result.toUpperCase() + '</span>';
             const autoBadge = p.is_assigned ? '<span class="badge badge-grey" style="font-size:10px;margin-left:4px">auto</span>' : '';
             rows += '<tr>' +
-              '<td class="history-round">' + r.name + '</td>' +
-              '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + autoBadge + '</td>' +
+              '<td class="history-round">' + shortRoundName(r.name) + '</td>' +
+              '<td style="white-space:nowrap">' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + autoBadge + '</td>' +
               '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
               '<td>' + resultBadge + '</td>' +
               '<td style="font-weight:600">' + res.points_earned + '</td>' +
               '</tr>';
           } else {
             rows += '<tr style="opacity:0.7">' +
-              '<td class="history-round">' + r.name + ' <span style="color:var(--accent);font-size:10px">(upcoming)</span></td>' +
-              '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
+              '<td class="history-round">' + shortRoundName(r.name) + ' <span style="color:var(--accent);font-size:10px">(upcoming)</span></td>' +
+              '<td style="white-space:nowrap">' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
               '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
               '<td><span class="badge badge-grey">Pending</span></td>' +
               '<td style="color:var(--text-muted)">—</td>' +
@@ -1379,7 +1435,7 @@
           const emptyMsg = isPostElim
             ? '<span style="color:var(--text-muted);font-style:italic;font-size:12px">Eliminated — no pick</span>'
             : '<span style="color:var(--red);font-style:italic;font-size:12px">⚠️ No pick submitted</span>';
-          rows += '<tr><td class="history-round">' + r.name + '</td><td colspan="4">' + emptyMsg + '</td></tr>';
+          rows += '<tr><td class="history-round">' + shortRoundName(r.name) + '</td><td colspan="4">' + emptyMsg + '</td></tr>';
         } else {
           rPicks.forEach(p => {
             const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
@@ -1389,8 +1445,8 @@
             const earned = res ? res.points_earned : '—';
             const autoBadge = p.is_assigned ? '<span class="badge badge-grey" style="font-size:10px;margin-left:4px">auto</span>' : '';
             rows += '<tr>' +
-              '<td class="history-round">' + r.name + '</td>' +
-              '<td>' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + autoBadge + '</td>' +
+              '<td class="history-round">' + shortRoundName(r.name) + '</td>' +
+              '<td style="white-space:nowrap">' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + autoBadge + '</td>' +
               '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
               '<td>' + resultBadge + '</td>' +
               '<td style="font-weight:600">' + earned + '</td>' +
@@ -1891,7 +1947,9 @@
 
         if (savedPool && savedPool.length > 0) {
           // Restore from localStorage — no network calls needed
-          _oraclePool       = savedPool;
+          const currentRoundIds = new Set(allPicks.filter(p => p.round_id === _oracleRound.id).map(p => p.team_id));
+          const prevUsedForOracle = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundIds.has(id)));
+          _oraclePool       = savedPool.filter(p => !prevUsedForOracle.has(p.team.id) && !eliminatedIds.has(p.team.id));
           _oracleDataReady  = true;
           _oracleConsultNum = 0;
 

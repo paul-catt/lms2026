@@ -109,7 +109,7 @@
   </nav>
   <script>
     (function() {
-      const slug = localStorage.getItem('lms2026_player_slug');
+      const slug = localStorage.getItem('lms2026_my_slug');
       const link = document.getElementById('nav-my-page');
       if (slug) { link.href = '/' + slug; }
       else { link.href = '/'; link.title = 'Enter your player code'; }
@@ -290,6 +290,7 @@
     function buildDayLabel(rounds, currentRoundSortOrder, firstMatchData) {
       const currentRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
       if (!currentRound || !firstMatchData) return '';
+      if (currentRound.name === 'Final') return '';
       const roundMatches = firstMatchData.filter(m => m.round_id === currentRound.id);
       if (!roundMatches.length) return '';
       const firstKickoff = new Date(roundMatches[0].kickoff);
@@ -303,6 +304,7 @@
     function buildDayLabelText(rounds, currentRoundSortOrder, firstMatchData) {
       const currentRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
       if (!currentRound || !firstMatchData) return '';
+      if (currentRound.name === 'Final') return '';
       const roundMatches = firstMatchData.filter(m => m.round_id === currentRound.id);
       if (!roundMatches.length) return '';
       const firstKickoff = new Date(roundMatches[0].kickoff);
@@ -336,7 +338,7 @@
           db.from('matches').select('id, round_id, home_team_id, away_team_id, kickoff, home_score, away_score, odds_home, odds_away, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)'),
           db.from('rounds').select('id, name, round_type, sort_order, is_complete, deadline').order('sort_order'),
           db.from('matches').select('round_id, kickoff').order('kickoff'),
-          db.from('leaderboard_snapshots').select('player_id, position, round_id'),
+          db.from('leaderboard_snapshots').select('player_id, position, round_id, total_points'),
           db.from('player_gd').select('player_id, gd'),
           db.from('player_furthest_round').select('player_id, furthest_round')
         ]);
@@ -789,9 +791,13 @@
       }
 
       const alive = sortedPlayers.filter(p => !p.isOut).length;
-      msg += `\n\n👥 ${alive} player${alive !== 1 ? 's' : ''} still standing.`;
+      if (alive === 0) {
+        msg += `\n\n🏁 Tournament complete.`;
+      } else {
+        msg += `\n\n👥 ${alive} player${alive !== 1 ? 's' : ''} still standing.`;
+      }
 
-      const nextOpenRound = (rounds || []).find(r => !r.is_complete);
+      const nextOpenRound = (rounds || []).find(r => !r.is_complete && r.name !== '3rd Place');
       if (nextOpenRound) {
         const deadline = new Date(nextOpenRound.deadline);
         const deadlineStr = deadline.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }) +
@@ -875,9 +881,8 @@
       } else {
         html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
           <th style="width:20px">#</th>
-          <th class="left" style="width:100px">Name</th>
-          <th class="left" style="width:120px">Pick</th>
-          <th style="width:28px">Pld</th>
+          <th class="left" style="width:110px">Name</th>
+          <th class="left" style="width:160px">Pick</th>
           <th style="width:28px">Pts</th>
         </tr></thead><tbody>`;
         const rankCounts2 = {};
@@ -894,7 +899,6 @@
             <td style="font-weight:700;color:#4a5568">${posLabel}</td>
             <td class="left"><span class="r-name">${p.name}</span></td>
             <td class="left">${teamCell(pick)}</td>
-            <td style="color:#4a5568">${p.pld}</td>
             <td style="font-weight:800;color:#1a202c">${p.totalPoints}</td>
           </tr>`;
         });
@@ -925,13 +929,13 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
 
       if (isGroupRound) {
-        html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
-          <th style="width:20px">#</th>
-          <th class="left">Team &amp; Opponent</th>
-          <th style="width:36px">Odds</th>
-          <th style="width:32px">2pt</th>
-          <th style="width:32px">3pt</th>
-          <th style="width:38px">Total</th>
+        html += `<table class="r-table" style="table-layout:fixed;width:280px"><thead><tr>
+          <th style="width:18px">#</th>
+          <th class="left" style="width:110px">Team &amp; Opponent</th>
+          <th style="width:34px">Odds</th>
+          <th style="width:28px">2pt</th>
+          <th style="width:28px">3pt</th>
+          <th style="width:34px">Total</th>
         </tr></thead><tbody>`;
         sorted.forEach((tid, i) => {
           const count = teamCounts[tid], count2 = teamCounts2[tid]||0, count3 = teamCounts3[tid]||0;
@@ -950,11 +954,11 @@
           </tr>`;
         });
       } else {
-        html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
-          <th style="width:20px">#</th>
-          <th class="left">Team &amp; Opponent</th>
-          <th style="width:38px">Odds</th>
-          <th style="width:44px">Picks</th>
+        html += `<table class="r-table" style="table-layout:fixed;width:260px"><thead><tr>
+          <th style="width:18px">#</th>
+          <th class="left" style="width:150px">Team &amp; Opponent</th>
+          <th style="width:34px">Odds</th>
+          <th style="width:38px">Picks</th>
         </tr></thead><tbody>`;
         sorted.forEach((tid, i) => {
           const count = teamCounts[tid];
@@ -1063,7 +1067,7 @@
     // ── 4. Leaderboard ────────────────────────────────────────
     function renderLeaderboard() {
       if (!roundData) return;
-      const { sortedPlayers, fullRoundLabel, snapshotPosMap, prevSnapshotPosMap, rankMap, matchesOnDay, isGroupRound, rounds, currentRoundSortOrder } = roundData;
+      const { sortedPlayers, fullRoundLabel, snapshotPosMap, prevSnapshotPosMap, rankMap, matchesOnDay, isGroupRound, rounds, currentRoundSortOrder, projectedTotal } = roundData;
       const nextMatch = matchesOnDay || '';
 
       // Build sort_order → short label map for KO rounds
@@ -1082,15 +1086,16 @@
       const currentRoundName = (rounds || []).find(r => r.sort_order === currentRoundSortOrder)?.name || '';
       const showGoals = !isGroupRound && !currentRoundName.toLowerCase().includes('32');
 
+      const showPld = isGroupRound;
       let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
       html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
         <th style="width:50px;text-align:left">Pos</th>
-        <th class="left" style="width:154px">Name</th>
-        <th style="width:28px">Pld</th>
+        <th class="left" style="width:${showPld ? 154 : 176}px">Name</th>
+        ${showPld ? '<th style="width:28px">Pld</th>' : ''}
         <th style="width:34px">Pts</th>
         ${!isGroupRound ? '<th style="width:32px">Rnd</th>' : ''}
         <th style="width:34px">GD</th>
-        ${showGoals ? '<th style="width:28px">Gls</th>' : ''}
+        ${showGoals ? '<th style="width:28px">Gls±</th>' : ''}
       </tr></thead><tbody>`;
 
       // Determine tied positions
@@ -1148,11 +1153,11 @@
         html += `<tr class="${rowClass}" style="${rowStyle}">
           <td>${posCellHtml}</td>
           <td class="left">${nameWithOut}</td>
-          <td style="color:#9aa5b4;font-size:10px">${p.pld}</td>
+          ${showPld ? `<td style="color:#9aa5b4;font-size:10px">${p.pld}</td>` : ''}
           <td style="font-weight:800;font-size:12px;color:#1a202c">${p.totalPoints}</td>
           ${!isGroupRound ? `<td style="color:#4a5568;font-size:10px;font-weight:600">${frLabel}</td>` : ''}
           <td>${gdHtml}</td>
-          ${showGoals ? `<td style="color:#9aa5b4;font-size:10px">${p.goalsPredict ?? '—'}</td>` : ''}
+          ${showGoals ? `<td style="color:#9aa5b4;font-size:10px">${projectedTotal > 0 ? Math.abs(Math.round((p.goalsPredict || 0) - projectedTotal)) : '—'}</td>` : ''}
         </tr>`;
       });
 
