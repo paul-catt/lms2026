@@ -104,7 +104,7 @@
       <a href="/match-centre">Match Centre</a>
       <a href="/bracket">Bracket</a>
       <a id="nav-my-page" href="/">+ My Page</a>
-      <a href="/rules">Rules</a>
+      <a href="/rules">FAQ</a>
     </div>
   </nav>
   <script>
@@ -289,8 +289,11 @@
 
     function buildDayLabel(rounds, currentRoundSortOrder, firstMatchData) {
       const currentRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
-      if (!currentRound || !firstMatchData) return '';
+      if (!currentRound) return '';
       if (currentRound.name === 'Final') return '';
+      const allComplete = (rounds || []).filter(r => r.name !== '3rd Place').every(r => r.is_complete);
+      if (allComplete) return ' · Complete';
+      if (!firstMatchData) return '';
       const roundMatches = firstMatchData.filter(m => m.round_id === currentRound.id);
       if (!roundMatches.length) return '';
       const firstKickoff = new Date(roundMatches[0].kickoff);
@@ -300,11 +303,13 @@
       return dayNum >= 1 ? ' · Day ' + dayNum : '';
     }
 
-    // Plain-text day label for WA copy
     function buildDayLabelText(rounds, currentRoundSortOrder, firstMatchData) {
       const currentRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
-      if (!currentRound || !firstMatchData) return '';
+      if (!currentRound) return '';
       if (currentRound.name === 'Final') return '';
+      const allComplete = (rounds || []).filter(r => r.name !== '3rd Place').every(r => r.is_complete);
+      if (allComplete) return ' - Complete';
+      if (!firstMatchData) return '';
       const roundMatches = firstMatchData.filter(m => m.round_id === currentRound.id);
       if (!roundMatches.length) return '';
       const firstKickoff = new Date(roundMatches[0].kickoff);
@@ -353,17 +358,14 @@
           opponentLookup[m.round_id + '|' + m.away_team_id] = m.home_team ? m.home_team.name : '?';
         });
 
-        // Use earliest incomplete round as current; fall back to highest pick round
+        // Use earliest incomplete round as current (excluding 3rd Place); fall back to last completed round
         const earliestIncomplete = (rounds || []).find(r => !r.is_complete && r.name !== '3rd Place');
+        const lastCompleted = (rounds || [])
+          .filter(r => r.is_complete && r.name !== '3rd Place')
+          .sort((a, b) => b.sort_order - a.sort_order)[0];
         let currentRoundSortOrder = earliestIncomplete
           ? earliestIncomplete.sort_order
-          : 0;
-        if (!earliestIncomplete) {
-          picks.forEach(p => {
-            if (p.rounds && p.rounds.sort_order > currentRoundSortOrder)
-              currentRoundSortOrder = p.rounds.sort_order;
-          });
-        }
+          : (lastCompleted ? lastCompleted.sort_order : 0);
 
         const currentPicks = picks.filter(p => p.rounds && p.rounds.sort_order === currentRoundSortOrder);
         const completedPicksAll = picks.filter(p => p.pick_results && p.pick_results.length > 0);
@@ -459,9 +461,11 @@
         const todayWindowEnd = new Date(todayWindowStart.getTime() + 24 * 60 * 60 * 1000);
 
         // Match IDs kicking off in today's window, mapped to team IDs
+        const todayRoundObj = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
         const todayMatchTeams = new Set();
         (matches || []).forEach(m => {
           if (!m.kickoff) return;
+          if (todayRoundObj && m.round_id !== todayRoundObj.id) return;
           const ko = new Date(m.kickoff);
           if (ko >= todayWindowStart && ko < todayWindowEnd) {
             todayMatchTeams.add(m.home_team_id);

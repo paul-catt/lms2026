@@ -287,12 +287,12 @@
       <a href="/match-centre">Match Centre</a>
       <a href="/bracket" class="active">Bracket</a>
       <a id="nav-my-page" href="/">+ My Page</a>
-      <a href="/rules">Rules</a>
+      <a href="/rules">FAQ</a>
     </div>
   </nav>
   <script>
     (function() {
-      const slug = localStorage.getItem('lms2026_player_slug');
+      const slug = localStorage.getItem('lms2026_my_slug');
       const link = document.getElementById('nav-my-page');
       if (slug) { link.href = '/' + slug; }
       else { link.href = '/'; link.title = 'Enter your player code'; }
@@ -679,7 +679,7 @@
         const QF_IDX = ROUND_DEFS.findIndex(r => r.key === 'qf');
         const startIdx = firstIncompleteIdx >= 0
           ? Math.min(firstIncompleteIdx, QF_IDX)
-          : 0;
+          : QF_IDX;
         roundsToShow = ROUND_DEFS.slice(startIdx);
       }
 

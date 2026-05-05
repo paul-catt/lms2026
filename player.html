@@ -159,17 +159,14 @@
     .history-round { font-size:12px; }
 
     /* 4-card stats row */
-    .stats-row { display:flex; gap:8px; margin-bottom:16px; }
-    .stats-row .stat-block { flex:1; min-width:0; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 8px; text-align:center; }
+    .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
+    @media (max-width:460px) { .stats-row { grid-template-columns:repeat(2,1fr); } }
+    .stats-row .stat-block { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 8px; text-align:center; }
     .stats-row .stat-value { font-size:22px; font-weight:800; color:var(--text); letter-spacing:-0.02em; display:block; }
     .stats-row .stat-label { font-size:10px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:3px; display:block; }
     .stats-row .stat-sub { font-size:10px; color:var(--text-muted); margin-top:3px; display:block; line-height:1.3; }
-    .stat-sub-bands { display:flex; justify-content:center; gap:4px; flex-wrap:wrap; margin-top:3px; }
+    .stat-sub-bands { display:flex; justify-content:center; align-items:center; gap:4px; flex-wrap:wrap; margin-top:3px; width:100%; }
     .stat-sub-band { font-size:10px; font-weight:700; }
-    /* Goals card de-emphasised */
-    .stats-row .stat-block.stat-goals-block { flex:0.7; opacity:0.65; }
-    .stats-row .stat-block.stat-goals-block .stat-value { font-size:16px; }
-    .stats-row .stat-block.stat-goals-block .stat-label { font-size:9px; }
 
     /* ── Oracle bottom sheet ─────────────────────────────── */
     .oracle-backdrop {
@@ -388,7 +385,7 @@
       <a href="/match-centre">Match Centre</a>
       <a href="/bracket">Bracket</a>
       <a id="nav-my-page" href="/" class="active">+ My Page</a>
-      <a href="/rules">Rules</a>
+      <a href="/faq">FAQ</a>
     </div>
   </nav>
   <script>
@@ -427,7 +424,7 @@
         <div class="stat-block"><div class="stat-value" id="stat-points">0</div><div class="stat-label">Points</div><div class="stat-sub" id="stat-points-sub"></div></div>
         <div class="stat-block"><div class="stat-value" id="stat-position">—</div><div class="stat-label">Position</div><div class="stat-sub" id="stat-position-sub"></div></div>
         <div class="stat-block"><div class="stat-value" id="stat-teams-left">—</div><div class="stat-label">Teams Left</div><div class="stat-sub-bands" id="stat-teams-sub"></div></div>
-        <div class="stat-block stat-goals-block"><div class="stat-value" id="stat-goals">—</div><div class="stat-label">Goals</div><div class="stat-sub" id="stat-goals-sub"></div></div>
+        <div class="stat-block"><div class="stat-value" id="stat-goals">—</div><div class="stat-label">Goals</div><div class="stat-sub" id="stat-goals-sub"></div></div>
       </div>
 
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
@@ -697,14 +694,17 @@
 
         // Band counts under teams left
         const subEl = document.getElementById('stat-teams-sub');
-        subEl.style.whiteSpace = 'nowrap';
+        subEl.style.whiteSpace = '';
+        subEl.style.maxWidth = '';
         subEl.innerHTML = Object.entries(bandCounts).map(([band, count]) =>
           '<span class="stat-sub-band" style="color:' + bandColors[band] + '">■' + count + '</span>'
         ).join('');
 
-        document.getElementById('stat-goals').textContent =
-          (player.total_goals_prediction !== null && player.total_goals_prediction !== undefined)
-            ? player.total_goals_prediction : '—';
+        const hasGoals = player.total_goals_prediction !== null && player.total_goals_prediction !== undefined;
+        document.getElementById('stat-goals').textContent = hasGoals ? player.total_goals_prediction : '—';
+        if (!hasGoals) {
+          document.getElementById('stat-goals-sub').innerHTML = '<span style="font-style:italic;color:var(--text-muted)">No pick</span>';
+        }
 
         // Goals projection sub-line
         const goalsPlayed = (goalsData || []);
@@ -1625,7 +1625,8 @@
       K_FAV_WARN:       'Favourite — consider saving for later rounds',
       K_BONUS_KO:       'Bonus eligible — upside available, but one loss ends your run',
       K_BONUS_RISKY:    'Bonus eligible — risky in knockout, only if nothing better available',
-      K_DAMAGE:         'Slim pickings — best available for survival',
+      K_DAMAGE:         'Awkward matchup or missing odds — functional pick, pool is fine',
+      K_DAMAGE_LATE:    'Late stage — best available from a narrowed pool',
       // QF
       K_QF_STRONG:      'Strong win probability — right team for this stage',
       K_QF_SAVE:        'Top team — consider whether you need them in the semis',
@@ -1639,120 +1640,127 @@
     const ORACLE_TEMPLATES = {
       // ── Group stage ──────────────────────────────────────────────────────────
       G_BONUS_STRONG: [
-        '{team} are bonus eligible playing {opponent}. Short odds, weak opposition, bonus on the table. The Oracle is pleased.',
-        'Bonus eligible. Weak opponent. Short H2H odds. {team} vs {opponent}. This is exactly what group stage picks should look like.',
-        '{team} tick every box — bonus eligible, favoured, facing {opponent}. The Oracle does not hesitate.',
-        'The Oracle sees {team}, sees {opponent}, sees a bonus waiting. This is the pick.',
-        '{team} vs {opponent}. Strong win chance and a bonus if it lands. Safe to use now. Pick them.',
+        '{team} vs {opponent}. Bonus eligible, short odds, weak opposition. The Oracle doesn\'t suggest better picks — they don\'t exist.',
+        '{opponent} are here to make up the numbers. {team} collect the points and the bonus. File under: obvious.',
+        'Tick. Tick. Tick. Bonus eligible, fancied, facing {opponent}. The Oracle has no notes.',
+        '{team} vs {opponent}. Every box checked. The Oracle would be embarrassed to suggest otherwise.',
+        'Weak opponent. Short odds. Bonus on the table. {team} vs {opponent}. This is what the group stage is for.',
       ],
       G_BONUS_MID: [
-        '{team} are bonus eligible against {opponent}. Not the easiest match, but the bonus is still on the table if they win.',
-        'Tougher draw for {team}, but they are bonus eligible. A win here gets you points and a bonus.',
-        '{team} vs {opponent}. Competitive match — but {team} are bonus eligible, which changes the maths.',
-        'The Oracle notes {team} are bonus eligible. {opponent} are no pushover, but the upside is real.',
-        'Not a gimme, but {team} are bonus eligible against {opponent}. Worth considering.',
+        '{team} are bonus eligible against {opponent}. Not a walkover — but a win here pays double. The Oracle is interested.',
+        'Tougher match, same upside. {team} are bonus eligible vs {opponent}. Worth the risk at this stage.',
+        '{team} vs {opponent}. Competitive. But {team} are bonus eligible, which changes the maths entirely.',
+        'The bonus is there if {team} come through vs {opponent}. Not nailed on. But the upside is real.',
+        'The Oracle sees a bonus opportunity. {team} vs {opponent}. Harder than it looks — but still worth it.',
       ],
       G_BONUS_WEAK: [
-        '{team} are bonus eligible against {opponent}. Win likely, bonus possible. Good use of a team you can afford to spend.',
-        'Bonus play. {team} vs {opponent}. Not nailed on, but the bonus is there if they come through.',
-        '{team} vs {opponent}. Bonus eligible, decent win chance. The Oracle likes this more than it looks.',
-        'The Oracle sees a bonus opportunity. {team} vs {opponent}. Worth the pick in the group stage.',
-        '{team} face {opponent} and are bonus eligible. Low cost, decent upside.',
+        '{team} vs {opponent}. Bonus eligible, decent win chance. The Oracle has seen worse ideas. Not many, but some.',
+        'Not the most inspiring matchup. But {team} are bonus eligible against {opponent}, and that counts for something.',
+        '{team} face {opponent} and are bonus eligible. Low cost, real upside. Group stage logic applies.',
+        'Bonus play. {team} vs {opponent}. Not nailed on, but the Oracle likes the risk/reward.',
+        '{team} are bonus eligible. {opponent} are beatable. The Oracle shrugs approvingly.',
       ],
       G_DH_STRONG: [
-        '{team} are a Dark Horse with strong odds against {opponent}. Solid points, no precious team burned.',
-        'Dark Horse with short H2H odds vs a weak opponent. {team} vs {opponent}. Safe to use now.',
-        '{team} should handle {opponent} comfortably. A Dark Horse well worth spending in the group stage.',
-        'The Oracle likes {team} here. Favoured against {opponent}, not too precious to use. Good pick.',
-        '{team} vs {opponent}. Dark Horse with real win probability. The Oracle approves.',
+        '{team} are a Dark Horse with short odds against {opponent}. Points without burning anyone precious. Ideal.',
+        '{opponent} flew a long way to lose this. {team} take the points. The Oracle is unmoved.',
+        'Dark Horse, weak opponent, short odds. {team} vs {opponent}. Use them now, don\'t look back.',
+        '{team} should handle {opponent} comfortably. Safe to spend in the group stage. The Oracle approves.',
+        'The Oracle sees {team} vs {opponent} and sees a routine three points. Nothing more to add.',
       ],
       G_SAFE_BURN: [
-        '{team} vs {opponent}. Decent win chance, safe to spend at this stage. Nothing precious being wasted.',
-        'Not the flashiest pick, but {team} vs {opponent} is a reasonable group stage choice.',
-        '{team} should get something here. A team you can afford to use now and not regret later.',
+        '{team} vs {opponent}. Decent win chance, nothing precious burned. Functional group stage pick.',
+        'Not inspired. Not wrong. {team} vs {opponent}. The Oracle has assessed it. Move on.',
+        '{team} are available, fancied, and won\'t be missed in the knockout rounds. Use them.',
         'The Oracle has assessed {team} vs {opponent}. Reasonable. Not inspired. Reasonable.',
-        '{team} are available, not precious, and fancied to get a result vs {opponent}. Use them.',
+        '{team} vs {opponent}. Gets the job done. The Oracle asks for nothing more from the group stage.',
       ],
       G_DAMAGE: [
-        '{team} vs {opponent}. Not the Oracle\'s first choice, but there is a result to be had here.',
-        'The Oracle has assessed {team} vs {opponent}. It is not inspired. But it is a pick.',
-        '{team}. The Oracle has seen better matchups. It has also seen worse. This will do.',
-        'The Oracle settles on {team} vs {opponent}. Not glamorous. Points are points.',
-        '{team} vs {opponent}. The Oracle is not overjoyed, but it is not panicking either.',
+        '{team} vs {opponent}. The Oracle is not excited. Points are still points.',
+        'Not the Oracle\'s finest hour. {team} are available and that will have to be enough.',
+        '{team} vs {opponent}. Imperfect pick. Imperfect round. The Oracle adapts.',
+        'The Oracle settles on {team}. It has settled for worse. Not by much, but still.',
+        'Limited options. {team} vs {opponent}. The Oracle recommends lowering expectations and submitting anyway.',
       ],
       // ── Knockout: R32 / R16 ──────────────────────────────────────────────────
       K_DH_STRONG: [
-        '{team} are a Dark Horse with strong win odds against {opponent}. This is the ideal knockout pick.',
-        'Good enough to win, not too precious to spend. {team} vs {opponent}. The Oracle approves.',
-        '{team} vs {opponent}. Strong win probability without burning anyone you will regret losing.',
-        'Dark Horse. Short odds. Weak opponent. {team} vs {opponent}. Pick them and move on.',
-        'The Oracle sees {team} vs {opponent} and sees a comfortable knockout round. Use them.',
+        '{team} vs {opponent}. Strong odds, not too precious to spend. This is what a knockout pick looks like.',
+        'Good enough to win. Not too good to use. {team} vs {opponent}. The Oracle does not hesitate.',
+        'Dark Horse. Short odds. Weak opponent. {team} vs {opponent}. The Oracle has done the work. Trust it.',
+        '{team} are the right call here. Win likely, pool intact. Pick them and move on.',
+        'The Oracle sees a comfortable knockout round. {team} vs {opponent}. Nothing complicated about this.',
       ],
       K_DH_MID: [
-        '{team} are favoured in this knockout match. Solid survival pick without burning anyone precious.',
-        'Good win odds, not too precious to spend. {team} vs {opponent} is the Oracle\'s kind of knockout pick.',
-        '{team} should advance past {opponent}. Sensible use of a mid-tier team at this stage.',
-        'The Oracle likes {team} here. Favoured, available, not wasted. Right for this round.',
-        '{team} vs {opponent}. Win probability is on your side. The Oracle approves.',
+        '{team} should get through this. Solid odds, not a team you\'ll regret spending. Right pick, right round.',
+        'Favoured to win, not too precious to use. {team} vs {opponent}. The Oracle\'s kind of knockout pick.',
+        '{team} vs {opponent}. Good win probability without burning anyone irreplaceable. Sensible.',
+        'The Oracle likes {team} here. Favoured, available, and not wasted on a match like this.',
+        '{team} vs {opponent}. The numbers favour {team}. The Oracle follows the numbers.',
       ],
       K_FAV_SAVE: [
-        '{team} will likely win this. But you will want them in the later rounds. Just so you know.',
-        'Strong pick. {team} vs {opponent}. The Oracle notes — they are gone from your pool after this.',
-        '{team} are excellent here. Use them now and they are not available later. Your call.',
-        'The Oracle recommends {team} with one caveat: there are cheaper ways to get through this round.',
-        '{team} vs {opponent}. Likely win. But is this the right round to spend them? The Oracle leaves it with you.',
+        '{team} will probably win this. They will also be gone from your pool afterwards. Just so you know.',
+        'Strong pick. Strong team. The Oracle notes — there are cheaper ways through this round.',
+        '{team} vs {opponent}. Likely win. But ask yourself: is this the right moment to spend them?',
+        'The Oracle recommends {team} with one caveat: you might want them more in two rounds\' time.',
+        '{team} are excellent. The Oracle simply wonders if you need excellent right now.',
       ],
       K_FAV_WARN: [
-        '{team} are one of your best teams. The Oracle would think carefully before using them here.',
-        'You could pick {team}. They are good. They will probably still be good in the later rounds — if you still have them.',
-        '{team} will probably win this. But there are better times to use a team this good.',
-        'The Oracle sees {team} and sees a team worth saving. This matchup does not require them.',
-        '{team} vs {opponent}. The Oracle is not convinced this is the right moment for your best.',
+        '{team} are one of your best remaining teams. This matchup does not require them.',
+        'You could use {team}. They\'d probably win. The Oracle would rather you saved them.',
+        '{team} vs {opponent}. The win is likely. The Oracle is unconvinced this is the right moment.',
+        'Spending {team} here is not wrong. The Oracle just thinks you\'ll feel it later.',
+        '{team} are good. {opponent} are beatable without them. The Oracle leaves it there.',
       ],
       K_BONUS_KO: [
-        '{team} are bonus eligible against {opponent}. Strong win chance and a bonus available — but one loss ends your run.',
-        'Bonus play in knockout. {team} vs {opponent}. The upside is real. So is the downside.',
-        '{team} could win this and bank the bonus. Or you could be eliminated. The Oracle has said its piece.',
-        'Bonus eligible with decent odds. {team} vs {opponent}. Higher risk in knockout, but the reward is there.',
-        'The Oracle flags {team} as bonus eligible. Worth knowing before you decide.',
+        '{team} are bonus eligible against {opponent}. Win and bank the bonus. Lose and go home. Your call.',
+        'Bonus play in knockout. {team} vs {opponent}. The upside is real. So is the downside. The Oracle has spoken.',
+        '{team} could win this, get the bonus, and look like a genius. Or not. Knockout is unforgiving.',
+        'The Oracle sees a bonus on the table. The Oracle also sees a single elimination match. Tread carefully.',
+        'Bonus eligible with decent odds. {team} vs {opponent}. The reward is real. So is the drop.',
       ],
       K_BONUS_RISKY: [
-        '{team} are bonus eligible but their win odds give the Oracle pause. This is knockout — one chance.',
-        'There is no recovering from a KO loss. {team} vs {opponent}. The bonus is tempting. The risk is real.',
-        '{team}. Bonus eligible. Not strongly fancied. The Oracle recommends only if nothing better is available.',
-        'Longshot play in knockout. {team} could come through. Could also send you home.',
-        'The Oracle notes the bonus. The Oracle also notes this is not the group stage. Proceed with caution.',
+        '{team} are bonus eligible, but their odds give the Oracle pause. This is not the group stage.',
+        'The bonus is tempting. The win odds are not. {team} vs {opponent}. Proceed with eyes open.',
+        '{team}. Bonus eligible. Not strongly fancied. The Oracle recommends only if the pool offers nothing better.',
+        'One loss. That\'s all it takes. {team} vs {opponent}. The bonus is nice. Staying in is nicer.',
+        'The Oracle notes the bonus opportunity and immediately notes this is a knockout round. Think carefully.',
       ],
       // ── QF / SF / Final ──────────────────────────────────────────────────────
       K_LATE_STRONG: [
-        '{team} are strongly fancied against {opponent}. At this stage, pick the team most likely to win.',
-        'Strong win probability. {team} vs {opponent}. Late stage — no room for heroics. Pick the likely winner.',
-        '{team} vs {opponent}. The Oracle sees a clear favourite. Use them.',
-        'You have made it this far. {team} give you the best chance of going further. Pick them.',
-        '{team} are the right call here. Strong odds, right stage. The Oracle does not hesitate.',
+        '{team} vs {opponent}. Best win odds available. At this stage, the Oracle stops being clever and picks the favourite.',
+        'Strong pick. Late stage. {team} are the right call. No overthinking required.',
+        '{team} vs {opponent}. You\'ve made it this far. Back the team most likely to take you further.',
+        'The Oracle sees a clear favourite and backs them without apology. {team}. Pick them.',
+        'Late stage. Short list. {team} are the answer. The Oracle does not hesitate.',
       ],
       K_LATE_MID: [
-        '{team} are favoured in this match. Sensible pick at this stage of the tournament.',
-        'Good win odds. {team} vs {opponent}. In the later rounds, take what the table gives you.',
-        '{team} should get through this. A solid pick for where you are in the tournament.',
-        'The Oracle sees {team} as the safer choice here. Not nailed on, but favoured.',
-        '{team} vs {opponent}. Favoured to win. The Oracle approves of sensible decisions.',
+        '{team} are favoured here. At this stage of the tournament, the Oracle takes what the table offers.',
+        'Good odds. Right stage. {team} vs {opponent}. The Oracle approves of sensible decisions.',
+        '{team} should get through this. A solid pick for where you are.',
+        'The Oracle sees {team} as the safer call. Not nailed on. But favoured — and that\'s enough.',
+        '{team} vs {opponent}. Favoured to win. The Oracle has no further notes.',
       ],
       K_QF_SAVE: [
-        '{team} will likely win — but the Oracle notes you may want them in the next round too.',
-        'Strong team. Good match. Just worth asking: is there a round you would rather save them for?',
-        '{team} vs {opponent}. They will probably win. Whether to spend them now is your call.',
-        'The Oracle likes {team} here, with a gentle note: they are one of your best remaining options.',
-        '{team}. Strong pick. The Oracle simply observes they are not easy to replace at this stage.',
+        '{team} will likely win this. The Oracle gently points out they\'re one of your best options remaining.',
+        'Strong team. Good match. Worth asking: is there a round you\'d rather save them for?',
+        '{team} vs {opponent}. Favoured to win. Whether to spend them now — that\'s your decision to make.',
+        'The Oracle likes {team} here. With one quiet observation: they\'re not easy to replace at this stage.',
+        '{team}. Right pick for the quarter final. The Oracle simply notes the pool gets thinner from here.',
       ],
       K_COINFLIP: [
-        '{team} vs {opponent}. This is a coin flip. The Oracle will not pretend otherwise.',
-        'Genuinely 50/50. {team} vs {opponent}. If there is a safer option, use it. If not — good luck.',
-        'The Oracle sees a competitive match and is uncomfortable. {team} vs {opponent}. No guarantees.',
-        '{team} vs {opponent}. The Oracle has no strong conviction here. That itself is the answer.',
-        'Both teams have genuine chances. {team} are marginally fancied. Marginally.',
+        '{team} vs {opponent}. Genuine coin flip. The Oracle will not dress it up.',
+        '50/50. {team} vs {opponent}. If there\'s a safer option, use it. If not — good luck.',
+        'The Oracle has stared into this match and seen nothing useful. {team} vs {opponent}. Take your pick.',
+        '{team} are marginally fancied. Marginally. The Oracle finds this deeply unsatisfying.',
+        'Both teams can win this. {team} have slightly better odds. Slightly. The Oracle is not proud of this suggestion.',
       ],
       K_DAMAGE: [
+        '{team} vs {opponent}. Not the Oracle\'s preferred matchup, but there is a result to be had.',
+        'The Oracle has assessed {team} vs {opponent}. It is not inspired. It is also not wrong.',
+        '{team} should get through this. Not a glamorous pick, but a functional one.',
+        'The Oracle settles on {team}. Points are points.',
+        '{team} vs {opponent}. Available, not precious, fancied to advance. Use them.',
+      ],
+      K_DAMAGE_LATE: [
         'The Oracle has examined your pool and found {team}. It is what it is.',
         '{team} are available and still in the tournament. At this stage, that counts for something.',
         'Your options are limited. {team} give you the best survival chance from what remains.',
@@ -1908,7 +1916,8 @@
           if (isLS)                          { pool2.push(entry('K_BONUS_RISKY', 2)); return; }
           if (winFav || coinFlip)            { pool2.push(entry('K_COINFLIP',    2)); return; }
 
-          poolFallback.push(entry('K_DAMAGE', 1));
+          const isLateKO = ['Quarter Finals','Quarter-Final','Semi Finals','Semi-Final','Final'].includes(round.name);
+          poolFallback.push(entry(isLateKO ? 'K_DAMAGE_LATE' : 'K_DAMAGE', 1));
 
         } else {
           // ── QF / SF / FINAL (mode === 'final') ───────────────────────────────
@@ -1927,7 +1936,7 @@
           // 2★: Coin flip
           if (coinFlip)               { pool2.push(entry('K_COINFLIP',   2)); return; }
 
-          poolFallback.push(entry('K_DAMAGE', 1));
+          poolFallback.push(entry('K_DAMAGE_LATE', 1));
         }
       });
 
@@ -2165,7 +2174,7 @@
         bandEl.style.color      = bandInfo.color;
       }
 
-      document.getElementById('oracle-why').textContent    = ORACLE_WHY[reasonCode] || '';
+      document.getElementById('oracle-why').textContent    = '';
       document.getElementById('oracle-verdict').textContent = verdict;
 
       const resultEl = document.getElementById('oracle-result');

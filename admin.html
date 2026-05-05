@@ -140,7 +140,7 @@
       <a href="/match-centre">Match Centre</a>
       <a href="/bracket">Bracket</a>
       <a id="nav-my-page" href="/">+ My Page</a>
-      <a href="/rules">Rules</a>
+      <a href="/rules">FAQ</a>
     </div>
   </nav>
   <script>
@@ -2905,7 +2905,7 @@ Good luck! ⚽🏆`;
     }
 
     // ── Shared fixture table renderer ─────────────────────────
-    function renderFixtureRounds(rounds, matches, wrapEl) {
+    function renderFixtureRounds(rounds, matches, wrapEl, pickedTeamIds) {
       function windowKey(isoStr) {
         const d = new Date(isoStr), h = d.getUTCHours();
         const base = h < 11
@@ -2943,8 +2943,10 @@ Good luck! ⚽🏆`;
 
           const date = ko.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
           const time = ko.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-          const home = m.home_team ? `${m.home_team.flag_emoji} ${m.home_team.name}` : '<span style="color:var(--text-muted)">TBD</span>';
-          const away = m.away_team ? `${m.away_team.flag_emoji} ${m.away_team.name}` : '<span style="color:var(--text-muted)">TBD</span>';
+          const homeCol = (pickedTeamIds && m.home_team && pickedTeamIds.has(m.home_team.id)) ? 'color:#c9a84c;' : '';
+          const awayCol = (pickedTeamIds && m.away_team && pickedTeamIds.has(m.away_team.id)) ? 'color:#c9a84c;' : '';
+          const home = m.home_team ? `<span style="${homeCol}">${m.home_team.flag_emoji} ${m.home_team.name}</span>` : '<span style="color:var(--text-muted)">TBD</span>';
+          const away = m.away_team ? `<span style="${awayCol}">${m.away_team.flag_emoji} ${m.away_team.name}</span>` : '<span style="color:var(--text-muted)">TBD</span>';
 
           let scoreHtml = '<span style="color:var(--text-muted)">—</span>';
           if (m.status === 'complete' && m.home_score !== null && m.away_score !== null) {
@@ -2986,13 +2988,15 @@ Good luck! ⚽🏆`;
       if (rErr || !rounds) { wrap.innerHTML = '<p style="color:var(--red)">Error loading rounds.</p>'; return; }
 
       const { data: matches, error: mErr } = await db.from('matches')
-        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji)')
+        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)')
         .in('round_id', rounds.map(r => r.id))
         .order('kickoff');
 
       if (mErr || !matches) { wrap.innerHTML = '<p style="color:var(--red)">Error loading matches.</p>'; return; }
 
-      const html = renderFixtureRounds(rounds, matches, wrap);
+      const { data: allPicks } = await db.from('picks').select('team_id');
+      const pickedTeamIds = new Set((allPicks || []).map(p => p.team_id));
+      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIds);
       wrap.innerHTML = html || '<p style="color:var(--text-muted)">No group fixtures found.</p>';
     }
 
@@ -3009,7 +3013,7 @@ Good luck! ⚽🏆`;
       if (rErr || !rounds) { wrap.innerHTML = '<p style="color:var(--red)">Error loading rounds.</p>'; return; }
 
       const { data: matches, error: mErr } = await db.from('matches')
-        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, is_third_place, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji)')
+        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, is_third_place, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)')
         .in('round_id', rounds.map(r => r.id))
         .not('home_team_id', 'is', null)
         .order('kickoff');
@@ -3021,7 +3025,9 @@ Good luck! ⚽🏆`;
         return;
       }
 
-      const html = renderFixtureRounds(rounds, matches, wrap);
+      const { data: allPicksKO } = await db.from('picks').select('team_id');
+      const pickedTeamIdsKO = new Set((allPicksKO || []).map(p => p.team_id));
+      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIdsKO);
       wrap.innerHTML = html || '<p style="color:var(--text-muted)">No knockout fixtures found.</p>';
     }
 
