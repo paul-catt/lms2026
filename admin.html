@@ -428,6 +428,10 @@
         </div>
         <button class="btn btn-primary" id="add-match-btn" style="display:none">✅ Confirm R32 Teams</button>
         <div id="match-msg" style="margin-top:8px; font-size:12px"></div>
+        <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
+          <button class="btn" id="btn-populate-r32-random" style="background:#7c3aed; color:white; border:none;">🎲 Populate R32 Randomly (testing)</button>
+          <div id="populate-r32-msg" style="margin-top:8px; font-size:12px"></div>
+        </div>
       </div>
 
       <!-- Group stage elimination -->
@@ -809,6 +813,7 @@
       document.getElementById('submit-result-btn').addEventListener('click', submitResult);
       document.getElementById('add-match-btn').addEventListener('click', addMatch);
       document.getElementById('btn-elim-group-teams').addEventListener('click', eliminateGroupStageTeams);
+      document.getElementById('btn-populate-r32-random').addEventListener('click', populateR32Random);
       document.getElementById('result-match-select').addEventListener('change', onMatchSelected);
       document.getElementById('result-home-score').addEventListener('input', updatePreview);
       document.getElementById('result-away-score').addEventListener('input', updatePreview);
@@ -2025,6 +2030,100 @@ Good luck! ⚽🏆`;
       }
     }
 
+    async function populateR32Random() {
+      const btn = document.getElementById('btn-populate-r32-random');
+      const msg = document.getElementById('populate-r32-msg');
+      btn.disabled = true; btn.textContent = 'Working...';
+      msg.style.color = 'var(--text-muted)'; msg.textContent = 'Fetching unassigned matches...';
+
+      try {
+        const { data: r32Round } = await db.from('rounds').select('id').eq('name', 'Round of 32').single();
+        if (!r32Round) throw new Error('Round of 32 not found in DB');
+
+        // Get unassigned R32 matches
+        const { data: unassigned } = await db.from('matches')
+          .select('id, match_number')
+          .eq('round_id', r32Round.id)
+          .is('home_team_id', null)
+          .order('match_number');
+
+        if (!unassigned || unassigned.length === 0) {
+          msg.style.color = 'var(--text-muted)'; msg.textContent = 'All R32 matches already assigned.';
+          btn.disabled = false; btn.textContent = '🎲 Populate R32 Randomly (testing)';
+          return;
+        }
+
+        // Get alive teams
+        const { data: aliveTeams } = await db.from('teams')
+          .select('id, name, flag_emoji, pot, is_eliminated')
+          .eq('is_eliminated', false)
+          .order('pot').order('name');
+
+        // Build pool of currently assigned teams from already-assigned KO matches
+        const { data: assignedMatches } = await db.from('matches')
+          .select('home_team_id, away_team_id')
+          .not('home_team_id', 'is', null)
+          .in('round_id', roundsCache.filter(r => r.round_type === 'knockout').map(r => r.id));
+
+        const assignedIds = new Set();
+        (assignedMatches || []).forEach(m => {
+          if (m.home_team_id) assignedIds.add(m.home_team_id);
+          if (m.away_team_id) assignedIds.add(m.away_team_id);
+        });
+
+        // We'll assign greedily, tracking what we've used this run
+        const usedThisRun = new Set(assignedIds);
+        const updates = [];
+
+        function pickRandom(candidates) {
+          const pool = candidates.filter(t => !usedThisRun.has(t.id));
+          if (pool.length === 0) return null;
+          return pool[Math.floor(Math.random() * pool.length)];
+        }
+
+        for (const match of unassigned) {
+          const slot = R32_SLOTS[match.match_number] || '';
+          const [homeSlot, awaySlot] = slot ? slot.split(' v ') : ['', ''];
+          const homeGroup = groupFromSlotHalf(homeSlot);
+          const awayGroup = groupFromSlotHalf(awaySlot);
+
+          const homePool = homeGroup
+            ? aliveTeams.filter(t => (TEAM_GROUPS[homeGroup] || []).some(n => n.toLowerCase() === t.name.toLowerCase()))
+            : aliveTeams;
+          const awayPool = awayGroup
+            ? aliveTeams.filter(t => (TEAM_GROUPS[awayGroup] || []).some(n => n.toLowerCase() === t.name.toLowerCase()))
+            : aliveTeams;
+
+          const homeTeam = pickRandom(homePool);
+          if (!homeTeam) throw new Error(`No available home team for match #${match.match_number} (slot: ${homeSlot})`);
+          usedThisRun.add(homeTeam.id);
+
+          const awayTeam = pickRandom(awayPool.filter(t => t.id !== homeTeam.id));
+          if (!awayTeam) throw new Error(`No available away team for match #${match.match_number} (slot: ${awaySlot})`);
+          usedThisRun.add(awayTeam.id);
+
+          updates.push({ id: match.id, home_team_id: homeTeam.id, away_team_id: awayTeam.id });
+        }
+
+        // Apply updates
+        msg.textContent = `Assigning ${updates.length} match(es)...`;
+        for (const u of updates) {
+          const { error } = await db.from('matches').update({ home_team_id: u.home_team_id, away_team_id: u.away_team_id }).eq('id', u.id);
+          if (error) throw error;
+        }
+
+        msg.style.color = 'var(--green)';
+        msg.textContent = `✅ ${updates.length} match(es) populated randomly.`;
+        loadR32Matches();
+        loadMatchesForResult();
+      } catch(err) {
+        msg.style.color = 'var(--red)';
+        msg.textContent = '❌ ' + err.message;
+      }
+
+      btn.disabled = false; btn.textContent = '🎲 Populate R32 Randomly (testing)';
+    }
+
     async function loadTeamsLongshot() {
       const [{ data: teams }, { data: rounds }] = await Promise.all([
         db.from('teams').select('id, name, flag_emoji, pot, is_longshot, is_eliminated, band, eliminated_in_round_id').order('pot').order('name'),
@@ -2918,7 +3017,11 @@ Good luck! ⚽🏆`;
       rounds.forEach(r => { byRound[r.id] = { name: r.name, matches: [] }; });
       matches.forEach(m => { if (byRound[m.round_id]) byRound[m.round_id].matches.push(m); });
 
-      let html = '';
+      let html = '<div style="margin-bottom:16px; font-size:12px; color:var(--text-muted); display:flex; gap:16px; align-items:center">'
+        + '<span style="font-weight:700; text-transform:uppercase; letter-spacing:0.05em">Key:</span>'
+        + '<span><span style="color:#c9a84c; font-weight:600">■</span> Picked this round</span>'
+        + '<span><span style="color:var(--text); font-weight:600">■</span> Unpicked</span>'
+        + '</div>';
       rounds.forEach(r => {
         const group = byRound[r.id];
         if (!group || !group.matches.length) return;
@@ -2943,8 +3046,9 @@ Good luck! ⚽🏆`;
 
           const date = ko.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
           const time = ko.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-          const homeCol = (pickedTeamIds && m.home_team && pickedTeamIds.has(m.home_team.id)) ? 'color:#c9a84c;' : '';
-          const awayCol = (pickedTeamIds && m.away_team && pickedTeamIds.has(m.away_team.id)) ? 'color:#c9a84c;' : '';
+          const roundPicks = pickedTeamIds ? (pickedTeamIds.get(m.round_id) || new Set()) : new Set();
+          const homeCol = (m.home_team && roundPicks.has(m.home_team.id)) ? 'color:#c9a84c;' : '';
+          const awayCol = (m.away_team && roundPicks.has(m.away_team.id)) ? 'color:#c9a84c;' : '';
           const home = m.home_team ? `<span style="${homeCol}">${m.home_team.flag_emoji} ${m.home_team.name}</span>` : '<span style="color:var(--text-muted)">TBD</span>';
           const away = m.away_team ? `<span style="${awayCol}">${m.away_team.flag_emoji} ${m.away_team.name}</span>` : '<span style="color:var(--text-muted)">TBD</span>';
 
@@ -2994,8 +3098,9 @@ Good luck! ⚽🏆`;
 
       if (mErr || !matches) { wrap.innerHTML = '<p style="color:var(--red)">Error loading matches.</p>'; return; }
 
-      const { data: allPicks } = await db.from('picks').select('team_id');
-      const pickedTeamIds = new Set((allPicks || []).map(p => p.team_id));
+      const { data: allPicks } = await db.from('picks').select('team_id, round_id').in('round_id', rounds.map(r => r.id));
+      const pickedTeamIds = new Map();
+      (allPicks || []).forEach(p => { if (!pickedTeamIds.has(p.round_id)) pickedTeamIds.set(p.round_id, new Set()); pickedTeamIds.get(p.round_id).add(p.team_id); });
       const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIds);
       wrap.innerHTML = html || '<p style="color:var(--text-muted)">No group fixtures found.</p>';
     }
@@ -3025,8 +3130,9 @@ Good luck! ⚽🏆`;
         return;
       }
 
-      const { data: allPicksKO } = await db.from('picks').select('team_id');
-      const pickedTeamIdsKO = new Set((allPicksKO || []).map(p => p.team_id));
+      const { data: allPicksKO } = await db.from('picks').select('team_id, round_id').in('round_id', rounds.map(r => r.id));
+      const pickedTeamIdsKO = new Map();
+      (allPicksKO || []).forEach(p => { if (!pickedTeamIdsKO.has(p.round_id)) pickedTeamIdsKO.set(p.round_id, new Set()); pickedTeamIdsKO.get(p.round_id).add(p.team_id); });
       const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIdsKO);
       wrap.innerHTML = html || '<p style="color:var(--text-muted)">No knockout fixtures found.</p>';
     }

@@ -131,6 +131,17 @@
       <div class="status-msg" id="load-status"></div>
     </div>
 
+    <!-- VERIFY: Leaderboard cross-check -->
+    <div class="card section-block" id="verify-card" style="display:none">
+      <div class="section-header">
+        <div>
+          <div class="card-title" style="margin-bottom:2px">🔍 Leaderboard Cross-Check</div>
+          <div style="font-size:12px; color:var(--text-muted)">Compares export points against the DB snapshot.</div>
+        </div>
+      </div>
+      <div id="verify-result"></div>
+    </div>
+
     <!-- 0. UNPICKED REMINDER (new) -->
     <div class="card section-block">
       <div class="section-header">
@@ -330,7 +341,9 @@
           { data: firstMatchData },
           { data: snapshots },
           { data: gdData },
-          { data: furthestRoundData }
+          { data: furthestRoundData },
+          { data: playerScores },
+          { data: allTeams }
         ] = await Promise.all([
           db.from('players').select('id, name, slug, is_eliminated, total_goals_prediction'),
           // FIX 3: order pick_results by match kickoff so form is chronological
@@ -345,7 +358,9 @@
           db.from('matches').select('round_id, kickoff').order('kickoff'),
           db.from('leaderboard_snapshots').select('player_id, position, round_id, total_points'),
           db.from('player_gd').select('player_id, gd'),
-          db.from('player_furthest_round').select('player_id, furthest_round')
+          db.from('player_furthest_round').select('player_id, furthest_round'),
+          db.from('player_scores').select('player_id, total_points, total_goals_prediction'),
+          db.from('teams').select('id, is_eliminated')
         ]);
 
         if (pErr) throw pErr;
@@ -517,80 +532,72 @@
 
         picks.forEach(pick => { const s = statsMap[pick.player_id]; if (s) s.teamsUsed++; });
 
-        // Order by snapshot (= same order as official leaderboard). Fall back to full
-        // tiebreaker chain for players not yet in any snapshot.
+        // Authoritative points from player_scores view (same source as leaderboard)
+        const scoresMap = {};
+        (playerScores || []).forEach(s => { scoresMap[s.player_id] = s.total_points; });
+        Object.values(statsMap).forEach(s => {
+          if (scoresMap[s.id] !== undefined) s.totalPoints = scoresMap[s.id];
+        });
+
+        // Build wonCurrentRound: alive players who won their KO pick this round
+        // AND still have eligible pool teams — mirrors leaderboard sort bonus exactly.
+        const wonCurrentRound = new Set();
+        const currentRoundObj2 = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
+        if (currentRoundObj2 && !isGroupRound) {
+          const alivePoolTeamIds = new Set((allTeams || []).filter(t => !t.is_eliminated).map(t => t.id));
+          const usedByPlayer = {};
+          picks.forEach(pick => {
+            if (!usedByPlayer[pick.player_id]) usedByPlayer[pick.player_id] = new Set();
+            usedByPlayer[pick.player_id].add(pick.team_id);
+          });
+          picks.forEach(pick => {
+            if (pick.round_id !== currentRoundObj2.id) return;
+            const res = pick.pick_results && pick.pick_results[0];
+            if (res && res.match_result === 'win') {
+              const used = usedByPlayer[pick.player_id] || new Set();
+              const hasTeamsLeft = [...alivePoolTeamIds].some(tid => !used.has(tid));
+              if (hasTeamsLeft) wonCurrentRound.add(pick.player_id);
+            }
+          });
+        }
+
+        // Sort exactly matching leaderboard.html
         const sortedPlayers = Object.values(statsMap).sort((a, b) => {
-          const aPos = snapshotPosMap[a.id];
-          const bPos = snapshotPosMap[b.id];
-          if (aPos !== undefined && bPos !== undefined) return aPos - bPos;
-          if (aPos !== undefined) return -1;
-          if (bPos !== undefined) return 1;
-          // Full tiebreaker fallback
           if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
           if (!isGroupRound) {
-            // KO tiebreaker 2: furthest round (alive players floor to currentRoundSortOrder)
-            const aFR = Math.max(a.furthestRound || 0, currentRoundSortOrder);
-            const bFR = Math.max(b.furthestRound || 0, currentRoundSortOrder);
-            if (bFR !== aFR) return bFR - aFR;
+            const currentSO = currentRoundSortOrder;
+            const aBonus = wonCurrentRound.has(a.id) ? 1 : 0;
+            const bBonus = wonCurrentRound.has(b.id) ? 1 : 0;
+            const afr = a.isOut ? (a.furthestRound || 0) : Math.max(a.furthestRound || 0, currentSO) + aBonus;
+            const bfr = b.isOut ? (b.furthestRound || 0) : Math.max(b.furthestRound || 0, currentSO) + bBonus;
+            if (bfr !== afr) return bfr - afr;
           }
           if (b.gd !== a.gd) return b.gd - a.gd;
-          // Goals prediction: closest to projected total wins
           const aDiff = Math.abs((a.goalsPredict || 0) - projectedTotal);
           const bDiff = Math.abs((b.goalsPredict || 0) - projectedTotal);
           if (aDiff !== bDiff) return aDiff - bDiff;
-          if (isGroupRound) return a.name.localeCompare(b.name); // alpha resolves group stage
-          return 0; // KO allows ties
+          return a.name.localeCompare(b.name);
         });
 
-        // Build rankMap from snapshot positions.
-        // For fallback (no snapshot): group stage uses alpha so every player gets a unique
-        // sequential position; knockout allows ties.
+        // Build rankMap matching leaderboard posMap logic exactly
         const rankMap = {};
-        const snappedCount = sortedPlayers.filter(q => snapshotPosMap[q.id] !== undefined).length;
-        let fallbackPos = snappedCount + 1;
-        sortedPlayers.forEach((p, i) => {
-          const snapPos = snapshotPosMap[p.id];
-          if (snapPos !== undefined) {
-            rankMap[p.id] = snapPos;
-          } else {
-            if (isGroupRound) {
-              // Alpha resolves all ties — sequential positions
-              rankMap[p.id] = snappedCount + (i - snappedCount) + 1;
-            } else {
-              // Knockout — tied positions allowed
-              if (i > 0 && snapshotPosMap[sortedPlayers[i-1].id] === undefined) {
-                if (p.totalPoints !== sortedPlayers[i-1].totalPoints) {
-                  fallbackPos = i + 1;
-                }
-              }
-              rankMap[p.id] = fallbackPos;
-            }
-          }
-        });
-
-        // Post-process rankMap: if two players are genuinely equal on all KO tiebreakers,
-        // give them the same rank regardless of snapshot order.
-        if (!isGroupRound) {
-          const genuinelyEqual = (a, b) => {
-            if (a.totalPoints !== b.totalPoints) return false;
-            if ((a.furthestRound || 0) !== (b.furthestRound || 0)) return false;
-            if (a.gd !== b.gd) return false;
-            const aDiff = Math.abs((a.goalsPredict || 0) - projectedTotal);
-            const bDiff = Math.abs((b.goalsPredict || 0) - projectedTotal);
-            if (aDiff !== bDiff) return false;
-            return true;
-          };
-          // Walk sorted order; assign same rank to runs of equal players
-          let groupStart = 0;
-          for (let i = 1; i <= sortedPlayers.length; i++) {
-            if (i === sortedPlayers.length || !genuinelyEqual(sortedPlayers[groupStart], sortedPlayers[i])) {
-              if (i - groupStart > 1) {
-                const tiedRank = rankMap[sortedPlayers[groupStart].id] ?? (groupStart + 1);
-                for (let j = groupStart; j < i; j++) rankMap[sortedPlayers[j].id] = tiedRank;
-              }
-              groupStart = i;
-            }
-          }
+        if (isGroupRound) {
+          sortedPlayers.forEach((p, i) => { rankMap[p.id] = i + 1; });
+        } else {
+          sortedPlayers.forEach((p, i) => {
+            if (i === 0) { rankMap[p.id] = 1; return; }
+            const prev = sortedPlayers[i - 1];
+            const currentSO = currentRoundSortOrder;
+            const pBonus = wonCurrentRound.has(prev.id) ? 1 : 0;
+            const cBonus = wonCurrentRound.has(p.id) ? 1 : 0;
+            const pfr = prev.isOut ? (prev.furthestRound || 0) : Math.max(prev.furthestRound || 0, currentSO) + pBonus;
+            const cfr = p.isOut    ? (p.furthestRound    || 0) : Math.max(p.furthestRound    || 0, currentSO) + cBonus;
+            const isTied = prev.totalPoints === p.totalPoints
+              && pfr === cfr
+              && (prev.gd || 0) === (p.gd || 0)
+              && Math.abs((prev.goalsPredict || 0) - projectedTotal) === Math.abs((p.goalsPredict || 0) - projectedTotal);
+            rankMap[p.id] = isTied ? rankMap[prev.id] : i + 1;
+          });
         }
 
         const roundLabel     = buildRoundLabel(rounds, currentRoundSortOrder);
@@ -656,6 +663,7 @@
         renderLeaderboard();
         renderReminderCopy();
         renderRoundSummary();
+        runLeaderboardVerify();
 
         let statusMsg = `✅ Loaded — ${currentPicks.length} picks in current round · ${completedPicksAll.length} results recorded.`;
         if (missingOddsCount > 0) {
@@ -1289,6 +1297,80 @@
       document.getElementById('btn-dl-lb').style.display = 'inline-block';
       const noSnapshot = !roundData.lastCompletedRound;
       setStatus('lb-status', noSnapshot ? '⚠️ No completed rounds yet — order is points desc (no snapshot).' : '');
+    }
+
+
+    // ── Leaderboard Cross-Check ───────────────────────────────
+    function runLeaderboardVerify() {
+      if (!roundData) return;
+      const { sortedPlayers, snapshots, lastCompletedRound } = roundData;
+
+      const card = document.getElementById('verify-card');
+      const out  = document.getElementById('verify-result');
+      card.style.display = '';
+
+      if (!lastCompletedRound) {
+        out.innerHTML = '<div style="color:var(--text-muted);font-size:13px">No completed rounds — nothing to verify yet.</div>';
+        return;
+      }
+
+      // Snapshot = authoritative points at end of last completed round
+      const snapMap = {};
+      (snapshots || [])
+        .filter(s => s.round_id === lastCompletedRound.id)
+        .forEach(s => { snapMap[s.player_id] = s.total_points; });
+
+      const diffs = [];
+
+      sortedPlayers.forEach(p => {
+        const snapPts = snapMap[p.id];
+        const issues = [];
+
+        if (snapPts === undefined) {
+          if (p.totalPoints > 0) issues.push(`Not in snapshot but has ${p.totalPoints}pts`);
+        } else if (p.totalPoints !== snapPts) {
+          issues.push(`Pts: export=${p.totalPoints} snap=${snapPts}`);
+        }
+
+        if (issues.length) diffs.push({ name: p.name, issues });
+      });
+
+      // In snapshot but missing from export
+      Object.entries(snapMap).forEach(([pid, snapPts]) => {
+        if (!sortedPlayers.find(p => p.id === pid)) {
+          diffs.push({ name: `Player ID ${pid}`, issues: [`In snapshot (${snapPts}pts) but missing from export`] });
+        }
+      });
+
+      if (diffs.length === 0) {
+        out.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 0">
+            <span style="font-size:28px">✅</span>
+            <div>
+              <div style="font-weight:700;font-size:14px;color:var(--green,#38a169)">All clear — points match snapshot for all ${sortedPlayers.length} players</div>
+              <div style="font-size:12px;color:var(--text-muted)">Based on <strong>${lastCompletedRound.name}</strong> snapshot.</div>
+            </div>
+          </div>`;
+      } else {
+        const rows = diffs.map(d => `
+          <tr>
+            <td style="font-weight:700;padding:6px 8px">${d.name}</td>
+            <td style="padding:6px 8px;color:#c53030;font-size:12px">${d.issues.join(' · ')}</td>
+          </tr>`).join('');
+        out.innerHTML = `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <span style="font-size:22px">⚠️</span>
+            <div style="font-weight:700;color:#c53030">${diffs.length} points mismatch${diffs.length !== 1 ? 'es' : ''} vs <strong>${lastCompletedRound.name}</strong> snapshot</div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr style="background:var(--surface2,#f0f0f0)">
+              <th style="text-align:left;padding:6px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em">Player</th>
+              <th style="text-align:left;padding:6px 8px;font-size:11px;text-transform:uppercase;letter-spacing:.05em">Issue</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Typically means a result was corrected without re-snapshotting.</div>`;
+      }
     }
 
     // ── Download ──────────────────────────────────────────────

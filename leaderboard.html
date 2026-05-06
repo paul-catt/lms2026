@@ -74,6 +74,30 @@
     .ls-pts { font-size:14px; font-weight:800; color:var(--gold); }
     .status-none { font-size:12px; color:var(--red); }
 
+    /* ── Picks Tab ───────────────────────────────────────────── */
+    .picks-table { border-collapse:collapse; white-space:nowrap; font-size:12px; }
+    .picks-table th { font-family:'Rajdhani',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:var(--text-muted); padding:4px 4px 8px; text-align:center; border-bottom:1px solid var(--border); }
+    .picks-table th.pk-name { text-align:left; padding-left:6px; min-width:80px; }
+    .picks-table th.pk-pts  { color:var(--gold); min-width:32px; }
+    .picks-table th.pk-div  { border-left:1px solid var(--border); }
+    .picks-table td { padding:5px 3px; text-align:center; vertical-align:middle; border-bottom:1px solid var(--border); }
+    .picks-table tr:last-child td { border-bottom:none; }
+    .picks-table tr:hover td { background:rgba(255,255,255,0.025); }
+    .picks-table td.pk-pos  { font-size:11px; font-weight:700; color:var(--text-muted); padding-right:2px; padding-left:6px; }
+    .picks-table td.pk-name { text-align:left; font-weight:600; font-size:13px; padding-left:6px; }
+    .picks-table td.pk-name.elim { color:var(--text-muted); }
+    .picks-table td.pk-pts  { font-family:'Rajdhani',sans-serif; font-size:16px; font-weight:700; color:var(--gold); padding-left:6px; padding-right:6px; }
+    .picks-table td.pk-div  { border-left:1px solid var(--border); }
+    .pk-chip { display:inline-flex; align-items:center; justify-content:center; font-size:17px; width:30px; height:30px; border-radius:5px; border:2.5px solid #4b5563; line-height:1; }
+    .pk-chip.win  { border-color:#10b981; box-shadow:0 0 5px rgba(16,185,129,0.35); }
+    .pk-chip.draw { border-color:#eab308; box-shadow:0 0 5px rgba(234,179,8,0.35); }
+    .pk-chip.loss { border-color:#ef4444; box-shadow:0 0 5px rgba(239,68,68,0.35); }
+    .pk-chip.pend { border-color:#4b5563; opacity:0.4; }
+    .pk-rh-gp1  { color:#60a5fa !important; }
+    .pk-rh-gp2  { color:#34d399 !important; }
+    .pk-rh-gp3  { color:#a78bfa !important; }
+    .pk-rh-ko   { color:var(--gold) !important; }
+
     /* ── Pick Matrix ─────────────────────────────────────────── */
     .matrix-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
     .matrix-table { border-collapse:collapse; font-size:11px; white-space:nowrap; }
@@ -132,12 +156,35 @@
 
       <div class="lb-tabs">
         <div class="lb-tab active" data-view="main" onclick="switchView('main')">📊 Table</div>
+        <div class="lb-tab" data-view="picks" onclick="switchView('picks')">🏁 Picks</div>
         <div class="lb-tab" data-view="matrix" onclick="switchView('matrix')">🔢 Matrix</div>
-        <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Longshot</div>
+        <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Long</div>
         <div class="lb-tab" data-view="fallen" onclick="switchView('fallen')">💀 Fallen</div>
       </div>
 
       <div id="loading" class="loading"><div class="spinner"></div>Loading standings...</div>
+
+      <!-- PICKS TAB -->
+      <div class="lb-view" id="view-picks">
+        <div id="picks-wrap" class="matrix-wrap">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+        <div style="margin-top:14px; display:flex; gap:14px; flex-wrap:wrap; align-items:center">
+          <span style="font-size:11px;color:var(--text-muted)">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:3px;border:2.5px solid #10b981;box-shadow:0 0 5px rgba(16,185,129,0.4);vertical-align:middle;margin-right:4px"></span>Win
+          </span>
+          <span style="font-size:11px;color:var(--text-muted)">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:3px;border:2.5px solid #eab308;box-shadow:0 0 5px rgba(234,179,8,0.4);vertical-align:middle;margin-right:4px"></span>Draw
+          </span>
+          <span style="font-size:11px;color:var(--text-muted)">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:3px;border:2.5px solid #ef4444;box-shadow:0 0 5px rgba(239,68,68,0.4);vertical-align:middle;margin-right:4px"></span>Loss
+          </span>
+          <span style="font-size:11px;color:var(--text-muted)">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:3px;border:2.5px solid #4b5563;opacity:0.45;vertical-align:middle;margin-right:4px"></span>Pending
+          </span>
+        </div>
+        <div class="rotate-hint">↔ Rotate for full table</div>
+      </div>
 
       <!-- MAIN LEADERBOARD -->
       <div class="lb-view active" id="view-main">
@@ -164,17 +211,46 @@
             <tbody id="leaderboard-body"></tbody>
           </table>
         </div>
-        <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border)">
-          <div style="display:grid; grid-template-columns:auto 1fr; gap:4px 10px; font-size:11px; color:var(--text-muted); align-items:center">
-            <span>🟣</span><span>Playing today</span>
-            <span class="knockout-only" style="display:none">🔴</span><span class="knockout-only" style="display:none">Eliminated</span>
-            <span class="knockout-only hide-mobile" style="display:none">·</span><span class="knockout-only hide-mobile" style="display:none">Pool remaining: 🔵 Favourite &nbsp;🟡 Dark Horse &nbsp;🟠 Long Shot &nbsp;🔴 No Hoper</span>
-            <span class="group-only"><span style="border-bottom:2px solid #94a3b8;padding-bottom:1px">&nbsp;&nbsp;&nbsp;&nbsp;</span></span><span class="group-only">2pt pick</span>
-            <span class="group-only"><span style="border-bottom:2px solid #f59e0b;padding-bottom:1px">&nbsp;&nbsp;&nbsp;&nbsp;</span></span><span class="group-only">3pt pick</span>
-            <span class="group-only"><span style="border-bottom:3px double #94a3b8;padding-bottom:1px">&nbsp;&nbsp;&nbsp;&nbsp;</span></span><span class="group-only">Longshot (3pts)</span>
-            <span class="group-only"><span style="border-bottom:3px double #f59e0b;padding-bottom:1px">&nbsp;&nbsp;&nbsp;&nbsp;</span></span><span class="group-only">Longshot (4pts)</span>
+        <div style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
+
+          <!-- Row 1: Playing today + Eliminated (KO only) -->
+          <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)">
+              <span style="width:10px;height:10px;border-radius:50%;background:#8b5cf6;display:inline-block;flex-shrink:0"></span>Playing today
+            </span>
+            <span class="knockout-only" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)">
+              <span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0"></span>Eliminated
+            </span>
+            <span class="knockout-only hide-mobile" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)">
+              Pool remaining: 🔵 Favourite &nbsp;🟡 Dark Horse &nbsp;🟠 Long Shot &nbsp;🔴 No Hoper
+            </span>
+          </div>
+
+          <!-- Row 2: grey underline picks -->
+          <div class="group-only" style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted)">
+              <span style="display:inline-block;width:28px;border-bottom:2px solid #94a3b8"></span>2pt pick
+            </span>
+            <span style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted)">
+              <span style="display:inline-block;width:28px;border-bottom:3px double #94a3b8"></span>Longshot (3pts)
+            </span>
+          </div>
+
+          <!-- Row 3: gold underline picks -->
+          <div class="group-only" style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted)">
+              <span style="display:inline-block;width:28px;border-bottom:2px solid #f59e0b"></span>3pt pick
+            </span>
+            <span style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted)">
+              <span style="display:inline-block;width:28px;border-bottom:3px double #f59e0b"></span>Longshot (4pts)
+            </span>
+          </div>
+
+          <!-- Row 4: Pick of the Round -->
+          <div style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted)">
             <span>🏆</span><span>Pick of the Round — highest scorer that round</span>
           </div>
+
         </div>
         <div class="rotate-hint">↔ Rotate for full table</div>
       </div>
@@ -227,6 +303,24 @@
     const TOTAL_MATCHES = 104;
     const LS_KEY = 'lms2026_test_date';
 
+    // Deadlines: picks for a round are hidden until this date at 11:00 UTC
+    const ROUND_START_DATES = {
+      'Group Phase 1': '2026-06-11',
+      'Group Phase 2': '2026-06-18',
+      'Group Phase 3': '2026-06-24',
+      'Round of 32':   '2026-06-28',
+      'Round of 16':   '2026-07-04',
+      'Quarter Finals':'2026-07-09',
+      'Semi Finals':   '2026-07-14',
+      'Final':         '2026-07-19'
+    };
+
+    function isRoundDeadlinePassed(roundName, effectiveDate) {
+      const dateStr = ROUND_START_DATES[roundName];
+      if (!dateStr) return true; // unknown round — show picks
+      return effectiveDate >= new Date(dateStr + 'T11:00:00Z');
+    }
+
     const urlParams = new URLSearchParams(window.location.search);
     const mySlug = urlParams.get('me') || localStorage.getItem('lms2026_my_slug') || null;
 
@@ -272,11 +366,158 @@
     function switchView(name) {
       document.querySelectorAll('.lb-tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
       document.querySelectorAll('.lb-view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+      if (name === 'picks'  && _leaderboardData) renderPicksView();
       if (name === 'matrix' && _leaderboardData) renderMatrixView();
       if (name === 'fallen') renderFallenView();
     }
 
     let _leaderboardData = null;
+
+    function renderPicksView() {
+      const wrap = document.getElementById('picks-wrap');
+      if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the standings first.</p>'; return; }
+      const { sorted, allPicks, rounds } = _leaderboardData;
+
+      // Round order: GP1, GP2, GP3 then KO rounds by sort_order
+      const GP_ROUNDS  = ['Group Phase 1', 'Group Phase 2', 'Group Phase 3'];
+      const KO_ROUNDS  = ['Round of 32', 'Round of 16', 'Quarter Finals', 'Semi Finals', 'Final'];
+      const roundOrder = [...GP_ROUNDS, ...KO_ROUNDS];
+
+      // Build round id lookup by name
+      const roundByName = {};
+      (rounds || []).forEach(r => { roundByName[r.name] = r; });
+
+      // Ordered list of round objects that exist in DB
+      const orderedRounds = roundOrder.map(n => roundByName[n]).filter(Boolean);
+
+      // For group rounds: 2 picks per round (multiplier 3 then 2). For KO: 1 pick.
+      // Build slot list: { roundId, roundName, label, isKO, divClass }
+      const slots = [];
+      orderedRounds.forEach(r => {
+        const isKO = r.round_type === 'knockout';
+        const gpIdx = GP_ROUNDS.indexOf(r.name); // 0,1,2 or -1
+        const gpLabel = gpIdx >= 0 ? 'GP' + (gpIdx + 1) : r.name;
+        const koShort = { 'Round of 32':'R32','Round of 16':'R16','Quarter Finals':'QF','Semi Finals':'SF','Final':'F' };
+        if (isKO) {
+          slots.push({ roundId: r.id, roundName: r.name, label: koShort[r.name] || r.name, multiplier: null, isKO: true });
+        } else {
+          slots.push({ roundId: r.id, roundName: r.name, label: '3pt', multiplier: 3, isKO: false, gpLabel });
+          slots.push({ roundId: r.id, roundName: r.name, label: '2pt', multiplier: 2, isKO: false, gpLabel });
+        }
+      });
+
+      // Build pick lookup: player_id -> round_id|multiplier -> pick
+      // For KO picks multiplier is null so key is just round_id
+      const pickLookup = {};
+      (allPicks || []).forEach(p => {
+        if (!pickLookup[p.player_id]) pickLookup[p.player_id] = {};
+        const res = p.pick_results && p.pick_results[0];
+        const result = res && res.match_result ? res.match_result : 'pending';
+        const flag   = p.teams ? p.teams.flag_emoji : '?';
+        const key    = p.round_id + '|' + (p.multiplier || 'ko');
+        // If two picks for same slot somehow, last wins — shouldn't happen
+        pickLookup[p.player_id][key] = { flag, result };
+      });
+
+      // Short name helper: "First L"
+      function shortName(fullName) {
+        if (!fullName) return '?';
+        const parts = fullName.trim().split(/\s+/);
+        if (parts.length === 1) return parts[0];
+        return parts[0] + ' ' + parts[parts.length - 1][0];
+      }
+
+      // Group slots into visual column groups for header row 1
+      // GP1(2cols), GP2(2cols), GP3(2cols), each KO round(1col)
+      // Build group spans: { label, span, cls }
+      const groups = [];
+      let i = 0;
+      while (i < slots.length) {
+        const s = slots[i];
+        if (!s.isKO) {
+          // Collect all slots for this GP round
+          const gpLabel = s.gpLabel;
+          let span = 0;
+          while (i + span < slots.length && !slots[i + span].isKO && slots[i + span].gpLabel === gpLabel) span++;
+          const gpIdx = GP_ROUNDS.findIndex(n => roundByName[n] && roundByName[n].id === s.roundId);
+          const cls = ['pk-rh-gp1','pk-rh-gp2','pk-rh-gp3'][gpIdx] || '';
+          groups.push({ label: gpLabel, span, cls, isKO: false });
+          i += span;
+        } else {
+          groups.push({ label: s.label, span: 1, cls: 'pk-rh-ko', isKO: true });
+          i++;
+        }
+      }
+
+      // Render
+      let html = '<table class="picks-table"><thead>';
+
+      // Row 1: group headers
+      html += '<tr>';
+      html += '<th class="pk-name" colspan="2"></th><th class="pk-pts"></th>';
+      let firstGroup = true;
+      groups.forEach(g => {
+        const divCls = firstGroup ? ' pk-div' : ' pk-div';
+        html += `<th colspan="${g.span}" class="${divCls} ${g.cls}" style="text-align:center">${g.label}</th>`;
+        firstGroup = false;
+      });
+      html += '</tr>';
+
+      // Row 2: slot headers
+      html += '<tr>';
+      html += '<th class="pk-name" style="padding-bottom:8px">#</th><th class="pk-name" style="padding-bottom:8px">Player</th><th class="pk-pts" style="padding-bottom:8px">Pts</th>';
+      let prevGpLabel = null;
+      slots.forEach(s => {
+        const isFirstInGroup = s.isKO || s.gpLabel !== prevGpLabel;
+        const divCls = isFirstInGroup ? ' pk-div' : '';
+        const colCls = s.isKO ? 'pk-rh-ko' : (GP_ROUNDS.indexOf(s.roundName) === 0 ? 'pk-rh-gp1' : GP_ROUNDS.indexOf(s.roundName) === 1 ? 'pk-rh-gp2' : 'pk-rh-gp3');
+        html += `<th class="${divCls} ${colCls}">${s.label}</th>`;
+        prevGpLabel = s.gpLabel;
+      });
+      html += '</tr></thead><tbody>';
+
+      // Build set of round IDs whose deadline has NOT yet passed — picks in these rounds are masked
+      const now = getEffectiveDate();
+      const lockedRoundIds = new Set(
+        (rounds || []).filter(r => !isRoundDeadlinePassed(r.name, now)).map(r => r.id)
+      );
+
+      // Rows
+      sorted.forEach((p, idx) => {
+        const isElim = p.is_eliminated;
+        const pLookup = pickLookup[p.player_id] || {};
+        const nameCls = isElim ? ' elim' : '';
+        const rowStyle = isElim ? ' style="opacity:0.55"' : '';
+
+        html += `<tr${rowStyle}>`;
+        html += `<td class="pk-pos">${idx + 1}</td>`;
+        html += `<td class="pk-name${nameCls}">${shortName(p.name)}</td>`;
+        html += `<td class="pk-pts">${p.total_points || 0}</td>`;
+
+        let prevGp = null;
+        slots.forEach(s => {
+          const key = s.roundId + '|' + (s.isKO ? '2' : s.multiplier);
+          const pick = pLookup[key];
+          const isFirstInGroup = s.isKO || s.gpLabel !== prevGp;
+          const divCls = isFirstInGroup ? ' pk-div' : '';
+          if (!pick) {
+            html += `<td class="${divCls}"></td>`;
+          } else if (lockedRoundIds.has(s.roundId)) {
+            // Deadline not yet passed — show that a pick exists but hide what it is
+            html += `<td class="${divCls}" title="Pick hidden until deadline"><span class="pk-chip pend" style="font-size:13px;opacity:0.6">🔒</span></td>`;
+          } else {
+            const cls = pick.result === 'win' ? 'win' : pick.result === 'draw' ? 'draw' : pick.result === 'loss' ? 'loss' : 'pend';
+            html += `<td class="${divCls}"><span class="pk-chip ${cls}">${pick.flag}</span></td>`;
+          }
+          prevGp = s.gpLabel;
+        });
+
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      wrap.innerHTML = html;
+    }
 
     function renderMatrixView() {
       const wrap = document.getElementById('matrix-wrap');
@@ -684,12 +925,31 @@
           return '<span style="color:var(--red);font-size:14px" title="Eliminated">🔴</span>';
         }
 
+        // Build set of players who have won their current round pick
+        // AND still have eligible teams remaining (safe pick for next round possible).
+        // We derive "has picks remaining" directly from pool data rather than trusting
+        // is_eliminated, which is set manually and may lag behind live results.
+        const wonCurrentRound = new Set();
+        if (currentRound && isKnockout) {
+          (allPicks || []).forEach(pick => {
+            if (pick.round_id !== currentRound.id) return;
+            const res = pick.pick_results && pick.pick_results[0];
+            if (res && res.match_result === 'win') {
+              const used = usedByPlayer[pick.player_id] || new Set();
+              const hasTeamsLeft = alivePoolTeams.some(t => !used.has(t.id));
+              if (hasTeamsLeft) wonCurrentRound.add(pick.player_id);
+            }
+          });
+        }
+
         const sorted = (scores || []).sort((a, b) => {
           if (b.total_points !== a.total_points) return b.total_points - a.total_points;
           if (isKnockout) {
             const currentSO = currentRound ? currentRound.sort_order : 0;
-            const afr = a.is_eliminated ? (furthestMap[a.player_id] || 0) : Math.max(furthestMap[a.player_id] || 0, currentSO);
-            const bfr = b.is_eliminated ? (furthestMap[b.player_id] || 0) : Math.max(furthestMap[b.player_id] || 0, currentSO);
+            const aBonus = wonCurrentRound.has(a.player_id) ? 1 : 0;
+            const bBonus = wonCurrentRound.has(b.player_id) ? 1 : 0;
+            const afr = a.is_eliminated ? (furthestMap[a.player_id] || 0) : Math.max(furthestMap[a.player_id] || 0, currentSO) + aBonus;
+            const bfr = b.is_eliminated ? (furthestMap[b.player_id] || 0) : Math.max(furthestMap[b.player_id] || 0, currentSO) + bBonus;
             if (bfr !== afr) return bfr - afr;
           }
           const agd = gdMap[a.player_id] || 0, bgd = gdMap[b.player_id] || 0;
@@ -718,7 +978,7 @@
           const samePts   = prev.total_points === p.total_points;
           const sameRnd   = !isKnockout || (furthestMap[prev.player_id] || 0) === (furthestMap[p.player_id] || 0);
           const sameGd    = (gdMap[prev.player_id] || 0) === (gdMap[p.player_id] || 0);
-          const samePrevSO = isKnockout ? (() => { const currentSO = currentRound ? currentRound.sort_order : 0; const pfr = prev.is_eliminated ? (furthestMap[prev.player_id]||0) : Math.max(furthestMap[prev.player_id]||0, currentSO); const cfr = p.is_eliminated ? (furthestMap[p.player_id]||0) : Math.max(furthestMap[p.player_id]||0, currentSO); return pfr === cfr; })() : true;
+          const samePrevSO = isKnockout ? (() => { const currentSO = currentRound ? currentRound.sort_order : 0; const pBonus = wonCurrentRound.has(prev.player_id) ? 1 : 0; const cBonus = wonCurrentRound.has(p.player_id) ? 1 : 0; const pfr = prev.is_eliminated ? (furthestMap[prev.player_id]||0) : Math.max(furthestMap[prev.player_id]||0, currentSO) + pBonus; const cfr = p.is_eliminated ? (furthestMap[p.player_id]||0) : Math.max(furthestMap[p.player_id]||0, currentSO) + cBonus; return pfr === cfr; })() : true;
           const sameGoals = projectedTotal === null || Math.abs((prev.total_goals_prediction||0) - projectedTotal) === Math.abs((p.total_goals_prediction||0) - projectedTotal);
           const isTied = isKnockout && samePts && samePrevSO && sameGd && sameGoals;
           if (isTied) {
@@ -751,7 +1011,7 @@
           const koForm    = form.filter(f => f.isKO);
           const groupPips = groupForm.map(f => '<span class="form-pip form-' + f.result + '" title="' + f.result + '"></span>').join('');
           const koPips    = koForm.map(f => '<span class="form-pip form-' + f.result + '" title="' + f.result + '"></span>').join('');
-          const formHtml  = '<div style="line-height:1.6">' + (groupPips || '') + (koPips ? '<br>' + koPips : '') + '</div>';
+          const formHtml  = '<div style="line-height:1.6;white-space:nowrap">' + (groupPips || '') + (koPips ? '<br>' + koPips : '') + '</div>';
           const gdHtml   = gd > 0 ? '<span class="gd-pos">+' + gd + '</span>' : gd < 0 ? '<span class="gd-neg">' + gd + '</span>' : '<span class="gd-zero">0</span>';
           const flagHtml = todayPicks_p.map(pick => {
             const cls = pick.multiplier === 3 ? (pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt') : (pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt');
@@ -815,6 +1075,7 @@
         document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
         _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches };
+        if (document.getElementById('view-picks').classList.contains('active'))  renderPicksView();
         if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
         if (document.getElementById('view-fallen').classList.contains('active')) renderFallenView();
         renderLongshotView();

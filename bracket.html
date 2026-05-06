@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bracket — LMS 2026</title>
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Icons & PWA -->
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.json">
@@ -35,8 +33,6 @@
       min-width: 860px;
       align-items: stretch;
     }
-
-    /* ── Columns ── */
     .bracket-col {
       display: flex;
       flex-direction: column;
@@ -68,26 +64,21 @@
       padding: 3px 5px;
       min-height: 0;
     }
-
-    /* ── Match card ── */
     .bracket-match {
       border: 1px solid var(--border);
       border-radius: 7px;
       overflow: hidden;
       background: var(--surface2);
     }
-    /* Teams confirmed in DB, not yet played */
     .bracket-match.state-confirmed {
       border-color: #3b82f6;
       border-left-width: 3px;
     }
-    /* Teams from uploaded JSON prediction only */
     .bracket-match.state-predicted {
       border-color: var(--border);
       border-left: 2px dashed #4b5563;
       background: rgba(255,255,255,0.02);
     }
-    /* Match complete — actual result */
     .bracket-match.state-complete {
       border-color: var(--green);
       border-left-width: 3px;
@@ -125,36 +116,25 @@
       min-height: 32px;
     }
     .bracket-team:last-child { border-bottom: none; }
-
-    /* Actual confirmed result — winner */
     .bracket-team.winner-actual {
       background: rgba(16,185,129,0.14);
       font-weight: 700;
       color: var(--green);
     }
-    /* Actual confirmed result — loser */
     .bracket-team.loser-actual { opacity: 0.35; }
-
-    /* Predicted winner (from odds) — teams are actual */
     .bracket-team.winner-pred {
       background: rgba(59,130,246,0.1);
       font-weight: 600;
       color: #93c5fd;
     }
-    /* Predicted loser — no dimming, just neutral */
     .bracket-team.loser-pred { color: var(--text-muted); }
-
-    /* Predicted team (from JSON, not yet in DB) */
     .bracket-team.team-pred { font-style: italic; color: var(--text-muted); }
-    /* Predicted team AND predicted winner */
     .bracket-team.team-pred.winner-pred {
       font-style: italic;
       color: #93c5fd;
       background: rgba(59,130,246,0.08);
     }
-    /* Predicted team AND predicted loser — no dimming */
     .bracket-team.team-pred.loser-pred { color: var(--text-muted); font-style: italic; }
-
     .bracket-team .t-flag { font-size: 13px; flex-shrink: 0; }
     .bracket-team .t-name {
       flex: 1;
@@ -191,8 +171,6 @@
       font-style: italic;
     }
     .tbd-row:last-child { border-bottom: none; }
-
-    /* ── Connector ── */
     .bracket-connector {
       width: 20px;
       flex-shrink: 0;
@@ -208,8 +186,6 @@
       height: 100%;
       overflow: visible;
     }
-
-    /* ── Champion ── */
     .champion-col {
       display: flex;
       flex-direction: column;
@@ -234,8 +210,6 @@
       text-align: center;
     }
     .champion-name.predicted { color: #93c5fd; font-style: italic; font-weight: 600; }
-
-    /* ── Legend ── */
     .legend {
       display: flex;
       gap: 14px;
@@ -247,19 +221,10 @@
     }
     .legend-item { display: flex; align-items: center; gap: 5px; }
     .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .legend-line {
-      width: 18px; height: 1px;
-      background: var(--text-muted);
-      opacity: 0.5;
-      flex-shrink: 0;
-    }
-
     .bracket-meta { font-size: 11px; color: var(--text-muted); }
     .no-bracket { padding: 40px; text-align: center; color: var(--text-muted); }
     .scroll-hint { display: none; font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
     @media(max-width: 960px) { .scroll-hint { display: block; } }
-
-    /* ── View toggle ── */
     .view-toggle { display: flex; gap: 6px; margin-bottom: 14px; }
     .view-toggle-btn {
       padding: 5px 14px;
@@ -355,9 +320,6 @@
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const mySlug = urlParams.get('me') || localStorage.getItem('lms2026_my_slug') || null;
-
     const ROUND_DEFS = [
       { key: 'r32',   label: 'Round of 32',    count: 16 },
       { key: 'r16',   label: 'Round of 16',    count: 8  },
@@ -366,17 +328,14 @@
       { key: 'final', label: 'Final',          count: 1  },
     ];
 
-    // ── View toggle ───────────────────────────────────────────────
     let _currentView = 'all';
-    let _lastRenderArgs = null; // store args so we can re-render on toggle
+    let _lastRenderArgs = null;
 
     function setView(mode) {
       _currentView = mode;
       document.getElementById('btn-all-rounds').classList.toggle('active', mode === 'all');
       document.getElementById('btn-live-view').classList.toggle('active', mode === 'live');
-      if (_lastRenderArgs) {
-        renderBracket(..._lastRenderArgs);
-      }
+      if (_lastRenderArgs) renderBracket(..._lastRenderArgs);
     }
 
     function fmtKickoff(iso) {
@@ -388,7 +347,6 @@
 
     async function loadBracket() {
       try {
-        // 1. Latest bracket prediction blob
         const { data: preds, error: predErr } = await db
           .from('bracket_predictions')
           .select('data, label, created_at')
@@ -404,21 +362,41 @@
 
         const pred        = preds[0];
         const bracketData = pred.data;
-        // bracketData shape:
-        // {
-        //   r32: [73,74,...], r16: [...], qf: [...], sf: [...], final: [104],
-        //   predicted_teams: {
-        //     "73": { home: { name, flag }, away: { name, flag } },
-        //     ...
-        //   }
-        // }
+        const progression = bracketData.progression || {};
 
-        const predTeams = bracketData.predicted_teams || {};
-        const allNums   = ['r32','r16','qf','sf','final']
+        // ── Build feeders map: matchNum -> { home: feederMatchNum, away: feederMatchNum }
+        const feeders = {};
+        Object.entries(progression).forEach(([src, p]) => {
+          const srcNum = parseInt(src);
+          if (!feeders[p.next]) feeders[p.next] = {};
+          feeders[p.next][p.slot] = srcNum;
+        });
+
+        // ── Derive correct render order from progression tree ──────
+        // Walk home-first from the Final down to each round's depth.
+        // This is always correct regardless of blob array order.
+        function getOrderedMatches(matchNum, depth) {
+          if (depth === 0) return [matchNum];
+          const f = feeders[matchNum] || {};
+          return [
+            ...(f.home ? getOrderedMatches(f.home, depth - 1) : []),
+            ...(f.away ? getOrderedMatches(f.away, depth - 1) : []),
+          ];
+        }
+
+        const finalNum = (bracketData.final || [])[0];
+        if (finalNum) {
+          bracketData.sf  = getOrderedMatches(finalNum, 1);
+          bracketData.qf  = getOrderedMatches(finalNum, 2);
+          bracketData.r16 = getOrderedMatches(finalNum, 3);
+          bracketData.r32 = getOrderedMatches(finalNum, 4);
+        }
+
+        // ── Fetch all referenced matches from DB ──────────────────
+        const allNums = ['r32','r16','qf','sf','final']
           .flatMap(k => bracketData[k] || [])
           .filter(Boolean);
 
-        // 2. Pull all referenced KO matches from DB
         const { data: matchRows, error: matchErr } = await db
           .from('matches')
           .select(`
@@ -436,7 +414,6 @@
         const matchMap = {};
         (matchRows || []).forEach(m => { matchMap[m.match_number] = m; });
 
-        // 3. Latest odds per team (first seen = most recent, ordered by fetched_at desc)
         const { data: oddsRows } = await db
           .from('team_odds')
           .select('team_id, odds_decimal')
@@ -449,27 +426,12 @@
           }
         });
 
-        // 4. Build name → team_id lookup so predicted teams can get odds too
-        // Normalise to lowercase for fuzzy matching
-        const { data: allTeams } = await db
-          .from('teams')
-          .select('id, name');
+        const derivedTeams = derivePredictedTeams(bracketData, matchMap, oddsMap, feeders);
+        _lastRenderArgs = [bracketData, matchMap, derivedTeams, oddsMap];
 
-        const nameToId = {};
-        (allTeams || []).forEach(t => {
-          nameToId[t.name.toLowerCase().trim()] = t.id;
-        });
-
-        // 5. Render
-        // Derive predicted teams for R16+ from R32 progression + odds
-        const allPredTeams = derivePredictedTeams(bracketData, predTeams, matchMap, oddsMap, nameToId);
-        _lastRenderArgs = [bracketData, matchMap, allPredTeams, oddsMap, nameToId];
-
-        renderBracket(bracketData, matchMap, allPredTeams, oddsMap, nameToId);
-        // Draw SVG connectors after DOM is laid out
+        renderBracket(bracketData, matchMap, derivedTeams, oddsMap);
         requestAnimationFrame(() => drawConnectors());
 
-        // Meta
         const uploaded = new Date(pred.created_at).toLocaleString('en-GB', {
           day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
         });
@@ -477,7 +439,7 @@
         document.getElementById('bracket-meta').textContent =
           `${labelStr}Predictions updated ${uploaded}`;
 
-        document.getElementById('loading').style.display        = 'none';
+        document.getElementById('loading').style.display         = 'none';
         document.getElementById('bracket-content').style.display = 'block';
 
       } catch(err) {
@@ -489,7 +451,6 @@
 
     // ── Winner helpers ────────────────────────────────────────────
 
-    // Lowest decimal odds = favourite. Returns 'home', 'away', or null.
     function predictedWinnerByOdds(homeId, awayId, oddsMap) {
       if (!homeId || !awayId) return null;
       const h = oddsMap[homeId];
@@ -500,7 +461,6 @@
       return h <= a ? 'home' : 'away';
     }
 
-    // Returns 'home', 'away', or null.
     function actualWinner(match) {
       if (!match || match.status !== 'complete') return null;
       if (match.pens_winner_id) {
@@ -511,172 +471,89 @@
       return null;
     }
 
-    // ── Render ────────────────────────────────────────────────────
+    // ── Derive predicted teams purely from DB + progression + odds ──
+    function derivePredictedTeams(bracketData, matchMap, oddsMap, feeders) {
 
-    // ── Derive predicted teams for R16+ from progression + odds ──
-    // For each match in R16/QF/SF/Final, look up which R32/R16/QF matches
-    // feed into it via the progression map, find the predicted winner of
-    // each feeder match (by odds), and use that as the predicted team.
-    function derivePredictedTeams(bracketData, predTeams, matchMap, oddsMap, nameToId) {
-      const derived = Object.assign({}, predTeams); // start with R32 data
+      // Get the winning team from a match (actual or predicted by odds).
+      // Recurses into feeders if teams not yet assigned.
+      function getWinner(matchNum) {
+        const m = matchMap[matchNum];
+        if (!m) return null;
 
-      // Remove any stale prediction entries where DB already has actual teams assigned
-      Object.keys(derived).forEach(key => {
-        const mn = parseInt(key);
-        const dbMatch = matchMap[mn];
-        if (dbMatch && dbMatch.home_team_id && dbMatch.away_team_id) {
-          delete derived[key];
-        }
-      });
-      const progression = bracketData.progression || {
-        "74":{"next":89,"slot":"home"},"77":{"next":89,"slot":"away"},
-        "73":{"next":90,"slot":"home"},"75":{"next":90,"slot":"away"},
-        "76":{"next":91,"slot":"home"},"78":{"next":91,"slot":"away"},
-        "79":{"next":92,"slot":"home"},"80":{"next":92,"slot":"away"},
-        "84":{"next":93,"slot":"home"},"83":{"next":93,"slot":"away"},
-        "81":{"next":94,"slot":"home"},"82":{"next":94,"slot":"away"},
-        "86":{"next":95,"slot":"home"},"88":{"next":95,"slot":"away"},
-        "85":{"next":96,"slot":"home"},"87":{"next":96,"slot":"away"},
-        "89":{"next":97,"slot":"home"},"90":{"next":97,"slot":"away"},
-        "93":{"next":98,"slot":"home"},"94":{"next":98,"slot":"away"},
-        "91":{"next":99,"slot":"home"},"92":{"next":99,"slot":"away"},
-        "95":{"next":100,"slot":"home"},"96":{"next":100,"slot":"away"},
-        "97":{"next":101,"slot":"home"},"98":{"next":101,"slot":"away"},
-        "99":{"next":102,"slot":"home"},"100":{"next":102,"slot":"away"},
-        "101":{"next":104,"slot":"home"},"102":{"next":104,"slot":"away"}
-      };
-
-      // Helper: get predicted winner team object for a match number
-      // Returns { name, flag } or null
-      function getPredWinner(matchNum) {
-        const key = String(matchNum);
-        const dbMatch = matchMap[matchNum];
-
-        // If match is complete, use actual winner
-        if (dbMatch && dbMatch.status === 'complete') {
-          const w = dbMatch.home_score > dbMatch.away_score ? 'home'
-                  : dbMatch.away_score > dbMatch.home_score ? 'away'
-                  : dbMatch.pens_winner_id
-                    ? (dbMatch.pens_winner_id === dbMatch.home_team_id ? 'home' : 'away')
-                    : null;
+        // Complete — use actual winner
+        if (m.status === 'complete') {
+          const w = m.pens_winner_id
+            ? (m.pens_winner_id === m.home_team_id ? 'home' : 'away')
+            : m.home_score > m.away_score ? 'home'
+            : m.away_score > m.home_score ? 'away'
+            : null;
           if (!w) return null;
-          const t = w === 'home' ? dbMatch.home_team : dbMatch.away_team;
-          return t ? { name: t.name, flag: t.flag_emoji } : null;
+          const t  = w === 'home' ? m.home_team : m.away_team;
+          const id = w === 'home' ? m.home_team_id : m.away_team_id;
+          return t ? { name: t.name, flag: t.flag_emoji, teamId: id, isActual: true } : null;
         }
 
-        // If DB has actual teams, use odds to predict
-        if (dbMatch && dbMatch.home_team_id && dbMatch.away_team_id) {
-          const w = predictedWinnerByOdds(dbMatch.home_team_id, dbMatch.away_team_id, oddsMap);
-          const t = w === 'home' ? dbMatch.home_team : dbMatch.away_team;
-          return t ? { name: t.name, flag: t.flag_emoji } : null;
+        // Both teams in DB — predict by odds
+        if (m.home_team_id && m.away_team_id) {
+          const w  = predictedWinnerByOdds(m.home_team_id, m.away_team_id, oddsMap);
+          const t  = w === 'home' ? m.home_team : m.away_team;
+          const id = w === 'home' ? m.home_team_id : m.away_team_id;
+          return t ? { name: t.name, flag: t.flag_emoji, teamId: id, isActual: false } : null;
         }
 
-        // Use derived predicted teams + odds
-        const pred = derived[key];
-        if (pred && pred.home && pred.away) {
-          const homeId = nameToId[(pred.home.name || '').toLowerCase().trim()] || null;
-          const awayId = nameToId[(pred.away.name || '').toLowerCase().trim()] || null;
-          const w = predictedWinnerByOdds(homeId, awayId, oddsMap);
-          return w === 'away' ? pred.away : pred.home;
-        }
-
-        return null;
+        // Teams not yet assigned — recurse into feeders
+        const f = feeders[matchNum] || {};
+        const homePred = f.home ? getWinner(f.home) : null;
+        const awayPred = f.away ? getWinner(f.away) : null;
+        if (!homePred && !awayPred) return null;
+        if (!homePred) return awayPred;
+        if (!awayPred) return homePred;
+        const w = predictedWinnerByOdds(homePred.teamId, awayPred.teamId, oddsMap);
+        return w === 'away' ? awayPred : homePred;
       }
 
-      // Process rounds in order: R16, QF, SF, Final
-      const roundKeys = ['r16', 'qf', 'sf', 'final'];
-      roundKeys.forEach(rk => {
-        const matchNums = bracketData[rk] || [];
-        matchNums.forEach(matchNum => {
-          // Already has predicted teams (from upload)? Skip
-          if (derived[String(matchNum)]) return;
-          // DB teams assigned? Skip — renderMatchCard will use those
-          const dbMatch = matchMap[matchNum];
-          if (dbMatch && dbMatch.home_team_id && dbMatch.away_team_id) return;
+      // Resolve both slots for a match
+      function resolveMatch(matchNum) {
+        const m = matchMap[matchNum];
+        const f = feeders[matchNum] || {};
 
-          // Find feeder matches from progression map
-          const homeFeeder = Object.entries(progression).find(([src, p]) =>
-            p.next === matchNum && p.slot === 'home'
-          );
-          const awayFeeder = Object.entries(progression).find(([src, p]) =>
-            p.next === matchNum && p.slot === 'away'
-          );
+        const homeTeam = (m && m.home_team_id)
+          ? { name: m.home_team.name, flag: m.home_team.flag_emoji, teamId: m.home_team_id, isActual: true }
+          : (f.home ? getWinner(f.home) : null);
 
-          const homeTeam = homeFeeder ? getPredWinner(parseInt(homeFeeder[0])) : null;
-          const awayTeam = awayFeeder ? getPredWinner(parseInt(awayFeeder[0])) : null;
+        const awayTeam = (m && m.away_team_id)
+          ? { name: m.away_team.name, flag: m.away_team.flag_emoji, teamId: m.away_team_id, isActual: true }
+          : (f.away ? getWinner(f.away) : null);
 
-          if (homeTeam || awayTeam) {
-            derived[String(matchNum)] = {
-              home: homeTeam || { name: 'TBD', flag: '' },
-              away: awayTeam || { name: 'TBD', flag: '' }
-            };
-          }
+        return { home: homeTeam, away: awayTeam };
+      }
+
+      const derived = {};
+      ['r16','qf','sf','final'].forEach(rk => {
+        (bracketData[rk] || []).forEach(matchNum => {
+          derived[String(matchNum)] = resolveMatch(matchNum);
         });
       });
 
       return derived;
     }
 
-    // ── Sort a round's match array by R32 root position ──────────
-    // Traces each match back through the progression map to its R32
-    // ancestor(s), then sorts by the earliest R32 index in the r32 array.
-    // Upload order no longer matters — bracket always renders correctly.
-    function sortRoundByProgression(matchNums, r32Array, progression) {
-      const feedsInto = {};
-      Object.entries(progression).forEach(([src, p]) => {
-        const child = p.next;
-        if (!feedsInto[child]) feedsInto[child] = [];
-        feedsInto[child].push(parseInt(src));
-      });
+    // ── Render ────────────────────────────────────────────────────
 
-      function r32Roots(matchNum, visited = new Set()) {
-        if (visited.has(matchNum)) return [];
-        visited.add(matchNum);
-        const parents = feedsInto[matchNum] || [];
-        if (parents.length === 0) return [matchNum];
-        const roots = [];
-        parents.forEach(p => r32Roots(p, visited).forEach(r => roots.push(r)));
-        return roots;
-      }
-
-      const r32Index = {};
-      r32Array.forEach((n, i) => { r32Index[n] = i; });
-
-      return [...matchNums].sort((a, b) => {
-        const aMin = Math.min(...r32Roots(a).map(r => r32Index[r] ?? 999));
-        const bMin = Math.min(...r32Roots(b).map(r => r32Index[r] ?? 999));
-        return aMin - bMin;
-      });
-    }
-
-    function renderBracket(bracketData, matchMap, predTeams, oddsMap, nameToId) {
+    function renderBracket(bracketData, matchMap, derivedTeams, oddsMap) {
       const grid = document.getElementById('bracket-grid');
       grid.innerHTML = '';
 
-      // Re-sort r16/qf/sf by progression so upload order can never misalign connectors
-      const progression = bracketData.progression || {};
-      const r32Array    = bracketData.r32 || [];
-      ['r16','qf','sf'].forEach(key => {
-        if (bracketData[key]) {
-          bracketData[key] = sortRoundByProgression(bracketData[key], r32Array, progression);
-        }
-      });
-
-      // In live view, hide rounds where ALL matches are complete
-      // Find the first round that has at least one incomplete or unplayed match
       let roundsToShow = ROUND_DEFS;
       if (_currentView === 'live') {
         const firstIncompleteIdx = ROUND_DEFS.findIndex(round => {
           const nums = bracketData[round.key] || [];
-          // Round is "active or future" if any match is not complete, or no matches assigned yet
           return nums.length === 0 || nums.some(num => {
             const m = num ? matchMap[num] : null;
             return !m || m.status !== 'complete';
           });
         });
-        // Never start later than QF (index 2) — QF+SF+Final always fits on screen
-        // and showing just 2 SF fixtures or 1 Final looks broken
-        const QF_IDX = ROUND_DEFS.findIndex(r => r.key === 'qf');
+        const QF_IDX   = ROUND_DEFS.findIndex(r => r.key === 'qf');
         const startIdx = firstIncompleteIdx >= 0
           ? Math.min(firstIncompleteIdx, QF_IDX)
           : QF_IDX;
@@ -698,7 +575,6 @@
         const slots = document.createElement('div');
         slots.className = 'bracket-slots';
 
-        // Pad to expected slot count so spacing stays consistent
         const padded = [...nums];
         while (padded.length < round.count) padded.push(null);
 
@@ -706,15 +582,14 @@
           const group = document.createElement('div');
           group.className = 'bracket-slot-group';
           const dbMatch  = num ? matchMap[num] : null;
-          const predTeam = num ? (predTeams[String(num)] || null) : null;
-          group.appendChild(renderMatchCard(dbMatch, predTeam, oddsMap, nameToId));
+          const predTeam = num ? (derivedTeams[String(num)] || null) : null;
+          group.appendChild(renderMatchCard(dbMatch, predTeam, oddsMap));
           slots.appendChild(group);
         });
 
         col.appendChild(slots);
         grid.appendChild(col);
 
-        // SVG bracket connectors (not after final)
         if (!isLast) {
           const conn = document.createElement('div');
           conn.className = 'bracket-connector';
@@ -723,25 +598,21 @@
         }
       });
 
-      // Champion column — only show once Final is complete
+      // Champion column — only once Final is complete
       const showChampion = roundsToShow.some(r => r.key === 'final');
       if (showChampion) {
-        const finalNums  = bracketData['final'] || [];
-        const finalNum   = finalNums[0] || null;
-        const finalMatch = finalNum ? matchMap[finalNum] : null;
+        const finalNums       = bracketData['final'] || [];
+        const finalNum        = finalNums[0] || null;
+        const finalMatch      = finalNum ? matchMap[finalNum] : null;
         const finalIsComplete = finalMatch && finalMatch.status === 'complete';
         if (finalIsComplete) {
-          const finalPred  = finalNum ? (predTeams[String(finalNum)] || null) : null;
-          grid.appendChild(renderChampionCol(finalMatch, finalPred, oddsMap, nameToId));
+          grid.appendChild(renderChampionCol(finalMatch));
         }
       }
     }
 
     // ── Match card ────────────────────────────────────────────────
-    // Priority:
-    //   Team display:  DB home_team > predTeam.home > TBD
-    //   Winner display: actual result > predicted by odds
-    function renderMatchCard(dbMatch, predTeam, oddsMap, nameToId) {
+    function renderMatchCard(dbMatch, predTeam, oddsMap) {
       const wrap = document.createElement('div');
       wrap.className = 'bracket-match';
 
@@ -749,26 +620,18 @@
       const hasActualHome = dbMatch && dbMatch.home_team_id;
       const hasActualAway = dbMatch && dbMatch.away_team_id;
 
-      // Resolve team ID for predicted teams via name lookup
-      function resolveId(name) {
-        if (!name) return null;
-        return nameToId[name.toLowerCase().trim()] || null;
-      }
-
-      // Which team to show for each side, with resolved IDs for odds lookup
       const homeTeam = hasActualHome
         ? { name: dbMatch.home_team.name, flag: dbMatch.home_team.flag_emoji, isActual: true,  teamId: dbMatch.home_team_id }
-        : (predTeam && predTeam.home && !hasActualHome)
-          ? { name: predTeam.home.name,   flag: predTeam.home.flag,           isActual: false, teamId: resolveId(predTeam.home.name) }
+        : (predTeam && predTeam.home)
+          ? { ...predTeam.home }
           : null;
 
       const awayTeam = hasActualAway
         ? { name: dbMatch.away_team.name, flag: dbMatch.away_team.flag_emoji, isActual: true,  teamId: dbMatch.away_team_id }
-        : (predTeam && predTeam.away && !hasActualAway)
-          ? { name: predTeam.away.name,   flag: predTeam.away.flag,           isActual: false, teamId: resolveId(predTeam.away.name) }
+        : (predTeam && predTeam.away)
+          ? { ...predTeam.away }
           : null;
 
-      // Mark card state for visual distinction
       if (isComplete) {
         wrap.classList.add('state-complete');
       } else if (hasActualHome && hasActualAway) {
@@ -777,20 +640,11 @@
         wrap.classList.add('state-predicted');
       }
 
-      // Mark card as all-predicted if neither team is confirmed in DB
-      if (!hasActualHome && !hasActualAway) wrap.classList.add('all-predicted');
+      const winner     = isComplete ? actualWinner(dbMatch) : null;
+      const homeId     = homeTeam && homeTeam.teamId;
+      const awayId     = awayTeam && awayTeam.teamId;
+      const predWinner = !isComplete ? predictedWinnerByOdds(homeId, awayId, oddsMap) : null;
 
-      // Winner logic
-      const winner = isComplete ? actualWinner(dbMatch) : null;
-
-      // Predicted winner — works for both actual and predicted teams now that IDs are resolved
-      const homeId = homeTeam && homeTeam.teamId;
-      const awayId = awayTeam && awayTeam.teamId;
-      const predWinner = !isComplete
-        ? predictedWinnerByOdds(homeId, awayId, oddsMap)
-        : null;
-
-      // Kickoff bar with optional FT badge
       const kb = document.createElement('div');
       kb.className = 'bracket-kickoff';
       const dateSpan = document.createElement('span');
@@ -804,7 +658,6 @@
       }
       wrap.appendChild(kb);
 
-      // Home row
       wrap.appendChild(buildTeamRow(
         homeTeam,
         isComplete ? dbMatch.home_score : null,
@@ -814,7 +667,6 @@
         !isComplete && homeTeam && homeTeam.teamId ? oddsMap[homeTeam.teamId] : null
       ));
 
-      // Away row
       wrap.appendChild(buildTeamRow(
         awayTeam,
         isComplete ? dbMatch.away_score : null,
@@ -848,10 +700,9 @@
       }
 
       let dotColor = 'var(--border)';
-      if (isComplete)                    dotColor = isWinner      ? 'var(--green)' : 'var(--border)';
-      else if (isPredWinner !== null)    dotColor = isPredWinner  ? '#3b82f6'      : 'var(--border)';
+      if (isComplete)                 dotColor = isWinner     ? 'var(--green)' : 'var(--border)';
+      else if (isPredWinner !== null) dotColor = isPredWinner ? '#3b82f6'      : 'var(--border)';
 
-      // Odds shown only on unplayed matches where we have a resolved team ID
       function decimalToFractional(dec) {
         if (!dec || dec <= 1) return '';
         const raw = dec - 1;
@@ -880,7 +731,7 @@
     }
 
     // ── Champion column ───────────────────────────────────────────
-    function renderChampionCol(finalMatch, finalPred, oddsMap, nameToId) {
+    function renderChampionCol(finalMatch) {
       const col = document.createElement('div');
       col.className = 'champion-col';
 
@@ -889,38 +740,16 @@
       lbl.textContent = '🏆 Champion';
       col.appendChild(lbl);
 
-      const isComplete    = finalMatch && finalMatch.status === 'complete';
-      const hasActualHome = finalMatch && finalMatch.home_team_id;
-      const hasActualAway = finalMatch && finalMatch.away_team_id;
-
-      let champTeam = null;
-      let isActual  = false;
-
-      if (isComplete) {
-        const w   = actualWinner(finalMatch);
-        champTeam = w === 'home' ? finalMatch.home_team : finalMatch.away_team;
-        isActual  = true;
-      } else if (hasActualHome && hasActualAway) {
-        // Both teams confirmed in DB — use DB IDs
-        const w   = predictedWinnerByOdds(finalMatch.home_team_id, finalMatch.away_team_id, oddsMap);
-        champTeam = w === 'home' ? finalMatch.home_team : finalMatch.away_team;
-      } else if (finalPred && finalPred.home && finalPred.away) {
-        // Fully predicted — resolve IDs from names for odds lookup
-        const homeId = nameToId[(finalPred.home.name || '').toLowerCase().trim()] || null;
-        const awayId = nameToId[(finalPred.away.name || '').toLowerCase().trim()] || null;
-        const w      = predictedWinnerByOdds(homeId, awayId, oddsMap);
-        champTeam    = w === 'away'
-          ? { name: finalPred.away.name, flag_emoji: finalPred.away.flag }
-          : { name: finalPred.home.name, flag_emoji: finalPred.home.flag };
-      }
+      const w         = actualWinner(finalMatch);
+      const champTeam = w === 'home' ? finalMatch.home_team : finalMatch.away_team;
 
       const flagEl = document.createElement('div');
       flagEl.className = 'champion-flag';
-      flagEl.textContent = champTeam ? (champTeam.flag_emoji || champTeam.flag || '') : '❓';
+      flagEl.textContent = champTeam ? (champTeam.flag_emoji || '') : '❓';
       col.appendChild(flagEl);
 
       const nameEl = document.createElement('div');
-      nameEl.className = 'champion-name' + (isActual ? '' : ' predicted');
+      nameEl.className = 'champion-name';
       nameEl.textContent = champTeam ? (champTeam.name || '') : 'TBD';
       col.appendChild(nameEl);
 
@@ -928,19 +757,14 @@
     }
 
     // ── Draw SVG bracket connector lines ─────────────────────────
-    // Runs after DOM layout. For each connector div, finds the bracket-match
-    // cards in the preceding column and the following column, measures their
-    // vertical centres, and draws H-V-H lines connecting pairs to their output.
     function drawConnectors() {
       const grid = document.getElementById('bracket-grid');
       const connectors = grid.querySelectorAll('.bracket-connector');
-      const gridRect = grid.getBoundingClientRect();
 
       connectors.forEach(conn => {
         const slotCount = parseInt(conn.dataset.slotCount || '0');
         if (slotCount < 2) return;
 
-        // Get the column before and after this connector
         const prevCol = conn.previousElementSibling;
         const nextCol = conn.nextElementSibling;
         if (!prevCol || !nextCol) return;
@@ -959,28 +783,22 @@
         svg.style.cssText = 'position:absolute;top:0;left:0;overflow:visible;pointer-events:none';
 
         const stroke = '#2e3350';
-        const sw = '1.5';
+        const sw     = '1.5';
 
-        // For each pair of prev matches → one next match
         const pairsCount = nextMatches.length;
         for (let i = 0; i < pairsCount; i++) {
-          const topMatch  = prevMatches[i * 2];
-          const botMatch  = prevMatches[i * 2 + 1];
-          const outMatch  = nextMatches[i];
+          const topMatch = prevMatches[i * 2];
+          const botMatch = prevMatches[i * 2 + 1];
+          const outMatch = nextMatches[i];
           if (!topMatch || !botMatch || !outMatch) continue;
 
-          const topRect  = topMatch.getBoundingClientRect();
-          const botRect  = botMatch.getBoundingClientRect();
-          const outRect  = outMatch.getBoundingClientRect();
+          const topRect = topMatch.getBoundingClientRect();
+          const botRect = botMatch.getBoundingClientRect();
 
-          // Y centres relative to connector
-          const y1 = topRect.top + topRect.height / 2 - connRect.top;
-          const y2 = botRect.top + botRect.height / 2 - connRect.top;
-          const yOut = outRect.top + outRect.height / 2 - connRect.top;
+          const y1   = topRect.top + topRect.height / 2 - connRect.top;
+          const y2   = botRect.top + botRect.height / 2 - connRect.top;
           const yMid = (y1 + y2) / 2;
 
-          // Draw: short H line from left edge at y1 → vertical bar → short H line at y2
-          // then vertical connects yMid → yOut, then H line to right edge at yOut
           const path = `
             M 0 ${y1} H ${W * 0.45}
             M 0 ${y2} H ${W * 0.45}
