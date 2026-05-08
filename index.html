@@ -494,17 +494,42 @@
           deadlineUtc = new Date(deadlineUtc.getTime() + 86400000);
         }
 
-        const dateLabel = deadlineUtc.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-        const time      = deadlineUtc.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
-        deadlineEl.innerHTML = (roundName ? '<span style="color:var(--text)">' + roundName + '</span><br>' : '')
-          + '<span style="font-size:12px;font-weight:500;color:var(--text-muted)">' + dateLabel + ' · ' + time + ' BST</span>';
+        nextDeadline = deadlineUtc;
+        nextDeadlineRound = roundName;
+        renderDeadline();
       } else {
         deadlineEl.textContent = 'No upcoming matches';
       }
     }
 
+    function getTimeLeftStr(deadline) {
+      const diff = deadline - new Date();
+      if (diff <= 0) return 'Locked';
+      const days = Math.floor(diff / 86400000);
+      const hours = Math.floor((diff % 86400000) / 3600000);
+      const mins  = Math.floor((diff % 3600000)  / 60000);
+      const secs  = Math.floor((diff % 60000)    / 1000);
+      if (days > 0) return days + 'd ' + String(hours).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm';
+      return String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
+    }
+
+    function renderDeadline() {
+      if (!nextDeadline) return;
+      const deadlineEl = document.getElementById('status-deadline');
+      const dateLabel = nextDeadline.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      const time      = nextDeadline.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
+      deadlineEl.innerHTML =
+        (nextDeadlineRound ? '<span style="color:var(--text)">' + nextDeadlineRound + '</span><br>' : '')
+        + '<span style="font-size:12px;font-weight:500;color:var(--text-muted)">' + dateLabel + ' · ' + time + ' BST</span>'
+        + '<br><span style="font-variant-numeric:tabular-nums;font-weight:900;font-size:13px;letter-spacing:-0.01em">' + getTimeLeftStr(nextDeadline) + '</span>';
+    }
+
+    let nextDeadline = null;
+    let nextDeadlineRound = '';
+
     loadStatus();
     setInterval(loadStatus, 60000);
+    setInterval(renderDeadline, 1000);
   </script>
 </body>
 </html>

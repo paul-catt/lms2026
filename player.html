@@ -1011,6 +1011,24 @@
       if (!round) return;
       if (getEffectiveDate() >= new Date(round.deadline)) return;
       pick3 = null; pick2 = null; pickSingle = null; _oracleUsed3 = false; _oracleUsed2 = false;
+
+      // Restore deadline countdown (hidden by showSubmittedPicks)
+      const deadlineBar = document.getElementById('deadline-bar');
+      if (deadlineInterval) clearInterval(deadlineInterval);
+      const deadline = new Date(round.deadline);
+      deadlineBar.style.display = '';
+      deadlineBar.className = 'deadline-bar open';
+      const tick = () => {
+        deadlineBar.innerHTML =
+          '<span style="display:flex;flex-direction:column;gap:1px">' +
+            '<span>⏰ <strong>' + round.name + ' deadline</strong></span>' +
+            '<span style="font-weight:400;font-size:11px;opacity:0.7">(1hr before first kick-off)</span>' +
+          '</span>' +
+          '<span class="countdown">' + getTimeLeftStr(deadline) + '</span>';
+      };
+      tick();
+      deadlineInterval = setInterval(tick, 1000);
+
       renderPickForm(round);
     }
 
@@ -1414,6 +1432,7 @@
         } else {
           player.total_goals_prediction = val;
           document.getElementById('stat-goals').textContent = val;
+          document.getElementById('stat-goals-sub').textContent = '';
           msg.style.color='var(--green)'; msg.textContent='✅ Saved!';
           btn.disabled=false; btn.textContent='Change Prediction';
           desc.innerHTML = '✅ You predicted <strong>' + val + '</strong> goals. You can update this until ' + lockDate.toLocaleDateString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '.';
@@ -2303,7 +2322,10 @@
       closeOracle();
 
       // KO only: auto-trigger submit confirm after oracle pick
+      // Group stage: auto-submit only when both picks are now filled (oracle completed the second pick)
       if (!isGroup) {
+        setTimeout(() => submitPick(), 150);
+      } else if (pick3 && pick2) {
         setTimeout(() => submitPick(), 150);
       }
     });

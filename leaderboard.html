@@ -76,19 +76,25 @@
 
     /* ── Picks Tab ───────────────────────────────────────────── */
     .picks-table { border-collapse:collapse; white-space:nowrap; font-size:12px; }
-    .picks-table th { font-family:'Rajdhani',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:var(--text-muted); padding:4px 4px 8px; text-align:center; border-bottom:1px solid var(--border); }
-    .picks-table th.pk-name { text-align:left; padding-left:6px; min-width:80px; }
-    .picks-table th.pk-pts  { color:var(--gold); min-width:32px; }
+    .picks-table th { font-family:'Rajdhani',sans-serif; font-size:10px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:var(--text-muted); padding:4px 3px 8px; text-align:center; border-bottom:1px solid var(--border); }
+    .picks-table th.pk-pos  { text-align:left; padding-left:4px; padding-right:2px; }
+    .picks-table th.pk-name { text-align:left; padding-left:4px; }
+    .picks-table th.pk-pts  { color:var(--gold); padding-left:4px; padding-right:8px; }
     .picks-table th.pk-div  { border-left:1px solid var(--border); }
-    .picks-table td { padding:5px 3px; text-align:center; vertical-align:middle; border-bottom:1px solid var(--border); }
+    .picks-table td { padding:4px 2px; text-align:center; vertical-align:middle; border-bottom:1px solid var(--border); }
     .picks-table tr:last-child td { border-bottom:none; }
     .picks-table tr:hover td { background:rgba(255,255,255,0.025); }
-    .picks-table td.pk-pos  { font-size:11px; font-weight:700; color:var(--text-muted); padding-right:2px; padding-left:6px; }
-    .picks-table td.pk-name { text-align:left; font-weight:600; font-size:13px; padding-left:6px; }
+    .picks-table td.pk-pos  { font-size:11px; font-weight:700; color:var(--text-muted); padding-left:4px; padding-right:2px; text-align:left; }
+    .picks-table td.pk-name { text-align:left; font-weight:600; font-size:13px; padding-left:4px; padding-right:8px; }
     .picks-table td.pk-name.elim { color:var(--text-muted); }
-    .picks-table td.pk-pts  { font-family:'Rajdhani',sans-serif; font-size:16px; font-weight:700; color:var(--gold); padding-left:6px; padding-right:6px; }
+    .picks-table td.pk-pts  { font-family:'Rajdhani',sans-serif; font-size:16px; font-weight:700; color:var(--gold); padding-left:4px; padding-right:8px; }
     .picks-table td.pk-div  { border-left:1px solid var(--border); }
     .pk-chip { display:inline-flex; align-items:center; justify-content:center; font-size:17px; width:30px; height:30px; border-radius:5px; border:2.5px solid #4b5563; line-height:1; }
+    @media(max-width:600px) {
+      .pk-chip { font-size:13px; width:22px; height:22px; border-radius:3px; border-width:2px; }
+      .picks-table td.pk-name { font-size:11px; }
+      .picks-table td { padding:3px 1px; }
+    }
     .pk-chip.win  { border-color:#10b981; box-shadow:0 0 5px rgba(16,185,129,0.35); }
     .pk-chip.draw { border-color:#eab308; box-shadow:0 0 5px rgba(234,179,8,0.35); }
     .pk-chip.loss { border-color:#ef4444; box-shadow:0 0 5px rgba(239,68,68,0.35); }
@@ -226,23 +232,23 @@
             </span>
           </div>
 
-          <!-- Row 2: grey underline picks -->
+          <!-- Row 2: grey picks (2pt normal + longshot) -->
           <div class="group-only" style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
             <span style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted)">
-              <span style="display:inline-block;width:28px;border-bottom:2px solid #94a3b8"></span>2pt pick
-            </span>
-            <span style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted)">
-              <span style="display:inline-block;width:28px;border-bottom:3px double #94a3b8"></span>Longshot (3pts)
+              <span style="display:inline-block;width:22px;border-bottom:2px solid #94a3b8"></span>
+              <span style="color:var(--text-muted);opacity:0.4">/</span>
+              <span style="display:inline-block;width:22px;border-bottom:3px double #94a3b8"></span>
+              2pt pick / longshot
             </span>
           </div>
 
-          <!-- Row 3: gold underline picks -->
+          <!-- Row 3: gold picks (3pt normal + longshot) -->
           <div class="group-only" style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
             <span style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted)">
-              <span style="display:inline-block;width:28px;border-bottom:2px solid #f59e0b"></span>3pt pick
-            </span>
-            <span style="display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted)">
-              <span style="display:inline-block;width:28px;border-bottom:3px double #f59e0b"></span>Longshot (4pts)
+              <span style="display:inline-block;width:22px;border-bottom:2px solid #f59e0b"></span>
+              <span style="color:var(--text-muted);opacity:0.4">/</span>
+              <span style="display:inline-block;width:22px;border-bottom:3px double #f59e0b"></span>
+              3pt pick / longshot
             </span>
           </div>
 
@@ -373,10 +379,30 @@
 
     let _leaderboardData = null;
 
+    function shortName(fullName) {
+      if (!fullName) return '?';
+      const parts = fullName.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0];
+      return parts[0] + ' ' + parts[parts.length - 1][0];
+    }
+
     function renderPicksView() {
       const wrap = document.getElementById('picks-wrap');
       if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the standings first.</p>'; return; }
-      const { sorted, allPicks, rounds } = _leaderboardData;
+      const { sorted, allPicks, rounds, firstMatchData } = _leaderboardData;
+      const picksNow = getEffectiveDate();
+
+      // Only show picks for rounds where first match has kicked off
+      const firstKickoffByRound = {};
+      (firstMatchData || []).forEach(m => {
+        const ko = new Date(m.kickoff).getTime();
+        if (!firstKickoffByRound[m.round_id] || ko < firstKickoffByRound[m.round_id])
+          firstKickoffByRound[m.round_id] = ko;
+      });
+      const nowMs = picksNow.getTime();
+      const visiblePicks = (allPicks || []).filter(p =>
+        (firstKickoffByRound[p.round_id] || Infinity) <= nowMs
+      );
 
       // Round order: GP1, GP2, GP3 then KO rounds by sort_order
       const GP_ROUNDS  = ['Group Phase 1', 'Group Phase 2', 'Group Phase 3'];
@@ -409,7 +435,7 @@
       // Build pick lookup: player_id -> round_id|multiplier -> pick
       // For KO picks multiplier is null so key is just round_id
       const pickLookup = {};
-      (allPicks || []).forEach(p => {
+      (visiblePicks || []).forEach(p => {
         if (!pickLookup[p.player_id]) pickLookup[p.player_id] = {};
         const res = p.pick_results && p.pick_results[0];
         const result = res && res.match_result ? res.match_result : 'pending';
@@ -420,13 +446,6 @@
       });
 
       // Short name helper: "First L"
-      function shortName(fullName) {
-        if (!fullName) return '?';
-        const parts = fullName.trim().split(/\s+/);
-        if (parts.length === 1) return parts[0];
-        return parts[0] + ' ' + parts[parts.length - 1][0];
-      }
-
       // Group slots into visual column groups for header row 1
       // GP1(2cols), GP2(2cols), GP3(2cols), each KO round(1col)
       // Build group spans: { label, span, cls }
@@ -476,18 +495,12 @@
       });
       html += '</tr></thead><tbody>';
 
-      // Build set of round IDs whose deadline has NOT yet passed — picks in these rounds are masked
-      const now = getEffectiveDate();
-      const lockedRoundIds = new Set(
-        (rounds || []).filter(r => !isRoundDeadlinePassed(r.name, now)).map(r => r.id)
-      );
-
       // Rows
       sorted.forEach((p, idx) => {
         const isElim = p.is_eliminated;
         const pLookup = pickLookup[p.player_id] || {};
         const nameCls = isElim ? ' elim' : '';
-        const rowStyle = isElim ? ' style="opacity:0.55"' : '';
+        const rowStyle = isElim ? ' style="opacity:0.5"' : '';
 
         html += `<tr${rowStyle}>`;
         html += `<td class="pk-pos">${idx + 1}</td>`;
@@ -502,9 +515,6 @@
           const divCls = isFirstInGroup ? ' pk-div' : '';
           if (!pick) {
             html += `<td class="${divCls}"></td>`;
-          } else if (lockedRoundIds.has(s.roundId)) {
-            // Deadline not yet passed — show that a pick exists but hide what it is
-            html += `<td class="${divCls}" title="Pick hidden until deadline"><span class="pk-chip pend" style="font-size:13px;opacity:0.6">🔒</span></td>`;
           } else {
             const cls = pick.result === 'win' ? 'win' : pick.result === 'draw' ? 'draw' : pick.result === 'loss' ? 'loss' : 'pend';
             html += `<td class="${divCls}"><span class="pk-chip ${cls}">${pick.flag}</span></td>`;
@@ -522,7 +532,8 @@
     function renderMatrixView() {
       const wrap = document.getElementById('matrix-wrap');
       if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the standings first.</p>'; return; }
-      const { sorted, allPicks, rounds } = _leaderboardData;
+      const { sorted, allPicks, rounds, firstMatchData, todayMatchRows } = _leaderboardData;
+      const now = getEffectiveDate();
 
       const completedKORounds = (rounds || []).filter(r => r.round_type === 'knockout' && r.is_complete);
       if (completedKORounds.length === 0) {
@@ -537,15 +548,29 @@
       const BAND_LABEL = { favourite:'Fav', dark_horse:'Dark H', long_shot:'L/S', no_hoper:'No H' };
       const BAND_COLOR = { favourite:'#3b82f6', dark_horse:'#eab308', long_shot:'#f97316', no_hoper:'#ef4444' };
 
+      // Build first-kickoff-per-round lookup
+      const firstKickoffByRound = {};
+      (firstMatchData || []).forEach(m => {
+        const ko = new Date(m.kickoff).getTime();
+        if (!firstKickoffByRound[m.round_id] || ko < firstKickoffByRound[m.round_id])
+          firstKickoffByRound[m.round_id] = ko;
+      });
+
+      // Only include picks for rounds where deadline has passed (first match kicked off)
+      const nowMs = now.getTime();
+      const visiblePicks = (allPicks || []).filter(p =>
+        (firstKickoffByRound[p.round_id] || Infinity) <= nowMs
+      );
+
       const pickMap = {};
-      (allPicks || []).forEach(p => {
+      visiblePicks.forEach(p => {
         if (!pickMap[p.player_id]) pickMap[p.player_id] = {};
         const res = p.pick_results && p.pick_results[0];
         pickMap[p.player_id][p.team_id] = { result: res ? res.match_result : 'pending', multiplier: p.multiplier };
       });
 
       const usedByPlayer = {};
-      (allPicks || []).forEach(p => {
+      visiblePicks.forEach(p => {
         if (!usedByPlayer[p.player_id]) usedByPlayer[p.player_id] = new Set();
         usedByPlayer[p.player_id].add(p.team_id);
       });
@@ -1032,8 +1057,11 @@
           const is3rdPlace = currentRound && currentRound.name === '3rd Place';
           let rndHtml = '—';
           if (showRndCol) {
-            if (!p.is_eliminated && currentRoundShort && !is3rdPlace) {
-              rndHtml = currentRoundShort;
+            if (!p.is_eliminated && !is3rdPlace) {
+              const furthestSO = furthestMap[p.player_id] || 0;
+              const currentSO  = currentRound ? currentRound.sort_order : 0;
+              const displaySO  = Math.max(furthestSO + 1, currentSO);
+              rndHtml = roundSortToShort[displaySO] || '—';
             } else {
               const furthestSortOrder = furthestMap[p.player_id];
               rndHtml = furthestSortOrder ? (roundSortToShort[furthestSortOrder] || '—') : '—';
@@ -1074,7 +1102,7 @@
         document.getElementById('leaderboard-wrap').style.display = 'block';
         document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
-        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches };
+        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData };
         if (document.getElementById('view-picks').classList.contains('active'))  renderPicksView();
         if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
         if (document.getElementById('view-fallen').classList.contains('active')) renderFallenView();
@@ -1106,13 +1134,17 @@
       });
       const hasAny = lsSorted.some(p => p.longshotPicks > 0);
       if (!hasAny) { wrap.innerHTML = '<p style="color:var(--text-muted);padding:16px 0">No longshot picks recorded yet.</p>'; return; }
-      let html = '<table><thead><tr><th class="pos">#</th><th>Player</th><th>Longshot Picks</th><th>Wins ⭐</th><th>Bonus Pts</th></tr></thead><tbody>';
+      let html = '<table style="table-layout:fixed;width:100%"><thead><tr><th class="pos" style="width:28px">#</th><th>Player</th><th style="width:60px;white-space:nowrap">Picks ⭐</th><th style="width:80px">Wins</th><th style="width:56px">Bonus<br>Pts</th></tr></thead><tbody>';
       lsSorted.filter(p => p.longshotPicks > 0).forEach((p, i) => {
+        const displayName = shortName(p.name);
+        const winsHtml = p.longshotWins.length > 0
+          ? `<div style="display:flex;flex-wrap:wrap;gap:0;line-height:1.2;font-size:15px">${p.longshotWins.map(f => `<span>${f}</span>`).join('')}</div>`
+          : '—';
         html += `<tr>
           <td class="pos">${i + 1}</td>
-          <td style="font-weight:600"><a href="/${p.slug}" style="color:var(--text);text-decoration:none">${p.name}</a></td>
-          <td style="color:var(--text-muted)">${p.longshotPicks}</td>
-          <td>${p.longshotWins.length > 0 ? p.longshotWins.join(' ') : '—'}</td>
+          <td style="font-weight:600"><a href="/${p.slug}" style="color:var(--text);text-decoration:none">${displayName}</a></td>
+          <td style="color:var(--text-muted);text-align:center">${p.longshotPicks}</td>
+          <td>${winsHtml}</td>
           <td class="ls-pts">${p.bonusPoints > 0 ? '+' + p.bonusPoints : '—'}</td>
         </tr>`;
       });
@@ -1147,14 +1179,12 @@
         return;
       }
 
-      // Build first-kickoff-per-round map for no-picks players
-      const lastKickoffByRound = {};
+      // Build match kickoff lookup keyed by team_id|round_id (for noPicks sort)
+      const kickoffByTeamRound = {};
       (completedMatches || []).forEach(m => {
         if (!m.kickoff) return;
-        const ko = new Date(m.kickoff).getTime();
-        if (!lastKickoffByRound[m.round_id] || ko < lastKickoffByRound[m.round_id]) {
-          lastKickoffByRound[m.round_id] = ko;
-        }
+        if (m.home_team_id) kickoffByTeamRound[m.home_team_id + '|' + m.round_id] = m.kickoff;
+        if (m.away_team_id) kickoffByTeamRound[m.away_team_id + '|' + m.round_id] = m.kickoff;
       });
 
       // Build round lookup: id -> { name, sort_order }
@@ -1188,14 +1218,23 @@
           return { pick: losingPick, match, noPicks: false };
         }
         // No KO loss — ran out of teams (or finalist)
-        // Use the furthest round they actually made a pick in as their elimRoundId
+        // Find their last pick (by round sort_order) and use that match's kickoff
         const elimRoundId = player.eliminated_in_round_id ||
           (playerPicks.length > 0
             ? [...playerPicks].sort((a, b) =>
                 (roundMap[b.round_id]?.sort_order || 0) - (roundMap[a.round_id]?.sort_order || 0)
               )[0].round_id
             : null);
-        return { pick: null, match: null, noPicks: true, elimRoundId };
+        // Last pick = highest sort_order pick, use its match kickoff as elimination timestamp
+        const lastPick = playerPicks.length > 0
+          ? [...playerPicks].sort((a, b) =>
+              (roundMap[b.round_id]?.sort_order || 0) - (roundMap[a.round_id]?.sort_order || 0)
+            )[0]
+          : null;
+        const lastPickKickoff = lastPick
+          ? kickoffByTeamRound[lastPick.team_id + '|' + lastPick.round_id] || null
+          : null;
+        return { pick: null, match: null, noPicks: true, elimRoundId, lastPickKickoff };
       }
 
       const fallenWithInfo = eliminated.map(p => ({
@@ -1232,10 +1271,10 @@
 
         const aKickoff = a.info.match?.kickoff
           ? new Date(a.info.match.kickoff).getTime()
-          : a.info.elimRoundId ? (lastKickoffByRound[a.info.elimRoundId] || 0) : 0;
+          : a.info.lastPickKickoff ? new Date(a.info.lastPickKickoff).getTime() : 0;
         const bKickoff = b.info.match?.kickoff
           ? new Date(b.info.match.kickoff).getTime()
-          : b.info.elimRoundId ? (lastKickoffByRound[b.info.elimRoundId] || 0) : 0;
+          : b.info.lastPickKickoff ? new Date(b.info.lastPickKickoff).getTime() : 0;
         if (aKickoff !== bKickoff) return aKickoff - bKickoff;
         return 0;
       });
@@ -1243,6 +1282,7 @@
       // Pre-compute sort keys for tie detection
       const sortKeys = fallenWithInfo.map(({ info }) => {
         if (info.match?.kickoff) return info.match.kickoff;
+        if (info.lastPickKickoff) return info.lastPickKickoff;
         if (info.elimRoundId) return 'round:' + info.elimRoundId;
         return null;
       });
@@ -1314,14 +1354,31 @@
           storyHtml = '<span style="color:var(--text-muted)">Eliminated</span>';
         }
 
+        // Build timestamp from match kickoff or lastPickKickoff
+        const kickoffRaw = info.match?.kickoff || info.lastPickKickoff || null;
+        let timestampHtml = '';
+        if (kickoffRaw) {
+          const ko = new Date(kickoffRaw);
+          // Convert UTC to BST (UTC+1)
+          const bst = new Date(ko.getTime() + 60 * 60 * 1000);
+          const day = bst.getUTCDate();
+          const mon = bst.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
+          const hh  = String(bst.getUTCHours()).padStart(2, '0');
+          const mm  = String(bst.getUTCMinutes()).padStart(2, '0');
+          timestampHtml = `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0">${day} ${mon} · ${hh}:${mm}</span>`;
+        }
+
         html += `
           <div style="display:flex; align-items:center; gap:12px; padding:11px 0; ${!isLast ? 'border-bottom:1px solid var(--border);' : ''}">
             <span style="font-size:11px; font-weight:700; color:var(--text-muted); min-width:22px; text-align:right; flex-shrink:0">${rankLabel}</span>
-            <div>
+            <div style="flex:1; min-width:0">
               <div style="font-weight:700; font-size:14px; display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
                 <a href="/${p.slug}" style="color:var(--text); text-decoration:none;">${p.name}</a>${lastMenIndices.includes(origIdx) ? lmsPill : ''}${firstOutIndices.includes(origIdx) ? firstOutPill : ''}
               </div>
-              <div style="font-size:12px; margin-top:3px; line-height:1.5">${storyHtml}</div>
+              <div style="font-size:12px; margin-top:3px; line-height:1.5; display:flex; align-items:baseline; justify-content:space-between; gap:8px;">
+                <span>${storyHtml}</span>
+                ${timestampHtml}
+              </div>
             </div>
           </div>`;
       });

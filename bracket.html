@@ -22,203 +22,52 @@
   <style>
     body { font-family: 'Inter', sans-serif; }
     nav, .nav-logo, .card-title, .bracket-round-label { font-family: 'Rajdhani', sans-serif; }
-    .bracket-outer {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      padding-bottom: 16px;
-    }
-    .bracket-grid {
-      display: flex;
-      gap: 0;
-      min-width: 860px;
-      align-items: stretch;
-    }
-    .bracket-col {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      min-width: 120px;
-      max-width: 155px;
-    }
+    .bracket-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 16px; }
+    .bracket-grid { display: flex; gap: 0; min-width: 860px; align-items: stretch; }
+    .bracket-col { display: flex; flex-direction: column; flex: 1; min-width: 120px; max-width: 155px; }
     .bracket-col-header {
-      text-align: center;
-      font-size: 9px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      padding: 0 4px 10px 0;
-      white-space: nowrap;
+      text-align: center; font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-muted); padding: 0 4px 10px 0; white-space: nowrap;
     }
-    .bracket-slots {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      justify-content: space-around;
-    }
-    .bracket-slot-group {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      flex: 1;
-      padding: 3px 5px;
-      min-height: 0;
-    }
-    .bracket-match {
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      overflow: hidden;
-      background: var(--surface2);
-    }
-    .bracket-match.state-confirmed {
-      border-color: #3b82f6;
-      border-left-width: 3px;
-    }
-    .bracket-match.state-predicted {
-      border-color: var(--border);
-      border-left: 2px dashed #4b5563;
-      background: rgba(255,255,255,0.02);
-    }
-    .bracket-match.state-complete {
-      border-color: var(--green);
-      border-left-width: 3px;
-    }
+    .bracket-slots { display: flex; flex-direction: column; flex: 1; justify-content: space-around; }
+    .bracket-slot-group { display: flex; flex-direction: column; justify-content: center; flex: 1; padding: 3px 5px; min-height: 0; }
+    .bracket-match { border: 1px solid var(--border); border-radius: 7px; overflow: hidden; background: var(--surface2); }
+    .bracket-match.state-confirmed { border-color: #3b82f6; border-left-width: 3px; }
+    .bracket-match.state-predicted { border-color: var(--border); border-left: 2px dashed #4b5563; background: rgba(255,255,255,0.02); }
+    .bracket-match.state-complete { border-color: var(--green); border-left-width: 3px; }
     .bracket-kickoff {
-      font-size: 8px;
-      color: var(--text-muted);
-      text-align: center;
-      padding: 2px 4px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      letter-spacing: 0.03em;
-      white-space: nowrap;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
+      font-size: 8px; color: var(--text-muted); text-align: center; padding: 2px 4px;
+      background: var(--surface); border-bottom: 1px solid var(--border); letter-spacing: 0.03em;
+      white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 5px;
     }
     .bracket-kickoff .ft-badge {
-      font-size: 7px;
-      font-weight: 700;
-      color: var(--green);
-      background: rgba(16,185,129,0.15);
-      border-radius: 3px;
-      padding: 1px 4px;
-      letter-spacing: 0.06em;
-      flex-shrink: 0;
+      font-size: 7px; font-weight: 700; color: var(--green); background: rgba(16,185,129,0.15);
+      border-radius: 3px; padding: 1px 4px; letter-spacing: 0.06em; flex-shrink: 0;
     }
-    .bracket-team {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 6px 7px;
-      border-bottom: 1px solid var(--border);
-      min-height: 32px;
-    }
+    .bracket-team { display: flex; align-items: center; gap: 5px; padding: 6px 7px; border-bottom: 1px solid var(--border); min-height: 32px; }
     .bracket-team:last-child { border-bottom: none; }
-    .bracket-team.winner-actual {
-      background: rgba(16,185,129,0.14);
-      font-weight: 700;
-      color: var(--green);
-    }
+    .bracket-team.winner-actual { background: rgba(16,185,129,0.14); font-weight: 700; color: var(--green); }
     .bracket-team.loser-actual { opacity: 0.35; }
-    .bracket-team.winner-pred {
-      background: rgba(59,130,246,0.1);
-      font-weight: 600;
-      color: #93c5fd;
-    }
+    .bracket-team.winner-pred { background: rgba(59,130,246,0.1); font-weight: 600; color: #93c5fd; }
     .bracket-team.loser-pred { color: var(--text-muted); }
     .bracket-team.team-pred { font-style: italic; color: var(--text-muted); }
-    .bracket-team.team-pred.winner-pred {
-      font-style: italic;
-      color: #93c5fd;
-      background: rgba(59,130,246,0.08);
-    }
+    .bracket-team.team-pred.winner-pred { font-style: italic; color: #93c5fd; background: rgba(59,130,246,0.08); }
     .bracket-team.team-pred.loser-pred { color: var(--text-muted); font-style: italic; }
     .bracket-team .t-flag { font-size: 13px; flex-shrink: 0; }
-    .bracket-team .t-name {
-      flex: 1;
-      font-size: 10.5px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .bracket-team .t-odds {
-      font-size: 8px;
-      color: var(--text-muted);
-      flex-shrink: 0;
-      opacity: 0.5;
-    }
-    .bracket-team .t-score {
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--gold);
-      flex-shrink: 0;
-    }
-    .bracket-team .t-dot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .tbd-row {
-      display: flex;
-      align-items: center;
-      padding: 4px 7px;
-      min-height: 26px;
-      border-bottom: 1px solid var(--border);
-      font-size: 9px;
-      color: var(--border);
-      font-style: italic;
-    }
+    .bracket-team .t-name { flex: 1; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bracket-team .t-odds { font-size: 8px; color: var(--text-muted); flex-shrink: 0; opacity: 0.5; }
+    .bracket-team .t-score { font-size: 10px; font-weight: 700; color: var(--gold); flex-shrink: 0; }
+    .bracket-team .t-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .tbd-row { display: flex; align-items: center; padding: 4px 7px; min-height: 26px; border-bottom: 1px solid var(--border); font-size: 9px; color: var(--border); font-style: italic; }
     .tbd-row:last-child { border-bottom: none; }
-    .bracket-connector {
-      width: 20px;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      align-self: stretch;
-      position: relative;
-    }
-    .bracket-connector svg {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
-      overflow: visible;
-    }
-    .champion-col {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-width: 90px;
-      padding: 12px 8px;
-      gap: 6px;
-    }
-    .champion-label {
-      font-size: 9px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--gold);
-    }
+    .bracket-connector { width: 20px; flex-shrink: 0; display: flex; flex-direction: column; align-self: stretch; position: relative; }
+    .bracket-connector svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
+    .champion-col { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 90px; padding: 12px 8px; gap: 6px; }
+    .champion-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); }
     .champion-flag { font-size: 30px; line-height: 1; }
-    .champion-name {
-      font-size: 12px;
-      font-weight: 800;
-      color: var(--gold);
-      text-align: center;
-    }
+    .champion-name { font-size: 12px; font-weight: 800; color: var(--gold); text-align: center; }
     .champion-name.predicted { color: #93c5fd; font-style: italic; font-weight: 600; }
-    .legend {
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-      align-items: center;
-    }
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--text-muted); margin-bottom: 12px; align-items: center; }
     .legend-item { display: flex; align-items: center; gap: 5px; }
     .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
     .bracket-meta { font-size: 11px; color: var(--text-muted); }
@@ -226,21 +75,8 @@
     .scroll-hint { display: none; font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
     @media(max-width: 960px) { .scroll-hint { display: block; } }
     .view-toggle { display: flex; gap: 6px; margin-bottom: 14px; }
-    .view-toggle-btn {
-      padding: 5px 14px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: var(--surface2);
-      color: var(--text-muted);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .view-toggle-btn.active {
-      background: var(--accent);
-      color: white;
-      border-color: var(--accent);
-    }
+    .view-toggle-btn { padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; }
+    .view-toggle-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -364,7 +200,7 @@
         const bracketData = pred.data;
         const progression = bracketData.progression || {};
 
-        // ── Build feeders map: matchNum -> { home: feederMatchNum, away: feederMatchNum }
+        // Build feeders map: matchNum -> { home: feederMatchNum, away: feederMatchNum }
         const feeders = {};
         Object.entries(progression).forEach(([src, p]) => {
           const srcNum = parseInt(src);
@@ -372,9 +208,8 @@
           feeders[p.next][p.slot] = srcNum;
         });
 
-        // ── Derive correct render order from progression tree ──────
-        // Walk home-first from the Final down to each round's depth.
-        // This is always correct regardless of blob array order.
+        // Derive correct render order by walking progression tree home-first from Final.
+        // R32 kept from blob — leaf nodes have no progression entries.
         function getOrderedMatches(matchNum, depth) {
           if (depth === 0) return [matchNum];
           const f = feeders[matchNum] || {};
@@ -389,10 +224,9 @@
           bracketData.sf  = getOrderedMatches(finalNum, 1);
           bracketData.qf  = getOrderedMatches(finalNum, 2);
           bracketData.r16 = getOrderedMatches(finalNum, 3);
-          bracketData.r32 = getOrderedMatches(finalNum, 4);
         }
 
-        // ── Fetch all referenced matches from DB ──────────────────
+        // Fetch all KO matches from DB
         const allNums = ['r32','r16','qf','sf','final']
           .flatMap(k => bracketData[k] || [])
           .filter(Boolean);
@@ -404,8 +238,7 @@
             home_score, away_score, pens_winner_id,
             home_team_id, away_team_id,
             home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji),
-            away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji),
-            rounds(round_type)
+            away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)
           `)
           .in('match_number', allNums);
 
@@ -414,6 +247,7 @@
         const matchMap = {};
         (matchRows || []).forEach(m => { matchMap[m.match_number] = m; });
 
+        // Odds map: team_id -> decimal odds (most recent first)
         const { data: oddsRows } = await db
           .from('team_odds')
           .select('team_id, odds_decimal')
@@ -426,10 +260,15 @@
           }
         });
 
-        const derivedTeams = derivePredictedTeams(bracketData, matchMap, oddsMap, feeders);
-        _lastRenderArgs = [bracketData, matchMap, derivedTeams, oddsMap];
+        // Name -> team_id lookup for resolving blob team names to IDs for odds
+        const { data: allTeams } = await db.from('teams').select('id, name');
+        const nameToId = {};
+        (allTeams || []).forEach(t => { nameToId[t.name.toLowerCase().trim()] = t.id; });
 
-        renderBracket(bracketData, matchMap, derivedTeams, oddsMap);
+        const derivedTeams = derivePredictedTeams(bracketData, matchMap, oddsMap, feeders, nameToId);
+        _lastRenderArgs = [bracketData, matchMap, derivedTeams, oddsMap, nameToId];
+
+        renderBracket(bracketData, matchMap, derivedTeams, oddsMap, nameToId);
         requestAnimationFrame(() => drawConnectors());
 
         const uploaded = new Date(pred.created_at).toLocaleString('en-GB', {
@@ -449,7 +288,7 @@
       }
     }
 
-    // ── Winner helpers ────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────
 
     function predictedWinnerByOdds(homeId, awayId, oddsMap) {
       if (!homeId || !awayId) return null;
@@ -463,46 +302,82 @@
 
     function actualWinner(match) {
       if (!match || match.status !== 'complete') return null;
-      if (match.pens_winner_id) {
-        return match.pens_winner_id === match.home_team_id ? 'home' : 'away';
-      }
+      if (match.pens_winner_id) return match.pens_winner_id === match.home_team_id ? 'home' : 'away';
       if (match.home_score > match.away_score) return 'home';
       if (match.away_score > match.home_score) return 'away';
       return null;
     }
 
-    // ── Derive predicted teams purely from DB + progression + odds ──
-    function derivePredictedTeams(bracketData, matchMap, oddsMap, feeders) {
+    function resolveId(name, nameToId) {
+      if (!name) return null;
+      return nameToId[name.toLowerCase().trim()] || null;
+    }
 
-      // Get the winning team from a match (actual or predicted by odds).
-      // Recurses into feeders if teams not yet assigned.
+    function decimalToFractional(dec) {
+      if (!dec || dec <= 1) return '';
+      const raw = dec - 1;
+      let rounded;
+      if (raw > 200)      rounded = Math.round(raw / 50) * 50;
+      else if (raw > 100) rounded = Math.round(raw / 20) * 20;
+      else if (raw > 25)  rounded = Math.round(raw / 5) * 5;
+      else                rounded = Math.round(raw);
+      if (rounded <= 0) rounded = 1;
+      return rounded + '/1';
+    }
+
+    // ── Derive predicted teams ────────────────────────────────────
+    // For each R16+ match, resolve home/away by walking the progression tree.
+    // Priority: DB result > DB teams + odds > blob teams + odds > recurse feeders
+    function derivePredictedTeams(bracketData, matchMap, oddsMap, feeders, nameToId) {
+      const blobTeams = bracketData.predicted_teams || {};
+
+      function teamFromBlob(blobSide) {
+        if (!blobSide) return null;
+        const teamId = resolveId(blobSide.name, nameToId);
+        return { name: blobSide.name, flag: blobSide.flag, teamId, isActual: false };
+      }
+
+      // Returns the predicted/actual winner of a match as a team object
       function getWinner(matchNum) {
         const m = matchMap[matchNum];
-        if (!m) return null;
 
-        // Complete — use actual winner
-        if (m.status === 'complete') {
-          const w = m.pens_winner_id
-            ? (m.pens_winner_id === m.home_team_id ? 'home' : 'away')
-            : m.home_score > m.away_score ? 'home'
-            : m.away_score > m.home_score ? 'away'
-            : null;
+        // Complete — actual winner
+        if (m && m.status === 'complete') {
+          const w  = actualWinner(m);
           if (!w) return null;
           const t  = w === 'home' ? m.home_team : m.away_team;
           const id = w === 'home' ? m.home_team_id : m.away_team_id;
-          return t ? { name: t.name, flag: t.flag_emoji, teamId: id, isActual: true } : null;
+          // Fall back to blob name/flag if DB join didn't populate
+          const blob = blobTeams[String(matchNum)];
+          const name = (t && t.name) || (blob && blob[w] && blob[w].name) || null;
+          const flag = (t && t.flag_emoji) || (blob && blob[w] && blob[w].flag) || '';
+          return name ? { name, flag, teamId: id, isActual: true } : null;
         }
 
         // Both teams in DB — predict by odds
-        if (m.home_team_id && m.away_team_id) {
+        if (m && m.home_team_id && m.away_team_id) {
           const w  = predictedWinnerByOdds(m.home_team_id, m.away_team_id, oddsMap);
           const t  = w === 'home' ? m.home_team : m.away_team;
           const id = w === 'home' ? m.home_team_id : m.away_team_id;
-          return t ? { name: t.name, flag: t.flag_emoji, teamId: id, isActual: false } : null;
+          const blob = blobTeams[String(matchNum)];
+          const name = (t && t.name) || (blob && blob[w] && blob[w].name) || null;
+          const flag = (t && t.flag_emoji) || (blob && blob[w] && blob[w].flag) || '';
+          return name ? { name, flag, teamId: id, isActual: false } : null;
         }
 
-        // Teams not yet assigned — recurse into feeders
-        const f = feeders[matchNum] || {};
+        // Teams in blob only — predict by odds using nameToId
+        const blob = blobTeams[String(matchNum)];
+        if (blob && blob.home && blob.away) {
+          const homeId = resolveId(blob.home.name, nameToId);
+          const awayId = resolveId(blob.away.name, nameToId);
+          const w      = predictedWinnerByOdds(homeId, awayId, oddsMap);
+          const team   = w === 'away' ? blob.away : blob.home;
+          const teamId = w === 'away' ? awayId : homeId;
+          return team ? { name: team.name, flag: team.flag, teamId, isActual: false } : null;
+        }
+
+        // Recurse into feeders
+        const f        = feeders[matchNum] || {};
         const homePred = f.home ? getWinner(f.home) : null;
         const awayPred = f.away ? getWinner(f.away) : null;
         if (!homePred && !awayPred) return null;
@@ -514,16 +389,35 @@
 
       // Resolve both slots for a match
       function resolveMatch(matchNum) {
-        const m = matchMap[matchNum];
-        const f = feeders[matchNum] || {};
+        const m    = matchMap[matchNum];
+        const f    = feeders[matchNum] || {};
+        const blob = blobTeams[String(matchNum)];
 
-        const homeTeam = (m && m.home_team_id)
-          ? { name: m.home_team.name, flag: m.home_team.flag_emoji, teamId: m.home_team_id, isActual: true }
-          : (f.home ? getWinner(f.home) : null);
+        // Home slot
+        let homeTeam = null;
+        if (m && m.home_team_id) {
+          const t = m.home_team;
+          const name = (t && t.name) || (blob && blob.home && blob.home.name) || null;
+          const flag = (t && t.flag_emoji) || (blob && blob.home && blob.home.flag) || '';
+          homeTeam = name ? { name, flag, teamId: m.home_team_id, isActual: true } : null;
+        } else if (blob && blob.home) {
+          homeTeam = teamFromBlob(blob.home);
+        } else if (f.home) {
+          homeTeam = getWinner(f.home);
+        }
 
-        const awayTeam = (m && m.away_team_id)
-          ? { name: m.away_team.name, flag: m.away_team.flag_emoji, teamId: m.away_team_id, isActual: true }
-          : (f.away ? getWinner(f.away) : null);
+        // Away slot
+        let awayTeam = null;
+        if (m && m.away_team_id) {
+          const t = m.away_team;
+          const name = (t && t.name) || (blob && blob.away && blob.away.name) || null;
+          const flag = (t && t.flag_emoji) || (blob && blob.away && blob.away.flag) || '';
+          awayTeam = name ? { name, flag, teamId: m.away_team_id, isActual: true } : null;
+        } else if (blob && blob.away) {
+          awayTeam = teamFromBlob(blob.away);
+        } else if (f.away) {
+          awayTeam = getWinner(f.away);
+        }
 
         return { home: homeTeam, away: awayTeam };
       }
@@ -538,11 +432,13 @@
       return derived;
     }
 
-    // ── Render ────────────────────────────────────────────────────
+    // ── Render bracket ────────────────────────────────────────────
 
-    function renderBracket(bracketData, matchMap, derivedTeams, oddsMap) {
+    function renderBracket(bracketData, matchMap, derivedTeams, oddsMap, nameToId) {
       const grid = document.getElementById('bracket-grid');
       grid.innerHTML = '';
+
+      const blobTeams = bracketData.predicted_teams || {};
 
       let roundsToShow = ROUND_DEFS;
       if (_currentView === 'live') {
@@ -554,15 +450,14 @@
           });
         });
         const QF_IDX   = ROUND_DEFS.findIndex(r => r.key === 'qf');
-        const startIdx = firstIncompleteIdx >= 0
-          ? Math.min(firstIncompleteIdx, QF_IDX)
-          : QF_IDX;
-        roundsToShow = ROUND_DEFS.slice(startIdx);
+        const startIdx = firstIncompleteIdx >= 0 ? Math.min(firstIncompleteIdx, QF_IDX) : QF_IDX;
+        roundsToShow   = ROUND_DEFS.slice(startIdx);
       }
 
       roundsToShow.forEach(round => {
         const nums   = bracketData[round.key] || [];
         const isLast = round.key === 'final';
+        const isR32  = round.key === 'r32';
 
         const col = document.createElement('div');
         col.className = 'bracket-col';
@@ -579,11 +474,14 @@
         while (padded.length < round.count) padded.push(null);
 
         padded.forEach(num => {
-          const group = document.createElement('div');
+          const group    = document.createElement('div');
           group.className = 'bracket-slot-group';
           const dbMatch  = num ? matchMap[num] : null;
-          const predTeam = num ? (derivedTeams[String(num)] || null) : null;
-          group.appendChild(renderMatchCard(dbMatch, predTeam, oddsMap));
+          // For R32, use blob predicted_teams directly. For R16+, use derived.
+          const predTeam = num
+            ? (isR32 ? (blobTeams[String(num)] || null) : (derivedTeams[String(num)] || null))
+            : null;
+          group.appendChild(renderMatchCard(dbMatch, predTeam, oddsMap, nameToId));
           slots.appendChild(group);
         });
 
@@ -599,20 +497,17 @@
       });
 
       // Champion column — only once Final is complete
-      const showChampion = roundsToShow.some(r => r.key === 'final');
-      if (showChampion) {
-        const finalNums       = bracketData['final'] || [];
-        const finalNum        = finalNums[0] || null;
-        const finalMatch      = finalNum ? matchMap[finalNum] : null;
-        const finalIsComplete = finalMatch && finalMatch.status === 'complete';
-        if (finalIsComplete) {
+      if (roundsToShow.some(r => r.key === 'final')) {
+        const finalNum    = (bracketData['final'] || [])[0] || null;
+        const finalMatch  = finalNum ? matchMap[finalNum] : null;
+        if (finalMatch && finalMatch.status === 'complete') {
           grid.appendChild(renderChampionCol(finalMatch));
         }
       }
     }
 
     // ── Match card ────────────────────────────────────────────────
-    function renderMatchCard(dbMatch, predTeam, oddsMap) {
+    function renderMatchCard(dbMatch, predTeam, oddsMap, nameToId) {
       const wrap = document.createElement('div');
       wrap.className = 'bracket-match';
 
@@ -620,17 +515,26 @@
       const hasActualHome = dbMatch && dbMatch.home_team_id;
       const hasActualAway = dbMatch && dbMatch.away_team_id;
 
-      const homeTeam = hasActualHome
-        ? { name: dbMatch.home_team.name, flag: dbMatch.home_team.flag_emoji, isActual: true,  teamId: dbMatch.home_team_id }
-        : (predTeam && predTeam.home)
-          ? { ...predTeam.home }
-          : null;
+      // Resolve team for display. DB join takes priority, then blob, then derived.
+      function resolveTeam(hasActual, dbTeamId, dbTeamObj, blobSide, derivedSide) {
+        if (hasActual) {
+          const name = (dbTeamObj && dbTeamObj.name) || (blobSide && blobSide.name) || '?';
+          const flag = (dbTeamObj && dbTeamObj.flag_emoji) || (blobSide && blobSide.flag) || '';
+          return { name, flag, teamId: dbTeamId, isActual: true };
+        }
+        if (derivedSide) { const teamId = derivedSide.teamId || resolveId(derivedSide.name, nameToId); return { ...derivedSide, teamId }; }
+        if (blobSide) {
+          const teamId = resolveId(blobSide.name, nameToId);
+          return { name: blobSide.name, flag: blobSide.flag, teamId, isActual: false };
+        }
+        return null;
+      }
 
-      const awayTeam = hasActualAway
-        ? { name: dbMatch.away_team.name, flag: dbMatch.away_team.flag_emoji, isActual: true,  teamId: dbMatch.away_team_id }
-        : (predTeam && predTeam.away)
-          ? { ...predTeam.away }
-          : null;
+      const blob     = predTeam || {};
+      const derived  = predTeam || {};  // for R16+ predTeam IS derived
+
+      const homeTeam = resolveTeam(hasActualHome, dbMatch && dbMatch.home_team_id, dbMatch && dbMatch.home_team, blob.home, derived.home);
+      const awayTeam = resolveTeam(hasActualAway, dbMatch && dbMatch.away_team_id, dbMatch && dbMatch.away_team, blob.away, derived.away);
 
       if (isComplete) {
         wrap.classList.add('state-complete');
@@ -664,7 +568,7 @@
         isComplete,
         winner === 'home',
         predWinner === 'home',
-        !isComplete && homeTeam && homeTeam.teamId ? oddsMap[homeTeam.teamId] : null
+        !isComplete && homeId ? oddsMap[homeId] : null
       ));
 
       wrap.appendChild(buildTeamRow(
@@ -673,7 +577,7 @@
         isComplete,
         winner === 'away',
         predWinner === 'away',
-        !isComplete && awayTeam && awayTeam.teamId ? oddsMap[awayTeam.teamId] : null
+        !isComplete && awayId ? oddsMap[awayId] : null
       ));
 
       return wrap;
@@ -690,7 +594,6 @@
 
       const row = document.createElement('div');
       row.className = 'bracket-team';
-
       if (!team.isActual) row.classList.add('team-pred');
 
       if (isComplete) {
@@ -703,18 +606,6 @@
       if (isComplete)                 dotColor = isWinner     ? 'var(--green)' : 'var(--border)';
       else if (isPredWinner !== null) dotColor = isPredWinner ? '#3b82f6'      : 'var(--border)';
 
-      function decimalToFractional(dec) {
-        if (!dec || dec <= 1) return '';
-        const raw = dec - 1;
-        let rounded;
-        if (raw > 200)      rounded = Math.round(raw / 50) * 50;
-        else if (raw > 100) rounded = Math.round(raw / 20) * 20;
-        else if (raw > 25)  rounded = Math.round(raw / 5) * 5;
-        else                rounded = Math.round(raw);
-        if (rounded <= 0) rounded = 1;
-        return rounded + '/1';
-      }
-
       const oddsHtml = (!isComplete && odds !== null && odds !== undefined)
         ? `<span class="t-odds">${decimalToFractional(odds)}</span>`
         : '';
@@ -723,8 +614,7 @@
         `<span class="t-flag">${team.flag || ''}</span>` +
         `<span class="t-name">${team.name || ''}</span>` +
         oddsHtml +
-        (isComplete && score !== null && score !== undefined
-          ? `<span class="t-score">${score}</span>` : '') +
+        (isComplete && score !== null && score !== undefined ? `<span class="t-score">${score}</span>` : '') +
         `<span class="t-dot" style="background:${dotColor}"></span>`;
 
       return row;
@@ -756,12 +646,10 @@
       return col;
     }
 
-    // ── Draw SVG bracket connector lines ─────────────────────────
+    // ── SVG connector lines ───────────────────────────────────────
     function drawConnectors() {
       const grid = document.getElementById('bracket-grid');
-      const connectors = grid.querySelectorAll('.bracket-connector');
-
-      connectors.forEach(conn => {
+      grid.querySelectorAll('.bracket-connector').forEach(conn => {
         const slotCount = parseInt(conn.dataset.slotCount || '0');
         if (slotCount < 2) return;
 
@@ -782,11 +670,7 @@
         svg.setAttribute('height', H);
         svg.style.cssText = 'position:absolute;top:0;left:0;overflow:visible;pointer-events:none';
 
-        const stroke = '#2e3350';
-        const sw     = '1.5';
-
-        const pairsCount = nextMatches.length;
-        for (let i = 0; i < pairsCount; i++) {
+        for (let i = 0; i < nextMatches.length; i++) {
           const topMatch = prevMatches[i * 2];
           const botMatch = prevMatches[i * 2 + 1];
           const outMatch = nextMatches[i];
@@ -794,22 +678,14 @@
 
           const topRect = topMatch.getBoundingClientRect();
           const botRect = botMatch.getBoundingClientRect();
-
           const y1   = topRect.top + topRect.height / 2 - connRect.top;
           const y2   = botRect.top + botRect.height / 2 - connRect.top;
           const yMid = (y1 + y2) / 2;
 
-          const path = `
-            M 0 ${y1} H ${W * 0.45}
-            M 0 ${y2} H ${W * 0.45}
-            M ${W * 0.45} ${y1} V ${y2}
-            M ${W * 0.45} ${yMid} H ${W}
-          `.trim();
-
           const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          p.setAttribute('d', path);
-          p.setAttribute('stroke', stroke);
-          p.setAttribute('stroke-width', sw);
+          p.setAttribute('d', `M 0 ${y1} H ${W*0.45} M 0 ${y2} H ${W*0.45} M ${W*0.45} ${y1} V ${y2} M ${W*0.45} ${yMid} H ${W}`);
+          p.setAttribute('stroke', '#2e3350');
+          p.setAttribute('stroke-width', '1.5');
           p.setAttribute('fill', 'none');
           p.setAttribute('stroke-linecap', 'round');
           svg.appendChild(p);
