@@ -522,7 +522,10 @@
           const flag = (dbTeamObj && dbTeamObj.flag_emoji) || (blobSide && blobSide.flag) || '';
           return { name, flag, teamId: dbTeamId, isActual: true };
         }
-        if (derivedSide) { const teamId = derivedSide.teamId || resolveId(derivedSide.name, nameToId); return { ...derivedSide, teamId }; }
+        if (derivedSide) {
+        const teamId = derivedSide.teamId || resolveId(derivedSide.name, nameToId);
+        return { ...derivedSide, teamId };
+        }
         if (blobSide) {
           const teamId = resolveId(blobSide.name, nameToId);
           return { name: blobSide.name, flag: blobSide.flag, teamId, isActual: false };
