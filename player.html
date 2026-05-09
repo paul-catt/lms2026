@@ -936,6 +936,11 @@
         deadlineBar.style.display = '';
         deadlineBar.className = 'deadline-bar open';
         const tick = () => {
+          if (getEffectiveDate() >= deadline) {
+            clearInterval(deadlineInterval);
+            loadDashboard();
+            return;
+          }
           deadlineBar.innerHTML =
             '<span style="display:flex;flex-direction:column;gap:1px">' +
               '<span>⏰ <strong>' + round.name + ' deadline</strong></span>' +
@@ -999,7 +1004,7 @@
         const single = roundPicks[0];
         if (single) html += '<div style="display:flex; justify-content:center"><div class="pick-slot filled-2" style="max-width:200px"><div class="pick-slot-label label-2">Your Pick' + (single.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (single.teams ? single.teams.flag_emoji + ' ' + single.teams.name : '—') + '</div></div></div>';
       }
-      if (!isLocked) html += '<div style="margin-top:12px;text-align:center"><button class="btn btn-secondary" onclick="allowResubmit()">Change pick</button></div>';
+      if (!isLocked && getEffectiveDate() < new Date(round.deadline)) html += '<div style="margin-top:12px;text-align:center"><button class="btn btn-secondary" onclick="allowResubmit()">Change pick</button></div>';
       document.getElementById('pick-summary').innerHTML = '';
       document.getElementById('pick-form-inner').innerHTML = html;
       document.getElementById('submit-oracle-row').style.display = 'none';
@@ -1523,6 +1528,13 @@
       document.getElementById('submit-pick-btn-top').addEventListener('click', submitPick);
       await syncTestDateFromSupabase();
       loadDashboard();
+
+      // Silent background refresh every 60s — skips if modal or oracle is open
+      setInterval(() => {
+        const modalOpen  = document.getElementById('pick-modal-backdrop').classList.contains('open');
+        const oracleOpen = document.getElementById('oracle-sheet').classList.contains('open');
+        if (!modalOpen && !oracleOpen) loadDashboard();
+      }, 60000);
     });
   </script>
 

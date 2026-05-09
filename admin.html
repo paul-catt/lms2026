@@ -661,21 +661,21 @@
 
     const QUICK_JUMPS = [
       { label: 'Pre-Tournament', date: '2026-06-10T15:00' },
-      { label: 'GP1 First',      date: '2026-06-11T15:00' },
-      { label: 'GP1 Last',       date: '2026-06-17T15:00' },
-      { label: 'GP2 First',      date: '2026-06-18T15:00' },
-      { label: 'GP2 Last',       date: '2026-06-23T15:00' },
-      { label: 'GP3 First',      date: '2026-06-24T15:00' },
-      { label: 'GP3 Last',       date: '2026-06-27T15:00' },
-      { label: 'R32 First',      date: '2026-06-28T15:00' },
-      { label: 'R32 Last',       date: '2026-07-03T15:00' },
-      { label: 'R16 First',      date: '2026-07-04T15:00' },
-      { label: 'R16 Last',       date: '2026-07-07T15:00' },
-      { label: 'QF First',       date: '2026-07-09T15:00' },
-      { label: 'QF Last',        date: '2026-07-11T15:00' },
-      { label: 'SF First',       date: '2026-07-14T15:00' },
-      { label: 'SF Last',        date: '2026-07-15T15:00' },
-      { label: 'Final',          date: '2026-07-19T15:00' },
+      { label: 'GP1 First',      date: '2026-06-11T20:00' },
+      { label: 'GP1 Last',       date: '2026-06-17T22:00' },
+      { label: 'GP2 First',      date: '2026-06-18T17:00' },
+      { label: 'GP2 Last',       date: '2026-06-23T21:00' },
+      { label: 'GP3 First',      date: '2026-06-24T17:00' },
+      { label: 'GP3 Last',       date: '2026-06-27T22:00' },
+      { label: 'R32 First',      date: '2026-06-28T17:00' },
+      { label: 'R32 Last',       date: '2026-07-03T20:00' },
+      { label: 'R16 First',      date: '2026-07-04T18:00' },
+      { label: 'R16 Last',       date: '2026-07-07T21:00' },
+      { label: 'QF First',       date: '2026-07-09T21:00' },
+      { label: 'QF Last',        date: '2026-07-11T20:00' },
+      { label: 'SF First',       date: '2026-07-14T20:00' },
+      { label: 'SF Last',        date: '2026-07-15T20:00' },
+      { label: 'Final',          date: '2026-07-19T20:00' },
     ];
 
     const LS_KEY = 'lms2026_test_date';
@@ -802,7 +802,7 @@
       if (name === 'picks') loadPicksAudit();
       if (name === 'fixtures') loadFixtures();
       if (name === 'livescores') initLiveScores();
-      if (name === 'results') loadSnapshotStatus();
+      if (name === 'results') { loadSnapshotStatus(); runExhaustionCheck(); }
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -886,6 +886,13 @@
     }
 
     // ── Players ───────────────────────────────────────────────
+    function shortName(fullName) {
+      if (!fullName) return '?';
+      const parts = fullName.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0];
+      return parts[0] + ' ' + parts[parts.length - 1][0];
+    }
+
     async function loadPlayers() {
       const { data, error } = await db.from('players').select('*').order('name');
       const el = document.getElementById('players-list');
@@ -911,6 +918,7 @@
           <div>
             <div style="font-weight:600">${p.name}</div>
             <div style="font-size:11px; color:var(--text-muted)">/${p.slug} · Goals: ${p.total_goals_prediction || '—'}</div>
+            <div style="font-size:11px; color:var(--text-muted)">Shown as: <span style="color:var(--text)">${p.display_name || shortName(p.name)}</span>${p.display_name ? ' <span style="color:var(--gold);font-size:10px">(custom)</span>' : ''}</div>
           </div>
           <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap">
             <button class="paid-badge ${paidClass}" onclick="togglePaid('${p.id}', ${p.has_paid ? 'true' : 'false'})">${paidLabel}</button>
@@ -933,6 +941,11 @@
             <label style="font-size:12px">Goals Prediction (admin override)</label>
             <input type="number" id="edit-goals-${p.id}" value="${p.total_goals_prediction || ''}" />
           </div>
+          <div class="form-group">
+            <label style="font-size:12px">Display Name <span style="color:var(--text-muted);font-weight:400">(shown on leaderboard — leave blank to use default)</span></label>
+            <input type="text" id="edit-display-name-${p.id}" value="${p.display_name || ''}" placeholder="${shortName(p.name)}" />
+            <div style="font-size:11px; color:var(--text-muted); margin-top:4px">Default: <strong>${shortName(p.name)}</strong> · <a href="#" style="color:var(--gold)" onclick="document.getElementById('edit-display-name-${p.id}').value='';return false">Reset to default</a></div>
+          </div>
           <div style="display:flex; gap:8px">
             <button class="btn btn-primary btn-sm" onclick="savePlayer('${p.id}')">Save</button>
             <button class="btn btn-secondary btn-sm" onclick="toggleEdit('${p.id}')">Cancel</button>
@@ -953,7 +966,7 @@
 Here's your personal link — bookmark it, it's the only way in:
 ${url}
 
-A few things to do before the first deadline (Thursday 11 June at 9pm BST):
+A few things to do before the first deadline (Thursday 11 June at 8pm BST):
 • Enter your total goals prediction for the tournament
 • Check out the rules: https://lms2026.netlify.app/rules
 
@@ -968,9 +981,11 @@ Good luck! ⚽🏆`;
       const name  = document.getElementById('edit-name-' + id).value.trim();
       const slug  = document.getElementById('edit-slug-' + id).value.trim().toLowerCase().replace(/\s+/g, '-');
       const goals = parseInt(document.getElementById('edit-goals-' + id).value) || null;
+      const rawDisplayName = document.getElementById('edit-display-name-' + id).value.trim();
+      const display_name = rawDisplayName && rawDisplayName !== shortName(name) ? rawDisplayName : null;
       const msg   = document.getElementById('edit-msg-' + id);
       if (!name || !slug) { msg.style.color = 'var(--red)'; msg.textContent = 'Name and slug required.'; return; }
-      const { error } = await db.from('players').update({ name, slug, total_goals_prediction: goals }).eq('id', id);
+      const { error } = await db.from('players').update({ name, slug, total_goals_prediction: goals, display_name }).eq('id', id);
       if (error) { msg.style.color = 'var(--red)'; msg.textContent = error.message; }
       else { loadPlayers(); if (document.getElementById('tab-goals').classList.contains('active')) loadGoalsTab(); }
     }
@@ -1421,33 +1436,7 @@ Good luck! ⚽🏆`;
         }
 
         // Re-run no-teams check — calculatePickResults may have skipped it due to pending picks timing
-        const [{ data: alivePlayers }, { data: aliveTeams }, { data: allPlayerPicks }] = await Promise.all([
-          db.from('players').select('id').eq('is_eliminated', false),
-          db.from('teams').select('id').eq('is_eliminated', false),
-          db.from('picks').select('player_id, team_id, pick_results(match_result)')
-        ]);
-        const aliveTeamIds = new Set((aliveTeams || []).map(t => t.id));
-        const picksByPlayer = {};
-        (allPlayerPicks || []).forEach(p => {
-          if (!picksByPlayer[p.player_id]) picksByPlayer[p.player_id] = [];
-          picksByPlayer[p.player_id].push(p);
-        });
-        const toEliminate = [];
-        for (const player of (alivePlayers || [])) {
-          const playerPicks = picksByPlayer[player.id] || [];
-          const hasPendingPick = playerPicks.some(p =>
-            !p.pick_results || p.pick_results.length === 0 || !p.pick_results[0].match_result
-          );
-          if (hasPendingPick) continue;
-          const usedTeamIds = new Set(playerPicks.map(p => p.team_id));
-          const remaining = [...aliveTeamIds].filter(id => !usedTeamIds.has(id));
-          if (remaining.length === 0) toEliminate.push(player.id);
-        }
-        if (toEliminate.length > 0) {
-          await db.from('players')
-            .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
-            .in('id', toEliminate);
-        }
+        await runExhaustionCheck(match.round_id);
       }
 
       msg.style.color='var(--green)'; msg.textContent='✅ Correction saved and points recalculated.';
@@ -1699,44 +1688,47 @@ Good luck! ⚽🏆`;
         }
       }
 
+      // Run exhaustion check after every match result (not just KO)
+      await runExhaustionCheck(roundId);
+
       if (isKnockout) {
-        // Fetch alive players and all their picks+results in two queries, process in memory
-        const [{ data: alivePlayers }, { data: aliveTeams }, { data: allPlayerPicks }] = await Promise.all([
-          db.from('players').select('id').eq('is_eliminated', false),
-          db.from('teams').select('id').eq('is_eliminated', false),
-          db.from('picks').select('player_id, team_id, pick_results(match_result)')
-        ]);
-
-        const aliveTeamIds = new Set((aliveTeams || []).map(t => t.id));
-        const alivePlayerIds = new Set((alivePlayers || []).map(p => p.id));
-
-        // Group all picks by player
-        const picksByPlayer = {};
-        (allPlayerPicks || []).forEach(p => {
-          if (!picksByPlayer[p.player_id]) picksByPlayer[p.player_id] = [];
-          picksByPlayer[p.player_id].push(p);
-        });
-
-        const toEliminate = [];
-        for (const player of (alivePlayers || [])) {
-          const playerPicks = picksByPlayer[player.id] || [];
-          const hasPendingPick = playerPicks.some(p =>
-            !p.pick_results || p.pick_results.length === 0 || !p.pick_results[0].match_result
-          );
-          if (hasPendingPick) continue;
-          const usedTeamIds = new Set(playerPicks.map(p => p.team_id));
-          const remaining = [...aliveTeamIds].filter(id => !usedTeamIds.has(id));
-          if (remaining.length === 0) toEliminate.push(player.id);
-        }
-
-        if (toEliminate.length > 0) {
-          await db.from('players')
-            .update({ is_eliminated: true, eliminated_at: new Date().toISOString() })
-            .in('id', toEliminate);
-        }
-
         await advanceWinnerToNextMatch(matchId, match, homeScore, awayScore, isPens, pensWinnerId);
       }
+    }
+
+    async function runExhaustionCheck(roundId) {
+      const [{ data: alivePlayers }, { data: aliveTeams }, { data: allPlayerPicks }] = await Promise.all([
+        db.from('players').select('id').eq('is_eliminated', false),
+        db.from('teams').select('id').eq('is_eliminated', false),
+        db.from('picks').select('player_id, team_id, pick_results(match_result)')
+      ]);
+      const aliveTeamIds = new Set((aliveTeams || []).map(t => t.id));
+      const picksByPlayer = {};
+      (allPlayerPicks || []).forEach(p => {
+        if (!picksByPlayer[p.player_id]) picksByPlayer[p.player_id] = [];
+        picksByPlayer[p.player_id].push(p);
+      });
+      const toEliminate = [];
+      for (const player of (alivePlayers || [])) {
+        const playerPicks = picksByPlayer[player.id] || [];
+        const hasPendingPick = playerPicks.some(p =>
+          !p.pick_results || p.pick_results.length === 0 || !p.pick_results[0].match_result
+        );
+        if (hasPendingPick) continue;
+        const usedTeamIds = new Set(playerPicks.map(p => p.team_id));
+        const remaining = [...aliveTeamIds].filter(id => !usedTeamIds.has(id));
+        if (remaining.length === 0) toEliminate.push(player.id);
+      }
+      if (toEliminate.length > 0) {
+        await db.from('players')
+          .update({
+            is_eliminated: true,
+            eliminated_at: new Date().toISOString(),
+            ...(roundId ? { eliminated_in_round_id: roundId } : {})
+          })
+          .in('id', toEliminate);
+      }
+      return toEliminate.length;
     }
 
     const KO_PROGRESSION = {
@@ -2630,8 +2622,8 @@ Good luck! ⚽🏆`;
       let html = `<div class="table-wrap"><table style="font-size:13px; table-layout:fixed; width:100%">
         <thead><tr>
           <th class="left" style="width:auto">Match</th>
-          <th style="width:52px; text-align:center">H ${scoreHint}</th>
-          <th style="width:52px; text-align:center">A ${scoreHint}</th>
+          <th style="width:60px; text-align:center">H ${scoreHint}</th>
+          <th style="width:60px; text-align:center">A ${scoreHint}</th>
           ${isKnockout ? '<th style="width:52px; text-align:center">AET?</th>' : ''}
         </tr></thead><tbody>`;
 
@@ -2649,8 +2641,8 @@ Good luck! ⚽🏆`;
             <strong>${m.home_team.flag_emoji} ${m.home_team.name} vs ${m.away_team.flag_emoji} ${m.away_team.name}</strong>${thirdTag}
             <div style="color:var(--text-muted);font-size:11px">${dayTag}${date} · ${ko}</div>
           </td>
-          <td style="text-align:center"><input type="number" min="0" placeholder="—" id="bulk-home-${m.id}" style="width:44px;text-align:center" oninput="bulkCheckDraw('${m.id}')" /></td>
-          <td style="text-align:center"><input type="number" min="0" placeholder="—" id="bulk-away-${m.id}" style="width:44px;text-align:center" oninput="bulkCheckDraw('${m.id}')" /></td>
+          <td style="text-align:center"><input type="number" min="0" placeholder="—" id="bulk-home-${m.id}" style="width:52px;text-align:center;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 2px;font-size:16px" oninput="bulkCheckDraw('${m.id}')" /></td>
+          <td style="text-align:center"><input type="number" min="0" placeholder="—" id="bulk-away-${m.id}" style="width:52px;text-align:center;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 2px;font-size:16px" oninput="bulkCheckDraw('${m.id}')" /></td>
           ${isKnockout ? `<td style="text-align:center; vertical-align:top; padding-top:10px">
             <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
               <input type="checkbox" id="bulk-pens-${m.id}" style="width:auto;accent-color:var(--accent);transform:scale(1.3)" onchange="bulkPensToggle('${m.id}')" />

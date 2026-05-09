@@ -306,6 +306,14 @@
     function roundBannerClass(name)  { return 'round-banner-' + roundKey(name); }
     function dayHeaderClass(name)    { return 'day-header-'    + roundKey(name); }
 
+    // ── Helpers ───────────────────────────────────────────────
+    function shortName(fullName) {
+      if (!fullName) return '?';
+      const parts = fullName.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0];
+      return parts[0] + ' ' + parts[parts.length - 1][0];
+    }
+
     // ── Deadline countdown ───────────────────────────────
     let deadlineInterval = null;
 
@@ -446,7 +454,7 @@
             ? ' <span class="out-badge">OUT</span>' : '';
           const chip = '<div class="pick-chip ' + chipClass + '">' +
             '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700">' +
-              (pl ? pl.name : '?') + '</a>' +
+              (pl ? (pl.display_name || shortName(pl.name)) : '?') + '</a>' +
             ' ' + flag +
             ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px">' + p.multiplier + 'pt</span>' +
             (isLongshot ? ' ⭐' : '') +
@@ -501,7 +509,7 @@
           const isLongshot = isHome ? match.home_team.is_longshot : match.away_team.is_longshot;
           const chip = '<div class="pick-chip">' +
             '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700">' +
-              (pl ? pl.name : '?') + '</a>' +
+              (pl ? (pl.display_name || shortName(pl.name)) : '?') + '</a>' +
             ' ' + flag +
             ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px">' + p.multiplier + 'pt</span>' +
             (isLongshot ? ' ⭐' : '') +
@@ -561,7 +569,7 @@
         const { windowStart, windowEnd } = getGameDayWindow(effectiveNow);
 
         const [{ data: players }, { data: picks }] = await Promise.all([
-          db.from('players').select('id, name, slug'),
+          db.from('players').select('id, name, slug, display_name'),
           db.from('picks').select('player_id, team_id, multiplier, round_id, pick_results(points_earned, match_result)')
         ]);
 

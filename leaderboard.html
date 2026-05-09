@@ -98,7 +98,7 @@
     .pk-chip.win  { border-color:#10b981; box-shadow:0 0 5px rgba(16,185,129,0.35); }
     .pk-chip.draw { border-color:#eab308; box-shadow:0 0 5px rgba(234,179,8,0.35); }
     .pk-chip.loss { border-color:#ef4444; box-shadow:0 0 5px rgba(239,68,68,0.35); }
-    .pk-chip.pend { border-color:#4b5563; opacity:0.4; }
+    .pk-chip.pend { border-color:#4b5563; }
     .pk-rh-gp1  { color:#60a5fa !important; }
     .pk-rh-gp2  { color:#34d399 !important; }
     .pk-rh-gp3  { color:#a78bfa !important; }
@@ -110,6 +110,8 @@
     .matrix-table td, .matrix-table th { padding:3px 4px; border:1px solid var(--border); text-align:center; }
     .matrix-table .m-player { text-align:left; font-weight:600; padding:3px 8px; white-space:nowrap; min-width:80px; }
     .matrix-table .m-player.elim { color:var(--red); }
+    .matrix-table tr.m-alive { background: rgba(99,155,210,0.13); }
+    .matrix-table tr.m-alive:hover { background: rgba(99,155,210,0.20) !important; }
     .matrix-table .m-pos { color:var(--text-muted); font-size:10px; padding:3px 4px; }
     .matrix-table .m-header { writing-mode:vertical-rl; transform:rotate(180deg); font-size:10px; font-weight:700; padding:6px 3px; max-height:80px; vertical-align:bottom; }
     .matrix-table .m-header-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; }
@@ -284,6 +286,10 @@
           <span style="border-bottom:2px solid #f97316;color:#f97316;font-weight:700">Long Shot</span>
           <span style="border-bottom:2px solid #ef4444;color:#ef4444;font-weight:700">No Hoper</span>
         </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button onclick="setMatrixFilter('all')" id="mx-btn-all" style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;padding:5px 14px;border-radius:20px;cursor:pointer;border:1px solid var(--gold);background:var(--gold);color:#000">All players</button>
+          <button onclick="setMatrixFilter('alive')" id="mx-btn-alive" style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;padding:5px 14px;border-radius:20px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted)">Still in</button>
+        </div>
         <div id="matrix-wrap" class="matrix-wrap">
           <div class="loading"><div class="spinner"></div></div>
         </div>
@@ -392,17 +398,19 @@
       const { sorted, allPicks, rounds, firstMatchData } = _leaderboardData;
       const picksNow = getEffectiveDate();
 
-      // Only show picks for rounds where first match has kicked off
+      // Deadline = first kickoff - 1hr. After deadline: show flags. Before deadline but pick exists: show ?.
       const firstKickoffByRound = {};
       (firstMatchData || []).forEach(m => {
         const ko = new Date(m.kickoff).getTime();
         if (!firstKickoffByRound[m.round_id] || ko < firstKickoffByRound[m.round_id])
           firstKickoffByRound[m.round_id] = ko;
       });
+      const deadlineByRound = {};
+      Object.entries(firstKickoffByRound).forEach(([rid, ko]) => { deadlineByRound[rid] = ko - 60 * 60 * 1000; });
       const nowMs = picksNow.getTime();
-      const visiblePicks = (allPicks || []).filter(p =>
-        (firstKickoffByRound[p.round_id] || Infinity) <= nowMs
-      );
+      const deadlinePassed = rid => (deadlineByRound[rid] || Infinity) <= nowMs;
+      // All picks for rounds that have a known deadline are "visible" — flag shown if deadline passed, ? if not
+      const visiblePicks = (allPicks || []).filter(p => p.round_id in deadlineByRound);
 
       // Round order: GP1, GP2, GP3 then KO rounds by sort_order
       const GP_ROUNDS  = ['Group Phase 1', 'Group Phase 2', 'Group Phase 3'];
@@ -504,7 +512,7 @@
 
         html += `<tr${rowStyle}>`;
         html += `<td class="pk-pos">${idx + 1}</td>`;
-        html += `<td class="pk-name${nameCls}">${shortName(p.name)}</td>`;
+        html += `<td class="pk-name${nameCls}">${p.display_name || shortName(p.name)}</td>`;
         html += `<td class="pk-pts">${p.total_points || 0}</td>`;
 
         let prevGp = null;
@@ -515,6 +523,8 @@
           const divCls = isFirstInGroup ? ' pk-div' : '';
           if (!pick) {
             html += `<td class="${divCls}"></td>`;
+          } else if (!deadlinePassed(s.roundId)) {
+            html += `<td class="${divCls}"><span class="pk-chip pend">?</span></td>`;
           } else {
             const cls = pick.result === 'win' ? 'win' : pick.result === 'draw' ? 'draw' : pick.result === 'loss' ? 'loss' : 'pend';
             html += `<td class="${divCls}"><span class="pk-chip ${cls}">${pick.flag}</span></td>`;
@@ -529,10 +539,24 @@
       wrap.innerHTML = html;
     }
 
+    let _matrixFilter = 'all';
+    function setMatrixFilter(f) {
+      _matrixFilter = f;
+      document.getElementById('mx-btn-all').style.background   = f === 'all'   ? 'var(--gold)' : 'var(--surface2)';
+      document.getElementById('mx-btn-all').style.color        = f === 'all'   ? '#000' : 'var(--text-muted)';
+      document.getElementById('mx-btn-all').style.borderColor  = f === 'all'   ? 'var(--gold)' : 'var(--border)';
+      document.getElementById('mx-btn-alive').style.background  = f === 'alive' ? 'var(--gold)' : 'var(--surface2)';
+      document.getElementById('mx-btn-alive').style.color       = f === 'alive' ? '#000' : 'var(--text-muted)';
+      document.getElementById('mx-btn-alive').style.borderColor = f === 'alive' ? 'var(--gold)' : 'var(--border)';
+      if (_leaderboardData) renderMatrixView();
+    }
+
     function renderMatrixView() {
       const wrap = document.getElementById('matrix-wrap');
       if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the standings first.</p>'; return; }
-      const { sorted, allPicks, rounds, firstMatchData, todayMatchRows } = _leaderboardData;
+      const { sorted: allSorted, allPicks, rounds, firstMatchData, todayMatchRows } = _leaderboardData;
+      const sorted = _matrixFilter === 'alive' ? allSorted.filter(p => !p.is_eliminated) : allSorted;
+      const posOffset = allSorted.indexOf(sorted[0]);
       const now = getEffectiveDate();
 
       const completedKORounds = (rounds || []).filter(r => r.round_type === 'knockout' && r.is_complete);
@@ -556,10 +580,10 @@
           firstKickoffByRound[m.round_id] = ko;
       });
 
-      // Only include picks for rounds where deadline has passed (first match kicked off)
+      // Only include picks for rounds where deadline has passed (first kickoff - 1hr)
       const nowMs = now.getTime();
       const visiblePicks = (allPicks || []).filter(p =>
-        (firstKickoffByRound[p.round_id] || Infinity) <= nowMs
+        (firstKickoffByRound[p.round_id] - 60 * 60 * 1000 || Infinity) <= nowMs
       );
 
       const pickMap = {};
@@ -612,28 +636,27 @@
       });
       html += '<th></th><th></th></tr></thead><tbody>';
 
-      sorted.forEach((p, i) => {
-        const pos  = i + 1;
+      sorted.forEach((p) => {
+        const pos  = allSorted.indexOf(p) + 1;
         const isElim = p.is_eliminated;
         const used = usedByPlayer[p.player_id] || new Set();
         const playerPicks = pickMap[p.player_id] || {};
 
-        html += `<tr${isElim ? ' style="background:rgba(255,255,255,0.04);opacity:0.5;"' : ''}><td class="m-pos">${pos}</td>`;
-        html += `<td class="m-player${isElim ? ' elim' : ''}"><a href="/${p.slug}" style="color:inherit;text-decoration:none">${p.name}</a></td>`;
+        html += `<tr${isElim ? ' style="opacity:0.45;"' : ' class="m-alive"'}><td class="m-pos">${pos}</td>`;
+        const hasPending = Object.values(playerPicks).some(pk => pk.result === 'pending');
+        const pendingTick = hasPending ? ' <span style="font-size:9px;color:var(--text-muted);opacity:0.7" title="Pick submitted">✓</span>' : '';
+        html += `<td class="m-player${isElim ? ' elim' : ''}"><a href="/${p.slug}" style="color:inherit;text-decoration:none">${p.display_name || shortName(p.name)}</a>${pendingTick}</td>`;
 
         teamList.forEach((t, i) => {
           const pick    = playerPicks[t.id];
           const divider = getBorderStyle(t, i);
           if (!pick) {
-            const isRemaining = !p.is_eliminated && !used.has(t.id);
-            const bg = isRemaining ? `background:rgba(255,255,255,0.11);` : '';
-            html += `<td style="${divider}${bg}"></td>`;
+            html += `<td style="${divider}"></td>`;
           } else {
             const r      = pick.result;
             const cls    = r === 'win' ? 'm-W' : r === 'draw' ? 'm-D' : r === 'loss' ? 'm-L' : '';
-            const label  = r === 'win' ? 'W' : r === 'draw' ? 'D' : r === 'loss' ? 'L' : '·';
-            const ptLabel = pick.multiplier ? `<span style="font-size:9px;color:var(--text-muted)">${pick.multiplier}</span>` : '';
-            html += `<td class="${cls}" style="${divider}" title="${t.flag_emoji || ''} ${r||'pending'}">${label}${ptLabel}</td>`;
+            const label  = r === 'win' ? 'W' : r === 'draw' ? 'D' : r === 'loss' ? 'L' : '';
+            html += `<td class="${cls}" style="${divider}" title="${t.flag_emoji || ''} ${r||'pending'}">${label}</td>`;
           }
         });
 
@@ -1085,7 +1108,7 @@
             '<td class="pos">' + pos + (tied ? '=' : '') + '</td>' +
             '<td class="prior">' + arrowHtml + '</td>' +
             '<td class="medal landscape-only">' + medal + '</td>' +
-            '<td class="player-name"><a href="/' + p.slug + '">' + p.name + '</a>' + trophyHtml + flagHtml + '</td>' +
+            '<td class="player-name"><a href="/' + p.slug + '">' + (p.display_name || shortName(p.name)) + '</a>' + trophyHtml + flagHtml + '</td>' +
             '<td style="color:var(--text-muted)" class="' + (isKnockout ? 'hide-portrait-ko' : '') + '">' + (p.rounds_played || 0) + '</td>' +
             '<td class="points tight-col">' + (p.total_points || 0) + '</td>' +
             (showRndCol ? '<td style="color:var(--text-muted);font-size:12px" class="tight-col">' + rndHtml + '</td>' : '') +
@@ -1136,7 +1159,7 @@
       if (!hasAny) { wrap.innerHTML = '<p style="color:var(--text-muted);padding:16px 0">No longshot picks recorded yet.</p>'; return; }
       let html = '<table style="table-layout:fixed;width:100%"><thead><tr><th class="pos" style="width:28px">#</th><th>Player</th><th style="width:60px;white-space:nowrap">Picks ⭐</th><th style="width:80px">Wins</th><th style="width:56px">Bonus<br>Pts</th></tr></thead><tbody>';
       lsSorted.filter(p => p.longshotPicks > 0).forEach((p, i) => {
-        const displayName = shortName(p.name);
+        const displayName = p.display_name || shortName(p.name);
         const winsHtml = p.longshotWins.length > 0
           ? `<div style="display:flex;flex-wrap:wrap;gap:0;line-height:1.2;font-size:15px">${p.longshotWins.map(f => `<span>${f}</span>`).join('')}</div>`
           : '—';
@@ -1373,7 +1396,7 @@
             <span style="font-size:11px; font-weight:700; color:var(--text-muted); min-width:22px; text-align:right; flex-shrink:0">${rankLabel}</span>
             <div style="flex:1; min-width:0">
               <div style="font-weight:700; font-size:14px; display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
-                <a href="/${p.slug}" style="color:var(--text); text-decoration:none;">${p.name}</a>${lastMenIndices.includes(origIdx) ? lmsPill : ''}${firstOutIndices.includes(origIdx) ? firstOutPill : ''}
+                <a href="/${p.slug}" style="color:var(--text); text-decoration:none;">${p.display_name || shortName(p.name)}</a>${lastMenIndices.includes(origIdx) ? lmsPill : ''}${firstOutIndices.includes(origIdx) ? firstOutPill : ''}
               </div>
               <div style="font-size:12px; margin-top:3px; line-height:1.5; display:flex; align-items:baseline; justify-content:space-between; gap:8px;">
                 <span>${storyHtml}</span>

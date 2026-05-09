@@ -345,7 +345,7 @@
           { data: playerScores },
           { data: allTeams }
         ] = await Promise.all([
-          db.from('players').select('id, name, slug, is_eliminated, total_goals_prediction'),
+          db.from('players').select('id, name, slug, display_name, is_eliminated, total_goals_prediction'),
           // FIX 3: order pick_results by match kickoff so form is chronological
           db.from('picks').select(`
             id, player_id, team_id, multiplier, round_id,
@@ -679,6 +679,14 @@
       }
     }
 
+    // ── Helpers ───────────────────────────────────────────────
+    function shortName(fullName) {
+      if (!fullName) return '?';
+      const parts = fullName.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0];
+      return parts[0] + ' ' + parts[parts.length - 1][0];
+    }
+
     // ── Pick Reminder Copy ────────────────────────────────────
     function renderReminderCopy() {
       if (!roundData) return;
@@ -806,7 +814,7 @@
         snapshotTop3.forEach((p, i) => {
           const medal = ['🥇','🥈','🥉'][i];
           const pts = p.snapshotPts !== undefined ? p.snapshotPts : p.totalPoints;
-          msg += `${medal} ${p.name} — ${pts}pts\n`;
+          msg += `${medal} ${p.display_name || shortName(p.name)} — ${pts}pts\n`;
         });
       } else {
         sortedPlayers.slice(0, 3).forEach((p, i) => {
@@ -818,11 +826,11 @@
       if (biggestUp || biggestDown) {
         msg += `\n`;
         if (biggestUp && biggestDown) {
-          msg += `📈 ${biggestUp.name} flew up ${biggestUp.move} place${biggestUp.move !== 1 ? 's' : ''} · ${biggestDown.name} dropped ${Math.abs(biggestDown.move)}\n`;
+          msg += `📈 ${(biggestUp.display_name || shortName(biggestUp.name))} flew up ${biggestUp.move} place${biggestUp.move !== 1 ? 's' : ''} · ${(biggestDown.display_name || shortName(biggestDown.name))} dropped ${Math.abs(biggestDown.move)}\n`;
         } else if (biggestUp) {
-          msg += `📈 ${biggestUp.name} flew up ${biggestUp.move} place${biggestUp.move !== 1 ? 's' : ''}\n`;
+          msg += `📈 ${(biggestUp.display_name || shortName(biggestUp.name))} flew up ${biggestUp.move} place${biggestUp.move !== 1 ? 's' : ''}\n`;
         } else {
-          msg += `📉 ${biggestDown.name} dropped ${Math.abs(biggestDown.move)} place${Math.abs(biggestDown.move) !== 1 ? 's' : ''}\n`;
+          msg += `📉 ${(biggestDown.display_name || shortName(biggestDown.name))} dropped ${Math.abs(biggestDown.move)} place${Math.abs(biggestDown.move) !== 1 ? 's' : ''}\n`;
         }
       } else if (prevCompletedRound) {
         msg += `\n↔️ No position changes from last round.\n`;
@@ -887,7 +895,7 @@
         // --- KO EXTRAS ---
         // Eliminations
         if (eliminatedThisRound.length > 0) {
-          msg += `\n💀 *Eliminated:* ${eliminatedThisRound.map(p => p.name).join(', ')}\n`;
+          msg += `\n💀 *Eliminated:* ${eliminatedThisRound.map(p => p.display_name || shortName(p.name)).join(', ')}\n`;
         } else {
           msg += `\n✅ No eliminations this round.\n`;
         }
@@ -996,7 +1004,7 @@
             : `<div style="font-size:11px;color:#a0aec0;font-style:italic;margin-top:2px">No 2pt pick</div>`;
           html += `<tr class="${rowClass}">
             <td style="font-weight:700;color:#4a5568">${posLabel}</td>
-            <td class="left"><span class="r-name">${p.name}</span></td>
+            <td class="left"><span class="r-name">${p.display_name || shortName(p.name)}</span></td>
             <td class="left">${pick3Html}${pick2Html}</td>
             <td style="color:#4a5568">${p.pld}</td>
             <td style="font-weight:800;color:#1a202c">${p.totalPoints}</td>
@@ -1021,7 +1029,7 @@
           const rowClass = p.isOut ? 'elim' : '';
           html += `<tr class="${rowClass}">
             <td style="font-weight:700;color:#4a5568">${posLabel}</td>
-            <td class="left"><span class="r-name">${p.name}</span></td>
+            <td class="left"><span class="r-name">${p.display_name || shortName(p.name)}</span></td>
             <td class="left">${teamCell(pick)}</td>
             <td style="font-weight:800;color:#1a202c">${p.totalPoints}</td>
           </tr>`;
@@ -1245,8 +1253,8 @@
         // Flags for picks playing today (up to 2)
         const flags = (p.todayFlags || []).slice(0, 2).join(' ');
         const nameHtml = flags
-          ? `<span class="r-name">${p.name}</span> <span class="r-today-flags">${flags}</span>`
-          : `<span class="r-name">${p.name}</span>`;
+          ? `<span class="r-name">${p.display_name || shortName(p.name)}</span> <span class="r-today-flags">${flags}</span>`
+          : `<span class="r-name">${p.display_name || shortName(p.name)}</span>`;
 
         // GD — red if negative
         const gd = p.gd ?? 0;
@@ -1259,7 +1267,7 @@
         const rowClass = p.isOut ? 'elim' : '';
 
         const nameWithOut = p.isOut
-          ? `<span class="r-name">${p.name}</span>${flags ? ' <span class="r-today-flags">' + flags + '</span>' : ''} <span style="font-size:9px;font-weight:800;color:#e53e3e;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:3px;padding:1px 4px;vertical-align:middle">OUT</span>`
+          ? `<span class="r-name">${p.display_name || shortName(p.name)}</span>${flags ? ' <span class="r-today-flags">' + flags + '</span>' : ''} <span style="font-size:9px;font-weight:800;color:#e53e3e;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:3px;padding:1px 4px;vertical-align:middle">OUT</span>`
           : nameHtml;
 
         // Pos cell: number + inline arrow — fixed width slots so they always align

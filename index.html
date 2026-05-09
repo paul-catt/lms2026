@@ -484,15 +484,8 @@
           if (roundRow) roundName = roundRow.name || '';
         }
 
-        // Deadline = 11:00 UTC on the day of the first scheduled match.
-        // If that time is already past, advance by one day until it's in the future.
-        let deadlineUtc = new Date(Date.UTC(
-          kickoff.getUTCFullYear(), kickoff.getUTCMonth(), kickoff.getUTCDate(),
-          WINDOW_START_HOUR, 0, 0
-        ));
-        while (deadlineUtc <= now) {
-          deadlineUtc = new Date(deadlineUtc.getTime() + 86400000);
-        }
+        // Deadline = 1 hour before the first scheduled match of the round.
+        const deadlineUtc = new Date(kickoff.getTime() - 60 * 60 * 1000);
 
         nextDeadline = deadlineUtc;
         nextDeadlineRound = roundName;
