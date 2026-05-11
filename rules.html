@@ -4,8 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FAQ — LMS 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
   <style>
+    body { font-family: 'Inter', sans-serif; }
+    nav, .nav-logo, .card-title { font-family: 'Rajdhani', sans-serif; }
     .rules-section { margin-bottom: 24px; }
     .rules-section h2 {
       font-size: 15px;
@@ -164,6 +169,10 @@
     .prizes-table tr:last-child td { border-bottom: none; }
     .prizes-table .place { font-weight: 600; color: var(--text); width: 60%; }
     .prizes-table .prize { font-weight: 700; color: var(--green); text-align: right; width: 40%; white-space: nowrap; }
+
+    .hero-logo { width: 72px; height: 72px; margin-bottom: 12px; }
+    .hero-title { font-family: 'Rajdhani', sans-serif; font-size: 28px; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.02em; }
+    .hero-sub { color: var(--text-muted); font-size: 13px; font-style: italic; }
   </style>
 </head>
 <body>
@@ -179,7 +188,7 @@
   </nav>
   <script>
     (function() {
-      const slug = localStorage.getItem('lms2026_player_slug');
+      const slug = localStorage.getItem('lms2026_my_slug');
       const link = document.getElementById('nav-my-page');
       if (slug) { link.href = '/' + slug; }
       else { link.href = '/'; link.title = 'Enter your player code'; }
@@ -188,10 +197,10 @@
 
   <main style="max-width:720px">
 
-    <div class="card" style="text-align:center; padding:28px 20px; margin-bottom:20px">
-      <div style="font-size:48px; margin-bottom:10px">📋</div>
-      <h1 style="font-size:22px; font-weight:800; margin-bottom:6px">FAQ</h1>
-      <p style="color:var(--text-muted); font-size:13px">World Cup 2026 Last Man Standing</p>
+    <div class="card" style="text-align:center; padding:32px 20px; margin-bottom:20px">
+      <img src="/logo.svg" alt="LMS 2026" class="hero-logo">
+      <h1 class="hero-title">FAQ</h1>
+      <p class="hero-sub">The rules. Yes, you have to read them.</p>
     </div>
 
     <!-- QUICK REFERENCE -->
@@ -348,7 +357,7 @@
     <div class="card">
       <div class="rules-section" style="margin-bottom:0">
         <h2>🎯 Goals Prediction</h2>
-        <p>At the start of the competition, each player submits a prediction for the <span class="highlight">total number of goals scored across all 104 matches</span>, including goals in extra time. This is used as a tiebreaker — the player closest to the actual total wins the tiebreak. You can set or update your prediction from your personal dashboard during Group Phase 1.</p>
+        <p>At the start of the competition, each player submits a prediction for the <span class="highlight">total number of goals scored across all 104 matches</span>, including goals in extra time. This is used as a tiebreaker — the player closest to the actual total wins the tiebreak. You can set or update your prediction from your personal dashboard before the <span class="highlight">Group Phase 1 deadline</span>.</p>
       </div>
     </div>
 
@@ -356,8 +365,8 @@
     <div class="card">
       <div class="rules-section" style="margin-bottom:0">
         <h2>🔮 The Oracle</h2>
-        <p>Not sure who to pick? The Oracle is a built-in advisor on your personal dashboard. It assesses <span class="highlight">8.8 billion possible pick combinations</span> and uses an algorithm — with a random element — to suggest the most suitable team for your situation, rated one to five stars.</p>
-        <p style="margin-top:8px">Picks made via the Oracle are marked with 🔮. For entertainment only — the Oracle accepts no responsibility for your leaderboard position.</p>
+        <p>Not sure who to pick? The Oracle is a built-in advisor on your personal dashboard. It assesses <span class="highlight">8.8 billion possible pick combinations</span> and uses an algorithm — with a random element — to suggest the most suitable team for your situation, rated ⭐ to ⭐⭐⭐⭐⭐.</p>
+        <p style="margin-top:8px">Picks made via the Oracle are marked with 🔮. For entertainment only — the Oracle accepts no responsibility for your leaderboard position!</p>
       </div>
     </div>
 

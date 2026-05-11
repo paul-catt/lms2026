@@ -2014,12 +2014,31 @@
 
       if (!_oracleDataReady) {
         const now = getEffectiveDate();
-        _oracleRound = openRounds.find(r => !r.is_complete && new Date(r.deadline) > now);
+
+        // Oracle always operates on the currently selected round
+        _oracleRound = openRounds.find(r => r.id === selectedRoundId) || null;
 
         if (!_oracleRound) {
           thinkEl.style.display = 'none';
           document.getElementById('oracle-no-round').style.display = 'block';
           return;
+        }
+
+        // KO rounds: only available when it's the earliest active KO round with fixtures assigned
+        const isKORound = KO_ROUNDS.includes(_oracleRound.name);
+        if (isKORound) {
+          const activeKORound = allRounds.find(r =>
+            KO_ROUNDS.includes(r.name) &&
+            !r.is_complete &&
+            allMatches.some(m => m.round_id === r.id && m.home_team && m.away_team)
+          );
+          if (!activeKORound || _oracleRound.id !== activeKORound.id) {
+            thinkEl.style.display = 'none';
+            const noRoundEl = document.getElementById('oracle-no-round');
+            noRoundEl.textContent = '😶 The Oracle can\'t help with ' + _oracleRound.name + ' yet — fixtures aren\'t known until the previous round completes.';
+            noRoundEl.style.display = 'block';
+            return;
+          }
         }
 
         // Check if we already have a fixed pool for this round
@@ -2318,23 +2337,37 @@
       const team = useBtn._oracleTeam;
       if (!team) return;
 
-      // Determine which slot will be filled, set that flag
+      // Block if deadline has passed
       const round = allRounds.find(r => r.id === selectedRoundId);
-      const isGroup = round && round.round_type === 'group';
+      if (!round) return;
+      if (getEffectiveDate() >= new Date(round.deadline)) {
+        closeOracle();
+        const msg = document.getElementById('pick-msg');
+        if (msg) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Deadline has passed — pick not submitted.'; }
+        return;
+      }
+
+      // Set oracle flags correctly for whichever slot gets filled
+      const isGroup = round.round_type === 'group';
       if (isGroup) {
         const alreadyPicked = (pick3 && pick3.id === team.id) || (pick2 && pick2.id === team.id);
         if (alreadyPicked) { closeOracle(); return; }
-        if (!pick3)                          { _oracleUsed3 = true; }
-        else if (!pick2 && team.id !== (pick3 && pick3.id)) { _oracleUsed2 = true; }
-        else                                 { _oracleUsed3 = true; if (pick2 && pick2.id === team.id) _oracleUsed2 = false; }
+        if (!pick3) {
+          _oracleUsed3 = true;
+        } else if (!pick2 && pick3.id !== team.id) {
+          _oracleUsed2 = true;
+        } else {
+          _oracleUsed3 = true;
+          _oracleUsed2 = false;
+        }
       } else {
         _oracleUsed2 = true;
       }
       selectTeam(team.id, true);
       closeOracle();
 
-      // KO only: auto-trigger submit confirm after oracle pick
-      // Group stage: auto-submit only when both picks are now filled (oracle completed the second pick)
+      // KO: auto-trigger submit after oracle pick
+      // Group: auto-submit only when both picks are now filled
       if (!isGroup) {
         setTimeout(() => submitPick(), 150);
       } else if (pick3 && pick2) {

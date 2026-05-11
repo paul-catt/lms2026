@@ -43,20 +43,19 @@
     .deadline-timer.locked { color:var(--text-muted); font-size:18px; font-weight:700; }
 
     /* ── Round colours ─────────────────────────────────── */
-    /* Each round has a colour token used for banners AND day headers */
     :root {
-      --rc-gp1:   #6366f1; /* indigo */
-      --rc-gp2:   #06b6d4; /* cyan */
-      --rc-gp3:   #10b981; /* emerald */
-      --rc-r32:   #f59e0b; /* amber */
-      --rc-r16:   #8b5cf6; /* violet */
-      --rc-qf:    #0ea5e9; /* sky blue */
-      --rc-sf:    #f97316; /* orange */
-      --rc-3p:    #0d9488; /* teal */
-      --rc-final: #dc2626; /* blood red */
+      --rc-gp1:   #6366f1;
+      --rc-gp2:   #06b6d4;
+      --rc-gp3:   #10b981;
+      --rc-r32:   #f59e0b;
+      --rc-r16:   #8b5cf6;
+      --rc-qf:    #0ea5e9;
+      --rc-sf:    #f97316;
+      --rc-3p:    #0d9488;
+      --rc-final: #dc2626;
     }
 
-    /* ── Round banners (item 5) ────────────────────────── */
+    /* ── Round banners ─────────────────────────────────── */
     .round-banner {
       font-family: 'Rajdhani', sans-serif;
       font-size: 13px;
@@ -82,8 +81,7 @@
     .round-banner-3p    { background: rgba(13,148,136,0.12);  color: var(--rc-3p);    border-left: 3px solid var(--rc-3p); }
     .round-banner-final { background: rgba(220,38,38,0.15);   color: var(--rc-final); border-left: 3px solid var(--rc-final); }
 
-    /* ── Day headers (items 2/3/4/5) ──────────────────── */
-    /* Format: ROUND NAME · DAY X · DATE */
+    /* ── Day headers ───────────────────────────────────── */
     .day-header {
       display: flex;
       align-items: center;
@@ -99,7 +97,6 @@
     }
     .day-header:first-child { margin-top: 4px; }
 
-    /* Colour variants matching round */
     .day-header-gp1   { background: rgba(99,102,241,0.07);  color: var(--rc-gp1); }
     .day-header-gp2   { background: rgba(6,182,212,0.07);   color: var(--rc-gp2); }
     .day-header-gp3   { background: rgba(16,185,129,0.07);  color: var(--rc-gp3); }
@@ -132,17 +129,14 @@
     .match-card.complete { opacity: 0.82; }
     .match-card.live     { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
 
-    /* Row 1: time + venue */
     .match-meta { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
     .match-time { font-size:11px; font-weight:700; color:var(--text-muted); }
     .match-venue-inline { font-size:11px; color:var(--text-muted); }
     .match-venue-sep { font-size:11px; color:var(--border); margin:0 2px; }
 
-    /* Row 2: home · score/vs · away */
     .match-main { display:flex; align-items:center; gap:6px; }
     .match-home, .match-away { font-size:20px; font-weight:700; font-family:'Rajdhani',sans-serif; min-width:0; flex:1; line-height:1.1; }
     .match-home { text-align:right; }
-    .match-home.loser, .match-away.loser { opacity:0.38; }
     .match-centre-col { display:flex; flex-direction:column; align-items:center; flex-shrink:0; gap:3px; }
     .match-score-inline { font-size:26px; font-weight:900; color:var(--text); min-width:52px; text-align:center; letter-spacing:-0.02em; line-height:1; }
     .match-vs { font-size:10px; color:var(--text-muted); min-width:28px; text-align:center; letter-spacing:0.05em; }
@@ -153,7 +147,7 @@
     .match-sub { margin-top:6px; }
     .match-aet { font-size:11px; color:var(--text-muted); margin-bottom:4px; }
 
-    /* ── Odds (items 6 & 7) ────────────────────────────── */
+    /* ── Odds ──────────────────────────────────────────── */
     .odds-row { display:flex; gap:5px; flex-wrap:wrap; align-items:center; margin-bottom:4px; }
     .odds-label { font-size:11px; color:var(--text-muted); margin-right:2px; }
     .odds-pill {
@@ -165,7 +159,6 @@
       color: var(--text-muted);
       transition: all 0.1s;
     }
-    /* Item 7: winning odds highlighted, others dimmed */
     .odds-pill.odds-winner { color: var(--text); border-color: var(--green); background: rgba(16,185,129,0.1); font-weight: 700; }
     .odds-pill.odds-loser  { opacity: 0.35; }
     .no-odds { font-size:11px; color:var(--border); font-style:italic; }
@@ -174,7 +167,7 @@
     .picks-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; padding-top:6px; border-top:1px solid var(--border); margin-top:4px; }
     .picks-home { display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-start; align-content:flex-start; }
     .picks-away { display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end; align-content:flex-start; }
-    .pick-chip { display:inline-flex; align-items:center; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:3px 8px; font-size:12px; width:fit-content; }
+    .pick-chip { display:inline-flex; align-items:center; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:3px 8px; font-size:12px; width:fit-content; max-width:calc(50% - 2px); min-width:0; overflow:hidden; }
     .pick-chip.win  { background:rgba(16,185,129,0.1);  border-color:rgba(16,185,129,0.3); }
     .pick-chip.draw { background:rgba(245,158,11,0.1);  border-color:rgba(245,158,11,0.3); }
     .pick-chip.loss { background:rgba(239,68,68,0.1);   border-color:rgba(239,68,68,0.3); }
@@ -194,8 +187,6 @@
 </head>
 <body>
 
-  <!-- Item 29: purple test banner removed -->
-
   <nav>
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
@@ -208,7 +199,7 @@
   </nav>
   <script>
     (function() {
-      const slug = localStorage.getItem('lms2026_player_slug');
+      const slug = localStorage.getItem('lms2026_my_slug');
       const link = document.getElementById('nav-my-page');
       if (slug) { link.href = '/' + slug; }
       else { link.href = '/'; link.title = 'Enter your player code'; }
@@ -219,7 +210,7 @@
     <div id="deadline-card-wrap"></div>
 
     <div class="card" id="today-card">
-      <div class="card-title">📅 Today</div>
+      <div class="card-title" id="today-section-title">📅 Today</div>
       <div id="today-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="today-content"></div>
     </div>
@@ -250,6 +241,10 @@
       const o = localStorage.getItem(LS_KEY);
       return o ? new Date(o) : new Date();
     }
+    function isLastNight() {
+      const h = getEffectiveDate().getUTCHours();
+      return h >= 6 && h < 11;
+    }
     async function syncTestDateFromSupabase() {
       const { data } = await db.from('app_config').select('value').eq('key', 'test_date_override').single();
       if (data?.value) { localStorage.setItem(LS_KEY, data.value); }
@@ -279,16 +274,13 @@
     function fmtShortDate(iso) { return new Date(iso).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }); }
     function fmtLongDate(iso)  { return new Date(iso).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' }); }
 
-    // Item 6: format odds — max 1dp, drop trailing zero
     function fmtOdds(val) {
       if (!val) return '—';
       const n = parseFloat(val);
       if (isNaN(n)) return '—';
-      // 1dp, strip trailing zero
       return (Math.round(n * 10) / 10).toString();
     }
 
-    // Map round name → CSS key
     function roundKey(name) {
       const n = (name || '').toLowerCase().replace(/\s+/g, '');
       if (n.includes('groupphase1') || n === 'gp1') return 'gp1';
@@ -306,12 +298,21 @@
     function roundBannerClass(name)  { return 'round-banner-' + roundKey(name); }
     function dayHeaderClass(name)    { return 'day-header-'    + roundKey(name); }
 
-    // ── Helpers ───────────────────────────────────────────────
     function shortName(fullName) {
       if (!fullName) return '?';
       const parts = fullName.trim().split(/\s+/);
       if (parts.length === 1) return parts[0];
       return parts[0] + ' ' + parts[parts.length - 1][0];
+    }
+
+    function sortPicksByName(picks, allPlayers) {
+      return [...picks].sort((a, b) => {
+        const pa = (allPlayers || []).find(pl => pl.id === a.player_id);
+        const pb = (allPlayers || []).find(pl => pl.id === b.player_id);
+        const na = pa ? (pa.display_name || pa.name || '') : '';
+        const nb = pb ? (pb.display_name || pb.name || '') : '';
+        return na.localeCompare(nb);
+      });
     }
 
     // ── Deadline countdown ───────────────────────────────
@@ -370,17 +371,14 @@
     }
 
     // ── Odds HTML ────────────────────────────────────────
-    // Item 6: 1dp. Item 7: winner highlighted in results, others dimmed.
     function oddsHtml(match, highlightWinner) {
       if (!match.odds_home) return '<div class="odds-row"><span class="no-odds">No odds yet</span></div>';
 
-      // Determine winner for highlighting
-      let winnerSide = null; // 'home', 'draw', 'away'
+      let winnerSide = null;
       if (highlightWinner && match.status === 'complete') {
         if (match.home_score > match.away_score) winnerSide = 'home';
         else if (match.away_score > match.home_score) winnerSide = 'away';
         else winnerSide = 'draw';
-        // pens: winner side takes it
         if (match.pens_winner_id) {
           winnerSide = match.pens_winner_id === match.home_team_id ? 'home' : 'away';
         }
@@ -401,20 +399,9 @@
     }
 
     // ── Match card (today + results archive) ────────────
-    // Item 8: showVenue=false for results archive
     function matchCardHtml(match, picks, allPlayers, showVenue) {
       const isComplete = match.status === 'complete';
       const isLive     = match.status === 'live';
-
-      // Determine which side lost for dimming
-      let homeLoser = '', awayLoser = '';
-      if (isComplete) {
-        if (match.pens_winner_id) {
-          homeLoser = match.pens_winner_id === match.home_team_id ? '' : 'loser';
-          awayLoser = match.pens_winner_id === match.away_team_id ? '' : 'loser';
-        } else if (match.home_score > match.away_score) { awayLoser = 'loser'; }
-        else if (match.away_score > match.home_score)   { homeLoser = 'loser'; }
-      }
 
       const middleHtml = isComplete
         ? '<span class="match-score-inline">' + match.home_score + '–' + match.away_score + '</span>'
@@ -430,7 +417,6 @@
         aetHtml = '<div class="match-aet">AET · ' + w.flag_emoji + ' ' + w.name + ' win on penalties</div>';
       }
 
-      // Picks for this match
       const matchPicks = (picks || []).filter(p =>
         p.round_id === match.round_id &&
         (p.team_id === match.home_team_id || p.team_id === match.away_team_id)
@@ -440,8 +426,9 @@
       if (matchPicks.length === 0) {
         picksHtml = '<div class="match-sub"><div class="picks-grid"><div class="picks-home"><span class="no-picks">No picks</span></div><div class="picks-away"></div></div></div>';
       } else {
+        const sorted = sortPicksByName(matchPicks, allPlayers);
         const homeChips = [], awayChips = [];
-        matchPicks.forEach(p => {
+        sorted.forEach(p => {
           const pl         = (allPlayers || []).find(pl => pl.id === p.player_id);
           const result     = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
           const chipClass  = result ? result.match_result : '';
@@ -449,16 +436,15 @@
           const isHome     = p.team_id === match.home_team_id;
           const flag       = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
           const isLongshot = isHome ? match.home_team.is_longshot : match.away_team.is_longshot;
-          const isElim   = result && result.match_result === 'loss' && match.round_id === match.round_id;
           const outBadge = (result && result.match_result === 'loss' && match.rounds && match.rounds.name && !match.rounds.name.toLowerCase().includes('group'))
             ? ' <span class="out-badge">OUT</span>' : '';
           const chip = '<div class="pick-chip ' + chipClass + '">' +
-            '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700">' +
+            '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
               (pl ? (pl.display_name || shortName(pl.name)) : '?') + '</a>' +
             ' ' + flag +
-            ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px">' + p.multiplier + 'pt</span>' +
+            ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px;flex-shrink:0">' + p.multiplier + 'pt</span>' +
             (isLongshot ? ' ⭐' : '') +
-            (pts ? ' <span class="pts-earned">' + pts + '</span>' : '') +
+            (pts ? ' <span class="pts-earned" style="flex-shrink:0">' + pts + '</span>' : '') +
             outBadge +
             '</div>';
           if (isHome) homeChips.push(chip); else awayChips.push(chip);
@@ -469,17 +455,15 @@
           '</div></div>';
       }
 
-      // venue now rendered inline in match-meta row
-
       return '<div class="match-card ' + match.status + '">' +
         '<div class="match-meta">' +
           '<span class="match-time">' + fmtTime(match.kickoff) + '</span>' +
           (match.venue && showVenue ? '<span class="match-venue-sep">·</span><span class="match-venue-inline">' + match.venue + '</span>' : '') +
         '</div>' +
         '<div class="match-main">' +
-          '<span class="match-home ' + homeLoser + '">' + match.home_team.flag_emoji + ' ' + match.home_team.name + '</span>' +
+          '<span class="match-home">' + match.home_team.flag_emoji + ' ' + match.home_team.name + '</span>' +
           '<div class="match-centre-col">' + middleHtml + '</div>' +
-          '<span class="match-away ' + awayLoser + '">' + match.away_team.name + ' ' + match.away_team.flag_emoji + '</span>' +
+          '<span class="match-away">' + match.away_team.name + ' ' + match.away_team.flag_emoji + '</span>' +
           (badgeHtml ? badgeHtml : '') +
         '</div>' +
         (aetHtml ? '<div class="match-sub">' + aetHtml + '</div>' : '') +
@@ -488,12 +472,10 @@
         '</div>';
     }
 
-    // ── Upcoming card (item 1: show picks) ──────────────
+    // ── Upcoming card ────────────────────────────────────
     function upcomingCardHtml(match, picks, allPlayers) {
       if (!match.home_team || !match.away_team) return '';
-      // venue now rendered inline in match-meta row
 
-      // Item 1: picks for upcoming matches
       const matchPicks = (picks || []).filter(p =>
         p.round_id === match.round_id &&
         (p.team_id === match.home_team_id || p.team_id === match.away_team_id)
@@ -501,17 +483,18 @@
 
       let picksHtml = '';
       if (matchPicks.length > 0) {
+        const sorted = sortPicksByName(matchPicks, allPlayers);
         const homeChips = [], awayChips = [];
-        matchPicks.forEach(p => {
+        sorted.forEach(p => {
           const pl         = (allPlayers || []).find(pl => pl.id === p.player_id);
           const isHome     = p.team_id === match.home_team_id;
           const flag       = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
           const isLongshot = isHome ? match.home_team.is_longshot : match.away_team.is_longshot;
           const chip = '<div class="pick-chip">' +
-            '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700">' +
+            '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
               (pl ? (pl.display_name || shortName(pl.name)) : '?') + '</a>' +
             ' ' + flag +
-            ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px">' + p.multiplier + 'pt</span>' +
+            ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px;flex-shrink:0">' + p.multiplier + 'pt</span>' +
             (isLongshot ? ' ⭐' : '') +
             '</div>';
           if (isHome) homeChips.push(chip); else awayChips.push(chip);
@@ -537,14 +520,14 @@
         '</div>';
     }
 
-    // ── Day header (items 2/3/4/5) ───────────────────────
-    // Format: ROUND NAME · DAY X · DATE
+    // ── Day header ───────────────────────────────────────
     function dayHeaderHtml(roundName, dayNum, windowStartMs, isToday) {
       const cls     = dayHeaderClass(roundName);
       const repDate = new Date(windowStartMs + 4 * 60 * 60 * 1000);
       const dateStr = repDate.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }).toUpperCase();
-      const todayBadge = isToday ? ' <span class="day-today-badge">Today</span>' : '';
-      const n2 = roundName.toLowerCase().replace(/\s/g,''); const isSingleDay = (n2 === 'final' || n2.includes('3rd') || n2.includes('third')) && !n2.includes('semi');
+      const todayBadge = isToday ? ' <span class="day-today-badge">' + (isLastNight() ? 'Last Night' : 'Today') + '</span>' : '';
+      const n2 = roundName.toLowerCase().replace(/\s/g,'');
+      const isSingleDay = (n2 === 'final' || n2.includes('3rd') || n2.includes('third')) && !n2.includes('semi');
       const dayPart = isSingleDay ? '' : '<span class="sep">|</span><span>Day ' + dayNum + '</span>';
       return '<div class="day-header ' + cls + '">' +
         '<span>' + roundName.toUpperCase() + '</span>' +
@@ -567,6 +550,9 @@
       try {
         const effectiveNow = getEffectiveDate();
         const { windowStart, windowEnd } = getGameDayWindow(effectiveNow);
+
+        const todayTitle = document.getElementById('today-section-title');
+        if (todayTitle) todayTitle.textContent = isLastNight() ? '🌙 Last Night' : '📅 Today';
 
         const [{ data: players }, { data: picks }] = await Promise.all([
           db.from('players').select('id, name, slug, display_name'),
@@ -609,14 +595,12 @@
         const upcomingContent = document.getElementById('upcoming-content');
 
         if (upcomingMatches && upcomingMatches.length > 0) {
-          // Group by window day
           const buckets = {};
           upcomingMatches.forEach(m => {
             const key = toWindowStartMs(m.kickoff);
             if (!buckets[key]) buckets[key] = { wsMs: key, matches: [], roundName: m.rounds ? m.rounds.name : '' };
             buckets[key].matches.push(m);
           });
-          // Pre-fetch first kickoff per round
           const roundFirstCache = {};
           for (const b of Object.values(buckets)) {
             const rid = b.matches[0].round_id;
@@ -626,7 +610,6 @@
           Object.values(buckets).sort((a,b) => a.wsMs - b.wsMs).forEach(b => {
             const rid    = b.matches[0].round_id;
             const dayNum = roundFirstCache[rid] ? getDayNumber(new Date(b.wsMs).toISOString(), roundFirstCache[rid]) : 1;
-            // Items 2/5: day header with round name + colour
             html += dayHeaderHtml(b.roundName, dayNum, b.wsMs);
             html += b.matches.map(m => upcomingCardHtml(m, picks, players)).join('');
           });
@@ -679,15 +662,13 @@
             dayBuckets[wsMs].matches.push(m);
           });
 
-          const roundFirst      = roundFirstMap[round_id];
+          const roundFirst       = roundFirstMap[round_id];
           const dayBucketsSorted = Object.values(dayBuckets).sort((a,b) => b.wsMs - a.wsMs);
-          // Items 4/5: banner colour matches round
-          const bannerCls = 'round-banner ' + roundBannerClass(roundName);
+          const bannerCls        = 'round-banner ' + roundBannerClass(roundName);
 
           return '<div class="' + bannerCls + '">🏆 ' + roundName + '</div>' +
             dayBucketsSorted.map(b => {
-              const dayNum  = roundFirst ? getDayNumber(new Date(b.wsMs).toISOString(), roundFirst) : 1;
-              // Items 4/5: day header with round name + colour. Item 8: showVenue=false
+              const dayNum = roundFirst ? getDayNumber(new Date(b.wsMs).toISOString(), roundFirst) : 1;
               return dayHeaderHtml(roundName, dayNum, b.wsMs) +
                 b.matches.map(m => matchCardHtml(m, picks, players, false)).join('');
             }).join('');

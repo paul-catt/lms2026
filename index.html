@@ -460,35 +460,20 @@
 
       // ── Next deadline ─────────────────────────────────────
       const now = new Date();
-      const THIRD_PLACE_ROUND_ID = '2fd614f4-1aa7-43d5-beeb-be06f5530a85';
-      const { data: nextMatches } = await db
-        .from('matches')
-        .select('kickoff, round_id')
-        .eq('status', 'scheduled')
-        .neq('round_id', THIRD_PLACE_ROUND_ID)
-        .order('kickoff', { ascending: true })
-        .limit(1);
+      const { data: nextRound } = await db
+        .from('rounds')
+        .select('name, deadline')
+        .eq('is_complete', false)
+        .neq('name', '3rd Place')
+        .gt('deadline', now.toISOString())
+        .order('sort_order')
+        .limit(1)
+        .single();
 
       const deadlineEl = document.getElementById('status-deadline');
-      if (nextMatches && nextMatches.length > 0) {
-        const kickoff = new Date(nextMatches[0].kickoff);
-        const roundId = nextMatches[0].round_id;
-
-        let roundName = '';
-        if (roundId) {
-          const { data: roundRow } = await db
-            .from('rounds')
-            .select('name')
-            .eq('id', roundId)
-            .single();
-          if (roundRow) roundName = roundRow.name || '';
-        }
-
-        // Deadline = 1 hour before the first scheduled match of the round.
-        const deadlineUtc = new Date(kickoff.getTime() - 60 * 60 * 1000);
-
-        nextDeadline = deadlineUtc;
-        nextDeadlineRound = roundName;
+      if (nextRound) {
+        nextDeadline = new Date(nextRound.deadline);
+        nextDeadlineRound = nextRound.name;
         renderDeadline();
       } else {
         deadlineEl.textContent = 'No upcoming matches';
