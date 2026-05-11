@@ -137,8 +137,8 @@
     #view-main table th:nth-child(n+5) { text-align:center; }
     #view-main table td.tiebreak-val, #view-main table td.points { text-align:center; }
     #fallen-wrap > div > div { padding-top:7px !important; padding-bottom:7px !important; }
-    #pk-toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(8px); background:rgba(15,17,23,0.93); border:1px solid var(--border); color:var(--text); font-family:'Inter',sans-serif; font-size:14px; font-weight:600; padding:8px 18px; border-radius:20px; pointer-events:none; opacity:0; transition:opacity 0.15s, transform 0.15s; z-index:9999; white-space:nowrap; }
-    #pk-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    #pk-toast { position:fixed; background:rgba(15,17,23,0.96); border:1px solid var(--border); color:var(--text); font-family:'Inter',sans-serif; font-size:13px; font-weight:600; padding:5px 12px; border-radius:10px; pointer-events:none; opacity:0; transition:opacity 0.12s; z-index:9999; white-space:nowrap; transform:translateY(-4px); }
+    #pk-toast.show { opacity:1; transform:translateY(0); }
   </style>
 </head>
 <body>
@@ -1448,11 +1448,36 @@
       let timer;
       document.addEventListener('click', function(e){
         const chip = e.target.closest('[data-team]');
-        if (!chip) return;
+        if (!chip) { toast.classList.remove('show'); return; }
         clearTimeout(timer);
         toast.textContent = chip.dataset.team;
+
+        // Position anchored to the element
+        const rect = chip.getBoundingClientRect();
+        const GAP = 6;
+        toast.style.left = '-9999px';
+        toast.style.top  = '-9999px';
         toast.classList.add('show');
-        timer = setTimeout(() => toast.classList.remove('show'), 1800);
+
+        // After paint, measure and position
+        requestAnimationFrame(() => {
+          const tw = toast.offsetWidth;
+          const th = toast.offsetHeight;
+          const vw = window.innerWidth;
+
+          // Prefer above; fall back to below
+          let top = rect.top - th - GAP;
+          if (top < 4) top = rect.bottom + GAP;
+
+          // Centre horizontally on chip, clamp to viewport
+          let left = rect.left + rect.width / 2 - tw / 2;
+          left = Math.max(8, Math.min(left, vw - tw - 8));
+
+          toast.style.left = left + 'px';
+          toast.style.top  = top + 'px';
+        });
+
+        timer = setTimeout(() => toast.classList.remove('show'), 2000);
       });
     })();
   </script>

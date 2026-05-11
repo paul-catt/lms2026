@@ -164,10 +164,13 @@
     .no-odds { font-size:11px; color:var(--border); font-style:italic; }
 
     /* ── Picks ─────────────────────────────────────────── */
-    .picks-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; padding-top:6px; border-top:1px solid var(--border); margin-top:4px; }
-    .picks-home { display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-start; align-content:flex-start; }
-    .picks-away { display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end; align-content:flex-start; }
-    .pick-chip { display:inline-flex; align-items:center; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:3px 8px; font-size:12px; width:fit-content; max-width:calc(50% - 2px); min-width:0; overflow:hidden; }
+    .picks-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding-top:6px; border-top:1px solid var(--border); margin-top:4px; }
+    .picks-home { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
+    .picks-away { display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
+    .picks-home.two-col { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+    .picks-away.two-col { display:grid; grid-template-columns:1fr 1fr; gap:4px; justify-items:flex-end; }
+    .pick-chip { display:inline-flex; align-items:center; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:3px 8px; font-size:12px; width:fit-content; max-width:100%; min-width:0; overflow:hidden; }
+    .pick-chip a { min-width:0; flex-shrink:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .pick-chip.win  { background:rgba(16,185,129,0.1);  border-color:rgba(16,185,129,0.3); }
     .pick-chip.draw { background:rgba(245,158,11,0.1);  border-color:rgba(245,158,11,0.3); }
     .pick-chip.loss { background:rgba(239,68,68,0.1);   border-color:rgba(239,68,68,0.3); }
@@ -439,7 +442,7 @@
           const outBadge = (result && result.match_result === 'loss' && match.rounds && match.rounds.name && !match.rounds.name.toLowerCase().includes('group'))
             ? ' <span class="out-badge">OUT</span>' : '';
           const chip = '<div class="pick-chip ' + chipClass + '">' +
-            '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+            '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700;">' +
               (pl ? (pl.display_name || shortName(pl.name)) : '?') + '</a>' +
             ' ' + flag +
             ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px;flex-shrink:0">' + p.multiplier + 'pt</span>' +
@@ -449,9 +452,11 @@
             '</div>';
           if (isHome) homeChips.push(chip); else awayChips.push(chip);
         });
+        const homeTwoCol = homeChips.length > awayChips.length ? ' two-col' : '';
+        const awayTwoCol = awayChips.length > homeChips.length ? ' two-col' : '';
         picksHtml = '<div class="match-sub"><div class="picks-grid">' +
-          '<div class="picks-home">' + (homeChips.join('') || '') + '</div>' +
-          '<div class="picks-away">' + (awayChips.join('') || '') + '</div>' +
+          '<div class="picks-home' + homeTwoCol + '">' + (homeChips.join('') || '') + '</div>' +
+          '<div class="picks-away' + awayTwoCol + '">' + (awayChips.join('') || '') + '</div>' +
           '</div></div>';
       }
 
@@ -491,7 +496,7 @@
           const flag       = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
           const isLongshot = isHome ? match.home_team.is_longshot : match.away_team.is_longshot;
           const chip = '<div class="pick-chip">' +
-            '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+            '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700;">' +
               (pl ? (pl.display_name || shortName(pl.name)) : '?') + '</a>' +
             ' ' + flag +
             ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px;flex-shrink:0">' + p.multiplier + 'pt</span>' +
@@ -499,9 +504,11 @@
             '</div>';
           if (isHome) homeChips.push(chip); else awayChips.push(chip);
         });
+        const homeTwoColU = homeChips.length > awayChips.length ? ' two-col' : '';
+        const awayTwoColU = awayChips.length > homeChips.length ? ' two-col' : '';
         picksHtml = '<div class="match-sub"><div class="picks-grid">' +
-          '<div class="picks-home">' + homeChips.join('') + '</div>' +
-          '<div class="picks-away">' + awayChips.join('') + '</div>' +
+          '<div class="picks-home' + homeTwoColU + '">' + homeChips.join('') + '</div>' +
+          '<div class="picks-away' + awayTwoColU + '">' + awayChips.join('') + '</div>' +
           '</div></div>';
       }
 
