@@ -164,7 +164,11 @@
     .no-odds { font-size:11px; color:var(--border); font-style:italic; }
 
     /* ── Picks ─────────────────────────────────────────── */
-    .picks-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding-top:6px; border-top:1px solid var(--border); margin-top:4px; }
+    .picks-rows { display:flex; flex-direction:column; gap:4px; padding-top:6px; border-top:1px solid var(--border); margin-top:4px; }
+    .picks-row { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+    .picks-row-away { display:grid; grid-template-columns:1fr 1fr; gap:4px; justify-items:flex-end; }
+    .picks-away-cell { display:flex; justify-content:flex-end; }
+    .picks-spacer { }
     .picks-home { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
     .picks-away { display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
     .picks-home.two-col { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
@@ -318,6 +322,28 @@
       });
     }
 
+    function buildPicksHtml(homeChips, awayChips) {
+      const rows = [];
+      let hi = 0, ai = 0;
+      // Phase 1: interleave while both sides have chips
+      while (hi < homeChips.length && ai < awayChips.length) {
+        rows.push('<div class="picks-row">' + homeChips[hi++] + '<div class="picks-away-cell">' + awayChips[ai++] + '</div></div>');
+      }
+      // Phase 2: home overflow — two per row on the left
+      while (hi < homeChips.length) {
+        const h1 = homeChips[hi++];
+        const h2 = hi < homeChips.length ? homeChips[hi++] : '';
+        rows.push('<div class="picks-row">' + h1 + (h2 ? h2 : '<div class="picks-spacer"></div>') + '</div>');
+      }
+      // Phase 3: away overflow — two per row on the right
+      while (ai < awayChips.length) {
+        const a1 = awayChips[ai++];
+        const a2 = ai < awayChips.length ? awayChips[ai++] : '';
+        rows.push('<div class="picks-row-away">' + (a2 ? a1 + a2 : '<div class="picks-spacer"></div>' + a1) + '</div>');
+      }
+      return '<div class="match-sub"><div class="picks-rows">' + rows.join('') + '</div></div>';
+    }
+
     // ── Deadline countdown ───────────────────────────────
     let deadlineInterval = null;
 
@@ -427,7 +453,7 @@
 
       let picksHtml;
       if (matchPicks.length === 0) {
-        picksHtml = '<div class="match-sub"><div class="picks-grid"><div class="picks-home"><span class="no-picks">No picks</span></div><div class="picks-away"></div></div></div>';
+        picksHtml = '<div class="match-sub"><div class="picks-rows"><div class="picks-row"><span class="no-picks">No picks</span></div></div></div>';
       } else {
         const sorted = sortPicksByName(matchPicks, allPlayers);
         const homeChips = [], awayChips = [];
@@ -452,12 +478,7 @@
             '</div>';
           if (isHome) homeChips.push(chip); else awayChips.push(chip);
         });
-        const homeTwoCol = homeChips.length > awayChips.length ? ' two-col' : '';
-        const awayTwoCol = awayChips.length > homeChips.length ? ' two-col' : '';
-        picksHtml = '<div class="match-sub"><div class="picks-grid">' +
-          '<div class="picks-home' + homeTwoCol + '">' + (homeChips.join('') || '') + '</div>' +
-          '<div class="picks-away' + awayTwoCol + '">' + (awayChips.join('') || '') + '</div>' +
-          '</div></div>';
+        picksHtml = buildPicksHtml(homeChips, awayChips);
       }
 
       return '<div class="match-card ' + match.status + '">' +
@@ -504,12 +525,7 @@
             '</div>';
           if (isHome) homeChips.push(chip); else awayChips.push(chip);
         });
-        const homeTwoColU = homeChips.length > awayChips.length ? ' two-col' : '';
-        const awayTwoColU = awayChips.length > homeChips.length ? ' two-col' : '';
-        picksHtml = '<div class="match-sub"><div class="picks-grid">' +
-          '<div class="picks-home' + homeTwoColU + '">' + homeChips.join('') + '</div>' +
-          '<div class="picks-away' + awayTwoColU + '">' + awayChips.join('') + '</div>' +
-          '</div></div>';
+        picksHtml = buildPicksHtml(homeChips, awayChips);
       }
 
       return '<div class="upcoming-card">' +

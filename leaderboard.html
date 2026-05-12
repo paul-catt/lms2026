@@ -120,6 +120,7 @@
     .m-W  { background:rgba(16,185,129,0.25);  color:var(--green); font-weight:700; }
     .m-D  { background:rgba(245,158,11,0.2);   color:var(--gold);  font-weight:700; }
     .m-L  { background:rgba(239,68,68,0.2);    color:var(--red);   font-weight:700; }
+    .m-P  { background:rgba(139,92,246,0.15);  color:var(--text-muted); font-weight:700; }
     .m-fav  { border-bottom:2px solid #3b82f6; }
     .m-dh   { border-bottom:2px solid #eab308; }
     .m-ls   { border-bottom:2px solid #f97316; }
@@ -205,6 +206,10 @@
 
       <!-- MAIN LEADERBOARD -->
       <div class="lb-view active" id="view-main">
+        <div id="final-table-banner" style="display:none; margin-bottom:16px; padding:12px 16px; background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(239,68,68,0.08)); border:1px solid rgba(245,158,11,0.3); border-radius:10px;">
+          <div style="font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:700; color:var(--gold); letter-spacing:0.06em;">🏆 FINAL TABLE</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">The dust has settled. Here's how it ended.</div>
+        </div>
         <div id="leaderboard-wrap" class="table-wrap" style="display:none">
           <table>
             <thead>
@@ -411,7 +416,9 @@
     function renderPicksView() {
       const wrap = document.getElementById('picks-wrap');
       if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the standings first.</p>'; return; }
-      const { sorted, allPicks, rounds, firstMatchData } = _leaderboardData;
+      const { sorted, allPicks, rounds, firstMatchData, scores } = _leaderboardData;
+      const activePlayers = (scores || []).filter(p => !p.is_eliminated);
+      const picksCompetitionEnded = (scores || []).every(p => p.is_eliminated) || activePlayers.length === 0;
       const picksNow = getEffectiveDate();
 
       // Deadline = first kickoff - 1hr. After deadline: show flags. Before deadline but pick exists: show ?.
@@ -523,8 +530,8 @@
       sorted.forEach((p, idx) => {
         const isElim = p.is_eliminated;
         const pLookup = pickLookup[p.player_id] || {};
-        const nameCls = isElim ? ' elim' : '';
-        const rowStyle = isElim ? ' style="opacity:0.5"' : '';
+        const nameCls = isElim && !picksCompetitionEnded ? ' elim' : '';
+        const rowStyle = isElim && !picksCompetitionEnded ? ' style="opacity:0.5"' : '';
 
         html += `<tr${rowStyle}>`;
         html += `<td class="pk-pos">${idx + 1}</td>`;
@@ -552,7 +559,10 @@
       });
 
       html += '</tbody></table>';
-      wrap.innerHTML = html;
+      const picksBannerHtml = picksCompetitionEnded
+        ? '<div style="margin-bottom:14px;padding:10px 14px;background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(239,68,68,0.08));border:1px solid rgba(245,158,11,0.3);border-radius:10px;font-family:\'Rajdhani\',sans-serif;font-size:16px;font-weight:700;color:var(--gold);letter-spacing:0.06em;">🏆 FINAL TABLE — Full pick history</div>'
+        : '';
+      wrap.innerHTML = picksBannerHtml + html;
     }
 
     let _matrixFilter = 'all';
@@ -570,7 +580,7 @@
     function renderMatrixView() {
       const wrap = document.getElementById('matrix-wrap');
       if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the standings first.</p>'; return; }
-      const { sorted: allSorted, allPicks, rounds, firstMatchData, todayMatchRows } = _leaderboardData;
+      const { sorted: allSorted, allPicks, rounds, firstMatchData, todayMatchRows, teamsUsed } = _leaderboardData;
       const sorted = _matrixFilter === 'alive' ? allSorted.filter(p => !p.is_eliminated) : allSorted;
       const posOffset = allSorted.indexOf(sorted[0]);
       const now = getEffectiveDate();
@@ -599,14 +609,21 @@
       // Only include picks for rounds where deadline has passed (first kickoff - 1hr)
       const nowMs = now.getTime();
       const visiblePicks = (allPicks || []).filter(p =>
-        (firstKickoffByRound[p.round_id] - 60 * 60 * 1000 || Infinity) <= nowMs
+        ((firstKickoffByRound[p.round_id] - 60 * 60 * 1000) || Infinity) <= nowMs
       );
+
+      // Build pens lookup: player_id|team_id -> pens_winner_id
+      const pensLookup = {};
+      (teamsUsed || []).forEach(r => {
+        if (r.pens_winner_id) pensLookup[r.player_id + '|' + r.team_id] = r.pens_winner_id;
+      });
 
       const pickMap = {};
       visiblePicks.forEach(p => {
         if (!pickMap[p.player_id]) pickMap[p.player_id] = {};
         const res = p.pick_results && p.pick_results[0];
-        pickMap[p.player_id][p.team_id] = { result: res ? res.match_result : 'pending', multiplier: p.multiplier };
+        const pensWinnerId = pensLookup[p.player_id + '|' + p.team_id] || null;
+        pickMap[p.player_id][p.team_id] = { result: res ? res.match_result : 'pending', multiplier: p.multiplier, pensWinnerId, teamId: p.team_id };
       });
 
       const usedByPlayer = {};
@@ -640,7 +657,7 @@
       teamList.forEach((t, i) => {
         const color   = BAND_COLOR[t.band] || 'var(--border)';
         const divider = getBorderStyle(t, i);
-        html += `<th style="border-bottom:3px solid ${color};${divider}"><div class="m-header-wrap"><span style="font-size:12px">${t.flag_emoji || '?'}</span></div></th>`;
+        html += `<th title="${t.name || ''}" data-team="${t.name || ''}" style="border-bottom:3px solid ${color};${divider}"><div class="m-header-wrap"><span style="font-size:12px">${t.flag_emoji || '?'}</span></div></th>`;
       });
       html += '<th class="m-summary">Good<br>Left</th><th class="m-summary">Total<br>Left</th></tr>';
 
@@ -652,6 +669,7 @@
       });
       html += '<th></th><th></th></tr></thead><tbody>';
 
+      const teamListIds = new Set(teamList.map(t => t.id));
       sorted.forEach((p) => {
         const pos  = allSorted.indexOf(p) + 1;
         const isElim = p.is_eliminated;
@@ -659,7 +677,13 @@
         const playerPicks = pickMap[p.player_id] || {};
 
         html += `<tr${isElim ? ' style="opacity:0.45;"' : ' class="m-alive"'}><td class="m-pos">${pos}</td>`;
-        const hasPending = Object.values(playerPicks).some(pk => pk.result === 'pending');
+        const visiblePlayerTeams = new Set(Object.keys(playerPicks));
+        const hasPending = (allPicks || []).some(pk =>
+            pk.player_id === p.player_id &&
+            (!pk.pick_results || !pk.pick_results[0]) &&
+            !visiblePlayerTeams.has(pk.team_id) &&
+            teamListIds.has(pk.team_id)
+          );
         const pendingTick = hasPending ? ' <span style="font-size:9px;color:var(--text-muted);opacity:0.7" title="Pick submitted">✓</span>' : '';
         html += `<td class="m-player${isElim ? ' elim' : ''}"><a href="/${p.slug}" style="color:inherit;text-decoration:none">${p.display_name || shortName(p.name)}</a>${pendingTick}</td>`;
 
@@ -670,9 +694,10 @@
             html += `<td style="${divider}"></td>`;
           } else {
             const r      = pick.result;
-            const cls    = r === 'win' ? 'm-W' : r === 'draw' ? 'm-D' : r === 'loss' ? 'm-L' : '';
-            const label  = r === 'win' ? 'W' : r === 'draw' ? 'D' : r === 'loss' ? 'L' : '';
-            html += `<td class="${cls}" style="${divider}" data-team="${t.flag_emoji || ''} ${t.name || ''}" title="${t.flag_emoji || ''} ${r||'pending'}">${label}</td>`;
+            const isPens = !!pick.pensWinnerId;
+            const cls    = r === 'win' ? 'm-W' : r === 'draw' ? 'm-D' : r === 'loss' ? 'm-L' : 'm-P';
+            const label  = r === 'win' ? (isPens ? 'W<sub style="font-size:7px">p</sub>' : 'W') : r === 'draw' ? 'D' : r === 'loss' ? 'L' : '?';
+            html += `<td class="${cls}" style="${divider}" data-team="${t.flag_emoji || ''} ${t.name || ''}" title="${t.flag_emoji || ''} ${r||'pending'}${isPens ? ' (pens)' : ''}">${label}</td>`;
           }
         });
 
@@ -707,7 +732,7 @@
           db.from('player_scores').select('*'),
           db.from('player_gd').select('*'),
           db.from('player_furthest_round').select('*'),
-          db.from('player_teams_used').select('player_id, match_result, round_id'),
+          db.from('player_teams_used').select('player_id, team_id, match_result, round_id, pens_winner_id'),
           db.from('rounds').select('id, name, round_type, sort_order, is_complete').order('sort_order'),
           db.from('matches').select('round_id, kickoff').order('kickoff'),
           db.from('leaderboard_snapshots').select('player_id, position, round_id'),
@@ -802,7 +827,7 @@
         (teamsUsed || []).forEach(r => {
           if (!formMap[r.player_id]) formMap[r.player_id] = [];
           if (r.match_result) formMap[r.player_id].push({
-            result: r.match_result === 'win' ? 'W' : r.match_result === 'draw' ? 'D' : 'L',
+            result: r.pens_winner_id ? 'D' : r.match_result === 'win' ? 'W' : r.match_result === 'draw' ? 'D' : 'L',
             isKO: roundTypeMap[r.round_id] === 'knockout'
           });
         });
@@ -941,7 +966,7 @@
         const activePlayers   = (scores || []).filter(p => !p.is_eliminated);
         const competitionEnded = (!currentRound && (rounds || []).length > 0) ||
                                   (scores || []).every(p => p.is_eliminated) ||
-                                  activePlayers.length <= 1;
+                                  activePlayers.length === 0;
 
         const showRndCol = isKnockout || competitionEnded;
         document.getElementById('rnd-col-header').style.display = showRndCol ? '' : 'none';
@@ -1093,10 +1118,12 @@
             goalsDiffHtml = `<span style="color:var(--text-muted)">${diff}</span>`;
           }
 
+          const noPicksLeft = !playerHasPendingPick[p.player_id] && getPlayerRemainingTeams(p.player_id).length === 0;
+          const isEffectivelyOut = p.is_eliminated || noPicksLeft;
           const is3rdPlace = currentRound && currentRound.name === '3rd Place';
           let rndHtml = '—';
           if (showRndCol) {
-            if (!p.is_eliminated && !is3rdPlace) {
+            if (!isEffectivelyOut && !is3rdPlace) {
               const furthestSO = furthestMap[p.player_id] || 0;
               const currentSO  = currentRound ? currentRound.sort_order : 0;
               const displaySO  = Math.max(furthestSO + 1, currentSO);
@@ -1141,7 +1168,10 @@
         document.getElementById('leaderboard-wrap').style.display = 'block';
         document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
-        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData };
+        const finalBanner = document.getElementById('final-table-banner');
+        if (finalBanner) finalBanner.style.display = competitionEnded ? '' : 'none';
+
+        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed };
         if (document.getElementById('view-picks').classList.contains('active'))  renderPicksView();
         if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
         if (document.getElementById('view-fallen').classList.contains('active')) renderFallenView();
@@ -1156,10 +1186,23 @@
     function renderLongshotView() {
       const wrap = document.getElementById('longshot-wrap');
       if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the main leaderboard first.</p>'; return; }
-      const { allPicks, sorted } = _leaderboardData;
+      const { allPicks, sorted, firstMatchData } = _leaderboardData;
+
+      const now = getEffectiveDate();
+      const nowMs = now.getTime();
+      const firstKickoffByRound = {};
+      (firstMatchData || []).forEach(m => {
+        const ko = new Date(m.kickoff).getTime();
+        if (!firstKickoffByRound[m.round_id] || ko < firstKickoffByRound[m.round_id])
+          firstKickoffByRound[m.round_id] = ko;
+      });
+      const visiblePicks = (allPicks || []).filter(p =>
+        ((firstKickoffByRound[p.round_id] - 60 * 60 * 1000) || Infinity) <= nowMs
+      );
+
       const lsData = {};
       sorted.forEach(p => { lsData[p.player_id] = { name: p.name, slug: p.slug, display_name: p.display_name, bonusPoints: 0, longshotWins: [], longshotLosses: [], longshotPending: [], longshotPicks: 0 }; });
-      (allPicks || []).forEach(pick => {
+      visiblePicks.forEach(pick => {
         if (!pick.teams?.is_longshot) return;
         const s = lsData[pick.player_id];
         if (!s) return;
