@@ -21,6 +21,11 @@
 
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(console.error);
+    }
+  </script>
   <style>
     body { font-family: 'Inter', sans-serif; }
     nav, .nav-logo, .card-title, thead th { font-family: 'Rajdhani', sans-serif; }
@@ -177,7 +182,7 @@
 
     .oracle-sheet {
       position: fixed; bottom: 0; left: 0; right: 0;
-      height: 95%;
+      height: 82%;
       background: #0c0e16;
       border-radius: 18px 18px 0 0;
       border-top: 1px solid rgba(139,92,246,0.35);
@@ -190,19 +195,20 @@
 
     .oracle-handle-bar {
       display: flex; justify-content: center; align-items: center;
-      padding: 8px 0 6px; flex-shrink: 0;
+      padding: 10px 14px 8px; flex-shrink: 0;
       border-bottom: 1px solid rgba(139,92,246,0.1);
+      position: relative;
     }
     .oracle-handle {
       width: 36px; height: 4px; border-radius: 2px;
       background: rgba(139,92,246,0.4);
     }
     .oracle-close-btn {
-      position: fixed; top: 14px; right: 14px; z-index: 210;
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
       background: rgba(139,92,246,0.18); border: 1px solid rgba(139,92,246,0.4);
       color: #c4b5fd; font-size: 16px; font-weight: 700; cursor: pointer;
       width: 32px; height: 32px; border-radius: 50%;
-      display: none; align-items: center; justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       line-height: 1; padding: 0; transition: background 0.15s;
     }
     .oracle-close-btn:hover { background: rgba(139,92,246,0.35); }
@@ -404,6 +410,12 @@
       <p style="color:var(--text-muted); margin-top:8px">Check your link is correct.</p>
       <a href="/" class="btn btn-secondary" style="margin-top:16px">Go Home</a>
     </div>
+    <div id="timed-out" style="display:none; text-align:center; padding:48px">
+      <div style="font-size:48px; margin-bottom:16px">📡</div>
+      <h2>Taking too long</h2>
+      <p style="color:var(--text-muted); margin-top:8px">Something's not loading. Try refreshing — if it keeps happening, text Paul.</p>
+      <button class="btn btn-secondary" style="margin-top:16px" onclick="location.reload()">Try again</button>
+    </div>
 
     <div id="dashboard" style="display:none">
 
@@ -427,6 +439,12 @@
       </div>
 
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
+
+      <!-- Push notification opt-in -->
+      <div id="notif-bar" style="display:none; margin-bottom:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+        <span style="font-size:12px; color:var(--text-muted)">🔔 Get a nudge 1hr before the deadline if you haven't picked.</span>
+        <button id="notif-btn" class="btn btn-secondary" style="font-size:12px; padding:6px 14px; white-space:nowrap">Enable notifications</button>
+      </div>
 
       <!-- Goals prediction card -->
       <div id="goals-prediction-card" style="display:none" class="goals-inline-card">
@@ -1323,7 +1341,15 @@
       const isGroup = round.round_type === 'group';
 
       if (getEffectiveDate() >= new Date(round.deadline)) {
-        msg.style.color = 'var(--red)'; msg.textContent = '❌ Deadline has passed.'; return;
+        const minsLate = Math.floor((getEffectiveDate() - new Date(round.deadline)) / 60000);
+        if (minsLate <= 5) {
+          msg.style.color = 'var(--red)';
+          msg.textContent = '⏰ Just missed it — deadline was ' + minsLate + ' minute' + (minsLate === 1 ? '' : 's') + ' ago. Text Paul to see if he can help!';
+        } else {
+          msg.style.color = 'var(--red)';
+          msg.textContent = '❌ Deadline has passed.';
+        }
+        return;
       }
       if (isGroup && pick3.id === pick2.id) {
         msg.style.color = 'var(--red)'; msg.textContent = '❌ You cannot pick the same team twice.'; return;
@@ -1526,8 +1552,81 @@
     document.addEventListener('DOMContentLoaded', async function() {
       document.getElementById('submit-pick-btn').addEventListener('click', submitPick);
       document.getElementById('submit-pick-btn-top').addEventListener('click', submitPick);
+
+      // ── Push notification opt-in ──────────────────────────────────────────────
+      const VAPID_PUBLIC_KEY = 'BFv-J5fCtRvSjQLZi8_RpOUGQUYxQh7JUD4VFY-Gl4M6-XdHtUQv7wd7-6Bx73Kw5dV660I2HS_xBFZoJfkpGzE';
+
+      function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+      }
+
+      async function initNotifBar() {
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        const bar = document.getElementById('notif-bar');
+        const btn = document.getElementById('notif-btn');
+        if (!bar || !btn) return;
+
+        // Already granted — check if we have a sub saved
+        if (Notification.permission === 'granted') {
+          const reg = await navigator.serviceWorker.ready;
+          const existing = await reg.pushManager.getSubscription();
+          if (existing) {
+            bar.style.display = 'none'; // already subscribed — hide bar
+            return;
+          }
+        }
+
+        if (Notification.permission === 'denied') return; // blocked — don't show
+
+        bar.style.display = 'flex';
+
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          btn.textContent = 'Enabling...';
+          try {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+              btn.textContent = 'Blocked by browser';
+              return;
+            }
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+            });
+            // Save to Supabase
+            if (player && player.id) {
+              await db.from('push_subscriptions')
+                .upsert({ player_id: player.id, subscription: sub.toJSON() }, { onConflict: 'player_id' });
+            }
+            btn.textContent = '✅ Notifications on';
+            btn.style.color = 'var(--green)';
+            btn.style.borderColor = 'var(--green)';
+            setTimeout(() => { bar.style.display = 'none'; }, 2000);
+          } catch(err) {
+            console.error('Push subscription failed:', err);
+            btn.disabled = false;
+            btn.textContent = 'Failed — try again';
+          }
+        });
+      }
+
+      // 5-second spinner timeout
+      const loadTimeout = setTimeout(() => {
+        const loading = document.getElementById('loading');
+        if (loading.style.display !== 'none') {
+          loading.style.display = 'none';
+          document.getElementById('timed-out').style.display = 'block';
+        }
+      }, 5000);
+
       await syncTestDateFromSupabase();
-      loadDashboard();
+      await loadDashboard();
+      clearTimeout(loadTimeout);
+      initNotifBar();
 
       // Silent background refresh every 60s — skips if modal or oracle is open
       setInterval(() => {
@@ -1551,11 +1650,11 @@
   </div>
 
   <!-- ── Oracle bottom sheet ───────────────────────────────────────────────── -->
-  <button class="oracle-close-btn" id="oracle-close-btn" onclick="closeOracle()">✕</button>
   <div class="oracle-backdrop" id="oracle-backdrop" onclick="closeOracle()"></div>
   <div class="oracle-sheet" id="oracle-sheet">
     <div class="oracle-handle-bar">
       <div class="oracle-handle"></div>
+      <button class="oracle-close-btn" id="oracle-close-btn" onclick="closeOracle()">✕</button>
     </div>
     <div class="oracle-context" id="oracle-context" style="display:none">
       <span class="oracle-context-pill" id="oracle-ctx-round"></span>
@@ -2291,7 +2390,6 @@
 
       document.getElementById('oracle-backdrop').classList.add('open');
       document.getElementById('oracle-sheet').classList.add('open');
-      document.getElementById('oracle-close-btn').style.display = 'flex';
       document.body.style.overflow = 'hidden';
 
       // Auto-fire immediately
@@ -2301,7 +2399,6 @@
     function closeOracle() {
       document.getElementById('oracle-sheet').classList.remove('open');
       document.getElementById('oracle-backdrop').classList.remove('open');
-      document.getElementById('oracle-close-btn').style.display = 'none';
       document.body.style.overflow = '';
     }
 
@@ -2343,7 +2440,13 @@
       if (getEffectiveDate() >= new Date(round.deadline)) {
         closeOracle();
         const msg = document.getElementById('pick-msg');
-        if (msg) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Deadline has passed — pick not submitted.'; }
+        const minsLate = Math.floor((getEffectiveDate() - new Date(round.deadline)) / 60000);
+        if (msg) {
+          msg.style.color = 'var(--red)';
+          msg.textContent = minsLate <= 5
+            ? '⏰ Just missed it — deadline was ' + minsLate + ' minute' + (minsLate === 1 ? '' : 's') + ' ago. Text Paul to see if he can help!'
+            : '❌ Deadline has passed — pick not submitted.';
+        }
         return;
       }
 

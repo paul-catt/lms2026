@@ -6,3 +6,6 @@
 
 [functions."poll-scores"]
   schedule = "*/10 * * * *"
+
+[functions."send-reminders"]
+schedule = "0 * * * *"

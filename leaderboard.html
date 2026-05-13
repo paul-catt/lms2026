@@ -22,7 +22,6 @@
   <style>
     body { font-family: 'Inter', sans-serif; }
     nav, .nav-logo, .lb-tab, .card-title, thead th, .round-heading { font-family: 'Rajdhani', sans-serif; }
-    .nav-links a { font-size: 13px; }
     .pos { font-weight:700; color:var(--text-muted); width:16px; padding-right:0; }
     .prior { width:28px; text-align:center; font-size:11px; padding-left:2px; padding-right:2px; }
     .tight-col { padding-left:4px !important; padding-right:4px !important; text-align:center; }
@@ -67,7 +66,8 @@
     .proj-goals { font-size:11px; color:var(--text-muted); margin-top:2px; margin-bottom:16px; }
     @media(max-width:600px) { .proj-goals { display:none !important; } }
     .goals-diff { font-size:13px; }
-    .lb-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:nowrap; }
+    .lb-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:2px; }
+    .lb-tabs::-webkit-scrollbar { display:none; }
     .lb-tab { font-family:'Rajdhani',sans-serif; padding:7px 10px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:700; letter-spacing:0.04em; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); transition:all 0.15s; white-space:nowrap; }
     .lb-tab:hover { color:var(--text); border-color:var(--text-muted); }
     .lb-tab.active { background:var(--gold); color:#000; border-color:var(--gold); }

@@ -219,6 +219,10 @@
           <div class="picks-preview-title">Who picked this match</div>
           <div id="picks-preview-body"></div>
         </div>
+        <div id="ko-elim-preview" style="display:none; margin-top:14px; background:rgba(239,68,68,0.07); border:1px solid rgba(239,68,68,0.25); border-radius:10px; padding:12px 14px;">
+          <div style="font-size:11px; font-weight:700; color:var(--red); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px">💀 Eliminated if this result stands</div>
+          <div id="ko-elim-preview-body" style="font-size:13px; color:var(--text)"></div>
+        </div>
         <button class="btn btn-primary" id="submit-result-btn" style="margin-top:16px">Save Result & Calculate Points</button>
         <div id="result-msg" style="margin-top:8px; font-size:12px"></div>
 
@@ -1440,6 +1444,7 @@ Good luck! ⚽🏆`;
       }
 
       msg.style.color='var(--green)'; msg.textContent='✅ Correction saved and points recalculated.';
+      if (match && match.round_id) await maybeAutoSnapshot(match.round_id, msg);
       loadCompletedMatchesForCorrection();
     }
 
@@ -1531,9 +1536,9 @@ Good luck! ⚽🏆`;
       const pensWinner = document.getElementById('pens-winner-select').value;
       const previewEl = document.getElementById('picks-preview');
       const bodyEl = document.getElementById('picks-preview-body');
-      if (!matchId) { previewEl.style.display = 'none'; return; }
+      if (!matchId) { previewEl.style.display = 'none'; document.getElementById('ko-elim-preview').style.display = 'none'; return; }
       const match = matchCache[matchId];
-      if (!match) { previewEl.style.display = 'none'; return; }
+      if (!match) { previewEl.style.display = 'none'; document.getElementById('ko-elim-preview').style.display = 'none'; return; }
       if (match.is_third_place) {
         previewEl.style.display = 'block';
         bodyEl.innerHTML = '<p style="color:var(--text-muted); font-size:13px">3rd place match — no player picks to display.</p>';
@@ -1583,6 +1588,27 @@ Good luck! ⚽🏆`;
       awayPicks.forEach(p => { html += pickRowHtml(p, match.away_team, awayOutcome); });
       previewEl.style.display = 'block';
       bodyEl.innerHTML = html;
+
+      // KO elimination preview — only show when we know the loser
+      const koElimEl = document.getElementById('ko-elim-preview');
+      const koElimBody = document.getElementById('ko-elim-preview-body');
+      if (isKnockout && hasScores && homeOutcome && homeOutcome !== 'pens_unknown') {
+        const losingOutcome = 'loss';
+        const penLossOutcome = 'pens_loss';
+        const losingPicks = [
+          ...homePicks.filter(() => homeOutcome === losingOutcome || homeOutcome === penLossOutcome),
+          ...awayPicks.filter(() => awayOutcome === losingOutcome || awayOutcome === penLossOutcome),
+        ];
+        if (losingPicks.length > 0) {
+          koElimBody.innerHTML = losingPicks.map(p => '💀 <strong>' + p.players.name + '</strong>').join('<br>');
+          koElimEl.style.display = 'block';
+        } else {
+          koElimBody.innerHTML = '<span style="color:var(--text-muted)">No players picked the losing team this round.</span>';
+          koElimEl.style.display = 'block';
+        }
+      } else {
+        koElimEl.style.display = 'none';
+      }
     }
 
     async function submitResult() {
@@ -1618,6 +1644,7 @@ Good luck! ⚽🏆`;
       document.getElementById('pens-winner-row').style.display='none';
       document.getElementById('pens-row').style.display='none';
       document.getElementById('picks-preview').style.display='none';
+      document.getElementById('ko-elim-preview').style.display='none';
       document.getElementById('third-place-notice').style.display='none';
       document.getElementById('home-score-label').childNodes[0].textContent = 'Home Score ';
       document.getElementById('away-score-label').childNodes[0].textContent = 'Away Score ';
@@ -2445,7 +2472,7 @@ Good luck! ⚽🏆`;
         await db.from('teams').update({ is_eliminated: false, eliminated_in_round_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
         await db.from('rounds').update({ is_complete: false }).neq('id', '00000000-0000-0000-0000-000000000000');
         await db.from('leaderboard_snapshots').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        await db.from('players').update({ total_goals_prediction: null, is_eliminated: false, eliminated_at: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+        await db.from('players').update({ total_goals_prediction: null, is_eliminated: false, eliminated_at: null, eliminated_in_round_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
         await writeGP0Snapshot();
         msg.style.color = 'var(--green)'; msg.textContent = '✅ Nuclear reset complete. GP0 baseline snapshot written.';
         loadMatchesForResult(); loadCompletedMatchesForCorrection(); loadTeamsLongshot(); loadPlayers();
