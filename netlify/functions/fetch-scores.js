@@ -1,40 +1,38 @@
 // netlify/functions/fetch-scores.js
-// Proxies API-Football fixtures to the admin panel.
+// Proxies football-data.org World Cup fixtures to the admin panel.
 // Keeps the API key server-side.
 //
-// Prod: called with no params — defaults to World Cup (league=1, season=2026)
-// Test: ?league=39&season=2024 for Premier League etc.
+// Prod: no params — today's WC matches
+// Test: ?competition=PL&dateFrom=2026-05-15&dateTo=2026-05-15
 
 exports.handler = async function(event, context) {
-  const API_KEY = process.env.API_FOOTBALL_KEY;
+  const API_KEY = process.env.FOOTBALL_DATA_KEY;
 
   if (!API_KEY) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'API_FOOTBALL_KEY not configured in Netlify env vars.' })
+      body: JSON.stringify({ error: 'FOOTBALL_DATA_KEY not configured in Netlify env vars.' })
     };
   }
 
-  const params  = event.queryStringParameters || {};
-  const league  = params.league  || '1';
-  const season  = params.season  || '2026';
-  const dateParam = params.date;
+  const params      = event.queryStringParameters || {};
+  const competition = params.competition || 'WC';
+  const today       = new Date().toISOString().split('T')[0];
+  const dateFrom    = params.dateFrom || today;
+  const dateTo      = params.dateTo   || dateFrom;
 
-  const today = dateParam || new Date().toISOString().split('T')[0];
-
-  const url = `https://v3.football.api-sports.io/fixtures?league=${league}&season=${season}&date=${today}`;
+  const url = `https://api.football-data.org/v4/competitions/${competition}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`;
 
   try {
     const res = await fetch(url, {
-      headers: {
-        'x-apisports-key': API_KEY
-      }
+      headers: { 'X-Auth-Token': API_KEY }
     });
 
     if (!res.ok) {
+      const text = await res.text();
       return {
         statusCode: res.status,
-        body: JSON.stringify({ error: 'API-Football returned HTTP ' + res.status })
+        body: JSON.stringify({ error: 'football-data.org returned HTTP ' + res.status, detail: text })
       };
     }
 
