@@ -1,18 +1,17 @@
 // netlify/functions/poll-scores.js
 // Scheduled function — runs every 10 minutes via netlify.toml cron.
-// Fetches live/finished World Cup scores from football-data.org
-// and writes provisional scores to Supabase (unconfirmed).
-// No npm dependencies — plain fetch throughout.
+// No npm dependencies — uses plain fetch for both API-Football and Supabase REST API.
 
 const SUPABASE_URL = 'https://jrdjdqjepffdcjdfuarc.supabase.co';
 
-// football-data.org name → your DB name (only mismatches needed)
 const TEAM_MAP = {
-  'United States':       'USA',
-  'Bosnia-Herzegovina':  'Bosnia/Herzeg',
-  'Czechia':             'Czech Rep',
-  'Congo DR':            'DR Congo',
-  'Cape Verde Islands':  'Cape Verde',
+  'Korea Republic':         'South Korea',
+  'Bosnia and Herzegovina': 'Bosnia/Herzeg',
+  'Czech Republic':         'Czech Rep',
+  'United States':          'USA',
+  'IR Iran':                'Iran',
+  "Cote d'Ivoire":          'Ivory Coast',
+  'Republic of Ireland':    'Ireland',
 };
 
 function normalise(name) {
@@ -49,39 +48,31 @@ async function supabasePatch(path, key, body) {
 }
 
 exports.handler = async function(event, context) {
-  const FD_KEY        = process.env.FOOTBALL_DATA_KEY;
-  const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_KEY;
+  const API_KEY      = process.env.API_FOOTBALL_KEY;
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
-  if (!FD_KEY || !SUPABASE_KEY) {
+  if (!API_KEY || !SUPABASE_KEY) {
     console.error('Missing env vars');
     return { statusCode: 500, body: 'Missing env vars' };
   }
 
-  // Only run during match windows: 11:00–23:59 UTC
   const nowUTC = new Date();
-  const hour = nowUTC.getUTCHours();
-  if (hour < 11) {
-    console.log('Outside match window, skipping.');
-    return { statusCode: 200, body: 'Outside window' };
-  }
-
   const today = nowUTC.toISOString().split('T')[0];
   const tomorrow = new Date(nowUTC);
   tomorrow.setUTCDate(nowUTC.getUTCDate() + 1);
   const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
-  // Fetch from football-data.org
+  // Fetch from API-Football
   let fixtures = [];
   try {
     const res = await fetch(
-      `https://api.football-data.org/v4/competitions/WC/matches?dateFrom=${today}&dateTo=${today}`,
-      { headers: { 'X-Auth-Token': FD_KEY } }
+      'https://v3.football.api-sports.io/fixtures?league=1&season=2026&date=' + today,
+      { headers: { 'x-apisports-key': API_KEY } }
     );
-    if (!res.ok) throw new Error('football-data.org returned HTTP ' + res.status);
     const data = await res.json();
-    fixtures = data.matches || [];
+    fixtures = data.response || [];
   } catch (err) {
-    console.error('football-data.org error:', err.message);
+    console.error('API-Football error:', err.message);
     return { statusCode: 500, body: err.message };
   }
 
@@ -90,13 +81,13 @@ exports.handler = async function(event, context) {
     return { statusCode: 200, body: 'No fixtures' };
   }
 
-  // Fetch today's unconfirmed matches from Supabase
+  // Fetch today's matches from Supabase
   let dbMatches = [];
   try {
     dbMatches = await supabaseGet(
       'matches?select=id,confirmed,home_team:teams!matches_home_team_id_fkey(name),away_team:teams!matches_away_team_id_fkey(name)' +
       '&kickoff=gte.' + today + 'T00:00:00Z' +
-      '&kickoff=lt.'  + tomorrowStr + 'T00:00:00Z',
+      '&kickoff=lt.' + tomorrowStr + 'T00:00:00Z',
       SUPABASE_KEY
     );
   } catch (err) {
@@ -112,54 +103,40 @@ exports.handler = async function(event, context) {
     dbByTeams[key] = m;
   });
 
-  // football-data.org status mapping
-  // IN_PLAY, PAUSED → live
-  // FINISHED        → complete
-  // TIMED, SCHEDULED → skip
-  function mapStatus(fdStatus) {
-    if (fdStatus === 'FINISHED')               return 'complete';
-    if (fdStatus === 'IN_PLAY' || fdStatus === 'PAUSED') return 'live';
-    return null; // not started or unknown — skip
-  }
-
   let updated = 0;
   for (const f of fixtures) {
-    const apiHome   = normalise(f.homeTeam?.name || '');
-    const apiAway   = normalise(f.awayTeam?.name || '');
-    const homeGoals = f.score?.fullTime?.home;
-    const awayGoals = f.score?.fullTime?.away;
-    const fdStatus  = f.status || '';
-    const dbStatus  = mapStatus(fdStatus);
+    const apiHome   = normalise(f.teams?.home?.name || '');
+    const apiAway   = normalise(f.teams?.away?.name || '');
+    const homeGoals = f.goals?.home;
+    const awayGoals = f.goals?.away;
+    const apiStatus = f.fixture?.status?.short || '';
+    const elapsed   = f.fixture?.status?.elapsed ?? null;
 
-    if (!dbStatus) continue;
+    const isFT   = apiStatus === 'FT' || apiStatus === 'FT_PEN';
+    const isLive = ['1H','2H','HT','ET','BT','P'].includes(apiStatus);
+
+    if (!isFT && !isLive) continue;
     if (homeGoals === null || homeGoals === undefined) continue;
     if (awayGoals === null || awayGoals === undefined) continue;
 
-    const key     = [apiHome, apiAway].sort().join('|');
+    const key = [apiHome, apiAway].sort().join('|');
     const dbMatch = dbByTeams[key];
-
-    if (!dbMatch) {
-      console.warn('No DB match for:', apiHome, 'vs', apiAway);
-      continue;
-    }
-    if (dbMatch.confirmed) {
-      console.log('Already confirmed, skipping:', apiHome, 'vs', apiAway);
-      continue;
-    }
+    if (!dbMatch) { console.warn('No DB match for:', apiHome, 'vs', apiAway); continue; }
+    if (dbMatch.confirmed) { console.log('Already confirmed, skipping:', apiHome, 'vs', apiAway); continue; }
 
     try {
       await supabasePatch(
         'matches?id=eq.' + dbMatch.id,
         SUPABASE_KEY,
         {
-          home_score:       homeGoals,
-          away_score:       awayGoals,
-          status:           dbStatus,
-          elapsed_minutes:  dbStatus === 'live' ? (f.minute ?? null) : null
+          home_score: homeGoals,
+          away_score: awayGoals,
+          status: isFT ? 'complete' : 'live',
+          elapsed_minutes: isFT ? null : elapsed
         }
       );
       updated++;
-      console.log('Updated:', apiHome, homeGoals, '-', awayGoals, apiAway, '(' + fdStatus + ')');
+      console.log('Updated:', apiHome, homeGoals, '-', awayGoals, apiAway, elapsed ? elapsed + '\'' : '');
     } catch (err) {
       console.error('Update error for', apiHome, 'vs', apiAway, ':', err.message);
     }

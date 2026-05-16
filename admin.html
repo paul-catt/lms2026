@@ -3300,14 +3300,13 @@ Good luck! ⚽🏆`;
     }
 
     // ── LIVE SCORES ───────────────────────────────────────────
+    // football-data.org name → DB name (mismatches only)
     const LIVE_SCORES_TEAM_MAP = {
-      'Korea Republic':         'South Korea',
-      'Bosnia and Herzegovina': 'Bosnia/Herzeg',
-      'Czech Republic':         'Czech Rep',
-      'United States':          'USA',
-      'IR Iran':                'Iran',
-      "Côte d'Ivoire":          'Ivory Coast',
-      'Republic of Ireland':    'Ireland',
+      'United States':       'USA',
+      'Bosnia-Herzegovina':  'Bosnia/Herzeg',
+      'Czechia':             'Czech Rep',
+      'Congo DR':            'DR Congo',
+      'Cape Verde Islands':  'Cape Verde',
     };
 
     function normaliseTeamName(name) {
@@ -3319,16 +3318,16 @@ Good luck! ⚽🏆`;
     function initLiveScores() {
       if (!_liveScoresInitDone) {
         _liveScoresInitDone = true;
-        // Auto-poll every 10 minutes
-        setInterval(() => fetchLiveScores(true), 10 * 60 * 1000);
+        // Auto-poll every 10 seconds during match windows
+        setInterval(() => fetchLiveScores(true), 10 * 1000);
       }
       fetchLiveScores();
     }
 
     async function fetchLiveScores(silent = false) {
-      const btn = document.getElementById('btn-fetch-scores');
+      const btn    = document.getElementById('btn-fetch-scores');
       const status = document.getElementById('livescores-fetch-status');
-      const wrap = document.getElementById('livescores-wrap');
+      const wrap   = document.getElementById('livescores-wrap');
 
       if (!silent) { btn.disabled = true; btn.textContent = '⏳ Fetching...'; }
       status.textContent = 'Fetching...';
@@ -3338,9 +3337,10 @@ Good luck! ⚽🏆`;
         const res = await fetch('/.netlify/functions/fetch-scores');
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        if (data.error) throw new Error(data.error);
+        if (data.error) throw new Error(JSON.stringify(data.error));
 
-        const fixtures = data.response || [];
+        // football-data.org returns data.matches[]
+        const fixtures = data.matches || [];
         await renderLiveScores(fixtures, wrap);
 
         const now = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -3360,10 +3360,9 @@ Good luck! ⚽🏆`;
         return;
       }
 
-
       // Load today's DB matches
-      const today = new Date().toISOString().split('T')[0];
-      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+      const today      = new Date().toISOString().split('T')[0];
+      const tomorrow   = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
       const { data: dbMatches } = await db.from('matches')
@@ -3386,67 +3385,55 @@ Good luck! ⚽🏆`;
         document.head.appendChild(s);
       }
 
-      // Sort: unconfirmed oldest first (confirm in order), then confirmed newest first
+      // Sort: unconfirmed oldest first, confirmed newest first
       fixtures.sort((a, b) => {
-        const aKey = [normaliseTeamName(a.teams?.home?.name||''), normaliseTeamName(a.teams?.away?.name||'')].sort().join('|');
-        const bKey = [normaliseTeamName(b.teams?.home?.name||''), normaliseTeamName(b.teams?.away?.name||'')].sort().join('|');
+        const aKey       = [normaliseTeamName(a.homeTeam?.name||''), normaliseTeamName(a.awayTeam?.name||'')].sort().join('|');
+        const bKey       = [normaliseTeamName(b.homeTeam?.name||''), normaliseTeamName(b.awayTeam?.name||'')].sort().join('|');
         const aConfirmed = dbByTeams[aKey]?.confirmed === true;
         const bConfirmed = dbByTeams[bKey]?.confirmed === true;
-        const aTime = new Date(a.fixture?.date || 0).getTime();
-        const bTime = new Date(b.fixture?.date || 0).getTime();
-        if (aConfirmed !== bConfirmed) return aConfirmed ? 1 : -1; // unconfirmed first
-        if (!aConfirmed) return aTime - bTime; // unconfirmed: oldest first
-        return bTime - aTime; // confirmed: newest first
+        const aTime      = new Date(a.utcDate || 0).getTime();
+        const bTime      = new Date(b.utcDate || 0).getTime();
+        if (aConfirmed !== bConfirmed) return aConfirmed ? 1 : -1;
+        if (!aConfirmed) return aTime - bTime;
+        return bTime - aTime;
       });
 
       let html = '';
       for (const f of fixtures) {
-        const apiHome  = normaliseTeamName(f.teams?.home?.name || '');
-        const apiAway  = normaliseTeamName(f.teams?.away?.name || '');
-        const homeGoals = f.goals?.home;   // running total incl. AET
-        const awayGoals = f.goals?.away;
-        const apiStatus = f.fixture?.status?.short || '?';
-        const elapsed   = f.fixture?.status?.elapsed;
+        // football-data.org field names
+        const apiHome   = normaliseTeamName(f.homeTeam?.name || '');
+        const apiAway   = normaliseTeamName(f.awayTeam?.name || '');
+        const homeGoals = f.score?.fullTime?.home;
+        const awayGoals = f.score?.fullTime?.away;
+        const fdStatus  = f.status || '';
+        // score.winner: HOME_TEAM | AWAY_TEAM | DRAW | null
+        const fdWinner  = f.score?.winner || null;
 
-        // Penalty shootout scores from API
-        const penHome = f.score?.penalty?.home;
-        const penAway = f.score?.penalty?.away;
-        const hasPenData = typeof penHome === 'number' && typeof penAway === 'number';
+        const isLive = fdStatus === 'IN_PLAY' || fdStatus === 'PAUSED';
+        const isFT   = fdStatus === 'FINISHED';
 
         const statusLabel =
-          apiStatus === 'FT'  ? (hasPenData ? 'Full Time (AET)' : 'Full Time') :
-          apiStatus === 'FT_PEN' ? 'Full Time (Pens)' :
-          apiStatus === 'HT'  ? 'Half Time' :
-          apiStatus === '1H'  ? (elapsed ? elapsed + '\'' : 'Live') :
-          apiStatus === '2H'  ? (elapsed ? elapsed + '\'' : 'Live') :
-          apiStatus === 'ET'  ? 'Extra Time' :
-          apiStatus === 'BT'  ? 'Extra Time Break' :
-          apiStatus === 'P'   ? 'Penalties' :
-          apiStatus === 'NS'  ? 'Not Started' :
-          apiStatus === 'PST' ? 'Postponed' : apiStatus;
-
-        const isLive = ['1H','2H','HT','ET','BT','P'].includes(apiStatus);
-        const isFT   = apiStatus === 'FT' || apiStatus === 'FT_PEN';
+          fdStatus === 'FINISHED'  ? 'Full Time' :
+          fdStatus === 'IN_PLAY'   ? 'Live' :
+          fdStatus === 'PAUSED'    ? 'Half Time' :
+          fdStatus === 'TIMED'     ? 'Not Started' :
+          fdStatus === 'SCHEDULED' ? 'Scheduled' :
+          fdStatus === 'POSTPONED' ? 'Postponed' : fdStatus;
 
         const statusColor = isLive ? 'var(--green)' : isFT ? 'var(--gold)' : 'var(--text-muted)';
         const liveDot = isLive
           ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:5px;animation:livepulse 1.4s infinite"></span>'
           : '';
 
-        const key = [apiHome, apiAway].sort().join('|');
-        const dbMatch = dbByTeams[key];
+        const key      = [apiHome, apiAway].sort().join('|');
+        const dbMatch  = dbByTeams[key];
         const confirmed = dbMatch?.confirmed === true;
-        const isKO = dbMatch?.rounds?.round_type === 'knockout';
-        const isThird = dbMatch?.is_third_place;
+        const isKO     = dbMatch?.rounds?.round_type === 'knockout';
+        const isThird  = dbMatch?.is_third_place;
 
-        // Score display — show pens separately if available
-        let scoreDisplay = '';
-        if (typeof homeGoals === 'number') {
-          scoreDisplay = homeGoals + ' – ' + awayGoals;
-          if (hasPenData) scoreDisplay += ' <span style="font-size:13px; color:var(--text-muted)">(pens ' + penHome + '–' + penAway + ')</span>';
-        } else {
-          scoreDisplay = '— – —';
-        }
+        const scoreDisplay = typeof homeGoals === 'number'
+          ? homeGoals + ' – ' + awayGoals
+          : '— – —';
 
         html += '<div style="padding:14px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--surface2)">';
         html += '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">';
@@ -3461,22 +3448,23 @@ Good luck! ⚽🏆`;
         } else if (!dbMatch) {
           html += '<div style="margin-top:8px;font-size:12px;color:var(--text-muted)">⚠️ No matching fixture in DB — check team name mapping</div>';
         } else if (isFT && typeof homeGoals === 'number') {
-          const isDraw = homeGoals === awayGoals;
+          const isDraw         = homeGoals === awayGoals;
           const needsPensWinner = isKO && !isThird && isDraw;
 
           html += '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
 
-          if (needsPensWinner && hasPenData) {
-            // We know who won on pens from the API — auto-confirm available
-            const pensWinnerSide = penHome > penAway ? 'home' : 'away';
-            const pensWinnerId = pensWinnerSide === 'home' ? dbMatch.home_team_id : dbMatch.away_team_id;
-            const pensWinnerName = pensWinnerSide === 'home' ? apiHome : apiAway;
-            html += '<span style="font-size:12px;color:var(--text-muted)">Pens winner: <strong>' + pensWinnerName + '</strong></span>';
-            html += '<button class="btn btn-primary btn-sm" onclick="confirmLiveScore(\'' + dbMatch.id + '\',' + homeGoals + ',' + awayGoals + ',\'' + (dbMatch.rounds?.round_type || 'group') + '\',' + (isThird ? 'true' : 'false') + ',\'' + pensWinnerId + '\')">✅ Confirm Result</button>';
-          } else if (needsPensWinner && !hasPenData) {
-            // Pens data not yet available — send to Results tab
-            html += '<span style="font-size:12px;color:var(--gold)">⚠️ KO draw — pens data not yet available</span>';
-            html += '<button class="btn btn-secondary btn-sm" onclick="switchTab(\'results\')">Enter manually →</button>';
+          if (needsPensWinner) {
+            if (fdWinner && fdWinner !== 'DRAW') {
+              // football-data.org tells us who won overall — derive pens winner
+              const pensWinnerId   = fdWinner === 'HOME_TEAM' ? dbMatch.home_team_id : dbMatch.away_team_id;
+              const pensWinnerName = fdWinner === 'HOME_TEAM' ? apiHome : apiAway;
+              html += '<span style="font-size:12px;color:var(--text-muted)">Pens winner: <strong>' + pensWinnerName + '</strong></span>';
+              html += '<button class="btn btn-primary btn-sm" onclick="confirmLiveScore(\'' + dbMatch.id + '\',' + homeGoals + ',' + awayGoals + ',\'' + (dbMatch.rounds?.round_type || 'group') + '\',' + (isThird ? 'true' : 'false') + ',\'' + pensWinnerId + '\')">✅ Confirm Result</button>';
+            } else {
+              // Winner not yet determined — send to Results tab
+              html += '<span style="font-size:12px;color:var(--gold)">⚠️ KO draw — pens winner not yet available</span>';
+              html += '<button class="btn btn-secondary btn-sm" onclick="switchTab(\'results\')">Enter manually →</button>';
+            }
           } else {
             // Normal confirm (group stage or KO with outright winner)
             html += '<button class="btn btn-primary btn-sm" onclick="confirmLiveScore(\'' + dbMatch.id + '\',' + homeGoals + ',' + awayGoals + ',\'' + (dbMatch.rounds?.round_type || 'group') + '\',' + (isThird ? 'true' : 'false') + ',null)">✅ Confirm Result</button>';
@@ -3493,8 +3481,8 @@ Good luck! ⚽🏆`;
 
     async function confirmLiveScore(matchId, homeScore, awayScore, roundType, isThird, pensWinnerId) {
       const isKnockout = roundType === 'knockout';
-      const isPens = pensWinnerId !== null;
-      const btn = event.target;
+      const isPens     = pensWinnerId !== null;
+      const btn        = event.target;
       btn.disabled = true; btn.textContent = 'Saving...';
 
       const { data: match, error: mErr } = await db.from('matches')
@@ -3504,10 +3492,10 @@ Good luck! ⚽🏆`;
       if (mErr || !match) { btn.disabled = false; btn.textContent = '✅ Confirm Result'; alert('Error: ' + (mErr?.message || 'match not found')); return; }
 
       const { error } = await db.from('matches').update({
-        home_score: homeScore,
-        away_score: awayScore,
-        status: 'complete',
-        confirmed: true,
+        home_score:     homeScore,
+        away_score:     awayScore,
+        status:         'complete',
+        confirmed:      true,
         pens_winner_id: (isKnockout && !isThird && isPens) ? pensWinnerId : null
       }).eq('id', matchId);
 
