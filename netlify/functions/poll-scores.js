@@ -117,6 +117,7 @@ exports.handler = async function(event, context) {
     const homeGoals = f.goals?.home;
     const awayGoals = f.goals?.away;
     const apiStatus = f.fixture?.status?.short || '';
+    const elapsed   = f.fixture?.status?.elapsed ?? null;
 
     const isFT   = apiStatus === 'FT' || apiStatus === 'FT_PEN';
     const isLive = ['1H','2H','HT','ET','BT','P'].includes(apiStatus);
@@ -134,10 +135,15 @@ exports.handler = async function(event, context) {
       await supabasePatch(
         'matches?id=eq.' + dbMatch.id,
         SUPABASE_KEY,
-        { home_score: homeGoals, away_score: awayGoals, status: isFT ? 'complete' : 'live' }
+        {
+          home_score: homeGoals,
+          away_score: awayGoals,
+          status: isFT ? 'complete' : 'live',
+          elapsed_minutes: isFT ? null : elapsed
+        }
       );
       updated++;
-      console.log('Updated:', apiHome, homeGoals, '-', awayGoals, apiAway);
+      console.log('Updated:', apiHome, homeGoals, '-', awayGoals, apiAway, elapsed ? elapsed + '\'' : '');
     } catch (err) {
       console.error('Update error for', apiHome, 'vs', apiAway, ':', err.message);
     }

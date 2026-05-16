@@ -1111,7 +1111,7 @@ Good luck! ⚽🏆`;
           } else {
             if (eligible.length === 0) {
               preview.push(`💀 ${player.name} — pool exhausted → will be eliminated`);
-              _pendingAssignments.push({ player_id: player.id, eliminate: true });
+              _pendingAssignments.push({ player_id: player.id, round_id: roundId, eliminate: true });
             } else {
               const a = eligible[0];
               preview.push(`✅ ${player.name} → ${a.teams.flag_emoji} ${a.teams.name} (2pt)`);
@@ -1137,7 +1137,8 @@ Good luck! ⚽🏆`;
           let assignCount = 0;
           for (const a of assignmentsToProcess) {
             if (a.eliminate) {
-              await db.from('players').update({ is_eliminated: true, eliminated_at: new Date().toISOString(), eliminated_in_round_id: a.round_id }).eq('id', a.player_id);
+              const { error: elimError } = await db.from('players').update({ is_eliminated: true, eliminated_at: new Date().toISOString(), eliminated_in_round_id: a.round_id }).eq('id', a.player_id);
+              if (elimError) console.error('Elimination failed for', a.player_id, elimError.message);
             } else {
               const { error } = await db.from('picks').insert({ player_id: a.player_id, round_id: a.round_id, team_id: a.team_id, multiplier: a.multiplier, is_assigned: true });
               if (!error) assignCount++;
@@ -3359,6 +3360,7 @@ Good luck! ⚽🏆`;
         return;
       }
 
+
       // Load today's DB matches
       const today = new Date().toISOString().split('T')[0];
       const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
@@ -3383,6 +3385,19 @@ Good luck! ⚽🏆`;
         s.textContent = '@keyframes livepulse { 0%,100%{opacity:1} 50%{opacity:0.25} }';
         document.head.appendChild(s);
       }
+
+      // Sort: unconfirmed oldest first (confirm in order), then confirmed newest first
+      fixtures.sort((a, b) => {
+        const aKey = [normaliseTeamName(a.teams?.home?.name||''), normaliseTeamName(a.teams?.away?.name||'')].sort().join('|');
+        const bKey = [normaliseTeamName(b.teams?.home?.name||''), normaliseTeamName(b.teams?.away?.name||'')].sort().join('|');
+        const aConfirmed = dbByTeams[aKey]?.confirmed === true;
+        const bConfirmed = dbByTeams[bKey]?.confirmed === true;
+        const aTime = new Date(a.fixture?.date || 0).getTime();
+        const bTime = new Date(b.fixture?.date || 0).getTime();
+        if (aConfirmed !== bConfirmed) return aConfirmed ? 1 : -1; // unconfirmed first
+        if (!aConfirmed) return aTime - bTime; // unconfirmed: oldest first
+        return bTime - aTime; // confirmed: newest first
+      });
 
       let html = '';
       for (const f of fixtures) {

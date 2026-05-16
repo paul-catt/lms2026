@@ -143,6 +143,7 @@
     .match-badge { font-size:9px; font-weight:700; padding:1px 5px; border-radius:8px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.04em; flex-shrink:0; margin-left:4px; align-self:center; }
     .badge-ft    { background:rgba(148,163,184,0.12); color:var(--text-muted); }
     .badge-live  { background:rgba(59,130,246,0.15); color:#3b82f6; }
+    .badge-elapsed { background:rgba(245,158,11,0.15); color:var(--gold); }
 
     .match-sub { margin-top:6px; }
     .match-aet { font-size:11px; color:var(--text-muted); margin-bottom:4px; }
@@ -325,17 +326,14 @@
     function buildPicksHtml(homeChips, awayChips) {
       const rows = [];
       let hi = 0, ai = 0;
-      // Phase 1: interleave while both sides have chips
       while (hi < homeChips.length && ai < awayChips.length) {
         rows.push('<div class="picks-row">' + homeChips[hi++] + '<div class="picks-away-cell">' + awayChips[ai++] + '</div></div>');
       }
-      // Phase 2: home overflow — two per row on the left
       while (hi < homeChips.length) {
         const h1 = homeChips[hi++];
         const h2 = hi < homeChips.length ? homeChips[hi++] : '';
         rows.push('<div class="picks-row">' + h1 + (h2 ? h2 : '<div class="picks-spacer"></div>') + '</div>');
       }
-      // Phase 3: away overflow — two per row on the right
       while (ai < awayChips.length) {
         const a1 = awayChips[ai++];
         const a2 = ai < awayChips.length ? awayChips[ai++] : '';
@@ -432,13 +430,19 @@
       const isComplete = match.status === 'complete';
       const isLive     = match.status === 'live';
 
-      const middleHtml = isComplete
-        ? '<span class="match-score-inline">' + match.home_score + '–' + match.away_score + '</span>'
+      const middleHtml = isComplete || isLive
+        ? '<span class="match-score-inline">' + (match.home_score ?? '—') + '–' + (match.away_score ?? '—') + '</span>'
         : '<span class="match-vs">vs</span>';
 
-      const badgeHtml = isComplete
-        ? '<span class="match-badge badge-ft">FT</span>'
-        : isLive ? '<span class="match-badge badge-live">🔴 Live</span>' : '';
+      let badgeHtml = '';
+      if (isComplete) {
+        badgeHtml = '<span class="match-badge badge-ft">FT</span>';
+      } else if (isLive) {
+        badgeHtml = '<span class="match-badge badge-live">🔴 Live</span>';
+        if (match.elapsed_minutes) {
+          badgeHtml += '<span class="match-badge badge-elapsed">' + match.elapsed_minutes + '\'</span>';
+        }
+      }
 
       let aetHtml = '';
       if (isComplete && match.pens_winner_id) {
@@ -582,7 +586,7 @@
           db.from('picks').select('player_id, team_id, multiplier, round_id, pick_results(points_earned, match_result)')
         ]);
 
-        const matchSel = 'id, kickoff, status, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, round_id, pens_winner_id, venue, rounds(id, name, sort_order), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)';
+        const matchSel = 'id, kickoff, status, elapsed_minutes, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, round_id, pens_winner_id, venue, rounds(id, name, sort_order), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)';
 
         // ── TODAY ──────────────────────────────────────────
         const { data: todayMatches } = await db.from('matches').select(matchSel)

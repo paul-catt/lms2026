@@ -1,6 +1,9 @@
 // netlify/functions/fetch-scores.js
-// Proxies API-Football today's World Cup fixtures to the admin panel.
-// Keeps the API key server-side. Called by admin.html Live Scores tab.
+// Proxies API-Football fixtures to the admin panel.
+// Keeps the API key server-side.
+//
+// Prod: called with no params — defaults to World Cup (league=1, season=2026)
+// Test: ?league=39&season=2024 for Premier League etc.
 
 exports.handler = async function(event, context) {
   const API_KEY = process.env.API_FOOTBALL_KEY;
@@ -12,11 +15,14 @@ exports.handler = async function(event, context) {
     };
   }
 
-  // Today's date in YYYY-MM-DD (UTC)
-  const today = new Date().toISOString().split('T')[0];
+  const params  = event.queryStringParameters || {};
+  const league  = params.league  || '1';
+  const season  = params.season  || '2026';
+  const dateParam = params.date;
 
-  // League ID 1 = FIFA World Cup in API-Football
-  const url = `https://v3.football.api-sports.io/fixtures?league=1&season=2026&date=${today}`;
+  const today = dateParam || new Date().toISOString().split('T')[0];
+
+  const url = `https://v3.football.api-sports.io/fixtures?league=${league}&season=${season}&date=${today}`;
 
   try {
     const res = await fetch(url, {
@@ -34,12 +40,12 @@ exports.handler = async function(event, context) {
 
     const data = await res.json();
 
-    // Pass through the full response — admin.html reads data.response[]
     return {
       statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache'
+        'Cache-Control': 'no-cache',
+        'Access-Control-Allow-Origin': '*'
       },
       body: JSON.stringify(data)
     };
