@@ -148,9 +148,9 @@
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
       <a href="/leaderboard" class="active">Leaderboard</a>
-      <a href="/match-centre">Match Centre</a>
-      <a href="/bracket">Bracket</a>
-      <a id="nav-my-page" href="/">+ My Page</a>
+      <a href="/match-centre">Matches</a>
+      <a id="nav-my-page" href="/">My Page</a>
+      <a href="/bracket">Draw</a>
       <a href="/rules">FAQ</a>
     </div>
   </nav>
@@ -228,6 +228,7 @@
                 <!-- Status: landscape shows full reason, portrait shows dot only -->
                 <th id="status-col-header" style="display:none" class="landscape-only">Status</th>
                 <th id="status-col-portrait-header" style="display:none" class="portrait-only"></th>
+                <th id="status-col-portrait-goals-header" style="display:none" class="portrait-only">Goals</th>
               </tr>
             </thead>
             <tbody id="leaderboard-body"></tbody>
@@ -589,7 +590,7 @@
       if (completedKORounds.length === 0) {
         wrap.innerHTML = `<div style="padding:16px 0">
           <p style="color:var(--gold);font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px">🔢 Matrix unlocks at Round of 16</p>
-          <p style="color:var(--text-muted);font-size:13px;line-height:1.5">Once the knockout stage is underway, the matrix shows every player's picks side by side — so you can see who's doubled up on the same teams, who's gone rogue, and where the danger zones are.</p>
+          <p style="color:var(--text-muted);font-size:13px;line-height:1.5">See which teams you have left to pick, broken down by Favourite, Dark Horse, Long Shot and No Hoper — so you can plan your path to the final.</p>
         </div>`;
         return;
       }
@@ -971,7 +972,8 @@
         const showRndCol = isKnockout || competitionEnded;
         document.getElementById('rnd-col-header').style.display = showRndCol ? '' : 'none';
         document.getElementById('status-col-header').style.display = (isKnockout || competitionEnded) ? '' : 'none';
-        document.getElementById('status-col-portrait-header').style.display = (isKnockout || competitionEnded) ? '' : 'none';
+        document.getElementById('status-col-portrait-header').style.display = (isKnockout && !competitionEnded) ? '' : 'none';
+        document.getElementById('status-col-portrait-goals-header').style.display = competitionEnded ? '' : 'none';
         document.querySelectorAll('.knockout-only').forEach(el => el.style.display = isKnockout ? '' : 'none');
         document.querySelectorAll('.group-only').forEach(el => el.style.display = isKnockout ? 'none' : '');
         // Hide Pld header on portrait in KO (cells handled via hide-portrait-ko class)
@@ -1003,15 +1005,28 @@
         }
 
         function portraitStatusHtml(player) {
+          if (competitionEnded) {
+            // Show goals prediction diff instead of dot
+            if (projectedTotal !== null && player.total_goals_prediction !== null && player.total_goals_prediction !== undefined) {
+              const diff = Math.abs(Math.round(player.total_goals_prediction - projectedTotal));
+              return '<span style="color:var(--text-muted)">' + diff + '</span>';
+            }
+            return '<span style="color:var(--text-muted)">—</span>';
+          }
           if (!player.is_eliminated) return '';
+          return '<span style="color:var(--red);font-size:14px" title="Eliminated">🔴</span>';
+        }
+
+        function portraitFinalistBadge(player) {
+          if (!competitionEnded || !player.is_eliminated) return '';
           const playerPicks = (allPicks || []).filter(p => p.player_id === player.player_id);
           const finalRound  = (rounds || []).find(r => r.name === 'Final');
           const finalPick   = finalRound ? playerPicks.find(p => p.round_id === finalRound.id) : null;
           const finalRes    = finalPick && finalPick.pick_results && finalPick.pick_results[0];
           if (finalRound && finalRound.is_complete && finalPick && finalPick.teams && finalRes && finalRes.match_result === 'win') {
-            return '<span style="font-size:14px" title="Finalist">✅</span>';
+            return '<span title="Picked the winner" style="margin-left:4px;font-size:13px">✅</span>';
           }
-          return '<span style="color:var(--red);font-size:14px" title="Eliminated">🔴</span>';
+          return '';
         }
 
         // Build set of players who have won their current round pick
@@ -1151,7 +1166,7 @@
             '<td class="pos">' + pos + (tied ? '=' : '') + '</td>' +
             '<td class="prior">' + arrowHtml + '</td>' +
             '<td class="medal landscape-only">' + medal + '</td>' +
-            '<td class="player-name"><a href="/' + p.slug + '">' + (p.display_name || shortName(p.name)) + '</a>' + trophyHtml + flagHtml + '</td>' +
+            '<td class="player-name"><a href="/' + p.slug + '">' + (p.display_name || shortName(p.name)) + '</a>' + trophyHtml + portraitFinalistBadge(p) + flagHtml + '</td>' +
             '<td style="color:var(--text-muted);text-align:center" class="' + (isKnockout ? 'hide-portrait-ko' : '') + '">' + (p.rounds_played || 0) + '</td>' +
             '<td class="points tight-col">' + (p.total_points || 0) + '</td>' +
             (showRndCol ? '<td style="color:var(--text-muted);font-size:12px" class="tight-col">' + rndHtml + '</td>' : '') +

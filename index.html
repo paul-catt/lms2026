@@ -87,17 +87,16 @@
       background: #1c1f2e;
       border: 1px solid rgba(255,255,255,0.07);
       display: flex;
-      align-items: flex-end; /* digit anchored to centre line */
+      align-items: flex-end;
       justify-content: center;
       box-shadow: 0 2px 8px rgba(0,0,0,0.5);
     }
-    /* digit offset so the centre of the numeral sits at the half-card boundary */
     .fd-top .fd-num, .fd-flap-top .fd-num {
       transform: translateY(50%);
       line-height: 1;
     }
     .fd-bot, .fd-flap-bot {
-      align-items: flex-start; /* digit anchored to centre line from below */
+      align-items: flex-start;
       top: 50%;
     }
     .fd-bot .fd-num, .fd-flap-bot .fd-num {
@@ -157,14 +156,36 @@
       max-width: 320px;
       margin: 0 auto;
     }
-    .hero-buttons-solo .btn {
+    .hero-buttons-solo .hero-btn {
       width: 100%;
     }
-    .hero-buttons .btn,
-    .hero-buttons-solo .btn {
-      font-size: 13px;
-      padding: 10px 8px;
+    .hero-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 12px 8px;
       text-align: center;
+      text-decoration: none;
+      background: var(--surface2, #1c1f2e);
+      border: 1px solid var(--border, rgba(255,255,255,0.1));
+      border-radius: 10px;
+      transition: border-color 0.15s;
+    }
+    .hero-btn:hover {
+      border-color: rgba(255,255,255,0.25);
+    }
+    .hero-btn-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text, #e8eaf0);
+      line-height: 1.2;
+    }
+    .hero-btn-sub {
+      font-size: 11px;
+      color: var(--text-muted, #6b7280);
+      line-height: 1.3;
     }
 
     /* My Page redirect banner */
@@ -230,15 +251,15 @@
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
       <a href="/leaderboard">Leaderboard</a>
-      <a href="/match-centre">Match Centre</a>
-      <a href="/bracket">Bracket</a>
-      <a id="nav-my-page" href="/">+ My Page</a>
+      <a href="/match-centre">Matches</a>
+      <a id="nav-my-page" href="/">My Page</a>
+      <a href="/bracket">Draw</a>
       <a href="/rules">FAQ</a>
     </div>
   </nav>
   <script>
     (function() {
-      const slug = localStorage.getItem('lms2026_player_slug');
+      const slug = localStorage.getItem('lms2026_my_slug');
       const link = document.getElementById('nav-my-page');
       if (slug) { link.href = '/' + slug; }
       else { link.href = '/?ref=mypage'; link.title = 'Enter your player code'; }
@@ -284,14 +305,29 @@
       </div>
 
       <div class="hero-buttons">
-        <a href="/leaderboard" class="btn btn-secondary">📊 Leaderboard</a>
-        <a href="/match-centre" class="btn btn-secondary">⚽ Match Centre</a>
-        <a href="/bracket"      class="btn btn-secondary">🏆 Bracket</a>
-        <a href="/rules"        class="btn btn-secondary">📋 FAQ</a>
+        <a href="/leaderboard" class="hero-btn">
+          <span class="hero-btn-label">📊 Leaderboard</span>
+          <span class="hero-btn-sub">Tables & stats</span>
+        </a>
+        <a href="/match-centre" class="hero-btn">
+          <span class="hero-btn-label">⚽ Matches</span>
+          <span class="hero-btn-sub">Results & upcoming fixtures</span>
+        </a>
+        <a href="/bracket" class="hero-btn">
+          <span class="hero-btn-label">🏆 Draw</span>
+          <span class="hero-btn-sub">Routes to the final</span>
+        </a>
+        <a href="/rules" class="hero-btn">
+          <span class="hero-btn-label">📋 FAQ</span>
+          <span class="hero-btn-sub">How it all works</span>
+        </a>
       </div>
       <div style="height:10px"></div>
       <div class="hero-buttons-solo">
-        <a id="hero-my-page" href="/" class="btn btn-secondary">👤 My Page</a>
+        <a id="hero-my-page" href="/" class="hero-btn">
+          <span class="hero-btn-label">👤 My Page</span>
+          <span class="hero-btn-sub">Your picks & progress</span>
+        </a>
       </div>
     </div>
 
@@ -314,7 +350,7 @@
 
     // ── My Page link (hero button) ────────────────────────────
     (function() {
-      const slug = localStorage.getItem('lms2026_player_slug');
+      const slug = localStorage.getItem('lms2026_my_slug');
       const heroLink = document.getElementById('hero-my-page');
       if (slug) {
         heroLink.href = '/' + slug;
@@ -362,15 +398,11 @@
     }
 
     function flipDigit(d, fromVal, toVal, done) {
-      // Both static panels show old value before animation
       d.topCur.textContent = String(fromVal);
       d.botCur.textContent = String(fromVal);
-
-      // Flap top flies away showing old; flap bot sweeps up revealing new
       d.flapTopNum.textContent = String(fromVal);
       d.flapBotNum.textContent = String(toVal);
 
-      // Reset both flaps cleanly before animating
       d.flapTop.style.animation = 'none';
       d.flapBot.style.animation = 'none';
       d.flapTop.classList.remove('go');
@@ -383,12 +415,9 @@
       d.flapTop.classList.add('go');
       d.flapBot.classList.add('go');
 
-      // flapTop is now covering topCur — safe to update it
       d.topCur.textContent = String(toVal);
-      // botCur stays as fromVal — flapBot is still rotating into place
 
       setTimeout(() => {
-        // Update both flap faces to toVal before removing 'go' so they show correct value at rest
         d.flapTopNum.textContent = String(toVal);
         d.flapBotNum.textContent = String(toVal);
         d.botCur.textContent = String(toVal);
@@ -449,7 +478,6 @@
 
     // ── Load data ─────────────────────────────────────────────
     async function loadStatus() {
-      // Active (non-eliminated) player count
       const { count } = await db
         .from('players')
         .select('id', { count: 'exact', head: true })
@@ -458,7 +486,6 @@
       const activeCount = count ?? 0;
       flipTo(activeCount);
 
-      // ── Next deadline ─────────────────────────────────────
       const now = new Date();
       const { data: nextRound } = await db
         .from('rounds')

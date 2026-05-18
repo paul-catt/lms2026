@@ -387,9 +387,9 @@
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
       <a href="/leaderboard" id="leaderboard-link">Leaderboard</a>
-      <a href="/match-centre">Match Centre</a>
-      <a href="/bracket">Bracket</a>
-      <a id="nav-my-page" href="/" class="active">+ My Page</a>
+      <a href="/match-centre">Matches</a>
+      <a id="nav-my-page" href="/" class="active">My Page</a>
+      <a href="/bracket">Draw</a>
       <a href="/rules">FAQ</a>
     </div>
   </nav>
@@ -1579,7 +1579,17 @@
           }
         }
 
-        if (Notification.permission === 'denied') return; // blocked — don't show
+        if (Notification.permission === 'denied') {
+          // Past first deadline — don't bother showing
+          const firstDeadline = new Date('2026-06-12T11:00:00Z');
+          if (new Date() > firstDeadline) return;
+          bar.style.display = 'flex';
+          btn.textContent = '🔔 Enable in browser settings';
+          btn.addEventListener('click', () => {
+            alert('Notifications are blocked on this device.\n\nTo enable: open your browser settings, find Notifications, and allow lms2026.netlify.app.\n\nThen reload the page.');
+          });
+          return;
+        }
 
         bar.style.display = 'flex';
 
@@ -1589,7 +1599,8 @@
           try {
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') {
-              btn.textContent = 'Blocked by browser';
+              btn.disabled = false;
+              btn.textContent = '🔔 Enable in browser settings';
               return;
             }
             const reg = await navigator.serviceWorker.ready;

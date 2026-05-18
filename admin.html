@@ -137,15 +137,15 @@
     <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
       <a href="/leaderboard">Leaderboard</a>
-      <a href="/match-centre">Match Centre</a>
-      <a href="/bracket">Bracket</a>
-      <a id="nav-my-page" href="/">+ My Page</a>
+      <a href="/match-centre">Matches</a>
+      <a id="nav-my-page" href="/">My Page</a>
+      <a href="/bracket">Draw</a>
       <a href="/rules">FAQ</a>
     </div>
   </nav>
   <script>
     (function() {
-      const slug = localStorage.getItem('lms2026_player_slug');
+      const slug = localStorage.getItem('lms2026_my_slug');
       const link = document.getElementById('nav-my-page');
       if (slug) { link.href = '/' + slug; }
       else { link.href = '/'; link.title = 'Enter your player code'; }
@@ -217,11 +217,8 @@
         </div>
         <div id="picks-preview" class="picks-preview" style="display:none">
           <div class="picks-preview-title">Who picked this match</div>
+          <div id="ko-elim-summary" style="display:none; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;"></div>
           <div id="picks-preview-body"></div>
-        </div>
-        <div id="ko-elim-preview" style="display:none; margin-top:14px; background:rgba(239,68,68,0.07); border:1px solid rgba(239,68,68,0.25); border-radius:10px; padding:12px 14px;">
-          <div style="font-size:11px; font-weight:700; color:var(--red); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px">💀 Eliminated if this result stands</div>
-          <div id="ko-elim-preview-body" style="font-size:13px; color:var(--text)"></div>
         </div>
         <button class="btn btn-primary" id="submit-result-btn" style="margin-top:16px">Save Result & Calculate Points</button>
         <div id="result-msg" style="margin-top:8px; font-size:12px"></div>
@@ -611,7 +608,7 @@
       <div class="card">
         <div class="card-title">📡 Live Scores</div>
         <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px">
-          Scores are fetched automatically every 10 minutes during match windows. Use the button below to pull now. Confirm a result to trigger points calculation.
+          Scores are fetched automatically every 10 seconds. Use the button below to pull now. Confirm a result to trigger points calculation.
         </p>
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px">
           <button class="btn btn-primary" id="btn-fetch-scores" onclick="fetchLiveScores()">⚡ Fetch Now</button>
@@ -1537,9 +1534,9 @@ Good luck! ⚽🏆`;
       const pensWinner = document.getElementById('pens-winner-select').value;
       const previewEl = document.getElementById('picks-preview');
       const bodyEl = document.getElementById('picks-preview-body');
-      if (!matchId) { previewEl.style.display = 'none'; document.getElementById('ko-elim-preview').style.display = 'none'; return; }
+      if (!matchId) { previewEl.style.display = 'none'; document.getElementById('ko-elim-summary').style.display = 'none'; return; }
       const match = matchCache[matchId];
-      if (!match) { previewEl.style.display = 'none'; document.getElementById('ko-elim-preview').style.display = 'none'; return; }
+      if (!match) { previewEl.style.display = 'none'; document.getElementById('ko-elim-summary').style.display = 'none'; return; }
       if (match.is_third_place) {
         previewEl.style.display = 'block';
         bodyEl.innerHTML = '<p style="color:var(--text-muted); font-size:13px">3rd place match — no player picks to display.</p>';
@@ -1582,7 +1579,9 @@ Good luck! ⚽🏆`;
         const lsTag = team.is_longshot ? '<span class="longshot-star">⭐</span>' : '';
         const ptsClass = outcome === 'win' || outcome === 'pens_win' ? 'pts-win' : outcome === 'loss' ? 'pts-loss' : 'pts-draw';
         const ptsDisplay = pts !== null ? `<span class="pick-pts ${ptsClass}">${pts}pts</span>` : `<span class="pick-pts pts-none">—</span>`;
-        return `<div class="pick-row"><div><span class="pick-player">${pick.players.name}</span><span class="pick-detail">${team.flag_emoji} ${team.name} (${side}, ${pick.multiplier}pt${lsTag})${outcome?' · '+outcomeLabel(outcome):''}</span></div>${ptsDisplay}</div>`;
+        const isEliminated = isKnockout && (outcome === 'loss' || outcome === 'pens_loss');
+        const skullTag = isEliminated ? ' 💀' : '';
+        return `<div class="pick-row"><div><span class="pick-player">${pick.players.name}${skullTag}</span><span class="pick-detail">${team.flag_emoji} ${team.name} (${side}, ${pick.multiplier}pt${lsTag})${outcome?' · '+outcomeLabel(outcome):''}</span></div>${ptsDisplay}</div>`;
       }
       let html = '';
       homePicks.forEach(p => { html += pickRowHtml(p, match.home_team, homeOutcome); });
@@ -1590,25 +1589,24 @@ Good luck! ⚽🏆`;
       previewEl.style.display = 'block';
       bodyEl.innerHTML = html;
 
-      // KO elimination preview — only show when we know the loser
-      const koElimEl = document.getElementById('ko-elim-preview');
-      const koElimBody = document.getElementById('ko-elim-preview-body');
-      if (isKnockout && hasScores && homeOutcome && homeOutcome !== 'pens_unknown') {
-        const losingOutcome = 'loss';
-        const penLossOutcome = 'pens_loss';
+      // KO elimination summary line
+      const koElimSummary = document.getElementById('ko-elim-summary');
+      if (isKnockout) {
         const losingPicks = [
-          ...homePicks.filter(() => homeOutcome === losingOutcome || homeOutcome === penLossOutcome),
-          ...awayPicks.filter(() => awayOutcome === losingOutcome || awayOutcome === penLossOutcome),
+          ...homePicks.filter(() => homeOutcome === 'loss' || homeOutcome === 'pens_loss'),
+          ...awayPicks.filter(() => awayOutcome === 'loss' || awayOutcome === 'pens_loss'),
         ];
-        if (losingPicks.length > 0) {
-          koElimBody.innerHTML = losingPicks.map(p => '💀 <strong>' + p.players.name + '</strong>').join('<br>');
-          koElimEl.style.display = 'block';
+        const count = losingPicks.length;
+        if (count > 0) {
+          koElimSummary.textContent = `💀 ${count} PLAYER${count !== 1 ? 'S' : ''} ELIMINATED IF THIS RESULT STANDS`;
+          koElimSummary.style.color = 'var(--red)';
         } else {
-          koElimBody.innerHTML = '<span style="color:var(--text-muted)">No players picked the losing team this round.</span>';
-          koElimEl.style.display = 'block';
+          koElimSummary.textContent = '✅ NO PLAYERS ELIMINATED';
+          koElimSummary.style.color = 'var(--green)';
         }
+        koElimSummary.style.display = 'block';
       } else {
-        koElimEl.style.display = 'none';
+        koElimSummary.style.display = 'none';
       }
     }
 
@@ -1645,7 +1643,7 @@ Good luck! ⚽🏆`;
       document.getElementById('pens-winner-row').style.display='none';
       document.getElementById('pens-row').style.display='none';
       document.getElementById('picks-preview').style.display='none';
-      document.getElementById('ko-elim-preview').style.display='none';
+      document.getElementById('ko-elim-summary').style.display='none';
       document.getElementById('third-place-notice').style.display='none';
       document.getElementById('home-score-label').childNodes[0].textContent = 'Home Score ';
       document.getElementById('away-score-label').childNodes[0].textContent = 'Away Score ';
@@ -3377,6 +3375,60 @@ Good luck! ⚽🏆`;
         dbByTeams[key] = m;
       });
 
+      // Fetch picks for today's matches
+      const allTeamIds = [...new Set((dbMatches || []).flatMap(m => [m.home_team_id, m.away_team_id]).filter(Boolean))];
+      let livePicksCache = {};
+      if (allTeamIds.length > 0) {
+        const { data: picksData } = await db.from('picks').select('id, team_id, multiplier, round_id, players(id, name)').in('team_id', allTeamIds);
+        (picksData || []).forEach(pick => {
+          const k = pick.team_id + '|' + pick.round_id;
+          if (!livePicksCache[k]) livePicksCache[k] = [];
+          livePicksCache[k].push(pick);
+        });
+      }
+
+      function livePicksHtml(dbMatch, homeOutcome, awayOutcome) {
+        if (!dbMatch || dbMatch.is_third_place) return '';
+        const isKO = dbMatch.rounds?.round_type === 'knockout';
+        const hk = dbMatch.home_team_id + '|' + dbMatch.round_id;
+        const ak = dbMatch.away_team_id + '|' + dbMatch.round_id;
+        const homePicks = livePicksCache[hk] || [];
+        const awayPicks = livePicksCache[ak] || [];
+        if (homePicks.length === 0 && awayPicks.length === 0) return '';
+
+        let rows = '';
+        function pickRow(pick, outcome) {
+          const isLoss = outcome === 'loss' || outcome === 'pens_loss';
+          const skull = isKO && isLoss ? ' 💀' : '';
+          const outcomeStr = outcome ? { win:'Win', draw:'Draw', loss:'Loss', pens_win:'Win (pens)', pens_loss:'Loss (pens)' }[outcome] || '' : '';
+          const ptsColor = outcome === 'win' || outcome === 'pens_win' ? 'var(--green)' : outcome === 'loss' || outcome === 'pens_loss' ? 'var(--red)' : 'var(--gold)';
+          const pts = outcome === 'win' ? pick.multiplier : outcome === 'draw' ? 1 : outcome === 'pens_win' ? 1 : outcome === 'loss' || outcome === 'pens_loss' ? 0 : null;
+          const ptsDisplay = pts !== null ? `<span style="font-weight:700;color:${ptsColor}">${pts}pts</span>` : '<span style="color:var(--text-muted)">—</span>';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span><strong>${pick.players.name}${skull}</strong>${outcomeStr ? ' · <span style="color:var(--text-muted)">' + outcomeStr + '</span>' : ''}</span>${ptsDisplay}</div>`;
+        }
+
+        homePicks.forEach(p => { rows += pickRow(p, homeOutcome); });
+        awayPicks.forEach(p => { rows += pickRow(p, awayOutcome); });
+
+        let summaryHtml = '';
+        if (isKO) {
+          const elimCount = [
+            ...homePicks.filter(() => homeOutcome === 'loss' || homeOutcome === 'pens_loss'),
+            ...awayPicks.filter(() => awayOutcome === 'loss' || awayOutcome === 'pens_loss'),
+          ].length;
+          const summaryColor = elimCount > 0 ? 'var(--red)' : 'var(--green)';
+          const summaryText = elimCount > 0
+            ? `💀 ${elimCount} PLAYER${elimCount !== 1 ? 'S' : ''} ELIMINATED IF THIS RESULT STANDS`
+            : '✅ NO PLAYERS ELIMINATED';
+          summaryHtml = `<div style="font-size:11px;font-weight:700;color:${summaryColor};text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">${summaryText}</div>`;
+        }
+
+        return `<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Who picked this match</div>
+          ${summaryHtml}${rows}
+        </div>`;
+      }
+
       // Pulse animation
       if (!document.getElementById('live-pulse-style')) {
         const s = document.createElement('style');
@@ -3472,6 +3524,19 @@ Good luck! ⚽🏆`;
 
           html += '</div>';
         }
+
+        // Derive outcomes for picks display
+        let homeOutcomeForPicks = null, awayOutcomeForPicks = null;
+        if (typeof homeGoals === 'number' && typeof awayGoals === 'number') {
+          if (isKO && homeGoals === awayGoals) {
+            if (fdWinner === 'HOME_TEAM') { homeOutcomeForPicks = 'pens_win'; awayOutcomeForPicks = 'pens_loss'; }
+            else if (fdWinner === 'AWAY_TEAM') { homeOutcomeForPicks = 'pens_loss'; awayOutcomeForPicks = 'pens_win'; }
+          } else {
+            homeOutcomeForPicks = homeGoals > awayGoals ? 'win' : homeGoals === awayGoals ? 'draw' : 'loss';
+            awayOutcomeForPicks = awayGoals > homeGoals ? 'win' : homeGoals === awayGoals ? 'draw' : 'loss';
+          }
+        }
+        html += livePicksHtml(dbMatch, homeOutcomeForPicks, awayOutcomeForPicks);
 
         html += '</div>';
       }
