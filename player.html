@@ -441,7 +441,7 @@
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
 
       <!-- Push notification opt-in -->
-      <div id="notif-bar" style="display:none; margin-bottom:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+      <div id="notif-bar" style="display:none; margin-bottom:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 14px; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
         <span style="font-size:12px; color:var(--text-muted)">🔔 Get a nudge 1hr before the deadline if you haven't picked.</span>
         <button id="notif-btn" class="btn btn-secondary" style="font-size:12px; padding:6px 14px; white-space:nowrap">Enable notifications</button>
       </div>
@@ -503,7 +503,7 @@
         <div class="card-title">📋 Pick History</div>
         <div class="table-wrap">
           <table style="font-size:13px">
-            <thead><tr><th>Round</th><th>Team</th><th style="white-space:nowrap">Val</th><th>Result</th><th>Pts</th></tr></thead>
+            <thead><tr><th>Round</th><th>Team</th><th style="white-space:nowrap">Val</th><th style="white-space:nowrap">Res</th><th>Pts</th></tr></thead>
             <tbody id="history-body"></tbody>
           </table>
         </div>
@@ -635,17 +635,19 @@
           { data: teams },
           { data: allScores },
           { data: matches },
-          { data: goalsData }
+          { data: goalsData },
+          { data: gdData }
         ] = await Promise.all([
           db.from('picks')
-            .select('id, multiplier, team_id, round_id, is_assigned, oracle_pick, rounds(id, name, round_type, deadline, sort_order, is_complete), teams(id, name, flag_emoji, is_longshot), pick_results(points_earned, match_result)')
+            .select('id, multiplier, team_id, round_id, is_assigned, oracle_pick, rounds(id, name, round_type, deadline, sort_order, is_complete), teams(id, name, flag_emoji, is_longshot), pick_results(points_earned, match_result, match_id)')
             .eq('player_id', player.id)
             .order('created_at', { ascending: true }),
           db.from('rounds').select('*').order('sort_order'),
           db.from('teams').select('id, name, flag_emoji, is_longshot, is_eliminated, band, odds_rank').order('odds_rank'),
           db.from('player_scores').select('player_id, total_points').order('total_points', { ascending: false }),
           db.from('matches').select('id, round_id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band)').order('kickoff'),
-          db.from('matches').select('home_score, away_score').not('home_score', 'is', null).not('away_score', 'is', null)
+          db.from('matches').select('home_score, away_score').not('home_score', 'is', null).not('away_score', 'is', null),
+          db.from('player_gd').select('player_id, gd')
         ]);
 
         allPicks   = picks   || [];
@@ -669,6 +671,19 @@
           const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
           if (res) totalPoints += res.points_earned || 0;
         });
+
+        const gdMap = {};
+        (gdData || []).forEach(r => { gdMap[r.player_id] = r.gd || 0; });
+
+        // Sort using same tiebreakers as leaderboard: points → GD → name
+        if (allScores && allScores.length > 0) {
+          allScores.sort((a, b) => {
+            if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+            const agd = gdMap[a.player_id] || 0, bgd = gdMap[b.player_id] || 0;
+            if (bgd !== agd) return bgd - agd;
+            return (a.name || '').localeCompare(b.name || '');
+          });
+        }
 
         let position = '—';
         let positionIdx = -1;
@@ -1495,9 +1510,10 @@
         (picksByRound[r.id] || []).forEach(p => {
           const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
           if (res) {
-            const resultBadge = '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + res.match_result.toUpperCase() + '</span>';
+            const resultBadge = '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + (res.match_result==='win'?'W':res.match_result==='draw'?'D':'L') + '</span>';
             const autoBadge = p.is_assigned ? '<span class="badge badge-grey" style="font-size:10px;margin-left:4px">auto</span>' : '';
-            rows += '<tr>' +
+            const matchLink = res.match_id ? ' style="cursor:pointer" onclick="window.location=\'/match-centre#match-' + res.match_id + '\'"' : '';
+            rows += '<tr' + matchLink + '>' +
               '<td class="history-round">' + shortRoundName(r.name) + '</td>' +
               '<td style="white-space:nowrap">' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + autoBadge + '</td>' +
               '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
@@ -1530,11 +1546,12 @@
           rPicks.forEach(p => {
             const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
             const resultBadge = res
-              ? '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + res.match_result.toUpperCase() + '</span>'
+              ? '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + (res.match_result==='win'?'W':res.match_result==='draw'?'D':'L') + '</span>'
               : '<span class="badge badge-grey">Pending</span>';
             const earned = res ? res.points_earned : '—';
             const autoBadge = p.is_assigned ? '<span class="badge badge-grey" style="font-size:10px;margin-left:4px">auto</span>' : '';
-            rows += '<tr>' +
+            const matchLink = res && res.match_id ? ' style="cursor:pointer" onclick="window.location=\'/match-centre#match-' + res.match_id + '\'"' : '';
+            rows += '<tr' + matchLink + '>' +
               '<td class="history-round">' + shortRoundName(r.name) + '</td>' +
               '<td style="white-space:nowrap">' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + autoBadge + '</td>' +
               '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +

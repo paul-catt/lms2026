@@ -283,7 +283,7 @@
 
       <!-- Flip counter -->
       <div class="flip-counter-wrap">
-        <div class="flip-counter" id="flip-counter">
+        <div class="flip-counter" id="flip-counter" style="visibility:hidden">
           <!-- Tens digit -->
           <div class="flip-digit" id="digit-tens">
             <div class="fd-top">    <span class="fd-num" id="ft-top-cur">2</span></div>
@@ -436,6 +436,9 @@
       const stored = parseInt(localStorage.getItem(LS_COUNT_KEY), 10);
       const from = (!isNaN(stored) && stored >= target) ? stored : target;
       localStorage.setItem(LS_COUNT_KEY, target);
+
+      // Reveal counter now we have the real value
+      document.getElementById('flip-counter').style.visibility = 'visible';
 
       if (from === target) { setAll(target); return; }
 

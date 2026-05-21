@@ -166,14 +166,11 @@
 
     /* ── Picks ─────────────────────────────────────────── */
     .picks-rows { display:flex; flex-direction:column; gap:4px; padding-top:6px; border-top:1px solid var(--border); margin-top:4px; }
-    .picks-row { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
-    .picks-row-away { display:grid; grid-template-columns:1fr 1fr; gap:4px; justify-items:flex-end; }
-    .picks-away-cell { display:flex; justify-content:flex-end; }
-    .picks-spacer { }
-    .picks-home { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
-    .picks-away { display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
-    .picks-home.two-col { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
-    .picks-away.two-col { display:grid; grid-template-columns:1fr 1fr; gap:4px; justify-items:flex-end; }
+    .picks-row-3col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; align-items:start; }
+    .picks-row-2col { display:grid; grid-template-columns:1fr 1fr; gap:4px; align-items:start; }
+    .picks-col-left  { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
+    .picks-col-mid   { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
+    .picks-col-right { display:flex; flex-direction:column; gap:4px; align-items:flex-end; }
     .pick-chip { display:inline-flex; align-items:center; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:3px 8px; font-size:12px; width:fit-content; max-width:100%; min-width:0; overflow:hidden; }
     .pick-chip a { min-width:0; flex-shrink:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .pick-chip.win  { background:rgba(16,185,129,0.1);  border-color:rgba(16,185,129,0.3); }
@@ -323,23 +320,115 @@
       });
     }
 
+    // ── Pick layout engine ───────────────────────────────
+    //
+    // Three-column grid: LEFT | MIDDLE | RIGHT
+    // Home chips fill left-first, away chips fill right-first.
+    // Middle is contested: whoever needs more mid slots wins it.
+    // If tied on mid slots, total count breaks the tie.
+    // If total count also tied, nobody gets the middle.
+    //
+    // Single-side split rule (n chips, primary-heavy):
+    //   primary = ceil((n+1)/2)  [always strictly more than secondary]
+    //   secondary = floor((n-1)/2)
+    //   e.g. n=1 → 1/0, n=2 → 2/0, n=3 → 2/1, n=4 → 3/1, n=5 → 3/2
+    //
+    // When a side loses the middle it uses primary column only (all n chips there).
+
+    function sideSplit(n) {
+      // Returns { primary, secondary } where primary > secondary always
+      // n=1 → {1,0}, n=2 → {2,0}, n=3 → {2,1}, n=4 → {3,1}, n=5 → {3,2}
+      if (n <= 0) return { primary: 0, secondary: 0 };
+      const secondary = Math.floor((n - 1) / 2);
+      const primary   = n - secondary;
+      return { primary, secondary };
+    }
+
     function buildPicksHtml(homeChips, awayChips) {
-      const rows = [];
-      let hi = 0, ai = 0;
-      while (hi < homeChips.length && ai < awayChips.length) {
-        rows.push('<div class="picks-row">' + homeChips[hi++] + '<div class="picks-away-cell">' + awayChips[ai++] + '</div></div>');
+      const H = homeChips.length;
+      const A = awayChips.length;
+
+      if (H === 0 && A === 0) return '';
+
+      // Compute how many each side wants in the middle
+      const hSplit = sideSplit(H);
+      const aSplit = sideSplit(A);
+      const hMidWant = hSplit.secondary;
+      const aMidWant = aSplit.secondary;
+
+      // Decide who gets the middle
+      let homeGetsMid = false, awayGetsMid = false;
+      if (hMidWant > aMidWant) {
+        homeGetsMid = true;
+      } else if (aMidWant > hMidWant) {
+        awayGetsMid = true;
+      } else if (hMidWant === aMidWant && hMidWant > 0) {
+        // Tied on mid slots — break by total count
+        if (H > A)      { homeGetsMid = true; }
+        else if (A > H) { awayGetsMid = true; }
+        // else truly equal total → nobody gets middle
       }
-      while (hi < homeChips.length) {
-        const h1 = homeChips[hi++];
-        const h2 = hi < homeChips.length ? homeChips[hi++] : '';
-        rows.push('<div class="picks-row">' + h1 + (h2 ? h2 : '<div class="picks-spacer"></div>') + '</div>');
+
+      // Assign chips to columns
+      let leftChips = [], midChips = [], rightChips = [];
+
+      if (H > 0 && A === 0) {
+        // Home only
+        leftChips = homeChips.slice(0, hSplit.primary);
+        midChips  = homeChips.slice(hSplit.primary);
+      } else if (A > 0 && H === 0) {
+        // Away only — mirror: right gets primary, mid gets secondary
+        rightChips = awayChips.slice(0, aSplit.primary);
+        midChips   = awayChips.slice(aSplit.primary);
+        // mid chips display in middle column aligned right
+      } else {
+        // Both sides
+        if (homeGetsMid) {
+          leftChips  = homeChips.slice(0, hSplit.primary);
+          midChips   = homeChips.slice(hSplit.primary);   // home mid chips
+          rightChips = awayChips;                          // away primary only
+        } else if (awayGetsMid) {
+          leftChips  = homeChips;                          // home primary only
+          rightChips = awayChips.slice(0, aSplit.primary);
+          midChips   = awayChips.slice(aSplit.primary);   // away mid chips (right-aligned)
+        } else {
+          // Nobody gets middle
+          leftChips  = homeChips;
+          rightChips = awayChips;
+        }
       }
-      while (ai < awayChips.length) {
-        const a1 = awayChips[ai++];
-        const a2 = ai < awayChips.length ? awayChips[ai++] : '';
-        rows.push('<div class="picks-row-away">' + (a2 ? a1 + a2 : '<div class="picks-spacer"></div>' + a1) + '</div>');
+
+      // Determine if we need 3 columns or 2
+      const useThreeCols = midChips.length > 0;
+      // Who owns the mid column (affects alignment)
+      const midIsAway = awayGetsMid || (A > 0 && H === 0 && midChips.length > 0);
+
+      // Build column HTML
+      const nRows = Math.max(leftChips.length, midChips.length, rightChips.length);
+      let rows = '';
+
+      for (let i = 0; i < nRows; i++) {
+        const l = leftChips[i]  || '';
+        const m = midChips[i]   || '';
+        const r = rightChips[i] || '';
+
+        if (useThreeCols) {
+          const midAlign = midIsAway ? 'flex-end' : 'flex-start';
+          rows += '<div class="picks-row-3col">' +
+            '<div style="display:flex;justify-content:flex-start">'  + l + '</div>' +
+            '<div style="display:flex;justify-content:' + midAlign + '">' + m + '</div>' +
+            '<div style="display:flex;justify-content:flex-end">'    + r + '</div>' +
+            '</div>';
+        } else {
+          // 2-col: left and right only
+          rows += '<div class="picks-row-2col">' +
+            '<div style="display:flex;justify-content:flex-start">' + l + '</div>' +
+            '<div style="display:flex;justify-content:flex-end">'   + r + '</div>' +
+            '</div>';
+        }
       }
-      return '<div class="match-sub"><div class="picks-rows">' + rows.join('') + '</div></div>';
+
+      return '<div class="match-sub"><div class="picks-rows">' + rows + '</div></div>';
     }
 
     // ── Deadline countdown ───────────────────────────────
@@ -457,7 +546,7 @@
 
       let picksHtml;
       if (matchPicks.length === 0) {
-        picksHtml = '<div class="match-sub"><div class="picks-rows"><div class="picks-row"><span class="no-picks">No picks</span></div></div></div>';
+        picksHtml = '<div class="match-sub"><div class="picks-rows"><div class="picks-row-2col"><span class="no-picks">No picks</span></div></div></div>';
       } else {
         const sorted = sortPicksByName(matchPicks, allPlayers);
         const homeChips = [], awayChips = [];
@@ -485,7 +574,7 @@
         picksHtml = buildPicksHtml(homeChips, awayChips);
       }
 
-      return '<div class="match-card ' + match.status + '">' +
+      return '<div class="match-card ' + match.status + '" id="match-' + match.id + '">' +
         '<div class="match-meta">' +
           '<span class="match-time">' + fmtTime(match.kickoff) + '</span>' +
           (match.venue && showVenue ? '<span class="match-venue-sep">·</span><span class="match-venue-inline">' + match.venue + '</span>' : '') +
@@ -711,7 +800,11 @@
 
     (async () => {
       await syncTestDateFromSupabase();
-      loadAll();
+      await loadAll();
+      if (location.hash) {
+        const el = document.querySelector(location.hash);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       setInterval(loadAll, 60000);
     })();
   </script>
