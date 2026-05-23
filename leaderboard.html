@@ -889,7 +889,7 @@
           const res = pick.pick_results && pick.pick_results[0];
           if (!res || !res.match_result) return;
           if (!formMap[pick.player_id]) formMap[pick.player_id] = [];
-          const pts = res.points_earned || 0;
+          const pts = (res.points_earned || 0) + (res.longshot_bonus || 0);
           const isKO = roundTypeMap[pick.round_id] === 'knockout';
           const pensWinner = pensWinnerByTeamRound[pick.team_id + '|' + pick.round_id];
           const isPensMatch = !!pensWinner;
