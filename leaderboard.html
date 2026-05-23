@@ -128,6 +128,9 @@
     .m-good { font-weight:800; color:var(--green); }
     .m-total { font-weight:700; color:var(--text-muted); }
     .matrix-table .m-summary { background:var(--surface2); font-weight:700; }
+    .ls-sub-tab { font-family:'Rajdhani',sans-serif; padding:5px 12px; border-radius:20px; cursor:pointer; font-size:12px; font-weight:700; letter-spacing:0.04em; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); transition:all 0.15s; white-space:nowrap; }
+    .ls-sub-tab:hover { color:var(--text); border-color:var(--text-muted); }
+    .ls-sub-tab.active { background:rgba(245,158,11,0.15); color:var(--gold); border-color:var(--gold); }
     #longshot-wrap table { border-collapse:collapse; width:100%; }
     #longshot-wrap th:nth-child(1) { width:36px; }
     #longshot-wrap th:nth-child(3) { width:90px; }
@@ -176,6 +179,7 @@
         <div class="lb-tab active" data-view="main" onclick="switchView('main')">📊 Table</div>
         <div class="lb-tab" data-view="picks" onclick="switchView('picks')">🏁 Picks</div>
         <div class="lb-tab" data-view="prizes" onclick="switchView('prizes')">💰 Prizes</div>
+        <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Long</div>
         <div class="lb-tab knockout-only" id="tab-matrix" data-view="matrix" onclick="switchView('matrix')">🔢 Matrix</div>
         <div class="lb-tab knockout-only" id="tab-fallen" data-view="fallen" onclick="switchView('fallen')">💀 Fallen</div>
       </div>
@@ -286,14 +290,31 @@
       </div>
 
       <div class="lb-view" id="view-longshot">
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:2px">Tracks longshot bonus points earned across the tournament.</p>
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px">
-          <span style="color:#10b981;font-weight:700">✔</span> Win &nbsp;<span style="color:var(--text-muted)">|</span>&nbsp;
-          <span style="color:var(--red);font-weight:700">✕</span> Not win &nbsp;<span style="color:var(--text-muted)">|</span>&nbsp;
-          <span style="color:var(--text-muted)">Pending</span>
-        </p>
-        <div id="longshot-wrap" class="table-wrap">
-          <div class="loading"><div class="spinner"></div></div>
+        <!-- Sub-tabs -->
+        <div style="display:flex; gap:6px; margin-bottom:16px;">
+          <div id="ls-sub-bonus" class="ls-sub-tab active" onclick="switchLsSub('bonus')">🏆 Bonus</div>
+          <div id="ls-sub-teams" class="ls-sub-tab" onclick="switchLsSub('teams')">⭐ Teams</div>
+        </div>
+
+        <!-- Bonus sub-view -->
+        <div id="ls-view-bonus">
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:2px">Tracks longshot bonus points earned across the tournament.</p>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px">
+            <span style="color:#10b981;font-weight:700">✔</span> Win &nbsp;<span style="color:var(--text-muted)">|</span>&nbsp;
+            <span style="color:var(--red);font-weight:700">✕</span> Not win &nbsp;<span style="color:var(--text-muted)">|</span>&nbsp;
+            <span style="color:var(--text-muted)">Pending</span>
+          </p>
+          <div id="longshot-wrap" class="table-wrap">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- Teams sub-view -->
+        <div id="ls-view-teams" style="display:none">
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px; line-height:1.6">These teams were designated as longshots before the tournament based on pre-tournament odds. Picking one and winning earns a +1 bonus point.</p>
+          <div id="longshot-teams-grid" style="display:flex; flex-wrap:wrap; gap:6px;">
+            <div class="loading"><div class="spinner"></div></div>
+          </div>
         </div>
       </div>
 
@@ -402,6 +423,14 @@
       if (n.includes('semi')    || n === 'sf') return 'SF';
       if (n.includes('final'))                  return 'F';
       return name;
+    }
+
+    function switchLsSub(sub) {
+      document.getElementById('ls-sub-bonus').classList.toggle('active', sub === 'bonus');
+      document.getElementById('ls-sub-teams').classList.toggle('active', sub === 'teams');
+      document.getElementById('ls-view-bonus').style.display = sub === 'bonus' ? '' : 'none';
+      document.getElementById('ls-view-teams').style.display = sub === 'teams' ? '' : 'none';
+      if (sub === 'teams') renderLongshotTeamsView();
     }
 
     function switchView(name) {
@@ -759,7 +788,7 @@
           db.from('matches').select('round_id, home_score, away_score, home_team_id, away_team_id, pens_winner_id, kickoff, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji)').eq('status', 'complete').not('home_score', 'is', null),
           db.from('matches').select('home_team_id, away_team_id, round_id, kickoff, status, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)').not('home_team_id', 'is', null),
           db.from('picks').select('player_id, team_id, multiplier, round_id, teams(flag_emoji, name, is_longshot), players(slug), pick_results(points_earned, longshot_bonus, match_result)'),
-          db.from('teams').select('id, name, flag_emoji, band, is_eliminated')
+          db.from('teams').select('id, name, flag_emoji, band, is_eliminated, is_longshot')
         ]);
 
         if (error) throw error;
@@ -1340,7 +1369,7 @@
             '<td class="points tight-col">' + (p.total_points || 0) + '</td>' +
             (showRndCol ? '<td style="color:var(--text-muted);font-size:12px" class="tight-col">' + rndHtml + '</td>' : '') +
             '<td class="tight-col">' + gdHtml + '</td>' +
-            '<td class="hide-mobile tiebreak-val" style="text-align:center">' + goalsDiffHtml + '</td>' +
+            '<td class="tiebreak-val" style="text-align:center">' + goalsDiffHtml + '</td>' +
             '<td class="hide-mobile" style="text-align:left">' + formHtml + '</td>' +
             '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="landscape-only">' + statusCellHtml + '</td>';
 
@@ -1354,11 +1383,12 @@
         const finalBanner = document.getElementById('final-table-banner');
         if (finalBanner) finalBanner.style.display = competitionEnded ? '' : 'none';
 
-        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, competitionEnded };
+        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, competitionEnded, allTeams };
         if (document.getElementById('view-picks').classList.contains('active'))  renderPicksView();
         if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
         if (document.getElementById('view-fallen').classList.contains('active')) renderFallenView();
         renderLongshotView();
+        renderLongshotTeamsView();
 
       } catch(err) {
         console.error(err);
@@ -1403,7 +1433,10 @@
         return b.longshotPicks - a.longshotPicks;
       });
       const hasAny = lsSorted.some(p => p.longshotPicks > 0);
-      if (!hasAny) { wrap.innerHTML = '<p style="color:var(--text-muted);padding:16px 0">No longshot picks recorded yet.</p>'; return; }
+      if (!hasAny) {
+        wrap.innerHTML = '<p style="color:var(--text-muted);padding:16px 0">No longshot picks recorded yet.</p>';
+        return;
+      }
       let html = '<table style="table-layout:auto;width:100%"><thead><tr><th class="pos" style="width:28px">#</th><th>Player</th><th>⭐ Picks</th><th style="width:56px">Bonus<br>Pts</th></tr></thead><tbody>';
       lsSorted.filter(p => p.longshotPicks > 0).forEach((p, i) => {
         const displayName = p.display_name || shortName(p.name);
@@ -1415,7 +1448,6 @@
         const lossBlob   = !lossesHtml  ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--text-muted);opacity:0.4;vertical-align:middle"></span>` : '';
         const winSection  = winsHtml  || winBlob;
         const lossSection = lossesHtml || lossBlob;
-        const needsWinLossDivider = true;
         const needsPendingDivider = !!pendingHtml;
         const allFlagsHtml = (winsHtml || lossesHtml || pendingHtml)
           ? `<div style="display:flex;flex-wrap:nowrap;gap:1px;align-items:center;line-height:1.3;overflow:visible">${winSection}${divider}${lossSection}${needsPendingDivider ? divider + pendingHtml : ''}</div>`
@@ -1429,6 +1461,29 @@
       });
       html += '</tbody></table>';
       wrap.innerHTML = html;
+    }
+
+    function renderLongshotTeamsView() {
+      const teamsGrid = document.getElementById('longshot-teams-grid');
+      if (!teamsGrid) return;
+      if (!_leaderboardData || !_leaderboardData.allTeams) {
+        teamsGrid.innerHTML = '<p style="color:var(--text-muted);font-size:12px">Loading...</p>';
+        return;
+      }
+      const lsTeams = _leaderboardData.allTeams
+        .filter(t => t.is_longshot)
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      if (lsTeams.length === 0) {
+        teamsGrid.innerHTML = '<p style="color:var(--text-muted);font-size:12px">No longshot teams designated yet.</p>';
+        return;
+      }
+      teamsGrid.innerHTML = lsTeams.map(t => {
+        const eliminated = t.is_eliminated ? 'opacity:0.4;text-decoration:line-through;' : '';
+        return `<div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600;${eliminated}">
+          <span style="font-size:16px">${t.flag_emoji || '🏳'}</span>
+          <span style="color:var(--text)">${t.name}</span>
+        </div>`;
+      }).join('');
     }
 
     function renderPrizesView() {
@@ -1755,8 +1810,13 @@
 
     (async () => {
       await syncTestDateFromSupabase();
-      loadLeaderboard();
+      await loadLeaderboard();
       setInterval(loadLeaderboard, 60000);
+      // Auto-switch to longshot tab if arriving via #longshots anchor
+      if (window.location.hash === '#longshots') {
+        switchView('longshot');
+        switchLsSub('teams');
+      }
     })();
   </script>
   <div id="pk-toast"></div>

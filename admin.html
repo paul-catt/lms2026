@@ -163,7 +163,6 @@
       <div class="tab" data-tab="players">👥 Players</div>
       <div class="tab" data-tab="picks">👁 Picks</div>
       <div class="tab" data-tab="livescores">📡 Live Scores</div>
-      <div class="tab" data-tab="prizes">🏆 Prizes</div>
       <a href="/whatsapp-export" class="tab" style="text-decoration:none; background:var(--surface2); color:var(--text-muted)">📱 WhatsApp</a>
     </div>
 
@@ -621,18 +620,7 @@
     </div>
 
     <!-- PRIZES TAB -->
-    <div class="tab-content" id="tab-prizes">
-      <div class="card">
-        <div class="card-title">🏆 Prize Distribution</div>
-        <div id="prizes-summary" style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px; padding:12px 16px; background:var(--surface2); border-radius:8px; font-size:13px; align-items:center">
-          <span>👥 <strong id="prizes-player-count" style="color:var(--gold)">—</strong> players</span>
-          <span>💰 Pot: <strong id="prizes-pot" style="color:var(--gold)">£—</strong></span>
-          <span style="color:var(--text-muted)">🪦 First out: <strong id="prizes-first-out-amount">£10</strong></span>
-          <span style="color:var(--text-muted)">🎯 Remaining: <strong id="prizes-remaining">£—</strong></span>
-        </div>
-        <div id="prizes-wrap"><div class="loading"><div class="spinner"></div></div></div>
-      </div>
-    </div>
+
 
 
   </main>
@@ -817,7 +805,6 @@
       if (name === 'matches') loadR32Matches();
       if (name === 'picks') loadPicksAudit();
       if (name === 'livescores') initLiveScores();
-      if (name === 'prizes') loadPrizesTab();
       if (name === 'results') { loadSnapshotStatus(); runExhaustionCheck(); }
     }
 
@@ -3263,247 +3250,6 @@ Good luck! ⚽🏆`;
     }
 
     // ── PRIZES TAB ────────────────────────────────────────────────────────
-    async function loadPrizesTab() {
-      const wrap = document.getElementById('prizes-wrap');
-      wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-
-      const [
-        { data: players,  error: pErr },
-        { data: scores,   error: sErr },
-        { data: rounds,   error: rErr },
-        { data: gdData,   error: gdErr },
-        { data: furthestData },
-        { data: allPicks },
-        { data: completedMatches }
-      ] = await Promise.all([
-        db.from('players').select('id, name, slug, display_name, is_eliminated, eliminated_in_round_id, total_goals_prediction'),
-        db.from('player_scores').select('player_id, total_points'),
-        db.from('rounds').select('id, name, round_type, sort_order, is_complete').order('sort_order'),
-        db.from('player_gd').select('player_id, goal_difference'),
-        db.from('player_furthest_round').select('player_id, furthest_round'),
-        db.from('picks').select('player_id, team_id, round_id, pick_results(match_result)'),
-        db.from('matches').select('round_id, kickoff, home_team_id, away_team_id, home_score, away_score').eq('status','complete').not('home_score','is',null)
-      ]);
-
-      if (pErr || sErr || rErr) { wrap.innerHTML = '<p style="color:var(--red)">Failed to load.</p>'; return; }
-
-      const totalPlayers = players.length;
-      const pot = totalPlayers * 10;
-      const FIRST_OUT = 10;
-      const remaining = pot - FIRST_OUT;
-
-      // Tier splits
-      let splits;
-      if (totalPlayers >= 30)      splits = [{pct:45},{pct:25},{pct:15},{pct:10},{pct:5}];
-      else if (totalPlayers >= 21) splits = [{pct:50},{pct:25},{pct:15},{pct:10}];
-      else                          splits = [{pct:60},{pct:25},{pct:15}];
-
-      // Update summary bar
-      document.getElementById('prizes-player-count').textContent = totalPlayers;
-      document.getElementById('prizes-pot').textContent = '\u00a3' + pot;
-      document.getElementById('prizes-remaining').textContent = '\u00a3' + remaining;
-
-      // Build lookups — all keyed by player_id (uuid)
-      const gdMap = {};
-      (gdData || []).forEach(r => { gdMap[r.player_id] = r.goal_difference || 0; });
-      const roundMap = {};
-      (rounds || []).forEach(r => { roundMap[r.id] = r; });
-      const furthestMap = {}; // player_id -> sort_order of furthest round reached
-      (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round || 0; });
-      const scoreMap = {}; // player_id -> total_points
-      (scores || []).forEach(s => { scoreMap[s.player_id] = s.total_points || 0; });
-
-      // Projected total goals (for goals prediction tiebreak)
-      let projectedTotal = null;
-      const TOTAL_MATCHES = 104;
-      let goalsScored = 0, matchesPlayed = 0;
-      (completedMatches || []).forEach(m => { goalsScored += (m.home_score||0) + (m.away_score||0); matchesPlayed++; });
-      if (matchesPlayed > 0) projectedTotal = (goalsScored / matchesPlayed) * TOTAL_MATCHES;
-
-      function shortName(n) {
-        const parts = n.trim().split(/\s+/);
-        return parts.length === 1 ? parts[0] : parts[0] + ' ' + parts[parts.length - 1][0];
-      }
-      function displayName(p) { return p.display_name || shortName(p.name); }
-
-      // Sort players by finish position — mirrors leaderboard tiebreak exactly
-      // pts -> furthest round -> GD -> goals prediction closeness -> name
-      const sorted = [...players].sort((a, b) => {
-        const apt = scoreMap[a.id] || 0, bpt = scoreMap[b.id] || 0;
-        if (bpt !== apt) return bpt - apt;
-        const afr = furthestMap[a.id] || 0, bfr = furthestMap[b.id] || 0;
-        if (bfr !== afr) return bfr - afr;
-        const agd = gdMap[a.id] || 0, bgd = gdMap[b.id] || 0;
-        if (bgd !== agd) return bgd - agd;
-        if (projectedTotal !== null) {
-          const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
-          const bDiff = Math.abs((b.total_goals_prediction || 0) - projectedTotal);
-          if (aDiff !== bDiff) return aDiff - bDiff;
-        }
-        return a.name.localeCompare(b.name);
-      });
-
-      // Assign prize positions (ties share position)
-      const posMap = {}; // player id -> position number
-      sorted.forEach((p, i) => {
-        if (i === 0) { posMap[p.id] = 1; return; }
-        const prev = sorted[i - 1];
-        const tied = (scoreMap[p.id]||0) === (scoreMap[prev.id]||0)
-          && (furthestMap[p.id]||0) === (furthestMap[prev.id]||0)
-          && (gdMap[p.id]||0) === (gdMap[prev.id]||0)
-          && (projectedTotal === null || Math.abs((p.total_goals_prediction||0) - projectedTotal) === Math.abs((prev.total_goals_prediction||0) - projectedTotal));
-        posMap[p.id] = tied ? posMap[prev.id] : i + 1;
-      });
-
-      // Group by prize position
-      const prizeGroups = {};
-      sorted.forEach(p => {
-        const pos = posMap[p.id];
-        if (!prizeGroups[pos]) prizeGroups[pos] = [];
-        prizeGroups[pos].push(p);
-      });
-
-      // Compute prize per place index
-      const prizeByPlace = {};
-      splits.forEach((s, i) => { prizeByPlace[i] = Math.round((s.pct / 100) * remaining * 100) / 100; });
-
-      // Map player -> prize amount (split across tied positions)
-      const winningsMap = {};
-      let placeIdx = 0;
-      const sortedPos = Object.keys(prizeGroups).map(Number).sort((a,b) => a-b);
-      for (const pos of sortedPos) {
-        if (placeIdx >= splits.length) break;
-        const group = prizeGroups[pos];
-        let totalShare = 0;
-        for (let k = placeIdx; k < placeIdx + group.length && k < splits.length; k++) totalShare += prizeByPlace[k];
-        const perPlayer = Math.round((totalShare / group.length) * 100) / 100;
-        group.forEach(p => { winningsMap[p.id] = perPlayer; });
-        placeIdx += group.length;
-      }
-
-      // ── First Out ─────────────────────────────────────────────────────
-      const kickoffByTeamRound = {};
-      (completedMatches || []).forEach(m => {
-        if (m.home_team_id) kickoffByTeamRound[m.home_team_id + '|' + m.round_id] = m.kickoff;
-        if (m.away_team_id) kickoffByTeamRound[m.away_team_id + '|' + m.round_id] = m.kickoff;
-      });
-      const matchByTeam = {};
-      (completedMatches || []).forEach(m => {
-        if (m.home_team_id) matchByTeam[m.home_team_id + '|' + m.round_id] = m;
-        if (m.away_team_id) matchByTeam[m.away_team_id + '|' + m.round_id] = m;
-      });
-      const picksByPlayer = {};
-      (allPicks || []).forEach(pk => {
-        if (!picksByPlayer[pk.player_id]) picksByPlayer[pk.player_id] = [];
-        picksByPlayer[pk.player_id].push(pk);
-      });
-
-      const koRoundIds = new Set((rounds || []).filter(r =>
-        ['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final'].includes(r.name)
-      ).map(r => r.id));
-
-      function getElimKickoff(player) {
-        const pks = picksByPlayer[player.id] || [];
-        const losingPick = [...pks].reverse().find(pk => {
-          const res = pk.pick_results && pk.pick_results[0];
-          return res && res.match_result === 'loss' && koRoundIds.has(pk.round_id);
-        });
-        if (losingPick) {
-          const m = matchByTeam[losingPick.team_id + '|' + losingPick.round_id];
-          return m?.kickoff || null;
-        }
-        const lastPick = pks.length > 0
-          ? [...pks].sort((a,b) => (roundMap[b.round_id]?.sort_order||0) - (roundMap[a.round_id]?.sort_order||0))[0]
-          : null;
-        return lastPick ? kickoffByTeamRound[lastPick.team_id + '|' + lastPick.round_id] || null : null;
-      }
-
-      const eliminated = players.filter(p => p.is_eliminated);
-
-      // Sort eliminated by kickoff time, then by standard tiebreaks on a tie
-      const elimWithKickoff = eliminated.map(p => ({ player: p, kickoff: getElimKickoff(p) }))
-        .sort((a, b) => {
-          const aK = a.kickoff ? new Date(a.kickoff).getTime() : Infinity;
-          const bK = b.kickoff ? new Date(b.kickoff).getTime() : Infinity;
-          return aK - bK;
-        });
-
-      // First-out: all players eliminated in the same earliest match — split equally
-      const firstK = elimWithKickoff.length > 0 ? (elimWithKickoff[0].kickoff ? new Date(elimWithKickoff[0].kickoff).getTime() : Infinity) : null;
-      const firstOutPlayers = firstK !== null
-        ? elimWithKickoff.filter(e => (e.kickoff ? new Date(e.kickoff).getTime() : Infinity) === firstK).map(e => e.player)
-        : [];
-      const firstOutShare = firstOutPlayers.length > 0 ? Math.round((FIRST_OUT / firstOutPlayers.length) * 100) / 100 : 0;
-      const firstOutIds = new Set(firstOutPlayers.map(p => p.id));
-
-      // ── Render ────────────────────────────────────────────────────────
-      const competitionEnded = eliminated.length === players.length ||
-        (rounds || []).filter(r => r.name !== '3rd Place').every(r => r.is_complete);
-      const statusNote = competitionEnded
-        ? '<p style="font-size:12px;color:var(--green);margin-bottom:16px">\u2705 Tournament complete \u2014 final payouts below.</p>'
-        : '<p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">\u23f3 Tournament in progress \u2014 positions are provisional.</p>';
-
-      let html = statusNote;
-
-      // First Out card
-      html += '<div style="margin-bottom:20px;padding:12px 16px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px">';
-      html += '<div style="font-family:\'Rajdhani\',sans-serif;font-size:15px;font-weight:700;color:#ef4444;margin-bottom:8px">';
-      html += '\ud83e\udea6 First Out \u2014 \u00a3' + FIRST_OUT + (firstOutPlayers.length > 1 ? ' split' : '') + '</div>';
-      if (firstOutPlayers.length === 0) {
-        html += '<div style="font-size:13px;color:var(--text-muted)">No eliminations yet.</div>';
-      } else {
-        firstOutPlayers.forEach(p => {
-          html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(239,68,68,0.15)">';
-          html += '<span style="font-size:14px">' + displayName(p) + '</span>';
-          html += '<span style="font-weight:700;color:#ef4444">\u00a3' + firstOutShare + '</span>';
-          html += '</div>';
-        });
-      }
-      html += '</div>';
-
-      // Prize places table
-      html += '<table style="width:100%;border-collapse:collapse;font-size:13px">';
-      html += '<thead><tr style="border-bottom:2px solid var(--border)">';
-      ['Place','Player','Pts','%','Prize'].forEach((h, i) => {
-        const align = i >= 2 ? 'right' : 'left';
-        html += '<th style="text-align:' + align + ';padding:8px 4px;color:var(--text-muted);font-weight:600">' + h + '</th>';
-      });
-      html += '</tr></thead><tbody>';
-
-      placeIdx = 0;
-      for (const pos of sortedPos) {
-        if (placeIdx >= splits.length) break;
-        const group = prizeGroups[pos];
-        const isTied = group.length > 1;
-        const pctDisplay = isTied
-          ? splits.slice(placeIdx, placeIdx + group.length).map(s => s.pct + '%').join('+')
-          : splits[placeIdx].pct + '%';
-        const prize = winningsMap[group[0].id];
-
-        group.forEach((p, gi) => {
-          const pts = scoreMap[p.id] || 0;
-          html += '<tr style="border-bottom:1px solid var(--border)">';
-          html += '<td style="padding:10px 4px;font-family:\'Rajdhani\',sans-serif;font-weight:700;font-size:16px;color:var(--gold)">' + pos + (isTied ? '=' : '') + '</td>';
-          html += '<td style="padding:10px 4px">' + displayName(p) + (firstOutIds.has(p.id) ? ' <span style="font-size:10px;color:#ef4444">\ud83e\udea6</span>' : '') + '</td>';
-          html += '<td style="padding:10px 4px;text-align:right;color:var(--text-muted)">' + pts + '</td>';
-          html += gi === 0 ? '<td style="padding:10px 4px;text-align:right;color:var(--text-muted)">' + pctDisplay + '</td>' : '<td></td>';
-          html += '<td style="padding:10px 4px;text-align:right;font-weight:700;color:var(--gold)">\u00a3' + prize + '</td>';
-          html += '</tr>';
-        });
-        placeIdx += group.length;
-      }
-
-      html += '</tbody></table>';
-      const totalOut = (firstOutShare * firstOutPlayers.length) + sorted.reduce((sum, p) => sum + (winningsMap[p.id] || 0), 0);
-      html += '<div style="margin-top:12px;font-size:11px;color:var(--text-muted);text-align:right">Total distributed: \u00a3' + totalOut.toFixed(2) + ' of \u00a3' + pot + '</div>';
-
-      wrap.innerHTML = html;
-    }
-    // ─────────────────────────────────────────────────────────────────────
-
-
-    let _liveScoresInitDone = false;
-
     function initLiveScores() {
       if (!_liveScoresInitDone) {
         _liveScoresInitDone = true;

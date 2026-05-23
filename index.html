@@ -262,7 +262,7 @@
       const slug = localStorage.getItem('lms2026_my_slug');
       const link = document.getElementById('nav-my-page');
       if (slug) { link.href = '/' + slug; }
-      else { link.href = '/?ref=mypage'; link.title = 'Enter your player code'; }
+      else { link.href = '/?ref=mypage'; link.title = 'Find your link in the WhatsApp group'; }
     })();
   </script>
 
@@ -271,15 +271,15 @@
     <!-- Banner shown only when arriving via the nav My Page link with no slug set -->
     <div id="mypage-banner" class="mypage-banner" style="display:none">
       <strong>📎 Looking for your My Page?</strong>
-      You landed here because your personal link isn't saved on this device yet.
-      Enter your personal URL directly — e.g. <code>lms2026.netlify.app/yourname</code> —
-      and it will be remembered for next time.
+      Your personal link was sent in the WhatsApp group. Open it from there and it'll be saved on this device for next time.
+      Or go directly: <code>lms2026.netlify.app/yourname</code>
     </div>
 
     <div class="hero">
       <a href="/admin" class="hero-title" tabindex="-1" aria-hidden="true">LMS 2026</a>
       <div class="hero-event">World Cup 2026</div>
       <div class="hero-subtitle">11 June – 19 July</div>
+      <div style="font-size:13px; color:var(--text-muted); margin-bottom:20px; line-height:1.6">Pick teams each round. Score points. Last one standing wins the pot.</div>
 
       <!-- Flip counter -->
       <div class="flip-counter-wrap">

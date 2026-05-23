@@ -53,7 +53,9 @@
     .bracket-team.team-pred { font-style: italic; color: var(--text-muted); }
     .bracket-team.team-pred.winner-pred { font-style: italic; color: #93c5fd; background: rgba(59,130,246,0.08); }
     .bracket-team.team-pred.loser-pred { color: var(--text-muted); font-style: italic; }
-    .bracket-team .t-flag { font-size: 13px; flex-shrink: 0; }
+    .bracket-team.my-available { background: rgba(245,200,66,0.1); border-left: 3px solid #f5c842; margin-left: -1px; }
+    .bracket-team.my-available .t-name { color: #f5c842 !important; font-weight: 700; }
+    .bracket-team.my-available .t-dot { background: #f5c842 !important; }
     .bracket-team .t-name { flex: 1; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .bracket-team .t-odds { font-size: 8px; color: var(--text-muted); flex-shrink: 0; opacity: 0.5; }
     .bracket-team .t-score { font-size: 10px; font-weight: 700; color: var(--gold); flex-shrink: 0; }
@@ -101,7 +103,7 @@
       const slug = localStorage.getItem('lms2026_my_slug');
       const link = document.getElementById('nav-my-page');
       if (slug) { link.href = '/' + slug; }
-      else { link.href = '/'; link.title = 'Enter your player code'; }
+      else { link.href = '/'; link.title = 'Find your link in the WhatsApp group'; }
     })();
   </script>
 
@@ -144,6 +146,15 @@
           <div class="view-toggle">
             <button class="view-toggle-btn active" id="btn-all-rounds" onclick="setView('all')">📋 All Rounds</button>
             <button class="view-toggle-btn" id="btn-live-view" onclick="setView('live')">⚡ From Current Round</button>
+            <button class="view-toggle-btn" id="btn-my-teams" onclick="toggleMyTeams()" style="display:none">👤 My Teams</button>
+          </div>
+          <div id="my-teams-switch-wrap" style="display:none; align-items:center; gap:8px; margin-bottom:14px; font-size:12px; font-weight:600; color:var(--text-muted)">
+            <span>👤 Highlight my available teams</span>
+            <label style="position:relative; display:inline-block; width:36px; height:20px; cursor:pointer; flex-shrink:0">
+              <input type="checkbox" id="my-teams-checkbox" onchange="toggleMyTeams()" style="opacity:0; width:0; height:0; position:absolute">
+              <span id="my-teams-track" style="position:absolute; inset:0; background:#374151; border-radius:20px; transition:background 0.2s"></span>
+              <span id="my-teams-thumb" style="position:absolute; top:2px; left:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:transform 0.2s"></span>
+            </label>
           </div>
           <div class="scroll-hint">↔ Scroll right to see the full bracket</div>
           <div class="bracket-outer">
@@ -190,6 +201,20 @@
 
     let _currentView = 'all';
     let _lastRenderArgs = null;
+    let _myUsedTeamIds = new Set();
+    let _myEliminatedTeamIds = new Set();
+    let _mySlugFound = false;
+    let _myTeamsOn = false;
+
+    function toggleMyTeams() {
+      _myTeamsOn = document.getElementById('my-teams-checkbox').checked;
+      document.getElementById('my-teams-track').style.background = _myTeamsOn ? '#f5c842' : '#374151';
+      document.getElementById('my-teams-thumb').style.transform  = _myTeamsOn ? 'translateX(16px)' : 'translateX(0)';
+      if (_lastRenderArgs) {
+        renderBracket(..._lastRenderArgs);
+        requestAnimationFrame(() => drawConnectors());
+      }
+    }
 
     function setView(mode) {
       _currentView = mode;
@@ -285,15 +310,36 @@
         });
 
         // Name -> team_id lookup for resolving blob team names to IDs for odds
-        const { data: allTeams } = await db.from('teams').select('id, name');
+        const { data: allTeams } = await db.from('teams').select('id, name, is_eliminated');
         const nameToId = {};
         (allTeams || []).forEach(t => { nameToId[t.name.toLowerCase().trim()] = t.id; });
+
+        // Build eliminated set
+        const eliminatedTeamIds = new Set((allTeams || []).filter(t => t.is_eliminated).map(t => t.id));
+
+        // Fetch player's used team IDs if slug known
+        const _slug = localStorage.getItem('lms2026_my_slug');
+        if (_slug) {
+          const { data: playerRow } = await db.from('players').select('id').eq('slug', _slug).single();
+          if (playerRow) {
+            const { data: playerPicks } = await db.from('picks').select('team_id').eq('player_id', playerRow.id);
+            _myUsedTeamIds = new Set((playerPicks || []).map(p => p.team_id));
+            _mySlugFound = true;
+          }
+        }
+        _myEliminatedTeamIds = eliminatedTeamIds;
 
         const derivedTeams = derivePredictedTeams(bracketData, matchMap, oddsMap, feeders, nameToId);
         _lastRenderArgs = [bracketData, matchMap, derivedTeams, oddsMap, nameToId];
 
         renderBracket(bracketData, matchMap, derivedTeams, oddsMap, nameToId);
         requestAnimationFrame(() => drawConnectors());
+
+        // Show toggle only if slug found
+        if (_mySlugFound) {
+          document.getElementById('btn-my-teams').style.display = 'none';
+          document.getElementById('my-teams-switch-wrap').style.display = 'flex';
+        }
 
         const uploaded = new Date(pred.created_at).toLocaleString('en-GB', {
           day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
@@ -627,6 +673,15 @@
         row.classList.add(isWinner ? 'winner-actual' : 'loser-actual');
       } else if (isPredWinner !== null) {
         row.classList.add(isPredWinner ? 'winner-pred' : 'loser-pred');
+      }
+
+      // Gold highlight — available to pick
+      if (_myTeamsOn && team.teamId) {
+        const isEliminated = _myEliminatedTeamIds.has(team.teamId);
+        const isUsed = _myUsedTeamIds.has(team.teamId);
+        if (!isEliminated && !isUsed) {
+          row.classList.add('my-available');
+        }
       }
 
       let dotColor = 'var(--border)';
