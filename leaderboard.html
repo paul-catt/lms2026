@@ -66,7 +66,7 @@
     .proj-goals { font-size:11px; color:var(--text-muted); margin-top:2px; margin-bottom:16px; }
     @media(max-width:600px) { .proj-goals { display:none !important; } }
     .goals-diff { font-size:13px; }
-    .lb-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding-bottom:4px; margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px; }
+    .lb-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; margin-left:-16px; margin-right:-16px; padding-left:16px; padding-right:16px; }
     .lb-tabs::-webkit-scrollbar { display:none; }
     .lb-tab { font-family:'Rajdhani',sans-serif; padding:7px 10px; border-radius:20px; cursor:pointer; font-size:13px; font-weight:700; letter-spacing:0.04em; border:1px solid var(--border); background:var(--surface2); color:var(--text-muted); transition:all 0.15s; white-space:nowrap; }
     .lb-tab:hover { color:var(--text); border-color:var(--text-muted); }
@@ -175,9 +175,9 @@
       <div class="lb-tabs">
         <div class="lb-tab active" data-view="main" onclick="switchView('main')">📊 Table</div>
         <div class="lb-tab" data-view="picks" onclick="switchView('picks')">🏁 Picks</div>
-        <div class="lb-tab" data-view="matrix" onclick="switchView('matrix')">🔢 Matrix</div>
-        <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Long</div>
-        <div class="lb-tab" data-view="fallen" onclick="switchView('fallen')">💀 Fallen</div>
+        <div class="lb-tab" data-view="prizes" onclick="switchView('prizes')">💰 Prizes</div>
+        <div class="lb-tab knockout-only" id="tab-matrix" data-view="matrix" onclick="switchView('matrix')">🔢 Matrix</div>
+        <div class="lb-tab knockout-only" id="tab-fallen" data-view="fallen" onclick="switchView('fallen')">💀 Fallen</div>
       </div>
 
       <div id="loading" class="loading"><div class="spinner"></div>Loading standings...</div>
@@ -227,7 +227,6 @@
                 <th class="hide-mobile" style="text-align:left">Form</th>
                 <!-- Status: landscape shows full reason, portrait shows dot only -->
                 <th id="status-col-header" style="display:none" class="landscape-only">Status</th>
-                <th id="status-col-portrait-header" style="display:none" class="portrait-only"></th>
                 <th id="status-col-portrait-goals-header" style="display:none" class="portrait-only">Goals</th>
               </tr>
             </thead>
@@ -244,8 +243,8 @@
             <span style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)">
               <span style="width:10px;height:10px;border-radius:50%;background:#38bdf8;display:inline-block;flex-shrink:0"></span>Played last night
             </span>
-            <span class="knockout-only" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)">
-              <span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0"></span>Eliminated
+            <span class="knockout-only" style="display:none;align-items:center;gap:4px;font-size:11px;color:var(--text-muted)">
+              <span style="color:#10b981;font-size:11px;font-weight:700">✔</span>Result in &nbsp;<span style="color:var(--red);font-size:11px;font-weight:700">✕</span>Out
             </span>
             <span class="knockout-only hide-mobile" style="display:none;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)">
               Pool remaining: 🔵 Favourite &nbsp;🟡 Dark Horse &nbsp;🟠 Long Shot &nbsp;🔴 No Hoper
@@ -282,9 +281,17 @@
       </div>
 
       <!-- LONGSHOT LEADERBOARD -->
+      <div class="lb-view" id="view-prizes">
+        <div id="lb-prizes-wrap" style="padding-top:8px"></div>
+      </div>
+
       <div class="lb-view" id="view-longshot">
         <p style="font-size:12px; color:var(--text-muted); margin-bottom:2px">Tracks longshot bonus points earned across the tournament.</p>
-        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px">Bright = won · Faded = lost/draw · Half-faded = pending.</p>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px">
+          <span style="color:#10b981;font-weight:700">✔</span> Win &nbsp;<span style="color:var(--text-muted)">|</span>&nbsp;
+          <span style="color:var(--red);font-weight:700">✕</span> Not win &nbsp;<span style="color:var(--text-muted)">|</span>&nbsp;
+          <span style="color:var(--text-muted)">Pending</span>
+        </p>
         <div id="longshot-wrap" class="table-wrap">
           <div class="loading"><div class="spinner"></div></div>
         </div>
@@ -403,6 +410,7 @@
       if (name === 'picks'  && _leaderboardData) renderPicksView();
       if (name === 'matrix' && _leaderboardData) renderMatrixView();
       if (name === 'fallen') renderFallenView();
+      if (name === 'prizes' && _leaderboardData) renderPrizesView();
     }
 
     let _leaderboardData = null;
@@ -624,7 +632,7 @@
         if (!pickMap[p.player_id]) pickMap[p.player_id] = {};
         const res = p.pick_results && p.pick_results[0];
         const pensWinnerId = pensLookup[p.player_id + '|' + p.team_id] || null;
-        pickMap[p.player_id][p.team_id] = { result: res ? res.match_result : 'pending', multiplier: p.multiplier, pensWinnerId, teamId: p.team_id };
+        pickMap[p.player_id][p.team_id] = { result: res ? res.match_result : 'pending', multiplier: p.multiplier, pensWinnerId, teamId: p.team_id, roundId: p.round_id };
       });
 
       const usedByPlayer = {};
@@ -696,8 +704,19 @@
           } else {
             const r      = pick.result;
             const isPens = !!pick.pensWinnerId;
+            const pickRound = (() => {
+              const rn = (rounds || []).find(rd => rd.id === pick.roundId)?.name || '';
+              if (rn.startsWith('Group')) return 'GP';
+              if (rn === 'Round of 32') return '32';
+              if (rn === 'Round of 16') return '16';
+              if (rn === 'Quarter Finals') return 'QF';
+              if (rn === 'Semi Finals') return 'SF';
+              if (rn === 'Final') return 'F';
+              return '';
+            })();
+            const sub = pickRound ? '<sub style="font-size:7px;color:#fff">' + pickRound + '</sub>' : '';
             const cls    = r === 'win' ? 'm-W' : r === 'draw' ? 'm-D' : r === 'loss' ? 'm-L' : 'm-P';
-            const label  = r === 'win' ? (isPens ? 'W<sub style="font-size:7px">p</sub>' : 'W') : r === 'draw' ? 'D' : r === 'loss' ? 'L' : '?';
+            const label  = r === 'win' ? ('W' + sub) : r === 'draw' ? 'D' : r === 'loss' ? ('L' + sub) : '?';
             html += `<td class="${cls}" style="${divider}" data-team="${t.flag_emoji || ''} ${t.name || ''}" title="${t.flag_emoji || ''} ${r||'pending'}${isPens ? ' (pens)' : ''}">${label}</td>`;
           }
         });
@@ -930,6 +949,12 @@
           }
         });
 
+        // Build eliminated_in_round_id lookup by player_id
+        const elimRoundByPlayer = {};
+        (scores || []).forEach(p => {
+          if (p.eliminated_in_round_id) elimRoundByPlayer[p.player_id] = p.eliminated_in_round_id;
+        });
+
         function getPlayerRemainingTeams(playerId) {
           const used = usedByPlayer[playerId] || new Set();
           return alivePoolTeams.filter(t => !used.has(t.id));
@@ -939,7 +964,13 @@
           const remaining = getPlayerRemainingTeams(playerId);
           if (remaining.length === 0) {
             if (playerHasPendingPick[playerId]) return '';
-            return '<span class="status-none">OUT · No picks remaining</span>';
+            const playerPicksR = (allPicks || []).filter(p => p.player_id === playerId);
+            const elimRoundId = elimRoundByPlayer[playerId] || (currentRound && currentRound.id);
+            const hadPickInElimRound = elimRoundId && playerPicksR.some(p => p.round_id === elimRoundId);
+            if (hadPickInElimRound) {
+              return '<span class="status-none">OUT · No picks remaining</span>';
+            }
+            return '<span class="status-none">OUT · No pick · no pool teams left</span>';
           }
           if (isQFOrLater) {
             return remaining.map(t => {
@@ -972,9 +1003,11 @@
         const showRndCol = isKnockout || competitionEnded;
         document.getElementById('rnd-col-header').style.display = showRndCol ? '' : 'none';
         document.getElementById('status-col-header').style.display = (isKnockout || competitionEnded) ? '' : 'none';
-        document.getElementById('status-col-portrait-header').style.display = (isKnockout && !competitionEnded) ? '' : 'none';
         document.getElementById('status-col-portrait-goals-header').style.display = competitionEnded ? '' : 'none';
-        document.querySelectorAll('.knockout-only').forEach(el => el.style.display = isKnockout ? '' : 'none');
+        document.querySelectorAll('.knockout-only').forEach(el => {
+          const isTab = el.classList.contains('lb-tab');
+          el.style.display = (isKnockout || competitionEnded) ? (isTab ? 'inline-flex' : '') : 'none';
+        });
         document.querySelectorAll('.group-only').forEach(el => el.style.display = isKnockout ? 'none' : '');
         // Hide Pld header on portrait in KO (cells handled via hide-portrait-ko class)
         const pldHeader = document.getElementById('pld-col-header');
@@ -1001,7 +1034,12 @@
           if (koLostPick && koLostPick.teams) {
             return '<span style="font-size:12px;color:var(--red)">OUT · ' + (koLostPick.teams.flag_emoji || '') + ' ' + (koLostPick.teams.name || '') + ' pick lost</span>';
           }
-          return '<span style="font-size:12px;color:var(--red)">OUT · No picks remaining</span>';
+          const elimRoundId = player.eliminated_in_round_id;
+          const hadPickInElimRound = elimRoundId && playerPicks.some(p => p.round_id === elimRoundId);
+          if (hadPickInElimRound) {
+            return '<span style="font-size:12px;color:var(--red)">OUT · No picks remaining</span>';
+          }
+          return '<span style="font-size:12px;color:var(--red)">OUT · No pick · no pool teams left</span>';
         }
 
         function portraitStatusHtml(player) {
@@ -1027,6 +1065,16 @@
             return '<span title="Picked the winner" style="margin-left:4px;font-size:13px">✅</span>';
           }
           return '';
+        }
+
+        // Build set of players whose KO pick this round has a settled result (any outcome)
+        const resultInThisRound = new Set();
+        if (currentRound && isKnockout) {
+          (allPicks || []).forEach(pick => {
+            if (pick.round_id !== currentRound.id) return;
+            const res = pick.pick_results && pick.pick_results[0];
+            if (res && res.match_result) resultInThisRound.add(pick.player_id);
+          });
         }
 
         // Build set of players who have won their current round pick
@@ -1067,9 +1115,7 @@
           return a.name.localeCompare(b.name); // display-only tiebreak within tied KO groups
         });
 
-        const tbody = document.getElementById('leaderboard-body');
-        tbody.innerHTML = '';
-
+        // ── WINNINGS CALCULATION (final table only) ──────────────────────────
         // Build current position map (sequential, 1-to-N)
         const currentPosMap = {};
         sorted.forEach((p, i) => { currentPosMap[p.player_id] = i + 1; });
@@ -1092,6 +1138,129 @@
             posMap[p.player_id] = { pos: i + 1, tied: false };
           }
         });
+
+        const winningsMap = {}; // player_id -> £ amount
+        let firstOutPlayers = [];
+        if (competitionEnded) {
+          const totalPlayers = (scores || []).length;
+          const pot = totalPlayers * 10;
+
+          // Prize splits by player count tier
+          let splits; // array of % for 1st, 2nd, 3rd[, 4th, 5th] of remaining pot
+          if (totalPlayers >= 30)      splits = [0.45, 0.25, 0.15, 0.10, 0.05];
+          else if (totalPlayers >= 21) splits = [0.50, 0.25, 0.15, 0.10];
+          else                         splits = [0.60, 0.25, 0.15];
+
+          const FIRST_OUT_PRIZE = 10;
+          const remainingPot = pot - FIRST_OUT_PRIZE;
+
+          // ── Determine first-out player(s) ────────────────────────────────
+          // Replicate renderFallenView elimination-sort logic
+          const eliminated = (scores || []).filter(p => p.is_eliminated);
+          const kickoffByTeamRound2 = {};
+          (completedMatches || []).forEach(m => {
+            if (!m.kickoff) return;
+            if (m.home_team_id) kickoffByTeamRound2[m.home_team_id + '|' + m.round_id] = m.kickoff;
+            if (m.away_team_id) kickoffByTeamRound2[m.away_team_id + '|' + m.round_id] = m.kickoff;
+          });
+          const roundMap2 = {};
+          (rounds || []).forEach(r => { roundMap2[r.id] = r; });
+          const matchByTeam2 = {};
+          (completedMatches || []).forEach(m => {
+            if (m.home_team_id) matchByTeam2[m.home_team_id + '|' + m.round_id] = m;
+            if (m.away_team_id) matchByTeam2[m.away_team_id + '|' + m.round_id] = m;
+          });
+          const picksByPlayer2 = {};
+          (allPicks || []).forEach(pk => {
+            if (!picksByPlayer2[pk.player_id]) picksByPlayer2[pk.player_id] = [];
+            picksByPlayer2[pk.player_id].push(pk);
+          });
+          function getElimInfo(player) {
+            const playerPicks = picksByPlayer2[player.player_id] || [];
+            const koRoundNames = new Set(['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final']);
+            const koRoundIds = new Set((rounds || []).filter(r => koRoundNames.has(r.name)).map(r => r.id));
+            const losingPick = [...playerPicks].reverse().find(p => {
+              const res = p.pick_results && p.pick_results[0];
+              return res && res.match_result === 'loss' && koRoundIds.has(p.round_id);
+            });
+            if (losingPick) {
+              const match = matchByTeam2[losingPick.team_id + '|' + losingPick.round_id] || null;
+              return { match, noPicks: false, elimRoundId: null, lastPickKickoff: null };
+            }
+            const elimRoundId = player.eliminated_in_round_id ||
+              (playerPicks.length > 0
+                ? [...playerPicks].sort((a, b) => (roundMap2[b.round_id]?.sort_order||0) - (roundMap2[a.round_id]?.sort_order||0))[0].round_id
+                : null);
+            const lastPick = playerPicks.length > 0
+              ? [...playerPicks].sort((a, b) => (roundMap2[b.round_id]?.sort_order||0) - (roundMap2[a.round_id]?.sort_order||0))[0]
+              : null;
+            const lastPickKickoff = lastPick ? kickoffByTeamRound2[lastPick.team_id + '|' + lastPick.round_id] || null : null;
+            return { match: null, noPicks: true, elimRoundId, lastPickKickoff };
+          }
+          const elimWithInfo = eliminated.map(p => ({ player: p, info: getElimInfo(p) }));
+          elimWithInfo.sort((a, b) => {
+            const aSO = a.info.match ? (roundMap2[a.info.match.round_id]?.sort_order||0) : a.info.elimRoundId ? (roundMap2[a.info.elimRoundId]?.sort_order||0) : 0;
+            const bSO = b.info.match ? (roundMap2[b.info.match.round_id]?.sort_order||0) : b.info.elimRoundId ? (roundMap2[b.info.elimRoundId]?.sort_order||0) : 0;
+            if (aSO !== bSO) return aSO - bSO;
+            const aK = a.info.match?.kickoff ? new Date(a.info.match.kickoff).getTime() : a.info.lastPickKickoff ? new Date(a.info.lastPickKickoff).getTime() : 0;
+            const bK = b.info.match?.kickoff ? new Date(b.info.match.kickoff).getTime() : b.info.lastPickKickoff ? new Date(b.info.lastPickKickoff).getTime() : 0;
+            return aK - bK;
+          });
+          // First-out: all players eliminated in the same earliest match — split equally
+          const firstSO = elimWithInfo.length > 0 ? (elimWithInfo[0].info.match ? (roundMap2[elimWithInfo[0].info.match.round_id]?.sort_order||0) : elimWithInfo[0].info.elimRoundId ? (roundMap2[elimWithInfo[0].info.elimRoundId]?.sort_order||0) : 0) : null;
+          const firstK  = elimWithInfo.length > 0 ? (elimWithInfo[0].info.match?.kickoff ? new Date(elimWithInfo[0].info.match.kickoff).getTime() : elimWithInfo[0].info.lastPickKickoff ? new Date(elimWithInfo[0].info.lastPickKickoff).getTime() : 0) : null;
+          firstOutPlayers = firstSO !== null
+            ? elimWithInfo.filter(e => {
+                const so = e.info.match ? (roundMap2[e.info.match.round_id]?.sort_order||0) : e.info.elimRoundId ? (roundMap2[e.info.elimRoundId]?.sort_order||0) : 0;
+                const k  = e.info.match?.kickoff ? new Date(e.info.match.kickoff).getTime() : e.info.lastPickKickoff ? new Date(e.info.lastPickKickoff).getTime() : 0;
+                return so === firstSO && k === firstK;
+              }).map(e => e.player)
+            : [];
+          const firstOutShare = firstOutPlayers.length > 0 ? Math.round((FIRST_OUT_PRIZE / firstOutPlayers.length) * 100) / 100 : 0;
+          firstOutPlayers.forEach(p => { winningsMap[p.player_id] = (winningsMap[p.player_id] || 0) + firstOutShare; });
+
+          // ── Distribute prize places from sorted (finish order) ──────────
+          // Build a simple prize position map directly from sorted array
+          // Two players tie only if equal on all tiebreakers
+          const prizePosMap = {};
+          sorted.forEach((p, i) => {
+            if (i === 0) { prizePosMap[p.player_id] = 1; return; }
+            const prev = sorted[i - 1];
+            const samePts   = (prev.total_points||0) === (p.total_points||0);
+            const sameFR    = (furthestMap[prev.player_id]||0) === (furthestMap[p.player_id]||0);
+            const sameGD    = (gdMap[prev.player_id]||0) === (gdMap[p.player_id]||0);
+            const sameGoals = projectedTotal === null ||
+              Math.abs((prev.total_goals_prediction||0) - projectedTotal) === Math.abs((p.total_goals_prediction||0) - projectedTotal);
+            prizePosMap[p.player_id] = (samePts && sameFR && sameGD && sameGoals)
+              ? prizePosMap[prev.player_id]
+              : i + 1;
+          });
+          const prizeGroups = {}; // pos -> [player_id]
+          sorted.forEach(p => {
+            const pos = prizePosMap[p.player_id] || (sorted.indexOf(p) + 1);
+            if (!prizeGroups[pos]) prizeGroups[pos] = [];
+            prizeGroups[pos].push(p.player_id);
+          });
+          // Walk through prize places
+          let placeIdx = 0;
+          const sortedPos = Object.keys(prizeGroups).map(Number).sort((a,b) => a-b);
+          for (const pos of sortedPos) {
+            if (placeIdx >= splits.length) break;
+            const group = prizeGroups[pos];
+            let totalShare = 0;
+            for (let k = placeIdx; k < placeIdx + group.length && k < splits.length; k++) {
+              totalShare += splits[k] * remainingPot;
+            }
+            const perPlayer = Math.round((totalShare / group.length) * 100) / 100;
+            group.forEach(pid => { winningsMap[pid] = (winningsMap[pid] || 0) + perPlayer; });
+            placeIdx += group.length;
+          }
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
+        const tbody = document.getElementById('leaderboard-body');
+        tbody.innerHTML = '';
+
 
         sorted.forEach((p, i) => {
           const { pos, tied } = posMap[p.player_id];
@@ -1166,15 +1335,14 @@
             '<td class="pos">' + pos + (tied ? '=' : '') + '</td>' +
             '<td class="prior">' + arrowHtml + '</td>' +
             '<td class="medal landscape-only">' + medal + '</td>' +
-            '<td class="player-name"><a href="/' + p.slug + '">' + (p.display_name || shortName(p.name)) + '</a>' + trophyHtml + portraitFinalistBadge(p) + flagHtml + '</td>' +
+            '<td class="player-name"><a href="/' + p.slug + '">' + (p.display_name || shortName(p.name)) + '</a>' + (competitionEnded ? '' : (p.is_eliminated ? '<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:4px">✕</span>' : (isKnockout && resultInThisRound.has(p.player_id) ? '<span style="color:#10b981;font-size:11px;font-weight:700;margin-left:4px" title="Result in">✔</span>' : ''))) + (competitionEnded ? portraitFinalistBadge(p) : trophyHtml + portraitFinalistBadge(p) + flagHtml) + (competitionEnded && winningsMap[p.player_id] ? '<span style="font-weight:700;color:var(--gold);margin-left:6px">(£' + (winningsMap[p.player_id] % 1 === 0 ? winningsMap[p.player_id] : winningsMap[p.player_id].toFixed(2)) + ')</span>' : '') + '</td>' +
             '<td style="color:var(--text-muted);text-align:center" class="' + (isKnockout ? 'hide-portrait-ko' : '') + '">' + (p.rounds_played || 0) + '</td>' +
             '<td class="points tight-col">' + (p.total_points || 0) + '</td>' +
             (showRndCol ? '<td style="color:var(--text-muted);font-size:12px" class="tight-col">' + rndHtml + '</td>' : '') +
             '<td class="tight-col">' + gdHtml + '</td>' +
             '<td class="hide-mobile tiebreak-val" style="text-align:center">' + goalsDiffHtml + '</td>' +
             '<td class="hide-mobile" style="text-align:left">' + formHtml + '</td>' +
-            '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="landscape-only">' + statusCellHtml + '</td>' +
-            '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="portrait-only tight-col">' + portraitStatusHtml(p) + '</td>';
+            '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="landscape-only">' + statusCellHtml + '</td>';
 
           tbody.appendChild(row);
         });
@@ -1186,7 +1354,7 @@
         const finalBanner = document.getElementById('final-table-banner');
         if (finalBanner) finalBanner.style.display = competitionEnded ? '' : 'none';
 
-        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed };
+        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, competitionEnded };
         if (document.getElementById('view-picks').classList.contains('active'))  renderPicksView();
         if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
         if (document.getElementById('view-fallen').classList.contains('active')) renderFallenView();
@@ -1239,14 +1407,18 @@
       let html = '<table style="table-layout:auto;width:100%"><thead><tr><th class="pos" style="width:28px">#</th><th>Player</th><th>⭐ Picks</th><th style="width:56px">Bonus<br>Pts</th></tr></thead><tbody>';
       lsSorted.filter(p => p.longshotPicks > 0).forEach((p, i) => {
         const displayName = p.display_name || shortName(p.name);
-        const winsHtml    = p.longshotWins.map(t    => `<span style="font-size:16px;opacity:1" data-team="${t.teamLabel}">${t.flag}</span>`).join('');
-        const lossesHtml  = p.longshotLosses.map(t  => `<span style="font-size:16px;opacity:0.35" data-team="${t.teamLabel}">${t.flag}</span>`).join('');
-        const pendingHtml = p.longshotPending.map(t => `<span style="font-size:16px;opacity:0.55" data-team="${t.teamLabel}">${t.flag}</span>`).join('');
-        const sepHtml = (winsHtml && (lossesHtml || pendingHtml))
-          ? `<span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px;vertical-align:middle;flex-shrink:0"></span>`
-          : '';
+        const winsHtml    = p.longshotWins.map(t    => `<span style="font-size:16px" data-team="${t.teamLabel}">${t.flag}</span>`).join('');
+        const lossesHtml  = p.longshotLosses.map(t  => `<span style="font-size:16px" data-team="${t.teamLabel}">${t.flag}</span>`).join('');
+        const pendingHtml = p.longshotPending.map(t => `<span style="font-size:16px" data-team="${t.teamLabel}">${t.flag}</span>`).join('');
+        const divider = `<span style="display:inline-block;width:2px;height:20px;background:var(--text-muted);opacity:0.6;margin:0 6px;vertical-align:middle;flex-shrink:0"></span>`;
+        const winBlob    = !winsHtml    ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--text-muted);opacity:0.4;vertical-align:middle"></span>` : '';
+        const lossBlob   = !lossesHtml  ? `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--text-muted);opacity:0.4;vertical-align:middle"></span>` : '';
+        const winSection  = winsHtml  || winBlob;
+        const lossSection = lossesHtml || lossBlob;
+        const needsWinLossDivider = true;
+        const needsPendingDivider = !!pendingHtml;
         const allFlagsHtml = (winsHtml || lossesHtml || pendingHtml)
-          ? `<div style="display:flex;flex-wrap:nowrap;gap:1px;align-items:center;line-height:1.3;overflow:visible">${winsHtml}${sepHtml}${lossesHtml}${pendingHtml}</div>`
+          ? `<div style="display:flex;flex-wrap:nowrap;gap:1px;align-items:center;line-height:1.3;overflow:visible">${winSection}${divider}${lossSection}${needsPendingDivider ? divider + pendingHtml : ''}</div>`
           : '—';
         html += `<tr>
           <td class="pos">${i + 1}</td>
@@ -1254,6 +1426,88 @@
           <td>${allFlagsHtml}</td>
           <td class="ls-pts">${p.bonusPoints > 0 ? '+' + p.bonusPoints : '—'}</td>
         </tr>`;
+      });
+      html += '</tbody></table>';
+      wrap.innerHTML = html;
+    }
+
+    function renderPrizesView() {
+      const data = _leaderboardData;
+      if (!data) return;
+      const wrap = document.getElementById('lb-prizes-wrap');
+      if (!wrap) return;
+      const { scores, gdMap, furthestMap, competitionEnded, winningsMap: wm, firstOutPlayers, sorted } = data;
+      const totalPlayers = (scores || []).length;
+      const pot = totalPlayers * 10;
+      const FIRST_OUT = 10;
+      const remaining = pot - FIRST_OUT;
+      let splits;
+      if (totalPlayers >= 30)      splits = [{pct:45},{pct:25},{pct:15},{pct:10},{pct:5}];
+      else if (totalPlayers >= 21) splits = [{pct:50},{pct:25},{pct:15},{pct:10}];
+      else                          splits = [{pct:60},{pct:25},{pct:15}];
+      const firstOutShare = (firstOutPlayers||[]).length > 0 ? Math.round((FIRST_OUT / firstOutPlayers.length) * 100) / 100 : 0;
+      const firstOutIds = new Set((firstOutPlayers||[]).map(p => p.player_id));
+      const statusNote = competitionEnded
+        ? '<p style="font-size:12px;color:#10b981;margin-bottom:16px">&#x2705; Tournament complete &#x2014; final payouts.</p>'
+        : '<p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">&#x23F3; Provisional &#x2014; updates as the tournament progresses.</p>';
+      let html = '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;padding:10px 14px;background:var(--surface2);border-radius:8px;font-size:13px">';
+      html += '<span><strong style="color:var(--gold)">' + totalPlayers + '</strong> players</span>';
+      html += '<span>Pot: <strong style="color:var(--gold)">&#xa3;' + pot + '</strong></span>';
+      html += '<span style="color:var(--text-muted)">First out: <strong>&#xa3;' + FIRST_OUT + '</strong></span>';
+      html += '</div>' + statusNote;
+      html += '<div style="margin-bottom:16px;padding:10px 14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px">';
+      html += '<div style="font-size:14px;font-weight:700;color:#ef4444;margin-bottom:6px">';
+      html += '&#x1FAB6; First Out &#x2014; &#xa3;' + FIRST_OUT + ((firstOutPlayers||[]).length > 1 ? ' split' : '') + '</div>';
+      if (!(firstOutPlayers||[]).length) {
+        html += '<div style="font-size:13px;color:var(--text-muted)">No eliminations yet.</div>';
+      } else {
+        firstOutPlayers.forEach(p => {
+          html += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(239,68,68,0.15)">';
+          html += '<span style="font-size:13px">' + (p.display_name || shortName(p.name)) + '</span>';
+          html += '<span style="font-weight:700;color:#ef4444">&#xa3;' + firstOutShare + '</span></div>';
+        });
+      }
+      html += '</div>';
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px"><thead>';
+      html += '<tr style="border-bottom:2px solid var(--border)">';
+      ['Place','Player','Pts','%','Prize'].forEach((h,i) => {
+        html += '<th style="text-align:' + (i>=2?'right':'left') + ';padding:7px 4px;color:var(--text-muted);font-weight:600;font-size:12px;letter-spacing:0.05em;text-transform:uppercase">' + h + '</th>';
+      });
+      html += '</tr></thead><tbody>';
+      const prizePosMap = {};
+      (sorted||[]).forEach((p, i) => {
+        if (i === 0) { prizePosMap[p.player_id] = 1; return; }
+        const prev = sorted[i-1];
+        const tied = (prev.total_points||0) === (p.total_points||0)
+          && (furthestMap[prev.player_id]||0) === (furthestMap[p.player_id]||0)
+          && (gdMap[prev.player_id]||0) === (gdMap[p.player_id]||0);
+        prizePosMap[p.player_id] = tied ? prizePosMap[prev.player_id] : i + 1;
+      });
+      const prizeGroups = {};
+      (sorted||[]).forEach(p => {
+        const pos = prizePosMap[p.player_id] || (sorted.indexOf(p) + 1);
+        if (!prizeGroups[pos]) prizeGroups[pos] = [];
+        prizeGroups[pos].push(p);
+      });
+      let placeIdx = 0;
+      Object.keys(prizeGroups).map(Number).sort((a,b)=>a-b).forEach(pos => {
+        if (placeIdx >= splits.length) return;
+        const group = prizeGroups[pos];
+        const isTied = group.length > 1;
+        const pctDisplay = isTied
+          ? splits.slice(placeIdx, placeIdx+group.length).map(s=>s.pct+'%').join('+')
+          : splits[placeIdx].pct + '%';
+        const prize = (wm||{})[group[0].player_id] || 0;
+        group.forEach((p, gi) => {
+          html += '<tr style="border-bottom:1px solid var(--border)">';
+          html += '<td style="padding:9px 4px;font-weight:700;font-size:15px;color:var(--gold)">' + pos + (isTied?'=':'') + '</td>';
+          html += '<td style="padding:9px 4px">' + (p.display_name || shortName(p.name)) + (firstOutIds.has(p.player_id) ? ' <span style="font-size:10px;color:#ef4444">&#x1FAB6;</span>' : '') + '</td>';
+          html += '<td style="padding:9px 4px;text-align:right;color:var(--text-muted)">' + (p.total_points||0) + '</td>';
+          html += gi===0 ? '<td style="padding:9px 4px;text-align:right;color:var(--text-muted);font-size:12px">' + pctDisplay + '</td>' : '<td></td>';
+          html += '<td style="padding:9px 4px;text-align:right;font-weight:700;color:var(--gold)">' + (prize ? '&#xa3;'+prize : '&#x2014;') + '</td>';
+          html += '</tr>';
+        });
+        placeIdx += group.length;
       });
       html += '</tbody></table>';
       wrap.innerHTML = html;
@@ -1455,7 +1709,13 @@
             storyHtml = `<span style="color:var(--green);font-weight:600">🎉 ${finalPickF.teams.flag_emoji} ${finalPickF.teams.name} won the Final — went the distance</span>`;
           } else {
             const roundName = info.elimRoundId ? shortRoundName(roundMap[info.elimRoundId]?.name || '') : '';
-            storyHtml = `<span style="color:var(--text-muted)">Ran out of eligible teams${roundName ? ' · ' + roundName : ''}</span>`;
+            const playerPicksF2 = (allPicks || []).filter(px => px.player_id === p.player_id);
+            const hadPickInElimRound = info.elimRoundId && playerPicksF2.some(px => px.round_id === info.elimRoundId);
+            if (hadPickInElimRound) {
+              storyHtml = `<span style="color:var(--text-muted)">Ran out of eligible teams${roundName ? ' · ' + roundName : ''}</span>`;
+            } else {
+              storyHtml = `<span style="color:var(--text-muted)">No pick. Ran out of pool teams${roundName ? ' · ' + roundName : ''}</span>`;
+            }
           }
         } else {
           storyHtml = '<span style="color:var(--text-muted)">Eliminated</span>';

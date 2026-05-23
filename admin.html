@@ -162,8 +162,8 @@
       <div class="tab active" data-tab="results">⚽ Results</div>
       <div class="tab" data-tab="players">👥 Players</div>
       <div class="tab" data-tab="picks">👁 Picks</div>
-      <div class="tab" data-tab="fixtures">📅 Fixtures</div>
       <div class="tab" data-tab="livescores">📡 Live Scores</div>
+      <div class="tab" data-tab="prizes">🏆 Prizes</div>
       <a href="/whatsapp-export" class="tab" style="text-decoration:none; background:var(--surface2); color:var(--text-muted)">📱 WhatsApp</a>
     </div>
 
@@ -464,16 +464,29 @@
     <!-- ODDS TAB -->
     <div class="tab-content" id="tab-odds">
       <div class="card">
-        <div class="card-title">📈 Tournament Outright Odds</div>
-        <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
-          Fetch current tournament winner odds from The Odds API. Use sparingly — limited API quota.
-        </p>
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px">
           <button class="btn btn-primary" id="btn-fetch-odds">🔄 Fetch Odds</button>
           <span id="odds-fetch-msg" style="font-size:12px"></span>
         </div>
-        <div id="odds-remaining" style="font-size:12px; color:var(--text-muted); margin-bottom:16px"></div>
-        <div id="odds-table-wrap"><div class="loading"><div class="spinner"></div></div></div>
+        <div id="odds-remaining" style="font-size:12px; color:var(--text-muted)"></div>
+      </div>
+      <div style="display:flex; gap:6px; margin-bottom:16px; margin-top:4px">
+        <button class="btn btn-primary" id="odds-subtab-outright" onclick="switchOddsSubtab('outright')">📈 Outrights</button>
+        <button class="btn btn-secondary" id="odds-subtab-match" onclick="switchOddsSubtab('match')">⚽ Match Odds</button>
+      </div>
+      <div id="odds-sub-outright">
+        <div class="card">
+          <div class="card-title">📈 Tournament Outright Odds</div>
+          <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">Tournament winner odds (William Hill). Use Fetch Odds sparingly — limited quota.</p>
+          <div id="odds-table-wrap"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+      <div id="odds-sub-match" style="display:none">
+        <div class="card">
+          <div class="card-title">⚽ Match Odds</div>
+          <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">H2H match odds (William Hill). Updated when you Fetch Odds.</p>
+          <div id="match-odds-wrap"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
       </div>
     </div>
 
@@ -590,19 +603,6 @@
       </div>
     </div>
 
-    <!-- FIXTURES TAB -->
-    <div class="tab-content" id="tab-fixtures">
-      <div class="card">
-        <div class="card-title">📅 Fixtures</div>
-        <div style="display:flex; gap:6px; margin-bottom:16px;">
-          <button class="btn btn-primary" id="fixtures-sub-group" onclick="switchFixturesSubtab('group')">🌍 Group Stage</button>
-          <button class="btn btn-secondary" id="fixtures-sub-knockout" onclick="switchFixturesSubtab('knockout')">⚔️ Knockout</button>
-        </div>
-        <div id="fixtures-group-wrap"><div class="loading"><div class="spinner"></div></div></div>
-        <div id="fixtures-ko-wrap" style="display:none"><div class="loading"><div class="spinner"></div></div></div>
-      </div>
-    </div>
-
     <!-- LIVE SCORES TAB -->
     <div class="tab-content" id="tab-livescores">
       <div class="card">
@@ -619,6 +619,21 @@
         </div>
       </div>
     </div>
+
+    <!-- PRIZES TAB -->
+    <div class="tab-content" id="tab-prizes">
+      <div class="card">
+        <div class="card-title">🏆 Prize Distribution</div>
+        <div id="prizes-summary" style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px; padding:12px 16px; background:var(--surface2); border-radius:8px; font-size:13px; align-items:center">
+          <span>👥 <strong id="prizes-player-count" style="color:var(--gold)">—</strong> players</span>
+          <span>💰 Pot: <strong id="prizes-pot" style="color:var(--gold)">£—</strong></span>
+          <span style="color:var(--text-muted)">🪦 First out: <strong id="prizes-first-out-amount">£10</strong></span>
+          <span style="color:var(--text-muted)">🎯 Remaining: <strong id="prizes-remaining">£—</strong></span>
+        </div>
+        <div id="prizes-wrap"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
 
   </main>
 
@@ -796,13 +811,13 @@
       document.getElementById('tab-' + name).classList.add('active');
       document.querySelector('[data-tab="' + name + '"]').classList.add('active');
       if (name === 'goals') loadGoalsTab();
-      if (name === 'odds') loadOddsTable();
+      if (name === 'odds') { loadOddsTable(); if (document.getElementById('odds-sub-match')?.style.display !== 'none') loadMatchOddsTable(); }
       if (name === 'teams' && !_teamsLoaded) { _teamsLoaded = true; loadTeamsLongshot(); }
       if (name === 'bracket') loadBracketVersions();
       if (name === 'matches') loadR32Matches();
       if (name === 'picks') loadPicksAudit();
-      if (name === 'fixtures') loadFixtures();
       if (name === 'livescores') initLiveScores();
+      if (name === 'prizes') loadPrizesTab();
       if (name === 'results') { loadSnapshotStatus(); runExhaustionCheck(); }
     }
 
@@ -1461,6 +1476,16 @@ Good luck! ⚽🏆`;
       }).eq('id', matchId);
       if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; return; }
 
+      // Reopen the round if not all matches are complete
+      const { data: undoneMatch } = await db.from('matches').select('round_id').eq('id', matchId).single();
+      if (undoneMatch?.round_id) {
+        const { data: roundMatches } = await db.from('matches').select('status').eq('round_id', undoneMatch.round_id);
+        const allComplete = roundMatches?.every(m => m.status === 'complete');
+        if (!allComplete) {
+          await db.from('rounds').update({ is_complete: false }).eq('id', undoneMatch.round_id);
+        }
+      }
+
       msg.style.color='var(--green)'; msg.textContent='✅ Result undone. Match is back to pending.';
       loadMatchesForResult();
       loadCompletedMatchesForCorrection();
@@ -1988,7 +2013,7 @@ Good luck! ⚽🏆`;
 
         // Get all alive teams not in R32
         const { data: aliveTeams } = await db.from('teams')
-          .select('id, name, flag_emoji')
+          .select('id, name, flag_emoji, is_longshot')
           .eq('is_eliminated', false)
           .order('name');
 
@@ -2001,7 +2026,7 @@ Good luck! ⚽🏆`;
           return;
         }
 
-        const teamList = toEliminate.map(t => t.flag_emoji + ' ' + t.name).join('\n');
+        const teamList = toEliminate.map(t => t.flag_emoji + ' ' + t.name + (t.is_longshot ? ' ⭐' : '')).join('\n');
         if (!confirm(`Eliminate these ${toEliminate.length} teams (Group Phase 3)?\n\n${teamList}`)) {
           btn.disabled = false; btn.textContent = '👀 Preview & Eliminate';
           return;
@@ -2507,7 +2532,7 @@ Good luck! ⚽🏆`;
       let quotaInfo = '';
       try {
         msg.style.color = 'var(--text-muted)'; msg.textContent = 'Fetching outright odds...';
-        const outrightUrl = `${ODDS_API_BASE}/sports/soccer_fifa_world_cup_winner/odds/?apiKey=${ODDS_API_KEY}&regions=uk&markets=outrights&oddsFormat=decimal`;
+        const outrightUrl = `${ODDS_API_BASE}/sports/soccer_fifa_world_cup_winner/odds/?apiKey=${ODDS_API_KEY}&regions=eu&markets=outrights&bookmakers=williamhill&oddsFormat=decimal`;
         const outrightResp = await fetch(outrightUrl);
         const rem1 = outrightResp.headers.get('x-requests-remaining');
         const used1 = outrightResp.headers.get('x-requests-used');
@@ -2535,7 +2560,7 @@ Good luck! ⚽🏆`;
           }
         }
         msg.textContent = 'Fetching match odds...';
-        const matchUrl = `${ODDS_API_BASE}/sports/soccer_fifa_world_cup/odds/?apiKey=${ODDS_API_KEY}&regions=uk&markets=h2h&bookmakers=paddypower&oddsFormat=decimal`;
+        const matchUrl = `${ODDS_API_BASE}/sports/soccer_fifa_world_cup/odds/?apiKey=${ODDS_API_KEY}&regions=uk&markets=h2h&bookmakers=williamhill&oddsFormat=decimal`;
         const matchResp = await fetch(matchUrl);
         const rem2 = matchResp.headers.get('x-requests-remaining');
         const used2 = matchResp.headers.get('x-requests-used');
@@ -2562,7 +2587,9 @@ Good luck! ⚽🏆`;
         if (outcomes.length === 0) msg.textContent = `⚠️ No outright odds returned yet · Match odds: ${matchedCount} matched`;
         else { const changeStr = changedCount > 0 ? `${changedCount} changed` : 'no changes'; msg.textContent = `✅ Outrights: ${outrightCount} teams (${changeStr}, ${skippedCount} unchanged) · Match odds: ${matchedCount} matched`; }
         if (unmatchedCount > 0) msg.textContent += ` · ${unmatchedCount} unmatched`;
+        localStorage.setItem('lms2026_odds_last_fetched', new Date().toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}));
         loadOddsTable();
+        if (document.getElementById('odds-sub-match')?.style.display !== 'none') loadMatchOddsTable();
       } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ ' + err.message; }
       btn.disabled = false; btn.textContent = '🔄 Fetch Odds';
     }
@@ -2578,17 +2605,18 @@ Good luck! ⚽🏆`;
         else { byTeam[r.team_id].history.push(parseFloat(r.odds_decimal)); }
       });
       const sorted = Object.values(byTeam).sort((a,b) => a.current - b.current);
-      const latestTime = allOdds[0].fetched_at;
-      const fetchTime = latestTime ? new Date(latestTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+      const lastChangedTime = allOdds[0].fetched_at;
+      const lastChangedStr = lastChangedTime ? new Date(lastChangedTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+      const lastFetchedStr = localStorage.getItem('lms2026_odds_last_fetched') || '—';
       const distinctFetches = new Set(allOdds.map(r => r.fetched_at)).size;
-      let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Last fetched: <strong>${fetchTime}</strong> · ${sorted.length} teams · ${distinctFetches} fetch${distinctFetches !== 1?'es':''} recorded</div>`;
+      let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Last fetched: <strong>${lastFetchedStr}</strong> · Last changed: <strong>${lastChangedStr}</strong> · ${sorted.length} teams · ${distinctFetches} fetch${distinctFetches !== 1?'es':''} recorded</div>`;
       const maxHistory = 3;
       html += `<div class="table-wrap"><table><thead><tr><th class="left">Team</th><th>Current</th>`;
       for (let i = 0; i < maxHistory; i++) html += `<th style="color:var(--text-muted);font-size:10px">-${i+1}</th>`;
       html += `<th>Move</th><th style="color:var(--accent);font-size:10px">Original</th></tr></thead><tbody>`;
       sorted.forEach(t => {
         const curr = t.current, hist = t.history;
-        const original = hist.length > 0 ? hist[hist.length - 1] : null;
+        const original = hist.length > 0 ? hist[hist.length - 1] : curr;
         let moveHtml = '<span style="color:var(--text-muted)">—</span>';
         if (hist.length > 0) { const prev = hist[0], diff = curr - prev; if (Math.abs(diff) > 0.01) moveHtml = diff < 0 ? `<span style="color:var(--green)">▼ ${Math.abs(diff).toFixed(2)}</span>` : `<span style="color:var(--red)">▲ ${diff.toFixed(2)}</span>`; }
         let origDisplay = '—', origStyle = 'color:var(--text-muted)';
@@ -2601,7 +2629,75 @@ Good luck! ⚽🏆`;
       wrap.innerHTML = html;
     }
 
-    function decimalToFractional(decimal) { if (!decimal) return '—'; const num = Math.round((decimal-1)*100), den = 100; const g = gcd(num,den); return (num/g)+'/'+(den/g); }
+    function switchOddsSubtab(name) {
+      document.getElementById('odds-sub-outright').style.display = name === 'outright' ? '' : 'none';
+      document.getElementById('odds-sub-match').style.display    = name === 'match'    ? '' : 'none';
+      document.getElementById('odds-subtab-outright').className  = name === 'outright' ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('odds-subtab-match').className     = name === 'match'    ? 'btn btn-primary' : 'btn btn-secondary';
+      if (name === 'match') loadMatchOddsTable();
+    }
+
+    async function loadMatchOddsTable() {
+      const wrap = document.getElementById('match-odds-wrap');
+      if (!wrap) return;
+      wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      const { data: rounds } = await db.from('rounds').select('id, name, sort_order, round_type').order('sort_order');
+      const { data: matches } = await db.from('matches')
+        .select('id, kickoff, round_id, status, home_score, away_score, odds_home, odds_away, odds_draw, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji)')
+        .not('home_team_id', 'is', null)
+        .not('away_team_id', 'is', null)
+        .neq('is_third_place', true)
+        .order('kickoff');
+      if (!matches || matches.length === 0) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No fixtures found.</p>'; return; }
+      const byRound = {};
+      matches.forEach(m => { if (!byRound[m.round_id]) byRound[m.round_id] = []; byRound[m.round_id].push(m); });
+      const sortedRounds = (rounds || []).filter(r => byRound[r.id] && r.name !== '3rd Place').sort((a,b) => a.sort_order - b.sort_order);
+      function frac(dec) {
+        if (!dec) return null;
+        const num = Math.round((dec - 1) * 100), den = 100;
+        function gcd(a,b) { return b===0?a:gcd(b,a%b); }
+        const g = gcd(num, den);
+        return (num/g) + '/' + (den/g);
+      }
+      function oddsCell(dec) {
+        if (!dec) return '<span style="color:var(--border)">—</span>';
+        return `<strong>${dec.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${frac(dec)}</span>`;
+      }
+      let html = '';
+      for (const r of sortedRounds) {
+        const rMatches = byRound[r.id] || [];
+        html += `<div style="margin-bottom:24px">
+          <div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">${r.name}</div>
+          <div class="table-wrap"><table style="width:100%;font-size:13px">
+            <thead><tr>
+              <th class="left">Match</th>
+              <th style="text-align:center;width:80px">Home</th>
+              <th style="text-align:center;width:80px">Draw</th>
+              <th style="text-align:center;width:80px">Away</th>
+              <th style="text-align:center;width:70px">Result</th>
+            </tr></thead><tbody>`;
+        for (const m of rMatches) {
+          const ko = new Date(m.kickoff).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'});
+          const t  = new Date(m.kickoff).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+          const isDone = m.status === 'complete';
+          const score = isDone ? `<span style="color:var(--green);font-weight:700">${m.home_score}–${m.away_score}</span>` : '<span style="color:var(--text-muted)">—</span>';
+          html += `<tr style="border-bottom:1px solid var(--border);${isDone?'opacity:0.55':''}">
+            <td style="padding:7px 6px">
+              <div style="font-weight:600">${m.home_team.flag_emoji} ${m.home_team.name} v ${m.away_team.flag_emoji} ${m.away_team.name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${ko} · ${t}</div>
+            </td>
+            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_home)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_draw)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_away)}</td>
+            <td style="text-align:center;padding:7px 6px">${score}</td>
+          </tr>`;
+        }
+        html += '</tbody></table></div></div>';
+      }
+      wrap.innerHTML = html;
+    }
+
+        function decimalToFractional(decimal) { if (!decimal) return '—'; const num = Math.round((decimal-1)*100), den = 100; const g = gcd(num,den); return (num/g)+'/'+(den/g); }
     function gcd(a,b) { return b===0?a:gcd(b,a%b); }
 
     // ── Bulk result entry ─────────────────────────────────────
@@ -3007,151 +3103,6 @@ Good luck! ⚽🏆`;
       wrap.innerHTML = summary + html;
     }
 
-    // ── Fixtures ──────────────────────────────────────────────
-    let _fixturesLoaded = false;
-    let _fixturesKOLoaded = false;
-
-    function switchFixturesSubtab(name) {
-      document.getElementById('fixtures-group-wrap').style.display = name === 'group' ? '' : 'none';
-      document.getElementById('fixtures-ko-wrap').style.display    = name === 'knockout' ? '' : 'none';
-      document.getElementById('fixtures-sub-group').className    = name === 'group'    ? 'btn btn-primary' : 'btn btn-secondary';
-      document.getElementById('fixtures-sub-knockout').className  = name === 'knockout' ? 'btn btn-primary' : 'btn btn-secondary';
-      if (name === 'knockout' && !_fixturesKOLoaded) loadKOFixtures();
-    }
-
-    // ── Shared fixture table renderer ─────────────────────────
-    function renderFixtureRounds(rounds, matches, wrapEl, pickedTeamIds) {
-      function windowKey(isoStr) {
-        const d = new Date(isoStr), h = d.getUTCHours();
-        const base = h < 11
-          ? new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 11, 0, 0))
-          : new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 11, 0, 0));
-        return base.toISOString();
-      }
-
-      const byRound = {};
-      rounds.forEach(r => { byRound[r.id] = { name: r.name, matches: [] }; });
-      matches.forEach(m => { if (byRound[m.round_id]) byRound[m.round_id].matches.push(m); });
-
-      let html = '<div style="margin-bottom:16px; font-size:12px; color:var(--text-muted); display:flex; gap:16px; align-items:center">'
-        + '<span style="font-weight:700; text-transform:uppercase; letter-spacing:0.05em">Key:</span>'
-        + '<span><span style="color:#c9a84c; font-weight:600">■</span> Picked this round</span>'
-        + '<span><span style="color:var(--text); font-weight:600">■</span> Unpicked</span>'
-        + '</div>';
-      rounds.forEach(r => {
-        const group = byRound[r.id];
-        if (!group || !group.matches.length) return;
-
-        html += `<div style="margin-bottom:24px">
-          <div style="font-size:12px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px">${group.name}</div>
-          <table style="width:100%; border-collapse:collapse; font-size:13px">
-            <thead><tr>
-              <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; width:80px">Date</th>
-              <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; width:44px">Time</th>
-              <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em">Match</th>
-              <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; width:60px">Score</th>
-            </tr></thead>
-            <tbody>`;
-
-        let prevWindowKey = null;
-        group.matches.forEach(m => {
-          const ko = new Date(m.kickoff);
-          const currWindowKey = windowKey(m.kickoff);
-          const divider = (prevWindowKey && currWindowKey !== prevWindowKey) ? ' border-top:3px solid rgba(255,255,255,0.35);' : '';
-          prevWindowKey = currWindowKey;
-
-          const date = ko.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-          const time = ko.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
-          const roundPicks = pickedTeamIds ? (pickedTeamIds.get(m.round_id) || new Set()) : new Set();
-          const homeCol = (m.home_team && roundPicks.has(m.home_team.id)) ? 'color:#c9a84c;' : '';
-          const awayCol = (m.away_team && roundPicks.has(m.away_team.id)) ? 'color:#c9a84c;' : '';
-          const home = m.home_team ? `<span style="${homeCol}">${m.home_team.flag_emoji} ${m.home_team.name}</span>` : '<span style="color:var(--text-muted)">TBD</span>';
-          const away = m.away_team ? `<span style="${awayCol}">${m.away_team.flag_emoji} ${m.away_team.name}</span>` : '<span style="color:var(--text-muted)">TBD</span>';
-
-          let scoreHtml = '<span style="color:var(--text-muted)">—</span>';
-          if (m.status === 'complete' && m.home_score !== null && m.away_score !== null) {
-            const pens = m.pens_winner_id ? ' <span style="font-size:10px;color:var(--text-muted)">(pens)</span>' : '';
-            scoreHtml = `<span style="font-weight:700;color:var(--green)">${m.home_score}–${m.away_score}${pens}</span>`;
-          }
-
-          html += `<tr style="border-bottom:1px solid var(--border);${divider}">
-            <td style="padding:7px 6px; white-space:nowrap; font-size:12px">${date}</td>
-            <td style="padding:7px 6px; white-space:nowrap; color:var(--text-muted); font-size:12px">${time}</td>
-            <td style="padding:7px 6px; font-weight:600; font-size:13px">${home} <span style="color:var(--text-muted); font-weight:400">v</span> ${away}</td>
-            <td style="padding:7px 6px; font-size:13px; white-space:nowrap">${scoreHtml}</td>
-          </tr>`;
-        });
-
-        html += `</tbody></table></div>`;
-      });
-      return html;
-    }
-
-    async function loadFixtures() {
-      if (_fixturesLoaded) return;
-      _fixturesLoaded = true;
-      const wrap = document.getElementById('fixtures-group-wrap');
-
-      // Default to knockout tab if any KO match has a result
-      const { data: koCheck } = await db.from('matches')
-        .select('id, rounds!inner(round_type)')
-        .eq('rounds.round_type', 'knockout')
-        .not('home_score', 'is', null)
-        .limit(1);
-      if (koCheck && koCheck.length > 0) switchFixturesSubtab('knockout');
-
-      const { data: rounds, error: rErr } = await db.from('rounds')
-        .select('id, name, sort_order')
-        .eq('round_type', 'group')
-        .order('sort_order');
-
-      if (rErr || !rounds) { wrap.innerHTML = '<p style="color:var(--red)">Error loading rounds.</p>'; return; }
-
-      const { data: matches, error: mErr } = await db.from('matches')
-        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)')
-        .in('round_id', rounds.map(r => r.id))
-        .order('kickoff');
-
-      if (mErr || !matches) { wrap.innerHTML = '<p style="color:var(--red)">Error loading matches.</p>'; return; }
-
-      const { data: allPicks } = await db.from('picks').select('team_id, round_id').in('round_id', rounds.map(r => r.id));
-      const pickedTeamIds = new Map();
-      (allPicks || []).forEach(p => { if (!pickedTeamIds.has(p.round_id)) pickedTeamIds.set(p.round_id, new Set()); pickedTeamIds.get(p.round_id).add(p.team_id); });
-      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIds);
-      wrap.innerHTML = html || '<p style="color:var(--text-muted)">No group fixtures found.</p>';
-    }
-
-    async function loadKOFixtures() {
-      _fixturesKOLoaded = true;
-      const wrap = document.getElementById('fixtures-ko-wrap');
-
-      const { data: rounds, error: rErr } = await db.from('rounds')
-        .select('id, name, sort_order')
-        .eq('round_type', 'knockout')
-        .not('name', 'eq', '3rd Place')
-        .order('sort_order');
-
-      if (rErr || !rounds) { wrap.innerHTML = '<p style="color:var(--red)">Error loading rounds.</p>'; return; }
-
-      const { data: matches, error: mErr } = await db.from('matches')
-        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, is_third_place, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)')
-        .in('round_id', rounds.map(r => r.id))
-        .not('home_team_id', 'is', null)
-        .order('kickoff');
-
-      if (mErr || !matches) { wrap.innerHTML = '<p style="color:var(--red)">Error loading KO matches.</p>'; return; }
-
-      if (!matches.length) {
-        wrap.innerHTML = '<p style="color:var(--text-muted); padding:8px 0">No knockout fixtures assigned yet — use the R32 tab to assign teams.</p>';
-        return;
-      }
-
-      const { data: allPicksKO } = await db.from('picks').select('team_id, round_id').in('round_id', rounds.map(r => r.id));
-      const pickedTeamIdsKO = new Map();
-      (allPicksKO || []).forEach(p => { if (!pickedTeamIdsKO.has(p.round_id)) pickedTeamIdsKO.set(p.round_id, new Set()); pickedTeamIdsKO.get(p.round_id).add(p.team_id); });
-      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIdsKO);
-      wrap.innerHTML = html || '<p style="color:var(--text-muted)">No knockout fixtures found.</p>';
-    }
 
     async function deleteBracketVersion(id) {
       if (!confirm('Delete this bracket prediction version? This cannot be undone.')) return;
@@ -3307,9 +3258,249 @@ Good luck! ⚽🏆`;
       'Cape Verde Islands':  'Cape Verde',
     };
 
-    function normaliseTeamName(name) {
+    function normaliseLiveTeamName(name) {
       return LIVE_SCORES_TEAM_MAP[name] || name;
     }
+
+    // ── PRIZES TAB ────────────────────────────────────────────────────────
+    async function loadPrizesTab() {
+      const wrap = document.getElementById('prizes-wrap');
+      wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      const [
+        { data: players,  error: pErr },
+        { data: scores,   error: sErr },
+        { data: rounds,   error: rErr },
+        { data: gdData,   error: gdErr },
+        { data: furthestData },
+        { data: allPicks },
+        { data: completedMatches }
+      ] = await Promise.all([
+        db.from('players').select('id, name, slug, display_name, is_eliminated, eliminated_in_round_id, total_goals_prediction'),
+        db.from('player_scores').select('player_id, total_points'),
+        db.from('rounds').select('id, name, round_type, sort_order, is_complete').order('sort_order'),
+        db.from('player_gd').select('player_id, goal_difference'),
+        db.from('player_furthest_round').select('player_id, furthest_round'),
+        db.from('picks').select('player_id, team_id, round_id, pick_results(match_result)'),
+        db.from('matches').select('round_id, kickoff, home_team_id, away_team_id, home_score, away_score').eq('status','complete').not('home_score','is',null)
+      ]);
+
+      if (pErr || sErr || rErr) { wrap.innerHTML = '<p style="color:var(--red)">Failed to load.</p>'; return; }
+
+      const totalPlayers = players.length;
+      const pot = totalPlayers * 10;
+      const FIRST_OUT = 10;
+      const remaining = pot - FIRST_OUT;
+
+      // Tier splits
+      let splits;
+      if (totalPlayers >= 30)      splits = [{pct:45},{pct:25},{pct:15},{pct:10},{pct:5}];
+      else if (totalPlayers >= 21) splits = [{pct:50},{pct:25},{pct:15},{pct:10}];
+      else                          splits = [{pct:60},{pct:25},{pct:15}];
+
+      // Update summary bar
+      document.getElementById('prizes-player-count').textContent = totalPlayers;
+      document.getElementById('prizes-pot').textContent = '\u00a3' + pot;
+      document.getElementById('prizes-remaining').textContent = '\u00a3' + remaining;
+
+      // Build lookups — all keyed by player_id (uuid)
+      const gdMap = {};
+      (gdData || []).forEach(r => { gdMap[r.player_id] = r.goal_difference || 0; });
+      const roundMap = {};
+      (rounds || []).forEach(r => { roundMap[r.id] = r; });
+      const furthestMap = {}; // player_id -> sort_order of furthest round reached
+      (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round || 0; });
+      const scoreMap = {}; // player_id -> total_points
+      (scores || []).forEach(s => { scoreMap[s.player_id] = s.total_points || 0; });
+
+      // Projected total goals (for goals prediction tiebreak)
+      let projectedTotal = null;
+      const TOTAL_MATCHES = 104;
+      let goalsScored = 0, matchesPlayed = 0;
+      (completedMatches || []).forEach(m => { goalsScored += (m.home_score||0) + (m.away_score||0); matchesPlayed++; });
+      if (matchesPlayed > 0) projectedTotal = (goalsScored / matchesPlayed) * TOTAL_MATCHES;
+
+      function shortName(n) {
+        const parts = n.trim().split(/\s+/);
+        return parts.length === 1 ? parts[0] : parts[0] + ' ' + parts[parts.length - 1][0];
+      }
+      function displayName(p) { return p.display_name || shortName(p.name); }
+
+      // Sort players by finish position — mirrors leaderboard tiebreak exactly
+      // pts -> furthest round -> GD -> goals prediction closeness -> name
+      const sorted = [...players].sort((a, b) => {
+        const apt = scoreMap[a.id] || 0, bpt = scoreMap[b.id] || 0;
+        if (bpt !== apt) return bpt - apt;
+        const afr = furthestMap[a.id] || 0, bfr = furthestMap[b.id] || 0;
+        if (bfr !== afr) return bfr - afr;
+        const agd = gdMap[a.id] || 0, bgd = gdMap[b.id] || 0;
+        if (bgd !== agd) return bgd - agd;
+        if (projectedTotal !== null) {
+          const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
+          const bDiff = Math.abs((b.total_goals_prediction || 0) - projectedTotal);
+          if (aDiff !== bDiff) return aDiff - bDiff;
+        }
+        return a.name.localeCompare(b.name);
+      });
+
+      // Assign prize positions (ties share position)
+      const posMap = {}; // player id -> position number
+      sorted.forEach((p, i) => {
+        if (i === 0) { posMap[p.id] = 1; return; }
+        const prev = sorted[i - 1];
+        const tied = (scoreMap[p.id]||0) === (scoreMap[prev.id]||0)
+          && (furthestMap[p.id]||0) === (furthestMap[prev.id]||0)
+          && (gdMap[p.id]||0) === (gdMap[prev.id]||0)
+          && (projectedTotal === null || Math.abs((p.total_goals_prediction||0) - projectedTotal) === Math.abs((prev.total_goals_prediction||0) - projectedTotal));
+        posMap[p.id] = tied ? posMap[prev.id] : i + 1;
+      });
+
+      // Group by prize position
+      const prizeGroups = {};
+      sorted.forEach(p => {
+        const pos = posMap[p.id];
+        if (!prizeGroups[pos]) prizeGroups[pos] = [];
+        prizeGroups[pos].push(p);
+      });
+
+      // Compute prize per place index
+      const prizeByPlace = {};
+      splits.forEach((s, i) => { prizeByPlace[i] = Math.round((s.pct / 100) * remaining * 100) / 100; });
+
+      // Map player -> prize amount (split across tied positions)
+      const winningsMap = {};
+      let placeIdx = 0;
+      const sortedPos = Object.keys(prizeGroups).map(Number).sort((a,b) => a-b);
+      for (const pos of sortedPos) {
+        if (placeIdx >= splits.length) break;
+        const group = prizeGroups[pos];
+        let totalShare = 0;
+        for (let k = placeIdx; k < placeIdx + group.length && k < splits.length; k++) totalShare += prizeByPlace[k];
+        const perPlayer = Math.round((totalShare / group.length) * 100) / 100;
+        group.forEach(p => { winningsMap[p.id] = perPlayer; });
+        placeIdx += group.length;
+      }
+
+      // ── First Out ─────────────────────────────────────────────────────
+      const kickoffByTeamRound = {};
+      (completedMatches || []).forEach(m => {
+        if (m.home_team_id) kickoffByTeamRound[m.home_team_id + '|' + m.round_id] = m.kickoff;
+        if (m.away_team_id) kickoffByTeamRound[m.away_team_id + '|' + m.round_id] = m.kickoff;
+      });
+      const matchByTeam = {};
+      (completedMatches || []).forEach(m => {
+        if (m.home_team_id) matchByTeam[m.home_team_id + '|' + m.round_id] = m;
+        if (m.away_team_id) matchByTeam[m.away_team_id + '|' + m.round_id] = m;
+      });
+      const picksByPlayer = {};
+      (allPicks || []).forEach(pk => {
+        if (!picksByPlayer[pk.player_id]) picksByPlayer[pk.player_id] = [];
+        picksByPlayer[pk.player_id].push(pk);
+      });
+
+      const koRoundIds = new Set((rounds || []).filter(r =>
+        ['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final'].includes(r.name)
+      ).map(r => r.id));
+
+      function getElimKickoff(player) {
+        const pks = picksByPlayer[player.id] || [];
+        const losingPick = [...pks].reverse().find(pk => {
+          const res = pk.pick_results && pk.pick_results[0];
+          return res && res.match_result === 'loss' && koRoundIds.has(pk.round_id);
+        });
+        if (losingPick) {
+          const m = matchByTeam[losingPick.team_id + '|' + losingPick.round_id];
+          return m?.kickoff || null;
+        }
+        const lastPick = pks.length > 0
+          ? [...pks].sort((a,b) => (roundMap[b.round_id]?.sort_order||0) - (roundMap[a.round_id]?.sort_order||0))[0]
+          : null;
+        return lastPick ? kickoffByTeamRound[lastPick.team_id + '|' + lastPick.round_id] || null : null;
+      }
+
+      const eliminated = players.filter(p => p.is_eliminated);
+
+      // Sort eliminated by kickoff time, then by standard tiebreaks on a tie
+      const elimWithKickoff = eliminated.map(p => ({ player: p, kickoff: getElimKickoff(p) }))
+        .sort((a, b) => {
+          const aK = a.kickoff ? new Date(a.kickoff).getTime() : Infinity;
+          const bK = b.kickoff ? new Date(b.kickoff).getTime() : Infinity;
+          return aK - bK;
+        });
+
+      // First-out: all players eliminated in the same earliest match — split equally
+      const firstK = elimWithKickoff.length > 0 ? (elimWithKickoff[0].kickoff ? new Date(elimWithKickoff[0].kickoff).getTime() : Infinity) : null;
+      const firstOutPlayers = firstK !== null
+        ? elimWithKickoff.filter(e => (e.kickoff ? new Date(e.kickoff).getTime() : Infinity) === firstK).map(e => e.player)
+        : [];
+      const firstOutShare = firstOutPlayers.length > 0 ? Math.round((FIRST_OUT / firstOutPlayers.length) * 100) / 100 : 0;
+      const firstOutIds = new Set(firstOutPlayers.map(p => p.id));
+
+      // ── Render ────────────────────────────────────────────────────────
+      const competitionEnded = eliminated.length === players.length ||
+        (rounds || []).filter(r => r.name !== '3rd Place').every(r => r.is_complete);
+      const statusNote = competitionEnded
+        ? '<p style="font-size:12px;color:var(--green);margin-bottom:16px">\u2705 Tournament complete \u2014 final payouts below.</p>'
+        : '<p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">\u23f3 Tournament in progress \u2014 positions are provisional.</p>';
+
+      let html = statusNote;
+
+      // First Out card
+      html += '<div style="margin-bottom:20px;padding:12px 16px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px">';
+      html += '<div style="font-family:\'Rajdhani\',sans-serif;font-size:15px;font-weight:700;color:#ef4444;margin-bottom:8px">';
+      html += '\ud83e\udea6 First Out \u2014 \u00a3' + FIRST_OUT + (firstOutPlayers.length > 1 ? ' split' : '') + '</div>';
+      if (firstOutPlayers.length === 0) {
+        html += '<div style="font-size:13px;color:var(--text-muted)">No eliminations yet.</div>';
+      } else {
+        firstOutPlayers.forEach(p => {
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(239,68,68,0.15)">';
+          html += '<span style="font-size:14px">' + displayName(p) + '</span>';
+          html += '<span style="font-weight:700;color:#ef4444">\u00a3' + firstOutShare + '</span>';
+          html += '</div>';
+        });
+      }
+      html += '</div>';
+
+      // Prize places table
+      html += '<table style="width:100%;border-collapse:collapse;font-size:13px">';
+      html += '<thead><tr style="border-bottom:2px solid var(--border)">';
+      ['Place','Player','Pts','%','Prize'].forEach((h, i) => {
+        const align = i >= 2 ? 'right' : 'left';
+        html += '<th style="text-align:' + align + ';padding:8px 4px;color:var(--text-muted);font-weight:600">' + h + '</th>';
+      });
+      html += '</tr></thead><tbody>';
+
+      placeIdx = 0;
+      for (const pos of sortedPos) {
+        if (placeIdx >= splits.length) break;
+        const group = prizeGroups[pos];
+        const isTied = group.length > 1;
+        const pctDisplay = isTied
+          ? splits.slice(placeIdx, placeIdx + group.length).map(s => s.pct + '%').join('+')
+          : splits[placeIdx].pct + '%';
+        const prize = winningsMap[group[0].id];
+
+        group.forEach((p, gi) => {
+          const pts = scoreMap[p.id] || 0;
+          html += '<tr style="border-bottom:1px solid var(--border)">';
+          html += '<td style="padding:10px 4px;font-family:\'Rajdhani\',sans-serif;font-weight:700;font-size:16px;color:var(--gold)">' + pos + (isTied ? '=' : '') + '</td>';
+          html += '<td style="padding:10px 4px">' + displayName(p) + (firstOutIds.has(p.id) ? ' <span style="font-size:10px;color:#ef4444">\ud83e\udea6</span>' : '') + '</td>';
+          html += '<td style="padding:10px 4px;text-align:right;color:var(--text-muted)">' + pts + '</td>';
+          html += gi === 0 ? '<td style="padding:10px 4px;text-align:right;color:var(--text-muted)">' + pctDisplay + '</td>' : '<td></td>';
+          html += '<td style="padding:10px 4px;text-align:right;font-weight:700;color:var(--gold)">\u00a3' + prize + '</td>';
+          html += '</tr>';
+        });
+        placeIdx += group.length;
+      }
+
+      html += '</tbody></table>';
+      const totalOut = (firstOutShare * firstOutPlayers.length) + sorted.reduce((sum, p) => sum + (winningsMap[p.id] || 0), 0);
+      html += '<div style="margin-top:12px;font-size:11px;color:var(--text-muted);text-align:right">Total distributed: \u00a3' + totalOut.toFixed(2) + ' of \u00a3' + pot + '</div>';
+
+      wrap.innerHTML = html;
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
 
     let _liveScoresInitDone = false;
 
@@ -3439,8 +3630,8 @@ Good luck! ⚽🏆`;
 
       // Sort: unconfirmed oldest first, confirmed newest first
       fixtures.sort((a, b) => {
-        const aKey       = [normaliseTeamName(a.homeTeam?.name||''), normaliseTeamName(a.awayTeam?.name||'')].sort().join('|');
-        const bKey       = [normaliseTeamName(b.homeTeam?.name||''), normaliseTeamName(b.awayTeam?.name||'')].sort().join('|');
+        const aKey       = [normaliseLiveTeamName(a.homeTeam?.name||''), normaliseLiveTeamName(a.awayTeam?.name||'')].sort().join('|');
+        const bKey       = [normaliseLiveTeamName(b.homeTeam?.name||''), normaliseLiveTeamName(b.awayTeam?.name||'')].sort().join('|');
         const aConfirmed = dbByTeams[aKey]?.confirmed === true;
         const bConfirmed = dbByTeams[bKey]?.confirmed === true;
         const aTime      = new Date(a.utcDate || 0).getTime();
@@ -3453,8 +3644,8 @@ Good luck! ⚽🏆`;
       let html = '';
       for (const f of fixtures) {
         // football-data.org field names
-        const apiHome   = normaliseTeamName(f.homeTeam?.name || '');
-        const apiAway   = normaliseTeamName(f.awayTeam?.name || '');
+        const apiHome   = normaliseLiveTeamName(f.homeTeam?.name || '');
+        const apiAway   = normaliseLiveTeamName(f.awayTeam?.name || '');
         const homeGoals = f.score?.fullTime?.home;
         const awayGoals = f.score?.fullTime?.away;
         const fdStatus  = f.status || '';

@@ -77,6 +77,11 @@
     .view-toggle { display: flex; gap: 6px; margin-bottom: 14px; }
     .view-toggle-btn { padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text-muted); font-size: 12px; font-weight: 600; cursor: pointer; }
     .view-toggle-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .page-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .page-tab-btn { padding: 7px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Rajdhani', sans-serif; letter-spacing: 0.03em; }
+    .page-tab-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .page-tab-panel { display: none; }
+    .page-tab-panel.active { display: block; }
   </style>
 </head>
 <body>
@@ -102,50 +107,69 @@
 
   <main>
     <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:8px">
-        <div class="card-title" style="margin-bottom:0">🏆 Tournament Bracket</div>
-        <span id="bracket-meta" class="bracket-meta"></span>
+      <div class="page-tabs">
+        <button class="page-tab-btn active" id="ptab-bracket" onclick="switchPageTab('bracket')">🏆 Bracket</button>
+        <button class="page-tab-btn" id="ptab-fixtures" onclick="switchPageTab('fixtures')">📅 Fixtures</button>
       </div>
 
-      <div class="legend">
-        <div class="legend-item">
-          <div style="width:14px;height:14px;border-radius:3px;border:1px solid var(--green);border-left:3px solid var(--green);background:var(--surface2)"></div>
-          Result confirmed
+      <!-- BRACKET PANEL -->
+      <div class="page-tab-panel active" id="panel-bracket">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:8px">
+          <div class="card-title" style="margin-bottom:0">🏆 Tournament Bracket</div>
+          <span id="bracket-meta" class="bracket-meta"></span>
         </div>
-        <div class="legend-item">
-          <div style="width:14px;height:14px;border-radius:3px;border:1px solid #3b82f6;border-left:3px solid #3b82f6;background:var(--surface2)"></div>
-          Teams assigned
+
+        <div class="legend">
+          <div class="legend-item">
+            <div style="width:14px;height:14px;border-radius:3px;border:1px solid var(--green);border-left:3px solid var(--green);background:var(--surface2)"></div>
+            Result confirmed
+          </div>
+          <div class="legend-item">
+            <div style="width:14px;height:14px;border-radius:3px;border:1px solid #3b82f6;border-left:3px solid #3b82f6;background:var(--surface2)"></div>
+            Teams assigned
+          </div>
+          <div class="legend-item">
+            <div style="width:14px;height:14px;border-radius:3px;border:1px solid #4b5563;border-left:2px dashed #4b5563;background:rgba(255,255,255,0.02)"></div>
+            <em style="font-size:10px">Predicted</em>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#3b82f6"></div>
+            Predicted winner (odds)
+          </div>
         </div>
-        <div class="legend-item">
-          <div style="width:14px;height:14px;border-radius:3px;border:1px solid #4b5563;border-left:2px dashed #4b5563;background:rgba(255,255,255,0.02)"></div>
-          <em style="font-size:10px">Predicted</em>
+
+        <div id="loading" class="loading"><div class="spinner"></div>Loading bracket...</div>
+
+        <div id="bracket-content" style="display:none">
+          <div class="view-toggle">
+            <button class="view-toggle-btn active" id="btn-all-rounds" onclick="setView('all')">📋 All Rounds</button>
+            <button class="view-toggle-btn" id="btn-live-view" onclick="setView('live')">⚡ From Current Round</button>
+          </div>
+          <div class="scroll-hint">↔ Scroll right to see the full bracket</div>
+          <div class="bracket-outer">
+            <div class="bracket-grid" id="bracket-grid"></div>
+          </div>
+          <div style="margin-top:12px; font-size:11px; color:var(--text-muted)">
+            Predicted teams shown in <em>italic</em> until confirmed · Predicted winners based on Paddy Power outright odds · Actual results always take priority
+          </div>
         </div>
-        <div class="legend-item">
-          <div class="legend-dot" style="background:#3b82f6"></div>
-          Predicted winner (odds)
+
+        <div id="no-bracket" class="no-bracket" style="display:none">
+          <div style="font-size:32px; margin-bottom:12px">🏗️</div>
+          <div style="font-weight:700; margin-bottom:6px">Bracket not yet published</div>
+          <div style="font-size:13px">Check back soon.</div>
         </div>
       </div>
 
-      <div id="loading" class="loading"><div class="spinner"></div>Loading bracket...</div>
-
-      <div id="bracket-content" style="display:none">
-        <div class="view-toggle">
-          <button class="view-toggle-btn active" id="btn-all-rounds" onclick="setView('all')">📋 All Rounds</button>
-          <button class="view-toggle-btn" id="btn-live-view" onclick="setView('live')">⚡ From Current Round</button>
+      <!-- FIXTURES PANEL -->
+      <div class="page-tab-panel" id="panel-fixtures">
+        <div class="card-title">📅 Fixtures</div>
+        <div style="display:flex; gap:6px; margin-bottom:16px;">
+          <button class="btn btn-primary" id="fixtures-sub-group" onclick="switchFixturesSubtab('group')">🌍 Group Stage</button>
+          <button class="btn btn-secondary" id="fixtures-sub-knockout" onclick="switchFixturesSubtab('knockout')">⚔️ Knockout</button>
         </div>
-        <div class="scroll-hint">↔ Scroll right to see the full bracket</div>
-        <div class="bracket-outer">
-          <div class="bracket-grid" id="bracket-grid"></div>
-        </div>
-        <div style="margin-top:12px; font-size:11px; color:var(--text-muted)">
-          Predicted teams shown in <em>italic</em> until confirmed · Predicted winners based on Paddy Power outright odds · Actual results always take priority
-        </div>
-      </div>
-
-      <div id="no-bracket" class="no-bracket" style="display:none">
-        <div style="font-size:32px; margin-bottom:12px">🏗️</div>
-        <div style="font-weight:700; margin-bottom:6px">Bracket not yet published</div>
-        <div style="font-size:13px">Check back soon.</div>
+        <div id="fixtures-group-wrap"><div class="loading"><div class="spinner"></div></div></div>
+        <div id="fixtures-ko-wrap" style="display:none"><div class="loading"><div class="spinner"></div></div></div>
       </div>
     </div>
   </main>
@@ -699,6 +723,161 @@
     }
 
     loadBracket();
+
+    // ── Page tabs (Bracket / Fixtures) ────────────────────────
+    let _fixturesLoaded = false;
+    let _fixturesKOLoaded = false;
+
+    function switchPageTab(name) {
+      document.getElementById('panel-bracket').classList.toggle('active', name === 'bracket');
+      document.getElementById('panel-fixtures').classList.toggle('active', name === 'fixtures');
+      document.getElementById('ptab-bracket').classList.toggle('active', name === 'bracket');
+      document.getElementById('ptab-fixtures').classList.toggle('active', name === 'fixtures');
+      if (name === 'fixtures' && !_fixturesLoaded) loadFixtures();
+    }
+
+    function switchFixturesSubtab(name) {
+      document.getElementById('fixtures-group-wrap').style.display = name === 'group' ? '' : 'none';
+      document.getElementById('fixtures-ko-wrap').style.display    = name === 'knockout' ? '' : 'none';
+      document.getElementById('fixtures-sub-group').className    = name === 'group'    ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('fixtures-sub-knockout').className  = name === 'knockout' ? 'btn btn-primary' : 'btn btn-secondary';
+      if (name === 'knockout' && !_fixturesKOLoaded) loadKOFixtures();
+    }
+
+    // ── Shared fixture table renderer ─────────────────────────
+    function renderFixtureRounds(rounds, matches, wrapEl, pickedTeamIds) {
+      function windowKey(isoStr) {
+        const d = new Date(isoStr), h = d.getUTCHours();
+        const base = h < 11
+          ? new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - 1, 11, 0, 0))
+          : new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 11, 0, 0));
+        return base.toISOString();
+      }
+
+      const byRound = {};
+      rounds.forEach(r => { byRound[r.id] = { name: r.name, matches: [] }; });
+      matches.forEach(m => { if (byRound[m.round_id]) byRound[m.round_id].matches.push(m); });
+
+      let html = '<div style="margin-bottom:16px; font-size:12px; color:var(--text-muted); display:flex; gap:16px; align-items:center">'
+        + '<span style="font-weight:700; text-transform:uppercase; letter-spacing:0.05em">Key:</span>'
+        + '<span><span style="color:#c9a84c; font-weight:600">■</span> Picked this round</span>'
+        + '<span><span style="color:var(--text); font-weight:600">■</span> Unpicked</span>'
+        + '</div>';
+      rounds.forEach(r => {
+        const group = byRound[r.id];
+        if (!group || !group.matches.length) return;
+
+        html += `<div style="margin-bottom:24px">
+          <div style="font-size:12px; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px">${group.name}</div>
+          <table style="width:100%; border-collapse:collapse; font-size:13px">
+            <thead><tr>
+              <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; width:80px">Date</th>
+              <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; width:44px">Time</th>
+              <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em">Match</th>
+              <th style="text-align:left; padding:6px 6px; border-bottom:2px solid var(--border); color:var(--text-muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; width:60px">Score</th>
+            </tr></thead>
+            <tbody>`;
+
+        let prevWindowKey = null;
+        group.matches.forEach(m => {
+          const ko = new Date(m.kickoff);
+          const currWindowKey = windowKey(m.kickoff);
+          const divider = (prevWindowKey && currWindowKey !== prevWindowKey) ? ' border-top:3px solid rgba(255,255,255,0.35);' : '';
+          prevWindowKey = currWindowKey;
+
+          const date = ko.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+          const time = ko.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+          const roundPicks = pickedTeamIds ? (pickedTeamIds.get(m.round_id) || new Set()) : new Set();
+          const homeCol = (m.home_team && roundPicks.has(m.home_team.id)) ? 'color:#c9a84c;' : '';
+          const awayCol = (m.away_team && roundPicks.has(m.away_team.id)) ? 'color:#c9a84c;' : '';
+          const home = m.home_team ? `<span style="${homeCol}">${m.home_team.flag_emoji} ${m.home_team.name}</span>` : '<span style="color:var(--text-muted)">TBD</span>';
+          const away = m.away_team ? `<span style="${awayCol}">${m.away_team.flag_emoji} ${m.away_team.name}</span>` : '<span style="color:var(--text-muted)">TBD</span>';
+
+          let scoreHtml = '<span style="color:var(--text-muted)">—</span>';
+          if (m.status === 'complete' && m.home_score !== null && m.away_score !== null) {
+            const pens = m.pens_winner_id ? ' <span style="font-size:10px;color:var(--text-muted)">(pens)</span>' : '';
+            scoreHtml = `<span style="font-weight:700;color:var(--green)">${m.home_score}–${m.away_score}${pens}</span>`;
+          }
+
+          html += `<tr style="border-bottom:1px solid var(--border);${divider}">
+            <td style="padding:7px 6px; white-space:nowrap; font-size:12px">${date}</td>
+            <td style="padding:7px 6px; white-space:nowrap; color:var(--text-muted); font-size:12px">${time}</td>
+            <td style="padding:7px 6px; font-weight:600; font-size:13px">${home} <span style="color:var(--text-muted); font-weight:400">v</span> ${away}</td>
+            <td style="padding:7px 6px; font-size:13px; white-space:nowrap">${scoreHtml}</td>
+          </tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+      });
+      return html;
+    }
+
+    async function loadFixtures() {
+      if (_fixturesLoaded) return;
+      _fixturesLoaded = true;
+      const wrap = document.getElementById('fixtures-group-wrap');
+
+      // Default to knockout sub-tab if any KO match has a result
+      const { data: koCheck } = await db.from('matches')
+        .select('id, rounds!inner(round_type)')
+        .eq('rounds.round_type', 'knockout')
+        .not('home_score', 'is', null)
+        .limit(1);
+      if (koCheck && koCheck.length > 0) switchFixturesSubtab('knockout');
+
+      const { data: rounds, error: rErr } = await db.from('rounds')
+        .select('id, name, sort_order')
+        .eq('round_type', 'group')
+        .order('sort_order');
+
+      if (rErr || !rounds) { wrap.innerHTML = '<p style="color:var(--red)">Error loading rounds.</p>'; return; }
+
+      const { data: matches, error: mErr } = await db.from('matches')
+        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)')
+        .in('round_id', rounds.map(r => r.id))
+        .order('kickoff');
+
+      if (mErr || !matches) { wrap.innerHTML = '<p style="color:var(--red)">Error loading matches.</p>'; return; }
+
+      const { data: allPicks } = await db.from('picks').select('team_id, round_id').in('round_id', rounds.map(r => r.id));
+      const pickedTeamIds = new Map();
+      (allPicks || []).forEach(p => { if (!pickedTeamIds.has(p.round_id)) pickedTeamIds.set(p.round_id, new Set()); pickedTeamIds.get(p.round_id).add(p.team_id); });
+      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIds);
+      wrap.innerHTML = html || '<p style="color:var(--text-muted)">No group fixtures found.</p>';
+    }
+
+    async function loadKOFixtures() {
+      _fixturesKOLoaded = true;
+      const wrap = document.getElementById('fixtures-ko-wrap');
+
+      const { data: rounds, error: rErr } = await db.from('rounds')
+        .select('id, name, sort_order')
+        .eq('round_type', 'knockout')
+        .not('name', 'eq', '3rd Place')
+        .order('sort_order');
+
+      if (rErr || !rounds) { wrap.innerHTML = '<p style="color:var(--red)">Error loading rounds.</p>'; return; }
+
+      const { data: matches, error: mErr } = await db.from('matches')
+        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, is_third_place, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)')
+        .in('round_id', rounds.map(r => r.id))
+        .not('home_team_id', 'is', null)
+        .order('kickoff');
+
+      if (mErr || !matches) { wrap.innerHTML = '<p style="color:var(--red)">Error loading KO matches.</p>'; return; }
+
+      if (!matches.length) {
+        wrap.innerHTML = '<p style="color:var(--text-muted); padding:8px 0">No knockout fixtures assigned yet.</p>';
+        return;
+      }
+
+      const { data: allPicksKO } = await db.from('picks').select('team_id, round_id').in('round_id', rounds.map(r => r.id));
+      const pickedTeamIdsKO = new Map();
+      (allPicksKO || []).forEach(p => { if (!pickedTeamIdsKO.has(p.round_id)) pickedTeamIdsKO.set(p.round_id, new Set()); pickedTeamIdsKO.get(p.round_id).add(p.team_id); });
+      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIdsKO);
+      wrap.innerHTML = html || '<p style="color:var(--text-muted)">No knockout fixtures found.</p>';
+    }
+
   </script>
 </body>
 </html>

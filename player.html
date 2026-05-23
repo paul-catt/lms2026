@@ -832,7 +832,13 @@
               if (koLostPick2 && koLostPick2.teams) {
                 elimMsg = koLostPick2.teams.flag_emoji + ' <strong>' + koLostPick2.teams.name + ' lost</strong> — you\'re out!';
               } else {
-                elimMsg = 'No eligible teams remaining — you\'re out!';
+                const elimRoundId = player.eliminated_in_round_id;
+                const hadPickInElimRound = elimRoundId && allPicks.some(p => p.round_id === elimRoundId);
+                if (hadPickInElimRound) {
+                  elimMsg = 'Ran out of road — no eligible teams left. You\'re out.';
+                } else {
+                  elimMsg = 'Ran out of road — no pick, no pool teams left. You\'re out.';
+                }
               }
               document.getElementById('no-round-msg').innerHTML =
                 '<strong style="color:var(--red); font-size:15px">' + elimMsg + '</strong><br>' +
@@ -1525,7 +1531,7 @@
               '<td class="history-round">' + shortRoundName(r.name) + ' <span style="color:var(--accent);font-size:10px">(upcoming)</span></td>' +
               '<td style="white-space:nowrap">' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
               '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
-              '<td><span class="badge badge-grey">Pending</span></td>' +
+              '<td><span class="badge badge-grey">P</span></td>' +
               '<td style="color:var(--text-muted)">—</td>' +
               '</tr>';
           }
@@ -1547,7 +1553,7 @@
             const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
             const resultBadge = res
               ? '<span class="badge badge-' + (res.match_result==='win'?'green':res.match_result==='draw'?'gold':'red') + '">' + (res.match_result==='win'?'W':res.match_result==='draw'?'D':'L') + '</span>'
-              : '<span class="badge badge-grey">Pending</span>';
+              : '<span class="badge badge-grey">P</span>';
             const earned = res ? res.points_earned : '—';
             const autoBadge = p.is_assigned ? '<span class="badge badge-grey" style="font-size:10px;margin-left:4px">auto</span>' : '';
             const matchLink = res && res.match_id ? ' style="cursor:pointer" onclick="window.location=\'/match-centre#match-' + res.match_id + '\'"' : '';

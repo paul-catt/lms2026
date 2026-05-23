@@ -413,14 +413,45 @@
       <div class="rules-section" style="margin-bottom:0">
         <h2>💰 Entry &amp; Prizes</h2>
         <p>It costs <span class="highlight">£10 to enter</span>. Hand it over however you like — cash, bank transfer, carrier pigeon. Just make sure it arrives.</p>
-        <table class="prizes-table">
-          <colgroup><col style="width:65%"><col style="width:35%"></colgroup>
-          <tr><td class="place">🥇 1st place</td><td class="prize">£120</td></tr>
-          <tr><td class="place">🥈 2nd place</td><td class="prize">£60</td></tr>
-          <tr><td class="place">🥉 3rd place</td><td class="prize">£40</td></tr>
-          <tr><td class="place">4th place</td><td class="prize">£20</td></tr>
-          <tr><td class="place">🪦 Last place</td><td class="prize" style="color:var(--text-muted); font-size:12px">£10 — your tenner back</td></tr>
+        <p>The pot is every entry fee combined. Prizes scale with the number of players.</p>
+
+        <div style="margin-bottom:16px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.06em;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">🪦 First Out</div>
+          <p style="margin:0;font-size:14px">The first player eliminated gets <span class="highlight">£10</span> back — a small consolation for going out earliest. If two or more players go out in the same match, they split the £10 equally.</p>
+        </div>
+
+        <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.06em;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">🏆 Prize Places</div>
+        <p style="font-size:14px;margin-bottom:12px">The remaining pot (total minus the £10 first-out prize) is split across the top finishers. The number of places paid depends on how many enter:</p>
+
+        <table class="prizes-table" style="margin-bottom:16px">
+          <colgroup><col style="width:30%"><col style="width:35%"><col style="width:35%"></colgroup>
+          <thead>
+            <tr style="border-bottom:2px solid var(--border)">
+              <th style="text-align:left;padding:8px 8px 8px 0;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.05em;color:var(--text-muted);text-transform:uppercase">Players</th>
+              <th style="text-align:left;padding:8px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.05em;color:var(--text-muted);text-transform:uppercase">Places paid</th>
+              <th style="text-align:left;padding:8px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.05em;color:var(--text-muted);text-transform:uppercase">Split</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td class="place" style="padding:10px 8px 10px 0">Up to 20</td>
+              <td style="padding:10px 8px;color:var(--text)">3 places</td>
+              <td style="padding:10px 8px;color:var(--text-muted);font-size:13px">60% · 25% · 15%</td>
+            </tr>
+            <tr style="border-bottom:1px solid var(--border)">
+              <td class="place" style="padding:10px 8px 10px 0">21–29</td>
+              <td style="padding:10px 8px;color:var(--text)">4 places</td>
+              <td style="padding:10px 8px;color:var(--text-muted);font-size:13px">50% · 25% · 15% · 10%</td>
+            </tr>
+            <tr>
+              <td class="place" style="padding:10px 8px 10px 0">30+</td>
+              <td style="padding:10px 8px;color:var(--text)">5 places</td>
+              <td style="padding:10px 8px;color:var(--text-muted);font-size:13px">45% · 25% · 15% · 10% · 5%</td>
+            </tr>
+          </tbody>
         </table>
+
+        <p style="font-size:13px;color:var(--text-muted)">Tied positions share the combined prize money for those places equally. The <a href="/leaderboard" style="color:var(--gold)">Prizes tab</a> in admin shows live payouts as the tournament progresses.</p>
       </div>
     </div>
 
