@@ -227,7 +227,7 @@
                 <th>Pts</th>
                 <th id="rnd-col-header" style="display:none">Rnd</th>
                 <th>GD</th>
-                <th class="hide-mobile">Goals</th>
+                <th title="Goals prediction difference">⚽</th>
                 <th class="hide-mobile" style="text-align:left">Form</th>
                 <!-- Status: landscape shows full reason, portrait shows dot only -->
                 <th id="status-col-header" style="display:none" class="landscape-only">Status</th>
@@ -797,10 +797,14 @@
 
         let goalsScored = 0, matchesPlayed = 0;
         (completedMatches || []).forEach(m => { goalsScored += (m.home_score || 0) + (m.away_score || 0); matchesPlayed++; });
-        const projectedTotal = matchesPlayed > 0 ? (goalsScored / matchesPlayed) * TOTAL_MATCHES : null;
+        const projectedTotal = matchesPlayed > 0 ? (goalsScored / matchesPlayed) * TOTAL_MATCHES : 290;
 
         const projLabel = document.getElementById('proj-goals-label');
-        if (projectedTotal !== null) projLabel.textContent = `⚽ Projected tournament goals: ${Math.round(projectedTotal)} (${goalsScored} goals in ${matchesPlayed} matches)`;
+        if (matchesPlayed > 0) {
+          projLabel.textContent = `⚽ Projected tournament goals: ${Math.round(projectedTotal)} (${goalsScored} goals in ${matchesPlayed} matches)`;
+        } else {
+          projLabel.textContent = `⚽ Projected tournament goals: 290 (pre-tournament baseline)`;
+        }
 
         const currentRound = (() => {
           // Show the round whose matches are currently being played or most recently played.
@@ -1249,24 +1253,10 @@
           firstOutPlayers.forEach(p => { winningsMap[p.player_id] = (winningsMap[p.player_id] || 0) + firstOutShare; });
 
           // ── Distribute prize places from sorted (finish order) ──────────
-          // Build a simple prize position map directly from sorted array
-          // Two players tie only if equal on all tiebreakers
-          const prizePosMap = {};
-          sorted.forEach((p, i) => {
-            if (i === 0) { prizePosMap[p.player_id] = 1; return; }
-            const prev = sorted[i - 1];
-            const samePts   = (prev.total_points||0) === (p.total_points||0);
-            const sameFR    = (furthestMap[prev.player_id]||0) === (furthestMap[p.player_id]||0);
-            const sameGD    = (gdMap[prev.player_id]||0) === (gdMap[p.player_id]||0);
-            const sameGoals = projectedTotal === null ||
-              Math.abs((prev.total_goals_prediction||0) - projectedTotal) === Math.abs((p.total_goals_prediction||0) - projectedTotal);
-            prizePosMap[p.player_id] = (samePts && sameFR && sameGD && sameGoals)
-              ? prizePosMap[prev.player_id]
-              : i + 1;
-          });
+          // Use posMap (same tie detection as main leaderboard)
           const prizeGroups = {}; // pos -> [player_id]
           sorted.forEach(p => {
-            const pos = prizePosMap[p.player_id] || (sorted.indexOf(p) + 1);
+            const pos = (posMap && posMap[p.player_id]) ? posMap[p.player_id].pos : (sorted.indexOf(p) + 1);
             if (!prizeGroups[pos]) prizeGroups[pos] = [];
             prizeGroups[pos].push(p.player_id);
           });
@@ -1383,7 +1373,7 @@
         const finalBanner = document.getElementById('final-table-banner');
         if (finalBanner) finalBanner.style.display = competitionEnded ? '' : 'none';
 
-        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, competitionEnded, allTeams };
+        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, competitionEnded, allTeams, posMap };
         if (document.getElementById('view-picks').classList.contains('active'))  renderPicksView();
         if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
         if (document.getElementById('view-fallen').classList.contains('active')) renderFallenView();
@@ -1491,7 +1481,7 @@
       if (!data) return;
       const wrap = document.getElementById('lb-prizes-wrap');
       if (!wrap) return;
-      const { scores, gdMap, furthestMap, competitionEnded, winningsMap: wm, firstOutPlayers, sorted } = data;
+      const { scores, gdMap, furthestMap, competitionEnded, winningsMap: wm, firstOutPlayers, sorted, posMap } = data;
       const totalPlayers = (scores || []).length;
       const pot = totalPlayers * 10;
       const FIRST_OUT = 10;
@@ -1529,18 +1519,9 @@
         html += '<th style="text-align:' + (i>=2?'right':'left') + ';padding:7px 4px;color:var(--text-muted);font-weight:600;font-size:12px;letter-spacing:0.05em;text-transform:uppercase">' + h + '</th>';
       });
       html += '</tr></thead><tbody>';
-      const prizePosMap = {};
-      (sorted||[]).forEach((p, i) => {
-        if (i === 0) { prizePosMap[p.player_id] = 1; return; }
-        const prev = sorted[i-1];
-        const tied = (prev.total_points||0) === (p.total_points||0)
-          && (furthestMap[prev.player_id]||0) === (furthestMap[p.player_id]||0)
-          && (gdMap[prev.player_id]||0) === (gdMap[p.player_id]||0);
-        prizePosMap[p.player_id] = tied ? prizePosMap[prev.player_id] : i + 1;
-      });
       const prizeGroups = {};
       (sorted||[]).forEach(p => {
-        const pos = prizePosMap[p.player_id] || (sorted.indexOf(p) + 1);
+        const pos = (posMap && posMap[p.player_id]) ? posMap[p.player_id].pos : (sorted.indexOf(p) + 1);
         if (!prizeGroups[pos]) prizeGroups[pos] = [];
         prizeGroups[pos].push(p);
       });
@@ -1816,6 +1797,9 @@
       if (window.location.hash === '#longshots') {
         switchView('longshot');
         switchLsSub('teams');
+      }
+      if (window.location.hash === '#prizes') {
+        switchView('prizes');
       }
     })();
   </script>

@@ -54,8 +54,11 @@
     .bracket-team.team-pred.winner-pred { font-style: italic; color: #93c5fd; background: rgba(59,130,246,0.08); }
     .bracket-team.team-pred.loser-pred { color: var(--text-muted); font-style: italic; }
     .bracket-team.my-available { background: rgba(245,200,66,0.1); border-left: 3px solid #f5c842; margin-left: -1px; }
-    .bracket-team.my-available .t-name { color: #f5c842 !important; font-weight: 700; }
+    .bracket-team.my-available .t-name { color: #f5c842 !important; font-weight: 700 !important; }
     .bracket-team.my-available .t-dot { background: #f5c842 !important; }
+    .bracket-team.my-available.winner-pred { background: rgba(245,200,66,0.1) !important; }
+    .bracket-team.my-available.winner-pred .t-name { color: #f5c842 !important; font-weight: 700 !important; }
+    .bracket-team.my-available.loser-pred .t-name { color: #f5c842 !important; font-weight: 700 !important; }
     .bracket-team .t-name { flex: 1; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .bracket-team .t-odds { font-size: 8px; color: var(--text-muted); flex-shrink: 0; opacity: 0.5; }
     .bracket-team .t-score { font-size: 10px; font-weight: 700; color: var(--gold); flex-shrink: 0; }
