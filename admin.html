@@ -1256,19 +1256,16 @@ Good luck! ⚽🏆`;
       ]);
       let goalsScored = 0, matchesPlayed = 0;
       (completedMatches || []).forEach(m => { goalsScored += (m.home_score || 0) + (m.away_score || 0); matchesPlayed++; });
-      const projectedTotal = matchesPlayed > 0 ? Math.round((goalsScored / matchesPlayed) * TOTAL_MATCHES * 10) / 10 : 290;
+      const projectedTotal = matchesPlayed > 0 ? Math.round((goalsScored / matchesPlayed) * TOTAL_MATCHES * 10) / 10 : null;
       const valEl = document.getElementById('proj-goals-val');
       const subEl = document.getElementById('proj-goals-sub');
-      if (matchesPlayed > 0) {
+      if (projectedTotal !== null) {
         valEl.textContent = Math.round(projectedTotal);
         subEl.textContent = `Projected total goals · ${goalsScored} goals in ${matchesPlayed} matches · avg ${(goalsScored/matchesPlayed).toFixed(1)}/game`;
-      } else {
-        valEl.textContent = '290';
-        subEl.textContent = 'Pre-tournament baseline · no matches played yet';
-      }
+      } else { valEl.textContent = '—'; subEl.textContent = 'No completed matches yet'; }
       const rows = (players || []).map(p => {
         const pred = p.total_goals_prediction;
-        const diff = (pred !== null && pred !== undefined) ? Math.round(pred - projectedTotal) : null;
+        const diff = (projectedTotal !== null && pred !== null && pred !== undefined) ? Math.round(pred - projectedTotal) : null;
         return { ...p, pred, diff, absDiff: diff !== null ? Math.abs(diff) : Infinity };
       }).sort((a,b) => a.absDiff - b.absDiff);
       let html = '<div class="table-wrap"><table><thead><tr><th>#</th><th style="min-width:120px">Player</th><th>Prediction</th><th>Diff from projection</th></tr></thead><tbody>';
@@ -1698,14 +1695,14 @@ Good luck! ⚽🏆`;
             result        = won ? 'win' : 'loss';
             longshotBonus = (won && team.is_longshot) ? 1 : 0;
             basePoints    = 1;
-            pointsEarned  = Math.min(1 + longshotBonus, 4);
+            pointsEarned  = 1;
           } else {
             const homeResult = homeScore > awayScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
             const awayResult = awayScore > homeScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
             result        = isHome ? homeResult : awayResult;
             basePoints    = result === 'win' ? pick.multiplier : result === 'draw' ? 1 : 0;
             longshotBonus = (result === 'win' && team.is_longshot) ? 1 : 0;
-            pointsEarned  = Math.min(basePoints + longshotBonus, 4);
+            pointsEarned  = basePoints;
           }
 
           pickResultRows.push({
@@ -2293,7 +2290,7 @@ Good luck! ⚽🏆`;
       const isKnockout = round && round.round_type === 'knockout';
       // Use same projected total approach as leaderboard — null if no matches played yet
       const { data: completedMatches } = await db.from('matches').select('home_score, away_score').eq('status', 'complete');
-      let projectedTotal = 290;
+      let projectedTotal = null;
       if (completedMatches && completedMatches.length > 0) {
         const goals = completedMatches.reduce((s, m) => s + (m.home_score||0) + (m.away_score||0), 0);
         projectedTotal = (goals / completedMatches.length) * 104;
@@ -2303,7 +2300,7 @@ Good luck! ⚽🏆`;
         if (isKnockout) { const afr = furthestMap[a.player_id]||0, bfr = furthestMap[b.player_id]||0; if (bfr !== afr) return bfr - afr; }
         const gdDiff = (gdMap[b.player_id]||0) - (gdMap[a.player_id]||0);
         if (gdDiff !== 0) return gdDiff;
-        if (projectedTotal) {
+        if (projectedTotal !== null) {
           const aDiff = Math.abs((goalsMap[a.player_id]||0) - projectedTotal);
           const bDiff = Math.abs((goalsMap[b.player_id]||0) - projectedTotal);
           if (aDiff !== bDiff) return aDiff - bDiff;

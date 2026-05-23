@@ -35,7 +35,7 @@
     .playing-row:hover { background:rgba(139,92,246,0.18) !important; }
     .last-night-row { background:rgba(56,189,248,0.10) !important; }
     .last-night-row:hover { background:rgba(56,189,248,0.16) !important; }
-    .form-pip { display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 1px; }
+    .form-pip { display:inline-flex; width:14px; height:14px; border-radius:50%; margin:0 1px; align-items:center; justify-content:center; font-size:8px; font-weight:800; color:#fff; line-height:1; }
     .form-W { background:var(--green); }
     .form-D { background:var(--gold); }
     .form-L { background:var(--red); }
@@ -876,13 +876,31 @@
         const roundTypeMap = {};
         (rounds || []).forEach(r => { roundTypeMap[r.id] = r.round_type; });
 
+        // Build pens lookup: team_id|round_id -> pens_winner_id
+        const pensWinnerByTeamRound = {};
+        (completedMatches || []).forEach(m => {
+          if (!m.pens_winner_id) return;
+          if (m.home_team_id) pensWinnerByTeamRound[m.home_team_id + '|' + m.round_id] = m.pens_winner_id;
+          if (m.away_team_id) pensWinnerByTeamRound[m.away_team_id + '|' + m.round_id] = m.pens_winner_id;
+        });
+
         const formMap = {};
-        (teamsUsed || []).forEach(r => {
-          if (!formMap[r.player_id]) formMap[r.player_id] = [];
-          if (r.match_result) formMap[r.player_id].push({
-            result: r.pens_winner_id ? 'D' : r.match_result === 'win' ? 'W' : r.match_result === 'draw' ? 'D' : 'L',
-            isKO: roundTypeMap[r.round_id] === 'knockout'
-          });
+        (allPicks || []).forEach(pick => {
+          const res = pick.pick_results && pick.pick_results[0];
+          if (!res || !res.match_result) return;
+          if (!formMap[pick.player_id]) formMap[pick.player_id] = [];
+          const pts = res.points_earned || 0;
+          const isKO = roundTypeMap[pick.round_id] === 'knockout';
+          const pensWinner = pensWinnerByTeamRound[pick.team_id + '|' + pick.round_id];
+          const isPensMatch = !!pensWinner;
+          const wonPens = isPensMatch && pensWinner === pick.team_id;
+          const lostPens = isPensMatch && pensWinner !== pick.team_id;
+          // Colour: red = 0pts or KO pens loss; amber = group draw; green = everything else positive
+          let colour;
+          if (pts === 0 || (pts === 1 && isKO && lostPens)) colour = 'L';
+          else if (pts === 1 && !isKO) colour = 'D'; // group draw → amber
+          else colour = 'W'; // green: pens win, FT win, any positive KO result
+          formMap[pick.player_id].push({ pts, colour });
         });
 
         const todayTeamRoundPairs = new Set();
@@ -1174,7 +1192,7 @@
 
         const winningsMap = {}; // player_id -> £ amount
         let firstOutPlayers = [];
-        if (competitionEnded) {
+        {
           const totalPlayers = (scores || []).length;
           const pot = totalPlayers * 10;
 
@@ -1299,11 +1317,9 @@
             else                            arrowHtml = '<span class="arrow-eq">—</span>';
           }
 
-          const groupForm = form.filter(f => !f.isKO);
-          const koForm    = form.filter(f => f.isKO);
-          const groupPips = groupForm.map(f => '<span class="form-pip form-' + f.result + '" title="' + f.result + '"></span>').join('');
-          const koPips    = koForm.map(f => '<span class="form-pip form-' + f.result + '" title="' + f.result + '"></span>').join('');
-          const formHtml  = '<div style="line-height:1.6;white-space:nowrap">' + (groupPips || '') + (koPips ? '<br>' + koPips : '') + '</div>';
+          const formHtml = '<div style="white-space:nowrap">' +
+            form.map(f => '<span class="form-pip form-' + f.colour + '" title="' + f.pts + 'pts">' + f.pts + '</span>').join('') +
+            '</div>';
           const gdHtml   = gd > 0 ? '<span class="gd-pos">+' + gd + '</span>' : gd < 0 ? '<span class="gd-neg">' + gd + '</span>' : '<span class="gd-zero">0</span>';
           const flagHtml = todayPicks_p.map(pick => {
             const cls = pick.multiplier === 3 ? (pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt') : (pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt');

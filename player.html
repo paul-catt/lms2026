@@ -935,10 +935,6 @@
         }
         container.appendChild(pill);
       });
-      if (sessionStorage.getItem('lms_scroll_to_pills')) {
-        sessionStorage.removeItem('lms_scroll_to_pills');
-        setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
-      }
     }
 
     function buildRoundDropdown() {
@@ -1443,7 +1439,6 @@
           toast.classList.add('show');
           setTimeout(() => toast.classList.remove('show'), 2500);
         }
-        sessionStorage.setItem('lms_scroll_to_pills', '1');
         setTimeout(() => location.reload(), 800);
       } catch(err) {
         console.error(err);
@@ -1690,7 +1685,6 @@
     });
   </script>
 
-  <!-- ── Submit toast ─────────────────────────────────────────────────────── -->
   <div id="submit-toast">✅ Pick submitted!</div>
 
   <!-- ── Pick confirm modal ──────────────────────────────────────────────────── -->
