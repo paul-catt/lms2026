@@ -154,6 +154,8 @@
       font-weight: 600;
     }
     .pool-team span { color: var(--text-muted); font-weight: 400; margin-right: 4px; }
+    details summary::-webkit-details-marker { display: none; }
+    details summary { user-select: none; }
 
     .prizes-table {
       width: 100%;
@@ -462,6 +464,112 @@
       </div>
     </div>
 
+    <!-- FOR GEEKS ONLY -->
+    <div class="card">
+      <div class="rules-section" style="margin-bottom:0">
+        <details>
+        <summary style="cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; padding:2px 0; margin-bottom:0">
+          <h2 style="margin-bottom:0; border-bottom:none; padding-bottom:0">🤓 For Geeks Only</h2>
+          <span id="geek-chevron" style="font-size:12px; color:var(--text-muted); flex-shrink:0">▼ expand</span>
+        </summary>
+        <p style="margin-top:16px; margin-bottom:20px"><em>The stuff nobody asked. But somebody needed to write down.</em></p>
+
+        <!-- TEAMS & BANDING -->
+        <div style="margin-bottom:24px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.06em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)">Teams &amp; Banding</div>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px">How longshot teams were designated</p>
+          <p>A team earns ⭐ longshot status only if they met <span class="highlight">both</span> criteria before the tournament started: long enough outright winner odds (Paddy Power UK), <em>and</em> a minimum odds threshold from their group stage match odds. Both conditions had to be satisfied. The list was fixed at tournament start and never updated — a team stays a ⭐ longshot even if they go on a run. Most ⭐ teams sit in the 🔴 No Hoper band. Don't confuse the two — "Long Shot" is a band label, ⭐ is the bonus flag. Related, but stored independently, and they can differ.</p>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px;margin-top:16px">What the banding system is</p>
+          <p>Every team is assigned one of four bands: 🔵 Favourite · 🟡 Dark Horse · 🟠 Long Shot · 🔴 No Hoper. Set manually before the tournament based on pre-tournament outright odds. Banding has <span class="highlight">zero direct effect on points</span> — it's used by The Oracle and shown on your pick form so you know what you're dealing with.</p>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px;margin-top:16px">How your eligible team pool works</p>
+          <p>At any point, the teams available to pick are: all 48 teams, minus any you've already used in a previous round, minus any teams eliminated from the tournament. This refreshes automatically — so as teams get knocked out, your pool shrinks. Choose carefully early on; burning a good team in the group stage means you can't use them in the knockouts.</p>
+        </div>
+
+        <!-- THE LEADERBOARD -->
+        <div style="margin-bottom:24px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.06em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)">The Leaderboard</div>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px">What the coloured circles mean</p>
+          <p>Each circle in a player's form strip represents one pick. The <span class="highlight">colour</span> is the outcome; the <span class="highlight">number inside</span> is the points earned for that pick — including whether it was a 3-point or 2-point group pick, plus any longshot bonus.</p>
+          <ul style="margin-top:8px">
+            <li>🟢 <span class="highlight">Green</span> — a win. Includes wins in extra time or on penalties in the knockout rounds.</li>
+            <li>🟡 <span class="highlight">Amber</span> — a group stage draw.</li>
+            <li>🔴 <span class="highlight">Red</span> — a loss. Includes losing in extra time or on penalties in the knockout rounds.</li>
+          </ul>
+          <p style="margin-top:8px">So a circle showing "1" in red means a knockout pens loss — you earned the point, but you're out.</p>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px;margin-top:16px">What the movement arrows mean</p>
+          <p>The ▲▼ arrows next to a player's position show movement since the <span class="highlight">end of the previous round</span> — not since yesterday, not since this morning. They're based on leaderboard snapshots taken when the last result of each round is saved. Mid-round, they'll look static or odd — that's expected.</p>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px;margin-top:16px">What the 🏆 trophy badge means</p>
+          <p>Awarded to the player with the highest points in a given round — Pick of the Round. Tiebroken by goal difference from that round's picks. If still tied, the badge is shared. Bragging rights only, no extra points.</p>
+        </div>
+
+        <!-- THE ORACLE -->
+        <div style="margin-bottom:24px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.06em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)">The Oracle</div>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px">How it actually makes decisions</p>
+          <p>The Oracle runs a decision tree against your remaining eligible teams and the current round's fixtures. It isn't random — but there is a random element <em>within</em> each tier if multiple teams qualify at the same priority level. Priority order:</p>
+          <ul style="margin-top:8px">
+            <li>1. Longshot vs No Hoper — always the preferred pick if available</li>
+            <li>2. Stronger longshot vs weaker longshot (by odds)</li>
+            <li>3. Late KO (Quarter Finals onwards) — deploy a Favourite</li>
+            <li>4. Group stage — Dark Horse is the sweet spot</li>
+            <li>5. Any KO round — Favourite</li>
+            <li>6. Nothing fits — damage limitation (best available)</li>
+          </ul>
+          <p style="margin-top:8px">The star rating (⭐–⭐⭐⭐⭐⭐) reflects how confident the Oracle is in the tier it landed on. A five-star suggestion means it found a textbook pick. One star means it's guessing.</p>
+        </div>
+
+        <!-- MISSED PICKS -->
+        <div style="margin-bottom:24px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.06em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)">Missed Picks &amp; the Default Pool</div>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px">How auto-assignment works</p>
+          <p>The 16 pool teams were selected as roughly the middle tier of the field by pre-tournament odds — not good enough to hand you an advantage, not bad enough to feel like a punishment. Ordered alphabetically — objective, if slightly unfortunate for Austria. At the moment of assignment, eliminated teams are skipped and teams you've already used are skipped. For group phases, the 3-point pick is assigned first, then the 2-point pick, from the next eligible team down the list. For knockout rounds, one pick is assigned; if no eligible pool team remains, you're eliminated. Auto-assigned picks are flagged on your player page so you know which ones weren't your choice.</p>
+        </div>
+
+        <!-- DEADLINES -->
+        <div style="margin-bottom:24px">
+          <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.06em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)">Deadlines &amp; the Day Window</div>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px">Why the day window is noon–noon BST</p>
+          <p>The tournament is hosted in the United States, so matches kick off in the afternoon and evening American time — which broadly maps to late evening and overnight UK time. The noon–noon BST window means a "day" of picks covers all matches in a natural American match day, without awkwardly splitting across midnight. It also gives you the morning to pick after seeing overnight results.</p>
+        </div>
+
+        <!-- UNDER THE HOOD -->
+        <div>
+          <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.06em;color:var(--text-muted);text-transform:uppercase;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border)">Under the Hood</div>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px">How elimination fires</p>
+          <p>Two routes: (1) your team loses a knockout match — at full time, in extra time, or on penalties; (2) you have no eligible teams left with no pending results outstanding. The eliminated flag on your player record is the sole source of truth. It's never re-derived from pick history on the fly — if it says you're in, you're in.</p>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px;margin-top:16px">How goal difference is tracked</p>
+          <p>Every goal in the tournament counts toward your GD total — including extra time goals. Penalty shootout goals don't count. GD is tiebreaker #2, after furthest round reached.</p>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px;margin-top:16px">What "furthest round reached" means</p>
+          <p>You only reach a round if you made a valid pick in it. It's tiebreaker #1. You can't claim credit for a round you coasted through without picking.</p>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px;margin-top:16px">What the goals prediction tracks</p>
+          <p>Your prediction is for the total goals scored across all 104 matches — including extra time goals, excluding penalty shootout goals. The 3rd place match counts. Closest to the actual total wins tiebreaker #3. You can update your prediction anytime before the Group Phase 1 deadline.</p>
+        </div>
+
+        </details>
+      </div>
+    </div>
+
   </main>
+  <script>
+    const geekDetails = document.querySelector('details');
+    if (geekDetails) {
+      geekDetails.addEventListener('toggle', function() {
+        document.getElementById('geek-chevron').textContent = this.open ? '▲ collapse' : '▼ expand';
+      });
+    }
+  </script>
 </body>
 </html>
