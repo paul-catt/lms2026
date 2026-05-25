@@ -923,8 +923,8 @@
           const awayPickNames = (picksByTeam && m.away_team)
             ? (picksByTeam.get(m.round_id + ':' + m.away_team.id) || []) : [];
 
-          const homeCol = (deadlinePassed && m.home_team && roundPicks.has(m.home_team.id)) ? 'color:#c9a84c;' : '';
-          const awayCol = (deadlinePassed && m.away_team && roundPicks.has(m.away_team.id)) ? 'color:#c9a84c;' : '';
+          const homeCol = (deadlinePassed && m.home_team && roundPicks.has(String(m.home_team.id))) ? 'color:#c9a84c;' : '';
+          const awayCol = (deadlinePassed && m.away_team && roundPicks.has(String(m.away_team.id))) ? 'color:#c9a84c;' : '';
 
           function teamSpan(team, col, pickNames, pickId) {
             if (!team) return '<span style="color:var(--text-muted)">TBD</span>';
@@ -989,7 +989,7 @@
       const picksByTeam = new Map(); // team_id -> [display names]
       (allPicks || []).forEach(p => {
         if (!pickedTeamIds.has(p.round_id)) pickedTeamIds.set(p.round_id, new Set());
-        pickedTeamIds.get(p.round_id).add(p.team_id);
+        pickedTeamIds.get(p.round_id).add(String(p.team_id));
         const key = p.round_id + ':' + p.team_id;
         if (!picksByTeam.has(key)) picksByTeam.set(key, []);
         const pname = p.players ? (p.players.display_name || shortName(p.players.name)) : '?';
@@ -1035,7 +1035,7 @@
       const picksByTeamKO = new Map();
       (allPicksKO || []).forEach(p => {
         if (!pickedTeamIdsKO.has(p.round_id)) pickedTeamIdsKO.set(p.round_id, new Set());
-        pickedTeamIdsKO.get(p.round_id).add(p.team_id);
+        pickedTeamIdsKO.get(p.round_id).add(String(p.team_id));
         const key = p.round_id + ':' + p.team_id;
         if (!picksByTeamKO.has(key)) picksByTeamKO.set(key, []);
         const pname = p.players ? (p.players.display_name || shortName(p.players.name)) : '?';

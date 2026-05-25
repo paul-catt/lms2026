@@ -1440,7 +1440,7 @@
       });
       const lsSorted = Object.values(lsData).sort((a, b) => {
         if (b.bonusPoints !== a.bonusPoints) return b.bonusPoints - a.bonusPoints;
-        if (b.longshotPicks !== a.longshotPicks) return b.longshotPicks - a.longshotPicks;
+        if (a.longshotPicks !== b.longshotPicks) return a.longshotPicks - b.longshotPicks;
         return a.name.localeCompare(b.name);
       });
       const hasAny = lsSorted.some(p => p.longshotPicks > 0);
