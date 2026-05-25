@@ -72,6 +72,17 @@
     .pens-row label { display:flex; align-items:center; gap:8px; font-size:13px; cursor:pointer; }
     .pens-row input[type=checkbox] { width:auto; accent-color:var(--accent); cursor:pointer; }
 
+    .correction-diff { margin-top:14px; border:1px solid var(--border); border-radius:10px; overflow:hidden; font-size:13px; }
+    .correction-diff-header { background:var(--surface2); padding:8px 12px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); display:flex; justify-content:space-between; }
+    .correction-diff-row { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-top:1px solid var(--border); }
+    .correction-diff-label { color:var(--text-muted); font-size:12px; font-weight:600; min-width:60px; }
+    .correction-diff-val { font-weight:700; font-size:15px; }
+    .correction-diff-elim { padding:8px 12px; border-top:1px solid var(--border); }
+    .correction-diff-elim-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; color:var(--text-muted); }
+    .correction-elim-pill { display:inline-flex; align-items:center; gap:4px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:var(--red); border-radius:20px; padding:3px 10px; font-size:12px; font-weight:600; margin:2px; }
+    .correction-safe-pill { display:inline-flex; align-items:center; gap:4px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); color:var(--green); border-radius:20px; padding:3px 10px; font-size:12px; font-weight:600; margin:2px; }
+    .correction-neutral-pill { display:inline-flex; align-items:center; gap:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text-muted); border-radius:20px; padding:3px 10px; font-size:12px; font-weight:600; margin:2px; }
+
     .goals-diff-pos { color: var(--green); font-weight: 600; }
     .goals-diff-neg { color: var(--red); font-weight: 600; }
     .goals-diff-zero { color: var(--text-muted); }
@@ -251,6 +262,27 @@
         <div class="form-group">
           <label>Match</label>
           <select id="correct-match-select"><option value="">Loading completed matches...</option></select>
+        </div>
+
+        <!-- Pre-flight diff: shows current result and who'd be affected -->
+        <div id="correction-diff-panel" style="display:none" class="correction-diff">
+          <div class="correction-diff-header">
+            <span>Current result</span>
+            <span id="correction-diff-round" style="color:var(--gold)"></span>
+          </div>
+          <div class="correction-diff-row">
+            <span id="correction-diff-home-name" class="correction-diff-label"></span>
+            <span id="correction-diff-score" class="correction-diff-val"></span>
+            <span id="correction-diff-away-name" class="correction-diff-label" style="text-align:right"></span>
+          </div>
+          <div id="correction-diff-pens" style="display:none; padding:4px 12px 6px; font-size:12px; color:var(--text-muted)"></div>
+          <div id="correction-diff-elim-section" class="correction-diff-elim" style="display:none">
+            <div id="correction-diff-elim-list"></div>
+          </div>
+          <div id="correction-diff-new-section" class="correction-diff-elim" style="display:none; border-top:1px solid var(--border)">
+            <div class="correction-diff-elim-title" id="correction-diff-new-title"></div>
+            <div id="correction-diff-new-list"></div>
+          </div>
         </div>
         <div class="admin-grid" id="correct-score-fields">
           <div class="form-group">
@@ -572,9 +604,15 @@
     <!-- PICKS AUDIT TAB -->
     <div class="tab-content" id="tab-picks">
       <!-- Sub-tab bar -->
-      <div style="display:flex; gap:6px; margin-bottom:16px">
+      <div style="display:flex; gap:6px; margin-bottom:16px; align-items:center; flex-wrap:wrap">
         <button class="btn btn-primary" id="picks-subtab-audit" onclick="switchPicksSubtab(&apos;audit&apos;)">📊 Audit Matrix</button>
         <button class="btn btn-secondary" id="picks-subtab-round" onclick="switchPicksSubtab(&apos;round&apos;)">📋 Round Summary</button>
+        <label style="display:flex; align-items:center; gap:6px; margin-left:auto; cursor:pointer; font-size:12px; font-weight:600; color:var(--text-muted)">
+          <span>Still in only</span>
+          <span id="picks-stillin-toggle" onclick="togglePicksStillIn()" style="display:inline-flex; width:36px; height:20px; border-radius:10px; background:var(--surface); border:1px solid var(--border); cursor:pointer; transition:background 0.2s; position:relative; flex-shrink:0">
+            <span style="position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:var(--text-muted); transition:transform 0.2s"></span>
+          </span>
+        </label>
       </div>
 
       <!-- Audit matrix -->
@@ -827,6 +865,9 @@
       document.getElementById('btn-random-assign').addEventListener('click', randomAssignMissingPicks);
       document.getElementById('correct-match-select').addEventListener('change', onCorrectMatchSelected);
       document.getElementById('correct-pens-checkbox').addEventListener('change', onCorrectPensToggle);
+      document.getElementById('correct-home-score').addEventListener('input', updateCorrectionDiff);
+      document.getElementById('correct-away-score').addEventListener('input', updateCorrectionDiff);
+      document.getElementById('correct-pens-winner-select').addEventListener('change', updateCorrectionDiff);
       document.getElementById('btn-save-correction').addEventListener('click', saveCorrection);
       document.getElementById('btn-undo-result').addEventListener('click', undoResult);
       document.getElementById('btn-set-test-date').addEventListener('click', () => {
@@ -1343,7 +1384,10 @@ Good luck! ⚽🏆`;
     function onCorrectMatchSelected() {
       const matchId = document.getElementById('correct-match-select').value;
       const match = matchId ? completedMatchCache[matchId] : null;
-      if (!match) return;
+      if (!match) {
+        document.getElementById('correction-diff-panel').style.display = 'none';
+        return;
+      }
       document.getElementById('correct-home-score').value = match.home_score ?? '';
       document.getElementById('correct-away-score').value = match.away_score ?? '';
       const isKnockout = match.rounds && match.rounds.round_type === 'knockout';
@@ -1361,6 +1405,7 @@ Good luck! ⚽🏆`;
       }
       updateScoreLabels(matchId, 'correct-home-hint', 'correct-away-hint');
       document.getElementById('correct-msg').textContent = '';
+      updateCorrectionDiff();
     }
 
     function onCorrectPensToggle() {
@@ -1374,6 +1419,135 @@ Good luck! ⚽🏆`;
           `<option value="${match.home_team_id}">${match.home_team.flag_emoji} ${match.home_team.name}</option>` +
           `<option value="${match.away_team_id}">${match.away_team.flag_emoji} ${match.away_team.name}</option>`;
       }
+      updateCorrectionDiff();
+    }
+
+    async function updateCorrectionDiff() {
+      const matchId = document.getElementById('correct-match-select').value;
+      const panel = document.getElementById('correction-diff-panel');
+      if (!matchId) { panel.style.display = 'none'; return; }
+      const match = completedMatchCache[matchId];
+      if (!match) { panel.style.display = 'none'; return; }
+
+      const isKnockout = match.rounds && match.rounds.round_type === 'knockout';
+
+      // Populate static current result info
+      document.getElementById('correction-diff-round').textContent = match.rounds.name;
+      document.getElementById('correction-diff-home-name').textContent = match.home_team.flag_emoji + ' ' + match.home_team.name;
+      document.getElementById('correction-diff-away-name').textContent = match.away_team.flag_emoji + ' ' + match.away_team.name;
+      document.getElementById('correction-diff-score').textContent = match.home_score + '–' + match.away_score;
+
+      const pensEl = document.getElementById('correction-diff-pens');
+      if (match.pens_winner_id) {
+        const pensWinnerName = match.pens_winner_id === match.home_team_id ? match.home_team.name : match.away_team.name;
+        pensEl.textContent = '(AET/pens — ' + pensWinnerName + ' won)';
+        pensEl.style.display = 'block';
+      } else {
+        pensEl.style.display = 'none';
+      }
+
+      panel.style.display = 'block';
+
+      if (!isKnockout) {
+        document.getElementById('correction-diff-elim-section').style.display = 'none';
+        document.getElementById('correction-diff-new-section').style.display = 'none';
+        return;
+      }
+
+      // Fetch picks for both teams in this round
+      const { data: picks } = await db.from('picks')
+        .select('player_id, team_id, multiplier, players(id, name, is_eliminated, eliminated_in_round_id)')
+        .in('team_id', [match.home_team_id, match.away_team_id])
+        .eq('round_id', match.round_id);
+
+      // Work out who is currently knocked out BY this match
+      // i.e. players who picked the losing team (or pens loser)
+      const origLosingTeamId = match.pens_winner_id
+        ? (match.pens_winner_id === match.home_team_id ? match.away_team_id : match.home_team_id)
+        : (match.home_score > match.away_score ? match.away_team_id : match.home_score < match.away_score ? match.home_team_id : null);
+
+      const currentlyElim = (picks || [])
+        .filter(p => p.team_id === origLosingTeamId)
+        .map(p => p.players);
+
+      const currentlySafe = (picks || [])
+        .filter(p => p.team_id !== origLosingTeamId)
+        .map(p => p.players);
+
+      const elimSection = document.getElementById('correction-diff-elim-section');
+      const elimList = document.getElementById('correction-diff-elim-list');
+      let elimHtml = '';
+      if (currentlyElim.length > 0) {
+        elimHtml += `<div class="correction-diff-elim-title">💀 Currently knocked out by this result</div>`;
+        elimHtml += currentlyElim.map(p => `<span class="correction-elim-pill">💀 ${p.name}</span>`).join('');
+      }
+      if (currentlySafe.length > 0) {
+        elimHtml += `<div class="correction-diff-elim-title" style="margin-top:${currentlyElim.length ? '10px' : '0'}">✅ Currently safe</div>`;
+        elimHtml += currentlySafe.map(p => `<span class="correction-safe-pill">✅ ${p.name}</span>`).join('');
+      }
+      if (elimHtml) {
+        elimSection.style.display = 'block';
+        elimList.innerHTML = elimHtml;
+      } else {
+        elimSection.style.display = 'none';
+      }
+
+      // Now work out what the NEW score would produce
+      const newHomeScore = parseInt(document.getElementById('correct-home-score').value);
+      const newAwayScore = parseInt(document.getElementById('correct-away-score').value);
+      const newPensChecked = document.getElementById('correct-pens-checkbox').checked;
+      const newPensWinner = document.getElementById('correct-pens-winner-select').value;
+      const newSection = document.getElementById('correction-diff-new-section');
+
+      if (isNaN(newHomeScore) || isNaN(newAwayScore)) {
+        newSection.style.display = 'none';
+        return;
+      }
+
+      let newLosingTeamId = null;
+      if (newPensChecked && newHomeScore === newAwayScore && newPensWinner) {
+        newLosingTeamId = newPensWinner === match.home_team_id ? match.away_team_id : match.home_team_id;
+      } else if (newHomeScore !== newAwayScore) {
+        newLosingTeamId = newHomeScore > newAwayScore ? match.away_team_id : match.home_team_id;
+      }
+
+      const newElim = (picks || [])
+        .filter(p => p.team_id === newLosingTeamId)
+        .map(p => p.players);
+
+      newSection.style.display = 'block';
+      const newTitle = document.getElementById('correction-diff-new-title');
+      const newList = document.getElementById('correction-diff-new-list');
+
+      // Check if anything changed
+      const origIds = new Set(currentlyElim.map(p => p.id));
+      const newIds = new Set(newElim.map(p => p.id));
+      const noChange = origIds.size === newIds.size && [...origIds].every(id => newIds.has(id));
+
+      const saved = currentlyElim.filter(p => !newIds.has(p.id));
+
+      if (noChange && newLosingTeamId === origLosingTeamId) {
+        newTitle.textContent = '✅ No change to eliminations';
+        newTitle.style.color = 'var(--green)';
+        newList.innerHTML = '';
+      } else {
+        let html = '';
+        if (newElim.length > 0) {
+          html += `<div class="correction-diff-elim-title" style="color:var(--red); margin-top:${html?'10px':'0'}">💀 Would be knocked out with new score</div>`;
+          html += newElim.map(p => `<span class="correction-elim-pill">💀 ${p.name}</span>`).join('');
+        }
+        if (saved.length > 0) {
+          html += `<div class="correction-diff-elim-title" style="color:var(--green); margin-top:${newElim.length?'10px':'0'}">✅ Would be saved with new score</div>`;
+          html += saved.map(p => `<span class="correction-safe-pill">✅ ${p.name}</span>`).join('');
+        }
+        if (!newElim.length && !saved.length) {
+          newTitle.textContent = '✅ No players knocked out with new score';
+          newTitle.style.color = 'var(--green)';
+        } else {
+          newTitle.textContent = '';
+        }
+        newList.innerHTML = html;
+      }
     }
 
     async function resetMatchEliminations(matchId) {
@@ -1382,21 +1556,16 @@ Good luck! ⚽🏆`;
         .eq('id', matchId).single();
       if (!match || match.rounds?.round_type !== 'knockout') return;
 
+      // Un-eliminate both teams in this match
       await db.from('teams')
         .update({ is_eliminated: false, eliminated_in_round_id: null })
         .in('id', [match.home_team_id, match.away_team_id]);
 
-      const { data: picks } = await db.from('picks')
-        .select('player_id')
-        .in('team_id', [match.home_team_id, match.away_team_id])
-        .eq('round_id', match.round_id);
-
-      if (picks && picks.length > 0) {
-        const playerIds = [...new Set(picks.map(p => p.player_id))];
-        await db.from('players')
-          .update({ is_eliminated: false, eliminated_at: null, eliminated_in_round_id: null })
-          .in('id', playerIds);
-      }
+      // Un-eliminate ALL players eliminated in this round — covers direct KO losses
+      // AND exhaustion eliminations that may now be invalid after a correction
+      await db.from('players')
+        .update({ is_eliminated: false, eliminated_at: null, eliminated_in_round_id: null })
+        .eq('eliminated_in_round_id', match.round_id);
     }
 
     async function saveCorrection() {
@@ -1580,7 +1749,7 @@ Good luck! ⚽🏆`;
         if (outcome === 'win') return pick.multiplier + (team.is_longshot ? 1 : 0);
         if (outcome === 'draw') return 1;
         if (outcome === 'loss') return 0;
-        if (outcome === 'pens_win') return 1 + (team.is_longshot ? 1 : 0);
+        if (outcome === 'pens_win') return 1;
         if (outcome === 'pens_loss') return 1;
         return null;
       }
@@ -1622,6 +1791,37 @@ Good luck! ⚽🏆`;
       }
     }
 
+    // ── Missing picks pre-check ────────────────────────────────
+    async function checkMissingPicksForRound(roundId, roundType) {
+      const isGroup = roundType === 'group';
+      const { data: players } = await db.from('players').select('id, name').eq('is_eliminated', false);
+      const { data: existingPicks } = await db.from('picks').select('player_id, multiplier').eq('round_id', roundId);
+      if (!players) return [];
+      const missing = [];
+      for (const player of players) {
+        const myPicks = (existingPicks || []).filter(p => p.player_id === player.id);
+        if (isGroup) {
+          const has3pt = myPicks.some(p => p.multiplier === 3);
+          const has2pt = myPicks.some(p => p.multiplier === 2);
+          if (!has3pt || !has2pt) missing.push(player.name);
+        } else {
+          if (myPicks.length === 0) missing.push(player.name);
+        }
+      }
+      return missing;
+    }
+
+    async function warnIfMissingPicks(roundId, roundType) {
+      if (!roundId) return true;
+      const missing = await checkMissingPicksForRound(roundId, roundType);
+      if (missing.length === 0) return true;
+      return confirm(
+        `⚠️ ${missing.length} player(s) have no pick for this round:\n\n` +
+        missing.join('\n') +
+        '\n\nSave result anyway?'
+      );
+    }
+
     async function submitResult() {
       const matchId = document.getElementById('result-match-select').value;
       const homeScore = parseInt(document.getElementById('result-home-score').value);
@@ -1635,6 +1835,10 @@ Good luck! ⚽🏆`;
       const isThird = match && match.is_third_place;
       if (isKnockout && !isThird && homeScore === awayScore && !pensChecked) { msg.style.color='var(--red)'; msg.textContent='KO matches cannot end in a draw — tick "Match went to extra time / penalties" and select the winner.'; return; }
       if (isKnockout && !isThird && pensChecked && homeScore === awayScore && !pensWinner) { msg.style.color='var(--red)'; msg.textContent='Select who won on penalties.'; return; }
+      if (!isThird && match) {
+        const ok = await warnIfMissingPicks(match.round_id, match.rounds?.round_type || 'group');
+        if (!ok) { msg.style.color='var(--gold)'; msg.textContent='Result not saved — resolve missing picks first.'; return; }
+      }
       const { error } = await db.from('matches').update({
         home_score: homeScore, away_score: awayScore, status: 'complete',
         pens_winner_id: (isKnockout && !isThird && pensChecked && homeScore === awayScore && pensWinner) ? pensWinner : null
@@ -1693,7 +1897,7 @@ Good luck! ⚽🏆`;
           if (isKnockout && isPens) {
             const won     = pick.team_id === pensWinnerId;
             result        = won ? 'win' : 'loss';
-            longshotBonus = (won && team.is_longshot) ? 1 : 0;
+            longshotBonus = 0;
             basePoints    = 1;
             pointsEarned  = 1;
           } else {
@@ -2810,6 +3014,11 @@ Good luck! ⚽🏆`;
     async function submitBulkResults(roundId, isKnockout) {
       const msg = document.getElementById('bulk-msg');
       msg.style.color = 'var(--text-muted)'; msg.textContent = 'Saving...';
+      const firstMatchId = [...document.querySelectorAll('[id^="bulk-row-"]')][0]?.id.replace('bulk-row-', '');
+      if (firstMatchId) {
+        const ok = await warnIfMissingPicks(roundId, isKnockout ? 'knockout' : 'group');
+        if (!ok) { msg.style.color='var(--gold)'; msg.textContent='Result not saved — resolve missing picks first.'; return; }
+      }
       const rows = document.querySelectorAll('[id^="bulk-row-"]');
       let saved = 0, skipped = 0, errors = 0, warnings = [];
 
@@ -3038,9 +3247,12 @@ Good luck! ⚽🏆`;
 
       html += `</tr></thead><tbody>`;
 
+      const activePlayers = players.filter(p => !p.is_eliminated);
+      const competitionEnded = activePlayers.length === 0 && players.length > 0;
+
       players.forEach(player => {
         const isOut = player.is_eliminated;
-        const rowStyle = isOut ? 'opacity:0.5' : '';
+        const rowStyle = isOut && !competitionEnded ? 'opacity:0.5' : '';
         const playerLabel = player.name + (isOut ? ' <span style="font-size:10px;color:var(--red);font-weight:700">OUT</span>' : '');
 
         html += `<tr style="${rowStyle}">
@@ -3088,6 +3300,35 @@ Good luck! ⚽🏆`;
       </div>`;
 
       wrap.innerHTML = summary + html;
+      applyPicksStillInFilter();
+    }
+
+    function togglePicksStillIn() {
+      window._picksStillIn = !window._picksStillIn;
+      const el = document.getElementById('picks-stillin-toggle');
+      const on = window._picksStillIn;
+      el.style.background = on ? 'var(--gold)' : 'var(--surface)';
+      el.querySelector('span').style.transform = on ? 'translateX(16px)' : 'translateX(0)';
+      el.querySelector('span').style.background = on ? 'var(--bg)' : 'var(--text-muted)';
+      applyPicksStillInFilter();
+    }
+
+    function applyPicksStillInFilter() {
+      const on = !!window._picksStillIn;
+      // Audit matrix: hide eliminated rows entirely
+      document.querySelectorAll('#picks-audit-wrap tbody tr').forEach(row => {
+        const isOut = row.querySelector('span[style*="color:var(--red)"]');
+        row.style.display = on && isOut ? 'none' : '';
+      });
+      // Round summary: hide eliminated rows only if they have no pick (dash cells only)
+      document.querySelectorAll('#picks-round-wrap tbody tr').forEach(row => {
+        const isOut = row.querySelector('span[style*="color:var(--red)"]');
+        const hasPick = row.querySelector('td:not(:first-child):not([data-nopick])');
+        const allMissingOrDash = [...row.querySelectorAll('td:not(:first-child)')].every(td =>
+          td.textContent.trim() === '—' || td.textContent.includes('Missing')
+        );
+        row.style.display = on && isOut && allMissingOrDash ? 'none' : '';
+      });
     }
 
 
@@ -3183,11 +3424,14 @@ Good luck! ⚽🏆`;
       }
       html += '</tr></thead><tbody>';
 
+      const activePlayers = (players || []).filter(p => !p.is_eliminated);
+      const competitionEnded = activePlayers.length === 0 && (players || []).length > 0;
+
       let missing = 0;
       (players || []).forEach(player => {
         const playerPicks = picksByPlayer[player.id] || [];
         const isOut = player.is_eliminated;
-        const rowStyle = isOut ? 'opacity:0.5' : '';
+        const rowStyle = isOut && !competitionEnded ? 'opacity:0.5' : '';
         const nameHtml = player.name + (isOut ? ' <span style="font-size:10px;color:var(--red);font-weight:700">OUT</span>' : '');
 
         html += '<tr style="' + rowStyle + '">';
@@ -3221,6 +3465,7 @@ Good luck! ⚽🏆`;
         '</div>';
 
       wrap.innerHTML = summary + html;
+      applyPicksStillInFilter();
     }
 
     function pickCell(pick, playerIsOut) {
@@ -3486,6 +3731,13 @@ Good luck! ⚽🏆`;
       const isPens     = pensWinnerId !== null;
       const btn        = event.target;
       btn.disabled = true; btn.textContent = 'Saving...';
+
+      if (!isThird) {
+        const _roundType = roundType === 'knockout' ? 'knockout' : 'group';
+        const _roundId = await db.from('matches').select('round_id').eq('id', matchId).single().then(r => r.data?.round_id);
+        const ok = await warnIfMissingPicks(_roundId, _roundType);
+        if (!ok) { btn.disabled = false; btn.textContent = '\u2705 Confirm Result'; return; }
+      }
 
       const { data: match, error: mErr } = await db.from('matches')
         .select('id, round_id, home_team_id, away_team_id, match_number, is_third_place, home_team:teams!matches_home_team_id_fkey(id, is_longshot), away_team:teams!matches_away_team_id_fkey(id, is_longshot), rounds(round_type)')

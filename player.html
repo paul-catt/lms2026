@@ -1059,7 +1059,7 @@
         const single = roundPicks[0];
         if (single) html += '<div style="display:flex; justify-content:center"><div class="pick-slot filled-2" style="max-width:200px"><div class="pick-slot-label label-2">Your Pick' + (single.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (single.teams ? single.teams.flag_emoji + ' ' + single.teams.name : '—') + '</div></div></div>';
       }
-      if (!isLocked && getEffectiveDate() < new Date(round.deadline)) html += '<div style="margin-top:12px;text-align:center"><button class="btn btn-secondary" onclick="allowResubmit()">Change pick</button></div>';
+      if (!isLocked && getEffectiveDate() < new Date(round.deadline)) html += '<div style="margin-top:12px;text-align:center;display:flex;gap:10px;justify-content:center"><button class="btn btn-secondary" onclick="allowResubmit()">Change pick</button><button class="btn btn-danger" onclick="cancelPick()">Cancel pick</button></div>';
       document.getElementById('pick-summary').innerHTML = '';
       document.getElementById('pick-form-inner').innerHTML = html;
       document.getElementById('submit-oracle-row').style.display = 'none';
@@ -1377,6 +1377,23 @@
       if (!round) return;
       const isGroup = round.round_type === 'group';
 
+      // Hard block: KO picks require all prior KO rounds to have been picked
+      if (!isGroup) {
+        const koRounds = allRounds
+          .filter(r => r.round_type === 'knockout' && r.name !== '3rd Place')
+          .sort((a, b) => a.sort_order - b.sort_order);
+        const thisIdx = koRounds.findIndex(r => r.id === round.id);
+        if (thisIdx > 0) {
+          const prevRound = koRounds[thisIdx - 1];
+          const hasPrevPick = allPicks.some(p => p.round_id === prevRound.id);
+          if (!hasPrevPick) {
+            msg.style.color = 'var(--red)';
+            msg.textContent = '❌ You need to submit your ' + prevRound.name + ' pick before picking for ' + round.name + '.';
+            return;
+          }
+        }
+      }
+
       if (getEffectiveDate() >= new Date(round.deadline)) {
         const minsLate = Math.floor((getEffectiveDate() - new Date(round.deadline)) / 60000);
         if (minsLate <= 5) {
@@ -1458,6 +1475,16 @@
 
     function closePickModal() {
       document.getElementById('pick-modal-backdrop').classList.remove('open');
+    }
+
+    async function cancelPick() {
+      const round = allRounds.find(r => r.id === selectedRoundId);
+      if (!round) return;
+      if (getEffectiveDate() >= new Date(round.deadline)) return;
+      if (!confirm('Cancel your ' + round.name + ' pick? You can re-pick before the deadline.')) return;
+      const { error } = await db.from('picks').delete().eq('player_id', player.id).eq('round_id', round.id);
+      if (error) { alert('Error cancelling pick: ' + error.message); return; }
+      location.reload();
     }
 
     function initGoalsPrediction() {
@@ -2210,13 +2237,22 @@
           // Restore from localStorage — no network calls needed
           const currentRoundIds = new Set(allPicks.filter(p => p.round_id === _oracleRound.id).map(p => p.team_id));
           const prevUsedForOracle = new Set([...usedTeamIdsGlobal].filter(id => !currentRoundIds.has(id)));
-          _oraclePool       = savedPool.filter(p => !prevUsedForOracle.has(p.team.id) && !eliminatedIds.has(p.team.id));
-          _oracleDataReady  = true;
-          _oracleConsultNum = 0;
+          const filteredPool = savedPool.filter(p => !prevUsedForOracle.has(p.team.id) && !eliminatedIds.has(p.team.id));
 
-          const shownIds = loadShownIds(_oracleRound.id);
-          _oracleShown = _oraclePool.filter(p => shownIds.includes(p.team.id));
-        } else {
+          if (filteredPool.length > 0) {
+            _oraclePool       = filteredPool;
+            _oracleDataReady  = true;
+            _oracleConsultNum = 0;
+            const shownIds = loadShownIds(_oracleRound.id);
+            _oracleShown = _oraclePool.filter(p => shownIds.includes(p.team.id));
+          } else {
+            // Stale pool — nuke it and fall through to rebuild
+            localStorage.removeItem(getPoolKey(_oracleRound.id));
+            localStorage.removeItem(getShownKey(_oracleRound.id));
+          }
+        }
+
+        if (!_oracleDataReady) {
           // First open for this round — build pool from Supabase
           const currentRoundPickIds = new Set(allPicks.filter(p => p.round_id === _oracleRound.id).map(p => p.team_id));
           const usedIds   = new Set([...allPicks.map(p => p.team_id)].filter(id => !currentRoundPickIds.has(id)));
@@ -2295,7 +2331,14 @@
       const CAP = availablePool.length;
 
       if (CAP === 0) {
-        document.getElementById('oracle-no-teams').style.display = 'block';
+        const noTeamsEl = document.getElementById('oracle-no-teams');
+        const allInPool = _oraclePool.length > 0 && _oraclePool.every(p => currentlySelected.has(p.team.id));
+        if (allInPool) {
+          noTeamsEl.innerHTML = '✅ Great minds think alike. You\'ve already selected the Oracle\'s pick.';
+        } else {
+          noTeamsEl.innerHTML = '💀 You have no teams left. The Oracle is silent.';
+        }
+        noTeamsEl.style.display = 'block';
         return;
       }
 

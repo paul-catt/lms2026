@@ -87,6 +87,21 @@
     .page-tab-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
     .page-tab-panel { display: none; }
     .page-tab-panel.active { display: block; }
+    .picks-popup {
+      position: fixed; z-index: 9999;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      font-size: 12px; color: var(--text);
+      max-width: 220px; min-width: 140px;
+      pointer-events: auto;
+    }
+    .picks-popup-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px;
+    }
+    .picks-popup-name { padding: 2px 0; font-size: 12px; }
+    .picks-popup-count { color: var(--text-muted); font-style: italic; }
   </style>
 </head>
 <body>
@@ -780,6 +795,53 @@
       });
     }
 
+    const LS_DATE_KEY = 'lms2026_test_date';
+    function getEffectiveDate() {
+      const override = localStorage.getItem(LS_DATE_KEY);
+      return override ? new Date(override) : new Date();
+    }
+
+    function shortName(fullName) {
+      if (!fullName) return '?';
+      const parts = fullName.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0];
+      return parts[0] + ' ' + parts[parts.length - 1][0];
+    }
+
+    // ── Picks popup ───────────────────────────────────────────────
+    let _activePopup = null;
+
+    function showTeamPicksPopup(e, el) {
+      e.stopPropagation();
+      dismissPicksPopup();
+
+      const id = el.getAttribute('data-pick-id');
+      const names = (window._pickData || {})[id];
+      if (!names || !names.length) return;
+
+      const popup = document.createElement('div');
+      popup.className = 'picks-popup';
+      popup.innerHTML = `<div class="picks-popup-title">Picks</div>` +
+        names.map(n => `<div class="picks-popup-name">${n}</div>`).join('');
+
+      document.body.appendChild(popup);
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const pw = popup.offsetWidth, ph = popup.offsetHeight;
+      let left = e.clientX + 10, top = e.clientY + 10;
+      if (left + pw > vw - 8) left = e.clientX - pw - 10;
+      if (top + ph > vh - 8) top = e.clientY - ph - 10;
+      popup.style.left = Math.max(8, left) + 'px';
+      popup.style.top  = Math.max(8, top)  + 'px';
+
+      _activePopup = popup;
+    }
+
+    function dismissPicksPopup() {
+      if (_activePopup) { _activePopup.remove(); _activePopup = null; }
+    }
+
+    document.addEventListener('click', dismissPicksPopup);
+
     loadBracket();
 
     // ── Page tabs (Bracket / Fixtures) ────────────────────────
@@ -803,7 +865,7 @@
     }
 
     // ── Shared fixture table renderer ─────────────────────────
-    function renderFixtureRounds(rounds, matches, wrapEl, pickedTeamIds) {
+    function renderFixtureRounds(rounds, matches, wrapEl, pickedTeamIds, picksByTeam, minKickoff) {
       function windowKey(isoStr) {
         const d = new Date(isoStr), h = d.getUTCHours();
         const base = h < 11
@@ -818,8 +880,7 @@
 
       let html = '<div style="margin-bottom:16px; font-size:12px; color:var(--text-muted); display:flex; gap:16px; align-items:center">'
         + '<span style="font-weight:700; text-transform:uppercase; letter-spacing:0.05em">Key:</span>'
-        + '<span><span style="color:#c9a84c; font-weight:600">■</span> Picked this round</span>'
-        + '<span><span style="color:var(--text); font-weight:600">■</span> Unpicked</span>'
+        + '<span><span style="color:#c9a84c; font-weight:600">■</span> Picked this round (post-deadline)</span>'
         + '</div>';
       rounds.forEach(r => {
         const group = byRound[r.id];
@@ -846,16 +907,41 @@
           const date = ko.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
           const time = ko.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
           const roundPicks = pickedTeamIds ? (pickedTeamIds.get(m.round_id) || new Set()) : new Set();
-          const homeCol = (m.home_team && roundPicks.has(m.home_team.id)) ? 'color:#c9a84c;' : '';
-          const awayCol = (m.away_team && roundPicks.has(m.away_team.id)) ? 'color:#c9a84c;' : '';
-          const home = m.home_team ? `<span style="${homeCol}">${m.home_team.flag_emoji} ${m.home_team.name}</span>` : '<span style="color:var(--text-muted)">TBD</span>';
-          const away = m.away_team ? `<span style="${awayCol}">${m.away_team.flag_emoji} ${m.away_team.name}</span>` : '<span style="color:var(--text-muted)">TBD</span>';
 
           let scoreHtml = '<span style="color:var(--text-muted)">—</span>';
           if (m.status === 'complete' && m.home_score !== null && m.away_score !== null) {
             const pens = m.pens_winner_id ? ' <span style="font-size:10px;color:var(--text-muted)">(pens)</span>' : '';
             scoreHtml = `<span style="font-weight:700;color:var(--green)">${m.home_score}–${m.away_score}${pens}</span>`;
           }
+
+          const minKo = minKickoff ? minKickoff.get(m.round_id) : null;
+          const deadlinePassed = minKo ? (getEffectiveDate().getTime() > new Date(minKo).getTime() - 3600000) : false;
+
+          const homePickNames = (picksByTeam && m.home_team)
+            ? (picksByTeam.get(m.round_id + ':' + m.home_team.id) || []) : [];
+          const awayPickNames = (picksByTeam && m.away_team)
+            ? (picksByTeam.get(m.round_id + ':' + m.away_team.id) || []) : [];
+
+          const homeCol = (deadlinePassed && m.home_team && roundPicks.has(m.home_team.id)) ? 'color:#c9a84c;' : '';
+          const awayCol = (deadlinePassed && m.away_team && roundPicks.has(m.away_team.id)) ? 'color:#c9a84c;' : '';
+
+          function teamSpan(team, col, pickNames, pickId) {
+            if (!team) return '<span style="color:var(--text-muted)">TBD</span>';
+            if (deadlinePassed && pickNames.length > 0) {
+              return `<span style="${col} cursor:pointer;" data-pick-id="${pickId}" onclick="showTeamPicksPopup(event,this)">${team.flag_emoji} ${team.name}</span>`;
+            }
+            return `<span style="${col}">${team.flag_emoji} ${team.name}</span>`;
+          }
+
+          const homePickId = 'pick_' + m.round_id + '_' + (m.home_team ? m.home_team.id : 'h');
+          const awayPickId = 'pick_' + m.round_id + '_' + (m.away_team ? m.away_team.id : 'a');
+          if (homePickNames.length) window._pickData = window._pickData || {};
+          if (homePickNames.length) window._pickData[homePickId] = homePickNames;
+          if (awayPickNames.length) window._pickData = window._pickData || {};
+          if (awayPickNames.length) window._pickData[awayPickId] = awayPickNames;
+
+          const home = teamSpan(m.home_team, homeCol, homePickNames, homePickId);
+          const away = teamSpan(m.away_team, awayCol, awayPickNames, awayPickId);
 
           html += `<tr style="border-bottom:1px solid var(--border);${divider}">
             <td style="padding:7px 6px; white-space:nowrap; font-size:12px">${date}</td>
@@ -897,10 +983,24 @@
 
       if (mErr || !matches) { wrap.innerHTML = '<p style="color:var(--red)">Error loading matches.</p>'; return; }
 
-      const { data: allPicks } = await db.from('picks').select('team_id, round_id').in('round_id', rounds.map(r => r.id));
+      const { data: allPicks } = await db.from('picks').select('team_id, round_id, players(name, display_name)').in('round_id', rounds.map(r => r.id));
       const pickedTeamIds = new Map();
-      (allPicks || []).forEach(p => { if (!pickedTeamIds.has(p.round_id)) pickedTeamIds.set(p.round_id, new Set()); pickedTeamIds.get(p.round_id).add(p.team_id); });
-      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIds);
+      const picksByTeam = new Map(); // team_id -> [display names]
+      (allPicks || []).forEach(p => {
+        if (!pickedTeamIds.has(p.round_id)) pickedTeamIds.set(p.round_id, new Set());
+        pickedTeamIds.get(p.round_id).add(p.team_id);
+        const key = p.round_id + ':' + p.team_id;
+        if (!picksByTeam.has(key)) picksByTeam.set(key, []);
+        const pname = p.players ? (p.players.display_name || shortName(p.players.name)) : '?';
+        picksByTeam.get(key).push(pname);
+      });
+      // Min kickoff per round for deadline calc
+      const minKickoff = new Map();
+      matches.forEach(m => {
+        const cur = minKickoff.get(m.round_id);
+        if (!cur || m.kickoff < cur) minKickoff.set(m.round_id, m.kickoff);
+      });
+      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIds, picksByTeam, minKickoff);
       wrap.innerHTML = html || '<p style="color:var(--text-muted)">No group fixtures found.</p>';
     }
 
@@ -929,10 +1029,23 @@
         return;
       }
 
-      const { data: allPicksKO } = await db.from('picks').select('team_id, round_id').in('round_id', rounds.map(r => r.id));
+      const { data: allPicksKO } = await db.from('picks').select('team_id, round_id, players(name, display_name)').in('round_id', rounds.map(r => r.id));
       const pickedTeamIdsKO = new Map();
-      (allPicksKO || []).forEach(p => { if (!pickedTeamIdsKO.has(p.round_id)) pickedTeamIdsKO.set(p.round_id, new Set()); pickedTeamIdsKO.get(p.round_id).add(p.team_id); });
-      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIdsKO);
+      const picksByTeamKO = new Map();
+      (allPicksKO || []).forEach(p => {
+        if (!pickedTeamIdsKO.has(p.round_id)) pickedTeamIdsKO.set(p.round_id, new Set());
+        pickedTeamIdsKO.get(p.round_id).add(p.team_id);
+        const key = p.round_id + ':' + p.team_id;
+        if (!picksByTeamKO.has(key)) picksByTeamKO.set(key, []);
+        const pname = p.players ? (p.players.display_name || shortName(p.players.name)) : '?';
+        picksByTeamKO.get(key).push(pname);
+      });
+      const minKickoffKO = new Map();
+      matches.forEach(m => {
+        const cur = minKickoffKO.get(m.round_id);
+        if (!cur || m.kickoff < cur) minKickoffKO.set(m.round_id, m.kickoff);
+      });
+      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIdsKO, picksByTeamKO, minKickoffKO);
       wrap.innerHTML = html || '<p style="color:var(--text-muted)">No knockout fixtures found.</p>';
     }
 

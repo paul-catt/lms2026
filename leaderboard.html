@@ -231,7 +231,6 @@
                 <th class="hide-mobile" style="text-align:left">Form</th>
                 <!-- Status: landscape shows full reason, portrait shows dot only -->
                 <th id="status-col-header" style="display:none" class="landscape-only">Status</th>
-                <th id="status-col-portrait-goals-header" style="display:none" class="portrait-only">Goals</th>
               </tr>
             </thead>
             <tbody id="leaderboard-body"></tbody>
@@ -618,7 +617,7 @@
     function renderMatrixView() {
       const wrap = document.getElementById('matrix-wrap');
       if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the standings first.</p>'; return; }
-      const { sorted: allSorted, allPicks, rounds, firstMatchData, todayMatchRows, teamsUsed } = _leaderboardData;
+      const { sorted: allSorted, allPicks, rounds, firstMatchData, todayMatchRows, teamsUsed, competitionEnded: matrixCompEnded } = _leaderboardData;
       const sorted = _matrixFilter === 'alive' ? allSorted.filter(p => !p.is_eliminated) : allSorted;
       const posOffset = allSorted.indexOf(sorted[0]);
       const now = getEffectiveDate();
@@ -672,7 +671,7 @@
 
       const allTeams = window._matrixAllTeams || [];
       const teamList = allTeams
-        .filter(t => !t.is_eliminated)
+        .filter(t => matrixCompEnded ? true : !t.is_eliminated)
         .sort((a, b) => {
           const ao = BAND_ORDER[a.band] || 5, bo = BAND_ORDER[b.band] || 5;
           if (ao !== bo) return ao - bo;
@@ -714,7 +713,7 @@
         const used = usedByPlayer[p.player_id] || new Set();
         const playerPicks = pickMap[p.player_id] || {};
 
-        html += `<tr${isElim ? ' style="opacity:0.45;"' : ' class="m-alive"'}><td class="m-pos">${pos}</td>`;
+        html += `<tr${(!matrixCompEnded && isElim) ? ' style="opacity:0.45;"' : ' class="m-alive"'}><td class="m-pos">${pos}</td>`;
         const visiblePlayerTeams = new Set(Object.keys(playerPicks));
         const hasPending = (allPicks || []).some(pk =>
             pk.player_id === p.player_id &&
@@ -888,7 +887,7 @@
         (allPicks || []).forEach(pick => {
           const res = pick.pick_results && pick.pick_results[0];
           if (!res || !res.match_result) return;
-          if (!formMap[pick.player_id]) formMap[pick.player_id] = [];
+          if (!formMap[pick.player_id]) formMap[pick.player_id] = { group: [], ko: [] };
           const pts = (res.points_earned || 0) + (res.longshot_bonus || 0);
           const isKO = roundTypeMap[pick.round_id] === 'knockout';
           const pensWinner = pensWinnerByTeamRound[pick.team_id + '|' + pick.round_id];
@@ -900,7 +899,9 @@
           if (pts === 0 || (pts === 1 && isKO && lostPens)) colour = 'L';
           else if (pts === 1 && !isKO) colour = 'D'; // group draw → amber
           else colour = 'W'; // green: pens win, FT win, any positive KO result
-          formMap[pick.player_id].push({ pts, colour });
+          const pip = { pts, colour };
+          if (isKO) { formMap[pick.player_id].ko.push(pip); }
+          else { formMap[pick.player_id].group.push(pip); }
         });
 
         const todayTeamRoundPairs = new Set();
@@ -1054,7 +1055,6 @@
         const showRndCol = isKnockout || competitionEnded;
         document.getElementById('rnd-col-header').style.display = showRndCol ? '' : 'none';
         document.getElementById('status-col-header').style.display = (isKnockout || competitionEnded) ? '' : 'none';
-        document.getElementById('status-col-portrait-goals-header').style.display = competitionEnded ? '' : 'none';
         document.querySelectorAll('.knockout-only').forEach(el => {
           const isTab = el.classList.contains('lb-tab');
           el.style.display = (isKnockout || competitionEnded) ? (isTab ? 'inline-flex' : '') : 'none';
@@ -1083,7 +1083,9 @@
             return res && res.match_result === 'loss' && koRoundIds.has(p.round_id);
           });
           if (koLostPick && koLostPick.teams) {
-            return '<span style="font-size:12px;color:var(--red)">OUT · ' + (koLostPick.teams.flag_emoji || '') + ' ' + (koLostPick.teams.name || '') + ' pick lost</span>';
+            const lostRoundName = (rounds || []).find(r => r.id === koLostPick.round_id);
+            const lostRoundShort = lostRoundName ? shortRoundName(lostRoundName.name) : '';
+            return '<span style="font-size:12px;color:var(--red)">OUT · ' + (koLostPick.teams.flag_emoji || '') + ' ' + (koLostPick.teams.name || '') + ' lost' + (lostRoundShort ? ' in ' + lostRoundShort : '') + '</span>';
           }
           const elimRoundId = player.eliminated_in_round_id;
           const hadPickInElimRound = elimRoundId && playerPicks.some(p => p.round_id === elimRoundId);
@@ -1303,7 +1305,7 @@
           const { pos, tied } = posMap[p.player_id];
           const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
           const gd    = gdMap[p.player_id] || 0;
-          const form  = formMap[p.player_id] || [];
+          const form  = formMap[p.player_id] || { group: [], ko: [] };
           const todayData      = playerTodayMap[p.player_id];
           const isPlayingToday = !!todayData;
           const todayPicks_p   = todayData ? todayData.picks : [];
@@ -1317,9 +1319,11 @@
             else                            arrowHtml = '<span class="arrow-eq">—</span>';
           }
 
-          const formHtml = '<div style="white-space:nowrap">' +
-            form.map(f => '<span class="form-pip form-' + f.colour + '" title="' + f.pts + 'pts">' + f.pts + '</span>').join('') +
-            '</div>';
+          const makePips = arr => arr.map(f => '<span class="form-pip form-' + f.colour + '" title="' + f.pts + 'pts">' + f.pts + '</span>').join('');
+          let formHtml = '<div style="white-space:nowrap;line-height:1.4">';
+          if (form.group.length > 0) formHtml += '<div>' + makePips(form.group) + '</div>';
+          if (form.ko.length > 0)    formHtml += '<div>' + makePips(form.ko) + '</div>';
+          formHtml += '</div>';
           const gdHtml   = gd > 0 ? '<span class="gd-pos">+' + gd + '</span>' : gd < 0 ? '<span class="gd-neg">' + gd + '</span>' : '<span class="gd-zero">0</span>';
           const flagHtml = todayPicks_p.map(pick => {
             const cls = pick.multiplier === 3 ? (pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt') : (pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt');
@@ -1525,7 +1529,7 @@
       } else {
         firstOutPlayers.forEach(p => {
           html += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(239,68,68,0.15)">';
-          html += '<span style="font-size:13px">' + (p.display_name || shortName(p.name)) + '</span>';
+          html += '<span style="font-size:13px">' + p.name + '</span>';
           html += '<span style="font-weight:700;color:#ef4444">&#xa3;' + firstOutShare + '</span></div>';
         });
       }
@@ -1554,7 +1558,7 @@
         group.forEach((p, gi) => {
           html += '<tr style="border-bottom:1px solid var(--border)">';
           html += '<td style="padding:9px 4px;font-weight:700;font-size:15px;color:var(--gold)">' + pos + (isTied?'=':'') + '</td>';
-          html += '<td style="padding:9px 4px">' + (p.display_name || shortName(p.name)) + (firstOutIds.has(p.player_id) ? ' <span style="font-size:10px;color:#ef4444">&#x1FAB6;</span>' : '') + '</td>';
+          html += '<td style="padding:9px 4px">' + p.name + (firstOutIds.has(p.player_id) ? ' <span style="font-size:10px;color:#ef4444">&#x1FAB6;</span>' : '') + '</td>';
           html += '<td style="padding:9px 4px;text-align:right;color:var(--text-muted)">' + (p.total_points||0) + '</td>';
           html += gi===0 ? '<td style="padding:9px 4px;text-align:right;color:var(--text-muted);font-size:12px">' + pctDisplay + '</td>' : '<td></td>';
           html += '<td style="padding:9px 4px;text-align:right;font-weight:700;color:var(--gold)">' + (prize ? '&#xa3;'+prize : '&#x2014;') + '</td>';
