@@ -180,6 +180,10 @@
     .out-badge { font-size:9px; font-weight:800; background:rgba(239,68,68,0.15); color:#ef4444; border-radius:6px; padding:1px 4px; letter-spacing:0.04em; }
     .pts-earned { font-weight:800; font-size:12px; }
     .no-picks { font-size:11px; color:var(--text-muted); font-style:italic; }
+    .pts-pip { display:inline-flex; width:18px; height:18px; border-radius:50%; align-items:center; justify-content:center; font-size:10px; font-weight:800; color:#fff; line-height:1; flex-shrink:0; }
+    .pts-pip-W { background:var(--green); }
+    .pts-pip-D { background:var(--gold); }
+    .pts-pip-L { background:var(--red); }
 
     .upcoming-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 14px; margin-bottom:6px; opacity:0.72; }
 
@@ -549,24 +553,38 @@
         picksHtml = '<div class="match-sub"><div class="picks-rows"><div class="picks-row-2col"><span class="no-picks">No picks</span></div></div></div>';
       } else {
         const sorted = sortPicksByName(matchPicks, allPlayers);
+        const isGroupRound = match.rounds && match.rounds.name && match.rounds.name.toLowerCase().includes('group');
+        const isKORound    = !isGroupRound;
         const homeChips = [], awayChips = [];
         sorted.forEach(p => {
           const pl         = (allPlayers || []).find(pl => pl.id === p.player_id);
           const result     = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
           const chipClass  = result ? result.match_result : '';
-          const pts        = result ? '+' + result.points_earned : '';
           const isHome     = p.team_id === match.home_team_id;
           const flag       = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
-          const isLongshot = isHome ? match.home_team.is_longshot : match.away_team.is_longshot;
-          const outBadge = (result && result.match_result === 'loss' && match.rounds && match.rounds.name && !match.rounds.name.toLowerCase().includes('group'))
+
+          // Points: compensate for DB not including longshot bonus in points_earned
+          let ptsPip = '';
+          if (result) {
+            const totalPts = Math.min((result.points_earned || 0) + (result.longshot_bonus || 0), 4);
+            const mr = result.match_result;
+            let pipCls = 'pts-pip-W';
+            if (mr === 'loss') pipCls = 'pts-pip-L';
+            else if (mr === 'draw') pipCls = 'pts-pip-D';
+            ptsPip = '<span class="pts-pip ' + pipCls + '">' + totalPts + '</span>';
+          }
+
+          const outBadge = (result && result.match_result === 'loss' && isKORound)
             ? ' <span class="out-badge">OUT</span>' : '';
+          const ptsBadge = (isGroupRound)
+            ? '<span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px;flex-shrink:0">' + p.multiplier + 'pt</span> ' : '';
+
           const chip = '<div class="pick-chip ' + chipClass + '">' +
+            flag + ' ' +
             '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700;">' +
               (pl ? (pl.display_name || shortName(pl.name)) : '?') + '</a>' +
-            ' ' + flag +
-            ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px;flex-shrink:0">' + p.multiplier + 'pt</span>' +
-            (isLongshot ? ' ⭐' : '') +
-            (pts ? ' <span class="pts-earned" style="flex-shrink:0">' + pts + '</span>' : '') +
+            (ptsBadge ? ' ' + ptsBadge : '') +
+            (result ? ' ' + ptsPip : '') +
             outBadge +
             '</div>';
           if (isHome) homeChips.push(chip); else awayChips.push(chip);
@@ -580,9 +598,9 @@
           (match.venue && showVenue ? '<span class="match-venue-sep">·</span><span class="match-venue-inline">' + match.venue + '</span>' : '') +
         '</div>' +
         '<div class="match-main">' +
-          '<span class="match-home">' + match.home_team.flag_emoji + ' ' + match.home_team.name + '</span>' +
+          '<span class="match-home">' + match.home_team.flag_emoji + ' ' + match.home_team.name + (match.home_team.is_longshot ? ' ⭐' : '') + '</span>' +
           '<div class="match-centre-col">' + middleHtml + '</div>' +
-          '<span class="match-away">' + match.away_team.name + ' ' + match.away_team.flag_emoji + '</span>' +
+          '<span class="match-away">' + match.away_team.name + (match.away_team.is_longshot ? ' ⭐' : '') + ' ' + match.away_team.flag_emoji + '</span>' +
           (badgeHtml ? badgeHtml : '') +
         '</div>' +
         (aetHtml ? '<div class="match-sub">' + aetHtml + '</div>' : '') +
@@ -603,18 +621,19 @@
       let picksHtml = '';
       if (matchPicks.length > 0) {
         const sorted = sortPicksByName(matchPicks, allPlayers);
+        const isGroupRound = match.rounds && match.rounds.name && match.rounds.name.toLowerCase().includes('group');
         const homeChips = [], awayChips = [];
         sorted.forEach(p => {
           const pl         = (allPlayers || []).find(pl => pl.id === p.player_id);
           const isHome     = p.team_id === match.home_team_id;
           const flag       = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
-          const isLongshot = isHome ? match.home_team.is_longshot : match.away_team.is_longshot;
+          const ptsBadge   = isGroupRound
+            ? '<span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px;flex-shrink:0">' + p.multiplier + 'pt</span>' : '';
           const chip = '<div class="pick-chip">' +
+            flag + ' ' +
             '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700;">' +
               (pl ? (pl.display_name || shortName(pl.name)) : '?') + '</a>' +
-            ' ' + flag +
-            ' <span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px;flex-shrink:0">' + p.multiplier + 'pt</span>' +
-            (isLongshot ? ' ⭐' : '') +
+            (ptsBadge ? ' ' + ptsBadge : '') +
             '</div>';
           if (isHome) homeChips.push(chip); else awayChips.push(chip);
         });
@@ -627,9 +646,9 @@
           (match.venue ? '<span class="match-venue-sep">·</span><span class="match-venue-inline">' + match.venue + '</span>' : '') +
         '</div>' +
         '<div class="match-main">' +
-          '<span class="match-home">' + match.home_team.flag_emoji + ' ' + match.home_team.name + '</span>' +
+          '<span class="match-home">' + match.home_team.flag_emoji + ' ' + match.home_team.name + (match.home_team.is_longshot ? ' ⭐' : '') + '</span>' +
           '<div class="match-centre-col"><span class="match-vs">vs</span></div>' +
-          '<span class="match-away">' + match.away_team.name + ' ' + match.away_team.flag_emoji + '</span>' +
+          '<span class="match-away">' + match.away_team.name + (match.away_team.is_longshot ? ' ⭐' : '') + ' ' + match.away_team.flag_emoji + '</span>' +
         '</div>' +
         '<div class="match-sub">' + oddsHtml(match, false) + '</div>' +
         picksHtml +
@@ -672,7 +691,7 @@
 
         const [{ data: players }, { data: picks }] = await Promise.all([
           db.from('players').select('id, name, slug, display_name'),
-          db.from('picks').select('player_id, team_id, multiplier, round_id, pick_results(points_earned, match_result)')
+          db.from('picks').select('player_id, team_id, multiplier, round_id, pick_results(points_earned, longshot_bonus, match_result)')
         ]);
 
         const matchSel = 'id, kickoff, status, elapsed_minutes, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, round_id, pens_winner_id, venue, rounds(id, name, sort_order), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)';
