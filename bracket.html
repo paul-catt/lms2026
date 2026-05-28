@@ -816,12 +816,14 @@
       dismissPicksPopup();
 
       const id = el.getAttribute('data-pick-id');
-      const names = (window._pickData || {})[id];
-      if (!names || !names.length) return;
+      const entry = (window._pickData || {})[id];
+      if (!entry || !entry.names || !entry.names.length) return;
+      const flag = entry.flag || '';
+      const names = entry.names;
 
       const popup = document.createElement('div');
       popup.className = 'picks-popup';
-      popup.innerHTML = `<div class="picks-popup-title">Picks</div>` +
+      popup.innerHTML = `<div class="picks-popup-title">${flag ? flag + ' ' : ''}Picks</div>` +
         names.map(n => `<div class="picks-popup-name">${n}</div>`).join('');
 
       document.body.appendChild(popup);
@@ -849,13 +851,35 @@
     let _fixturesLoaded = false;
     let _fixturesKOLoaded = false;
 
-    function switchPageTab(name) {
+    function switchPageTab(name, sectionOverride) {
       document.getElementById('panel-bracket').classList.toggle('active', name === 'bracket');
       document.getElementById('panel-fixtures').classList.toggle('active', name === 'fixtures');
       document.getElementById('ptab-bracket').classList.toggle('active', name === 'bracket');
       document.getElementById('ptab-fixtures').classList.toggle('active', name === 'fixtures');
-      if (name === 'fixtures' && !_fixturesLoaded) loadFixtures();
+      if (name === 'fixtures') {
+        if (!_fixturesLoaded) {
+          // loadFixtures has its own auto-KO logic; apply sectionOverride after it resolves
+          loadFixtures().then(() => {
+            if (sectionOverride === 'knockout') switchFixturesSubtab('knockout');
+            else if (sectionOverride === 'group') switchFixturesSubtab('group');
+          });
+        } else if (sectionOverride) {
+          if (sectionOverride === 'knockout') switchFixturesSubtab('knockout');
+          else if (sectionOverride === 'group') switchFixturesSubtab('group');
+        }
+      }
     }
+
+    // ── URL param handling ─────────────────────────────────────
+    // Supports: /bracket?tab=fixtures&section=group|knockout
+    (function applyUrlParams() {
+      const params  = new URLSearchParams(location.search);
+      const tab     = params.get('tab');
+      const section = params.get('section');
+      if (tab === 'fixtures') {
+        switchPageTab('fixtures', section || null);
+      }
+    })();
 
     function switchFixturesSubtab(name) {
       document.getElementById('fixtures-group-wrap').style.display = name === 'group' ? '' : 'none';
@@ -916,7 +940,7 @@
           }
 
           const minKo = minKickoff ? minKickoff.get(m.round_id) : null;
-          const deadlinePassed = minKo ? (getEffectiveDate().getTime() > new Date(minKo).getTime() - 3600000) : false;
+          const deadlinePassed = m.status === 'complete' || (minKo ? (getEffectiveDate().getTime() > new Date(minKo).getTime() - 3600000) : false);
 
           const homePickNames = (picksByTeam && m.home_team)
             ? (picksByTeam.get(m.round_id + ':' + m.home_team.id) || []) : [];
@@ -936,10 +960,9 @@
 
           const homePickId = 'pick_' + m.round_id + '_' + (m.home_team ? m.home_team.id : 'h');
           const awayPickId = 'pick_' + m.round_id + '_' + (m.away_team ? m.away_team.id : 'a');
-          if (homePickNames.length) window._pickData = window._pickData || {};
-          if (homePickNames.length) window._pickData[homePickId] = homePickNames;
-          if (awayPickNames.length) window._pickData = window._pickData || {};
-          if (awayPickNames.length) window._pickData[awayPickId] = awayPickNames;
+          window._pickData = window._pickData || {};
+          if (homePickNames.length) window._pickData[homePickId] = { flag: m.home_team ? (m.home_team.flag_emoji || '') : '', names: homePickNames };
+          if (awayPickNames.length) window._pickData[awayPickId] = { flag: m.away_team ? (m.away_team.flag_emoji || '') : '', names: awayPickNames };
 
           const home = teamSpan(m.home_team, homeCol, homePickNames, homePickId);
           const away = teamSpan(m.away_team, awayCol, awayPickNames, awayPickId);

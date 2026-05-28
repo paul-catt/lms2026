@@ -1897,9 +1897,9 @@ Good luck! ⚽🏆`;
           if (isKnockout && isPens) {
             const won     = pick.team_id === pensWinnerId;
             result        = won ? 'win' : 'loss';
-            longshotBonus = 0;
+            longshotBonus = (won && team.is_longshot) ? 1 : 0;
             basePoints    = 1;
-            pointsEarned  = 1;
+            pointsEarned  = 1 + longshotBonus;
           } else {
             const homeResult = homeScore > awayScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
             const awayResult = awayScore > homeScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
@@ -2033,8 +2033,8 @@ Good luck! ⚽🏆`;
       const prog = KO_PROGRESSION[mn];
       if (prog) {
         const { data: nextMatch } = await db.from('matches')
-          .select('id').eq('match_number', prog.next).single();
-        if (nextMatch) {
+          .select('id, status').eq('match_number', prog.next).single();
+        if (nextMatch && nextMatch.status !== 'complete') {
           const update = prog.slot === 'home'
             ? { home_team_id: winnerId }
             : { away_team_id: winnerId };
@@ -2045,8 +2045,8 @@ Good luck! ⚽🏆`;
       const thirdSlot = THIRD_PLACE_LOSERS[mn];
       if (thirdSlot && loserId) {
         const { data: thirdMatch } = await db.from('matches')
-          .select('id').eq('match_number', 103).single();
-        if (thirdMatch) {
+          .select('id, status').eq('match_number', 103).single();
+        if (thirdMatch && thirdMatch.status !== 'complete') {
           const update = thirdSlot === 'home'
             ? { home_team_id: loserId }
             : { away_team_id: loserId };

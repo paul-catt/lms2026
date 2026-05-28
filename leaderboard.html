@@ -179,7 +179,7 @@
         <div class="lb-tab active" data-view="main" onclick="switchView('main')">📊 Table</div>
         <div class="lb-tab" data-view="picks" onclick="switchView('picks')">🏁 Picks</div>
         <div class="lb-tab" data-view="prizes" onclick="switchView('prizes')">💰 Prizes</div>
-        <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Long</div>
+        <div class="lb-tab" data-view="longshot" onclick="switchView('longshot')">⭐ Longshots</div>
         <div class="lb-tab knockout-only" id="tab-matrix" data-view="matrix" onclick="switchView('matrix')">🔢 Matrix</div>
         <div class="lb-tab knockout-only" id="tab-fallen" data-view="fallen" onclick="switchView('fallen')">💀 Fallen</div>
       </div>
@@ -510,7 +510,17 @@
         const flag   = p.teams ? p.teams.flag_emoji : '?';
         const key    = p.round_id + '|' + (p.multiplier || 'ko');
         // If two picks for same slot somehow, last wins — shouldn't happen
-        pickLookup[p.player_id][key] = { flag, result, teamName: p.teams ? p.teams.name + (p.teams.is_longshot ? ' ⭐' : '') : '' };
+        const pts = res ? (res.points_earned || 0) + (res.longshot_bonus || 0) : null;
+        const isLongshot = p.teams ? p.teams.is_longshot : false;
+        const baseName = p.teams ? p.teams.name : '';
+        let toastName;
+        if (res && res.match_result) {
+          const circle = res.match_result === 'win' ? '🟢' : res.match_result === 'draw' ? '🟡' : '🔴';
+          toastName = flag + ' ' + baseName + (isLongshot ? ' ⭐' : '') + ' ' + circle + ' ' + pts + (pts === 1 ? 'pt' : 'pts');
+        } else {
+          toastName = flag + ' ' + baseName + (isLongshot ? ' ⭐' : '');
+        }
+        pickLookup[p.player_id][key] = { flag, result, teamName: toastName };
       });
 
       // Short name helper: "First L"
@@ -587,7 +597,7 @@
             html += `<td class="${divCls}"><span class="pk-chip pend">?</span></td>`;
           } else {
             const cls = pick.result === 'win' ? 'win' : pick.result === 'draw' ? 'draw' : pick.result === 'loss' ? 'loss' : 'pend';
-            html += `<td class="${divCls}"><span class="pk-chip ${cls}" data-team="${pick.flag} ${pick.teamName || ''}">${pick.flag}</span></td>`;
+            html += `<td class="${divCls}"><span class="pk-chip ${cls}" data-team="${pick.teamName || ''}">${pick.flag}</span></td>`;
           }
           prevGp = s.gpLabel;
         });
@@ -623,9 +633,10 @@
       const now = getEffectiveDate();
 
       const completedKORounds = (rounds || []).filter(r => r.round_type === 'knockout' && r.is_complete);
-      if (completedKORounds.length === 0) {
+      const aliveTeamCount = (window._matrixAllTeams || []).filter(t => !t.is_eliminated).length;
+      if (completedKORounds.length === 0 && aliveTeamCount > 22) {
         wrap.innerHTML = `<div style="padding:16px 0">
-          <p style="color:var(--gold);font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px">🔢 Matrix unlocks at Round of 16</p>
+          <p style="color:var(--gold);font-family:'Rajdhani',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px">🔢 Matrix unlocks towards the end of the Round of 32</p>
           <p style="color:var(--text-muted);font-size:13px;line-height:1.5">See which teams you have left to pick, broken down by Favourite, Dark Horse, Long Shot and No Hoper — so you can plan your path to the final.</p>
         </div>`;
         return;
@@ -883,6 +894,16 @@
           if (m.away_team_id) pensWinnerByTeamRound[m.away_team_id + '|' + m.round_id] = m.pens_winner_id;
         });
 
+        // Build match lookup: team_id|round_id -> match (for pip tooltips)
+        const matchByTeamRound = {};
+        (completedMatches || []).forEach(m => {
+          if (m.home_team_id) matchByTeamRound[m.home_team_id + '|' + m.round_id] = m;
+          if (m.away_team_id) matchByTeamRound[m.away_team_id + '|' + m.round_id] = m;
+        });
+
+        const roundMap = {};
+        (rounds || []).forEach(r => { roundMap[r.id] = r; });
+
         const formMap = {};
         (allPicks || []).forEach(pick => {
           const res = pick.pick_results && pick.pick_results[0];
@@ -899,7 +920,26 @@
           if (pts === 0 || (pts === 1 && isKO && lostPens)) colour = 'L';
           else if (pts === 1 && !isKO) colour = 'D'; // group draw → amber
           else colour = 'W'; // green: pens win, FT win, any positive KO result
-          const pip = { pts, colour };
+          // Build tooltip text for pip click
+          let pipToast = pts + 'pts';
+          const m = matchByTeamRound[pick.team_id + '|' + pick.round_id];
+          if (m && pick.teams) {
+            const isHome = m.home_team_id === pick.team_id;
+            const pickedFlag = pick.teams.flag_emoji || '';
+            const pickedName = pick.teams.name || '';
+            const oppTeam = isHome ? m.away_team : m.home_team;
+            const oppFlag = oppTeam?.flag_emoji || '';
+            const oppName = oppTeam?.name || '';
+            const pickedScore = isHome ? m.home_score : m.away_score;
+            const oppScore    = isHome ? m.away_score : m.home_score;
+            const pensStr = isPensMatch ? (wonPens ? ' (pens W)' : ' (pens L)') : '';
+            const rndFull = roundMap[pick.round_id]?.name || '';
+            const rndShort = rndFull === 'Group Phase 1' ? 'GP1' : rndFull === 'Group Phase 2' ? 'GP2' : rndFull === 'Group Phase 3' ? 'GP3' : shortRoundName(rndFull);
+            const lsStr = pick.teams.is_longshot ? ' ⭐' : '';
+            const resultCircle = colour === 'W' ? '🟢' : colour === 'D' ? '🟡' : '🔴';
+            pipToast = pickedFlag + ' ' + pickedName + lsStr + ' ' + pickedScore + '–' + oppScore + ' ' + oppFlag + ' ' + oppName + pensStr + ' · ' + pts + 'pt' + (pts === 1 ? '' : 's') + ' ' + resultCircle + (rndShort ? ' · ' + rndShort : '');
+          }
+          const pip = { pts, colour, toast: pipToast };
           if (isKO) { formMap[pick.player_id].ko.push(pip); }
           else { formMap[pick.player_id].group.push(pip); }
         });
@@ -919,7 +959,10 @@
             const dedup = pick.teams.flag_emoji + '|' + pick.multiplier + '|' + pick.teams.is_longshot;
             if (!playerTodayMap[pick.player_id].keys.has(dedup)) {
               playerTodayMap[pick.player_id].keys.add(dedup);
-              playerTodayMap[pick.player_id].picks.push({ flag: pick.teams.flag_emoji, isLongshot: pick.teams.is_longshot, multiplier: pick.multiplier, teamName: pick.teams.name + (pick.teams.is_longshot ? ' ⭐' : '') || '' });
+              const _res = pick.pick_results && pick.pick_results[0];
+              const _pts = _res ? (_res.points_earned || 0) + (_res.longshot_bonus || 0) : null;
+              const _mr  = _res ? _res.match_result : null;
+              playerTodayMap[pick.player_id].picks.push({ flag: pick.teams.flag_emoji, isLongshot: pick.teams.is_longshot, multiplier: pick.multiplier, teamName: pick.teams.name, matchResult: _mr, pointsEarned: _pts });
             }
           }
         });
@@ -1027,7 +1070,7 @@
           if (isQFOrLater) {
             return remaining.map(t => {
               const b = BAND_COLOUR[t.band] || { css:'#94a3b8' };
-              return `<span style="font-size:14px;border-bottom:2px solid ${b.css};margin-right:3px">${t.flag_emoji}</span>`;
+              return `<span style="font-size:14px;border-bottom:2px solid ${b.css};margin-right:3px;cursor:pointer" data-team="${t.flag_emoji} ${t.name}">${t.flag_emoji}</span>`;
             }).join('');
           }
           const bandCounts = { favourite:0, dark_horse:0, long_shot:0, no_hoper:0 };
@@ -1319,7 +1362,7 @@
             else                            arrowHtml = '<span class="arrow-eq">—</span>';
           }
 
-          const makePips = arr => arr.map(f => '<span class="form-pip form-' + f.colour + '" title="' + f.pts + 'pts">' + f.pts + '</span>').join('');
+          const makePips = arr => arr.map(f => { const t = (f.toast || f.pts + 'pts').replace(/"/g, '&quot;'); return '<span class="form-pip form-' + f.colour + '" data-team="' + t + '" title="' + t + '">' + f.pts + '</span>'; }).join('');
           let formHtml = '<div style="white-space:nowrap;line-height:1.4">';
           if (form.group.length > 0) formHtml += '<div>' + makePips(form.group) + '</div>';
           if (form.ko.length > 0)    formHtml += '<div>' + makePips(form.ko) + '</div>';
@@ -1327,7 +1370,14 @@
           const gdHtml   = gd > 0 ? '<span class="gd-pos">+' + gd + '</span>' : gd < 0 ? '<span class="gd-neg">' + gd + '</span>' : '<span class="gd-zero">0</span>';
           const flagHtml = todayPicks_p.map(pick => {
             const cls = pick.multiplier === 3 ? (pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt') : (pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt');
-            return '<span class="flag-inline' + cls + '" data-team="' + pick.flag + ' ' + (pick.teamName || '') + '">' + pick.flag + '</span>';
+            let toastText;
+            if (pick.matchResult) {
+              const circle = pick.matchResult === 'win' ? '🟢' : pick.matchResult === 'draw' ? '🟡' : '🔴';
+              toastText = pick.flag + ' ' + pick.teamName + (pick.isLongshot ? ' ⭐' : '') + ' ' + circle + ' ' + pick.pointsEarned + (pick.pointsEarned === 1 ? 'pt' : 'pts');
+            } else {
+              toastText = pick.flag + ' ' + pick.teamName + (pick.isLongshot ? ' ⭐' : '');
+            }
+            return '<span class="flag-inline' + cls + '" data-team="' + toastText + '">' + pick.flag + '</span>';
           }).join('');
 
           // Trophy badge — shown if player won any Pick of the Round
@@ -1432,7 +1482,14 @@
         s.longshotPicks++;
         const res = pick.pick_results && pick.pick_results[0];
         const flag = pick.teams.flag_emoji || '⭐';
-        const teamLabel = (pick.teams.flag_emoji || '⭐') + ' ' + (pick.teams.name || '');
+        const teamLabel = (() => {
+          if (res && res.match_result) {
+            const circle = res.match_result === 'win' ? '🟢' : res.match_result === 'draw' ? '🟡' : '🔴';
+            const lsPts = (res.points_earned || 0) + (res.longshot_bonus || 0);
+            return flag + ' ' + (pick.teams.name || '') + ' ⭐ ' + circle + ' ' + lsPts + (lsPts === 1 ? 'pt' : 'pts');
+          }
+          return flag + ' ' + (pick.teams.name || '') + ' ⭐';
+        })();
         if (res && res.longshot_bonus > 0) { s.bonusPoints += res.longshot_bonus; s.longshotWins.push({ flag, teamLabel }); }
         else if (res && res.match_result === 'loss') { s.longshotLosses.push({ flag, teamLabel }); }
         else if (res && res.match_result === 'draw') { s.longshotLosses.push({ flag, teamLabel }); }
@@ -1440,6 +1497,7 @@
       });
       const lsSorted = Object.values(lsData).sort((a, b) => {
         if (b.bonusPoints !== a.bonusPoints) return b.bonusPoints - a.bonusPoints;
+        if (a.longshotLosses.length !== b.longshotLosses.length) return a.longshotLosses.length - b.longshotLosses.length;
         if (a.longshotPicks !== b.longshotPicks) return a.longshotPicks - b.longshotPicks;
         return a.name.localeCompare(b.name);
       });

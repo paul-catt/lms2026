@@ -187,6 +187,25 @@
 
     .upcoming-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 14px; margin-bottom:6px; opacity:0.72; }
 
+    /* ── Fixtures nudge ────────────────────────────────── */
+    .fixtures-nudge {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 8px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .fixtures-nudge a {
+      color: var(--gold);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .fixtures-nudge a:hover { text-decoration: underline; }
+
     @media (max-width: 600px) {
       .deadline-timer { font-size:26px; min-width:0; text-align:left; }
       .match-home, .match-away { font-size:17px; }
@@ -227,6 +246,7 @@
     <div class="card" id="upcoming-card" style="display:none">
       <div class="card-title">📅 Upcoming</div>
       <div id="upcoming-content"></div>
+      <div class="fixtures-nudge" id="fixtures-nudge"></div>
     </div>
 
     <div class="card">
@@ -279,6 +299,11 @@
       return Math.round((toWindowStartMs(kickoffIso) - toWindowStartMs(roundFirstKickoffIso)) / WINDOW_DURATION_MS) + 1;
     }
 
+    // Returns true if the pick window for a given day window end has passed
+    function isWindowClosed(windowEndMs) {
+      return getEffectiveDate().getTime() >= windowEndMs;
+    }
+
     function fmtTime(iso) { return new Date(iso).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }); }
     function fmtShortDate(iso) { return new Date(iso).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }); }
     function fmtLongDate(iso)  { return new Date(iso).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' }); }
@@ -304,6 +329,10 @@
       return 'gp1';
     }
 
+    function isGroupRoundName(name) {
+      return (name || '').toLowerCase().includes('group');
+    }
+
     function roundBannerClass(name)  { return 'round-banner-' + roundKey(name); }
     function dayHeaderClass(name)    { return 'day-header-'    + roundKey(name); }
 
@@ -325,23 +354,7 @@
     }
 
     // ── Pick layout engine ───────────────────────────────
-    //
-    // Three-column grid: LEFT | MIDDLE | RIGHT
-    // Home chips fill left-first, away chips fill right-first.
-    // Middle is contested: whoever needs more mid slots wins it.
-    // If tied on mid slots, total count breaks the tie.
-    // If total count also tied, nobody gets the middle.
-    //
-    // Single-side split rule (n chips, primary-heavy):
-    //   primary = ceil((n+1)/2)  [always strictly more than secondary]
-    //   secondary = floor((n-1)/2)
-    //   e.g. n=1 → 1/0, n=2 → 2/0, n=3 → 2/1, n=4 → 3/1, n=5 → 3/2
-    //
-    // When a side loses the middle it uses primary column only (all n chips there).
-
     function sideSplit(n) {
-      // Returns { primary, secondary } where primary > secondary always
-      // n=1 → {1,0}, n=2 → {2,0}, n=3 → {2,1}, n=4 → {3,1}, n=5 → {3,2}
       if (n <= 0) return { primary: 0, secondary: 0 };
       const secondary = Math.floor((n - 1) / 2);
       const primary   = n - secondary;
@@ -354,60 +367,47 @@
 
       if (H === 0 && A === 0) return '';
 
-      // Compute how many each side wants in the middle
       const hSplit = sideSplit(H);
       const aSplit = sideSplit(A);
       const hMidWant = hSplit.secondary;
       const aMidWant = aSplit.secondary;
 
-      // Decide who gets the middle
       let homeGetsMid = false, awayGetsMid = false;
       if (hMidWant > aMidWant) {
         homeGetsMid = true;
       } else if (aMidWant > hMidWant) {
         awayGetsMid = true;
       } else if (hMidWant === aMidWant && hMidWant > 0) {
-        // Tied on mid slots — break by total count
         if (H > A)      { homeGetsMid = true; }
         else if (A > H) { awayGetsMid = true; }
-        // else truly equal total → nobody gets middle
       }
 
-      // Assign chips to columns
       let leftChips = [], midChips = [], rightChips = [];
 
       if (H > 0 && A === 0) {
-        // Home only
         leftChips = homeChips.slice(0, hSplit.primary);
         midChips  = homeChips.slice(hSplit.primary);
       } else if (A > 0 && H === 0) {
-        // Away only — mirror: right gets primary, mid gets secondary
         rightChips = awayChips.slice(0, aSplit.primary);
         midChips   = awayChips.slice(aSplit.primary);
-        // mid chips display in middle column aligned right
       } else {
-        // Both sides
         if (homeGetsMid) {
           leftChips  = homeChips.slice(0, hSplit.primary);
-          midChips   = homeChips.slice(hSplit.primary);   // home mid chips
-          rightChips = awayChips;                          // away primary only
+          midChips   = homeChips.slice(hSplit.primary);
+          rightChips = awayChips;
         } else if (awayGetsMid) {
-          leftChips  = homeChips;                          // home primary only
+          leftChips  = homeChips;
           rightChips = awayChips.slice(0, aSplit.primary);
-          midChips   = awayChips.slice(aSplit.primary);   // away mid chips (right-aligned)
+          midChips   = awayChips.slice(aSplit.primary);
         } else {
-          // Nobody gets middle
           leftChips  = homeChips;
           rightChips = awayChips;
         }
       }
 
-      // Determine if we need 3 columns or 2
       const useThreeCols = midChips.length > 0;
-      // Who owns the mid column (affects alignment)
       const midIsAway = awayGetsMid || (A > 0 && H === 0 && midChips.length > 0);
 
-      // Build column HTML
       const nRows = Math.max(leftChips.length, midChips.length, rightChips.length);
       let rows = '';
 
@@ -424,7 +424,6 @@
             '<div style="display:flex;justify-content:flex-end">'    + r + '</div>' +
             '</div>';
         } else {
-          // 2-col: left and right only
           rows += '<div class="picks-row-2col">' +
             '<div style="display:flex;justify-content:flex-start">' + l + '</div>' +
             '<div style="display:flex;justify-content:flex-end">'   + r + '</div>' +
@@ -519,7 +518,8 @@
     }
 
     // ── Match card (today + results archive) ────────────
-    function matchCardHtml(match, picks, allPlayers, showVenue) {
+    // picksVisible: true = show picks, false = hide (window still open)
+    function matchCardHtml(match, picks, allPlayers, showVenue, picksVisible) {
       const isComplete = match.status === 'complete';
       const isLive     = match.status === 'live';
 
@@ -543,53 +543,54 @@
         aetHtml = '<div class="match-aet">AET · ' + w.flag_emoji + ' ' + w.name + ' win on penalties</div>';
       }
 
-      const matchPicks = (picks || []).filter(p =>
-        p.round_id === match.round_id &&
-        (p.team_id === match.home_team_id || p.team_id === match.away_team_id)
-      );
+      let picksHtml = '';
+      if (picksVisible) {
+        const matchPicks = (picks || []).filter(p =>
+          p.round_id === match.round_id &&
+          (p.team_id === match.home_team_id || p.team_id === match.away_team_id)
+        );
 
-      let picksHtml;
-      if (matchPicks.length === 0) {
-        picksHtml = '<div class="match-sub"><div class="picks-rows"><div class="picks-row-2col"><span class="no-picks">No picks</span></div></div></div>';
-      } else {
-        const sorted = sortPicksByName(matchPicks, allPlayers);
-        const isGroupRound = match.rounds && match.rounds.name && match.rounds.name.toLowerCase().includes('group');
-        const isKORound    = !isGroupRound;
-        const homeChips = [], awayChips = [];
-        sorted.forEach(p => {
-          const pl         = (allPlayers || []).find(pl => pl.id === p.player_id);
-          const result     = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
-          const chipClass  = result ? result.match_result : '';
-          const isHome     = p.team_id === match.home_team_id;
-          const flag       = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
+        if (matchPicks.length === 0) {
+          picksHtml = '<div class="match-sub"><div class="picks-rows"><div class="picks-row-2col"><span class="no-picks">No picks</span></div></div></div>';
+        } else {
+          const sorted = sortPicksByName(matchPicks, allPlayers);
+          const isGroup  = match.rounds && match.rounds.name && isGroupRoundName(match.rounds.name);
+          const isKO     = !isGroup;
+          const homeChips = [], awayChips = [];
+          sorted.forEach(p => {
+            const pl        = (allPlayers || []).find(pl => pl.id === p.player_id);
+            const result    = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
+            const chipClass = result ? result.match_result : '';
+            const isHome    = p.team_id === match.home_team_id;
+            const flag      = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
 
-          // Points: compensate for DB not including longshot bonus in points_earned
-          let ptsPip = '';
-          if (result) {
-            const totalPts = Math.min((result.points_earned || 0) + (result.longshot_bonus || 0), 4);
-            const mr = result.match_result;
-            let pipCls = 'pts-pip-W';
-            if (mr === 'loss') pipCls = 'pts-pip-L';
-            else if (mr === 'draw') pipCls = 'pts-pip-D';
-            ptsPip = '<span class="pts-pip ' + pipCls + '">' + totalPts + '</span>';
-          }
+            let ptsPip = '';
+            if (result) {
+              const totalPts = Math.min((result.points_earned || 0) + (result.longshot_bonus || 0), 4);
+              const mr = result.match_result;
+              let pipCls = 'pts-pip-W';
+              if (mr === 'loss') pipCls = 'pts-pip-L';
+              else if (mr === 'draw') pipCls = 'pts-pip-D';
+              ptsPip = '<span class="pts-pip ' + pipCls + '">' + totalPts + '</span>';
+            }
 
-          const outBadge = (result && result.match_result === 'loss' && isKORound)
-            ? ' <span class="out-badge">OUT</span>' : '';
-          const ptsBadge = (isGroupRound)
-            ? '<span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px;flex-shrink:0">' + p.multiplier + 'pt</span> ' : '';
+            const outBadge = (result && result.match_result === 'loss' && isKO)
+              ? ' <span class="out-badge">OUT</span>' : '';
+            const ptsBadge = isGroup
+              ? '<span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px;flex-shrink:0">' + p.multiplier + 'pt</span> ' : '';
 
-          const chip = '<div class="pick-chip ' + chipClass + '">' +
-            flag + ' ' +
-            '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700;">' +
-              (pl ? (pl.display_name || shortName(pl.name)) : '?') + '</a>' +
-            (ptsBadge ? ' ' + ptsBadge : '') +
-            (result ? ' ' + ptsPip : '') +
-            outBadge +
-            '</div>';
-          if (isHome) homeChips.push(chip); else awayChips.push(chip);
-        });
-        picksHtml = buildPicksHtml(homeChips, awayChips);
+            const chip = '<div class="pick-chip ' + chipClass + '">' +
+              flag + ' ' +
+              '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700;">' +
+                (pl ? (pl.display_name || shortName(pl.name)) : '?') + '</a>' +
+              (ptsBadge ? ' ' + ptsBadge : '') +
+              (result ? ' ' + ptsPip : '') +
+              outBadge +
+              '</div>';
+            if (isHome) homeChips.push(chip); else awayChips.push(chip);
+          });
+          picksHtml = buildPicksHtml(homeChips, awayChips);
+        }
       }
 
       return '<div class="match-card ' + match.status + '" id="match-' + match.id + '">' +
@@ -610,34 +611,37 @@
     }
 
     // ── Upcoming card ────────────────────────────────────
-    function upcomingCardHtml(match, picks, allPlayers) {
+    // picksVisible: only show picks if window is closed
+    function upcomingCardHtml(match, picks, allPlayers, picksVisible) {
       if (!match.home_team || !match.away_team) return '';
 
-      const matchPicks = (picks || []).filter(p =>
-        p.round_id === match.round_id &&
-        (p.team_id === match.home_team_id || p.team_id === match.away_team_id)
-      );
-
       let picksHtml = '';
-      if (matchPicks.length > 0) {
-        const sorted = sortPicksByName(matchPicks, allPlayers);
-        const isGroupRound = match.rounds && match.rounds.name && match.rounds.name.toLowerCase().includes('group');
-        const homeChips = [], awayChips = [];
-        sorted.forEach(p => {
-          const pl         = (allPlayers || []).find(pl => pl.id === p.player_id);
-          const isHome     = p.team_id === match.home_team_id;
-          const flag       = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
-          const ptsBadge   = isGroupRound
-            ? '<span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px;flex-shrink:0">' + p.multiplier + 'pt</span>' : '';
-          const chip = '<div class="pick-chip">' +
-            flag + ' ' +
-            '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700;">' +
-              (pl ? (pl.display_name || shortName(pl.name)) : '?') + '</a>' +
-            (ptsBadge ? ' ' + ptsBadge : '') +
-            '</div>';
-          if (isHome) homeChips.push(chip); else awayChips.push(chip);
-        });
-        picksHtml = buildPicksHtml(homeChips, awayChips);
+      if (picksVisible) {
+        const matchPicks = (picks || []).filter(p =>
+          p.round_id === match.round_id &&
+          (p.team_id === match.home_team_id || p.team_id === match.away_team_id)
+        );
+
+        if (matchPicks.length > 0) {
+          const sorted = sortPicksByName(matchPicks, allPlayers);
+          const isGroup = match.rounds && match.rounds.name && isGroupRoundName(match.rounds.name);
+          const homeChips = [], awayChips = [];
+          sorted.forEach(p => {
+            const pl       = (allPlayers || []).find(pl => pl.id === p.player_id);
+            const isHome   = p.team_id === match.home_team_id;
+            const flag     = isHome ? match.home_team.flag_emoji : match.away_team.flag_emoji;
+            const ptsBadge = isGroup
+              ? '<span class="badge badge-' + (p.multiplier === 3 ? 'gold' : 'blue') + '" style="padding:1px 5px;font-size:10px;flex-shrink:0">' + p.multiplier + 'pt</span>' : '';
+            const chip = '<div class="pick-chip">' +
+              flag + ' ' +
+              '<a href="/' + (pl ? pl.slug : '#') + '" style="color:inherit;text-decoration:none;font-weight:700;">' +
+                (pl ? (pl.display_name || shortName(pl.name)) : '?') + '</a>' +
+              (ptsBadge ? ' ' + ptsBadge : '') +
+              '</div>';
+            if (isHome) homeChips.push(chip); else awayChips.push(chip);
+          });
+          picksHtml = buildPicksHtml(homeChips, awayChips);
+        }
       }
 
       return '<div class="upcoming-card">' +
@@ -706,6 +710,9 @@
         document.getElementById('today-loading').style.display = 'none';
         const todayContent = document.getElementById('today-content');
 
+        // Today's picks are visible only once today's window is closed
+        const todayPicksVisible = isWindowClosed(windowEnd.getTime());
+
         if (!todayMatches || todayMatches.length === 0) {
           todayContent.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:24px">No matches today.</p>';
         } else {
@@ -713,7 +720,7 @@
           const roundFirst = await getRoundFirstKickoff(todayMatches[0].round_id);
           const dayNum     = roundFirst ? getDayNumber(windowStart.toISOString(), roundFirst) : 1;
           todayContent.innerHTML = dayHeaderHtml(rName, dayNum, windowStart.getTime(), true) +
-            todayMatches.map(m => matchCardHtml(m, picks, players, true)).join('');
+            todayMatches.map(m => matchCardHtml(m, picks, players, true, todayPicksVisible)).join('');
         }
 
         // ── UPCOMING ───────────────────────────────────────
@@ -728,8 +735,15 @@
 
         const upcomingCardEl  = document.getElementById('upcoming-card');
         const upcomingContent = document.getElementById('upcoming-content');
+        const nudgeEl         = document.getElementById('fixtures-nudge');
 
         if (upcomingMatches && upcomingMatches.length > 0) {
+          // Determine fixtures link target based on first upcoming match's round type
+          const firstRoundName = upcomingMatches[0].rounds ? upcomingMatches[0].rounds.name : '';
+          const isGroupRound   = isGroupRoundName(firstRoundName);
+          const fixturesSection = isGroupRound ? 'group' : 'knockout';
+          const fixturesUrl    = '/bracket?tab=fixtures&section=' + fixturesSection;
+
           const buckets = {};
           upcomingMatches.forEach(m => {
             const key = toWindowStartMs(m.kickoff);
@@ -745,10 +759,13 @@
           Object.values(buckets).sort((a,b) => a.wsMs - b.wsMs).forEach(b => {
             const rid    = b.matches[0].round_id;
             const dayNum = roundFirstCache[rid] ? getDayNumber(new Date(b.wsMs).toISOString(), roundFirstCache[rid]) : 1;
+            // Picks visible for this bucket only if its window is already closed
+            const bucketPicksVisible = isWindowClosed(b.wsMs + WINDOW_DURATION_MS);
             html += dayHeaderHtml(b.roundName, dayNum, b.wsMs);
-            html += b.matches.map(m => upcomingCardHtml(m, picks, players)).join('');
+            html += b.matches.map(m => upcomingCardHtml(m, picks, players, bucketPicksVisible)).join('');
           });
           upcomingContent.innerHTML = html;
+          nudgeEl.innerHTML = 'Full fixtures in the <a href="' + fixturesUrl + '">Draw tab →</a>';
           upcomingCardEl.style.display = 'block';
         } else {
           upcomingCardEl.style.display = 'none';
@@ -789,6 +806,7 @@
           if (!roundFirstMap[round_id]) roundFirstMap[round_id] = await getRoundFirstKickoff(round_id);
         }
 
+        // Results archive: picks always visible (window closed by definition)
         resultsContent.innerHTML = sortedRounds.map(([roundName, { round_id, matches }]) => {
           const dayBuckets = {};
           matches.forEach(m => {
@@ -805,7 +823,7 @@
             dayBucketsSorted.map(b => {
               const dayNum = roundFirst ? getDayNumber(new Date(b.wsMs).toISOString(), roundFirst) : 1;
               return dayHeaderHtml(roundName, dayNum, b.wsMs) +
-                b.matches.map(m => matchCardHtml(m, picks, players, false)).join('');
+                b.matches.map(m => matchCardHtml(m, picks, players, false, true)).join('');
             }).join('');
         }).join('');
 
