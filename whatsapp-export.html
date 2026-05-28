@@ -131,6 +131,30 @@
       <div class="status-msg" id="load-status"></div>
     </div>
 
+    <!-- WA Image Top Padding Controls -->
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-title" style="margin-bottom:12px">📐 WhatsApp Image Top Padding</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Adds blank space above each image so the header lands in WhatsApp's inline preview crop. Tune by eye — adjust, download, check on your phone.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 24px">
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Picks by Name <span id="pad-pn-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-pn" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Teams Picked <span id="pad-tp-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-tp" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Combinations <span id="pad-cb-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-cb" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Leaderboard <span id="pad-lb-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-lb" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+      </div>
+    </div>
+
     <!-- VERIFY: Leaderboard cross-check -->
     <div class="card section-block" id="verify-card" style="display:none">
       <div class="section-header">
@@ -266,6 +290,23 @@
         const btn = document.getElementById('btn-copy-summary');
         btn.textContent = '✅ Copied!';
         setTimeout(() => { btn.textContent = '📋 Copy'; }, 2000);
+      });
+    });
+
+    // ── WA Top Padding sliders ─────────────────────────────────
+    const PAD_KEYS = { pn: 'lms2026_wa_pad_pn', tp: 'lms2026_wa_pad_tp', cb: 'lms2026_wa_pad_cb', lb: 'lms2026_wa_pad_lb' };
+    function getPad(key) { return parseInt(localStorage.getItem(PAD_KEYS[key]) || '0', 10); }
+    function setPad(key, v) { localStorage.setItem(PAD_KEYS[key], v); }
+
+    ['pn','tp','cb','lb'].forEach(key => {
+      const slider = document.getElementById('pad-' + key);
+      const label  = document.getElementById('pad-' + key + '-val');
+      const saved  = getPad(key);
+      slider.value = saved;
+      label.textContent = saved + 'px';
+      slider.addEventListener('input', () => {
+        label.textContent = slider.value + 'px';
+        setPad(key, slider.value);
       });
     });
 
@@ -1081,6 +1122,7 @@
             <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
             <td>${count2 ? `<span class="r-split-2">${count2}</span>` : '<span style="color:#cbd5e0">—</span>'}</td>
             <td>${count3 ? `<span class="r-split-3">${count3}</span>` : '<span style="color:#cbd5e0">—</span>'}</td>
+            <td><span class="r-badge ${badgeCls}">${count}</span></td>
           </tr>`;
         });
       } else {
@@ -1389,6 +1431,18 @@
       try {
         const el = document.getElementById(elId);
 
+        // Resolve padding key from element ID (pn-render → pn, lb-render → lb etc.)
+        const padKey = elId.replace('-render', '');
+        const padPx = getPad(padKey);
+
+        // Inject top padding spacer into the render element itself (before first child)
+        let spacer = null;
+        if (padPx > 0) {
+          spacer = document.createElement('div');
+          spacer.style.cssText = `height:${padPx}px;background:#ffffff;width:100%`;
+          el.insertBefore(spacer, el.firstChild);
+        }
+
         // Wrap in padded container for capture only — keeps on-screen preview unchanged
         const wrapper = document.createElement('div');
         wrapper.style.cssText = 'display:inline-block;padding:12px;background:#ffffff';
@@ -1401,6 +1455,7 @@
         // Restore DOM
         parent.insertBefore(el, wrapper);
         parent.removeChild(wrapper);
+        if (spacer && spacer.parentNode === el) el.removeChild(spacer);
 
         const link = document.createElement('a');
         const rnd  = (roundData?.fullRoundLabel || 'Round').replace(/[\s·]+/g,'_');

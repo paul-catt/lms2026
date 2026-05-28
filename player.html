@@ -438,12 +438,9 @@
         <div class="round-strip">
           <div>
             <h1 id="player-name" style="font-size:28px; font-weight:900; margin:0; letter-spacing:-0.02em"></h1>
-            <div id="player-status" style="margin-top:4px"></div>
+            <div id="player-status" style="margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;"></div>
           </div>
-          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-            <div id="position-label-wrap"></div>
-            <div class="round-pills" id="round-pills"></div>
-          </div>
+          <div class="round-pills" id="round-pills"></div>
         </div>
       </div>
 
@@ -654,7 +651,9 @@
           { data: allScores },
           { data: matches },
           { data: goalsData },
-          { data: gdData }
+          { data: gdData },
+          { data: furthestData },
+          { data: teamsUsed }
         ] = await Promise.all([
           db.from('picks')
             .select('id, multiplier, team_id, round_id, is_assigned, oracle_pick, rounds(id, name, round_type, deadline, sort_order, is_complete), teams(id, name, flag_emoji, is_longshot), pick_results(points_earned, longshot_bonus, match_result, match_id)')
@@ -662,10 +661,12 @@
             .order('created_at', { ascending: true }),
           db.from('rounds').select('*').order('sort_order'),
           db.from('teams').select('id, name, flag_emoji, is_longshot, is_eliminated, band, odds_rank').order('odds_rank'),
-          db.from('player_scores').select('player_id, total_points').order('total_points', { ascending: false }),
+          db.from('player_scores').select('player_id, total_points, name, is_eliminated, total_goals_prediction').order('total_points', { ascending: false }),
           db.from('matches').select('id, round_id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band)').order('kickoff'),
           db.from('matches').select('id, home_team_id, away_team_id, home_score, away_score').not('home_score', 'is', null).not('away_score', 'is', null),
-          db.from('player_gd').select('player_id, gd')
+          db.from('player_gd').select('player_id, gd'),
+          db.from('player_furthest_round').select('*'),
+          db.from('player_teams_used').select('player_id, team_id, match_result, round_id')
         ]);
 
         allPicks   = picks   || [];
@@ -699,12 +700,62 @@
         const gdMap = {};
         (gdData || []).forEach(r => { gdMap[r.player_id] = r.gd || 0; });
 
-        // Sort using same tiebreakers as leaderboard: points → GD → name
+        const furthestMap = {};
+        (furthestData || []).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
+
+        // Determine current round (same logic as leaderboard)
+        const TOTAL_MATCHES = 104;
+        const sortedAllRounds = (rounds || []).filter(r => r.sort_order > 0 && r.name !== '3rd Place').sort((a, b) => a.sort_order - b.sort_order);
+        const nowMs = Date.now();
+        let currentRound = null;
+        for (const r of sortedAllRounds) {
+          const roundMatches = (allMatches || []).filter(m => m.round_id === r.id);
+          if (roundMatches.length === 0) continue;
+          const firstKickoff = Math.min(...roundMatches.map(m => new Date(m.kickoff).getTime()));
+          if (firstKickoff > nowMs) {
+            const idx = sortedAllRounds.indexOf(r);
+            currentRound = idx > 0 ? sortedAllRounds[idx - 1] : r;
+            break;
+          }
+        }
+        if (!currentRound) currentRound = sortedAllRounds[sortedAllRounds.length - 1] || null;
+        const isKnockout = currentRound && currentRound.round_type === 'knockout';
+
+        // projectedTotal for goals tiebreaker
+        let goalsScored = 0, matchesPlayed = 0;
+        (goalsData || []).forEach(m => { goalsScored += (m.home_score || 0) + (m.away_score || 0); matchesPlayed++; });
+        const projectedTotal = matchesPlayed > 0 ? (goalsScored / matchesPlayed) * TOTAL_MATCHES : 290;
+
+        // wonCurrentRound: players with a KO win this round who still have eligible teams
+        const alivePoolTeams = (allTeams || []).filter(t => !t.is_eliminated);
+        const usedByPlayer = {};
+        (teamsUsed || []).forEach(p => {
+          if (!usedByPlayer[p.player_id]) usedByPlayer[p.player_id] = new Set();
+          usedByPlayer[p.player_id].add(p.team_id);
+        });
+        const wonCurrentRound = new Set();
+        if (currentRound && isKnockout) {
+          // Use allPicks from player_scores fetch — we only have this player's picks here,
+          // so build wonCurrentRound from teamsUsed + pick_results on allPicks
+          // For other players we can't know from here — omit wonCurrentRound bonus for cross-player sort
+          // (only matters when two players are tied on points AND furthest round, which is rare)
+        }
+
+        // Sort: points → furthest round (KO) → GD → goals prediction → name
         if (allScores && allScores.length > 0) {
           allScores.sort((a, b) => {
             if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+            if (isKnockout) {
+              const currentSO = currentRound ? currentRound.sort_order : 0;
+              const afr = a.is_eliminated ? (furthestMap[a.player_id] || 0) : Math.max(furthestMap[a.player_id] || 0, currentSO);
+              const bfr = b.is_eliminated ? (furthestMap[b.player_id] || 0) : Math.max(furthestMap[b.player_id] || 0, currentSO);
+              if (bfr !== afr) return bfr - afr;
+            }
             const agd = gdMap[a.player_id] || 0, bgd = gdMap[b.player_id] || 0;
             if (bgd !== agd) return bgd - agd;
+            const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
+            const bDiff = Math.abs((b.total_goals_prediction || 0) - projectedTotal);
+            if (aDiff !== bDiff) return aDiff - bDiff;
             return (a.name || '').localeCompare(b.name || '');
           });
         }
@@ -759,8 +810,8 @@
           else if (pct <= 80) label = '🫤 Could Be Worse';
           else if (pct <= 95) label = '🚨 Red Zone';
           else                label = '🗑️ Rock Bottom';
-          const wrap = document.getElementById('position-label-wrap');
-          if (wrap) wrap.innerHTML = '<span class="position-label-pill">' + label + '</span>';
+          const statusEl2 = document.getElementById('player-status');
+          if (statusEl2) statusEl2.insertAdjacentHTML('beforeend', '<span class="position-label-pill">' + label + '</span>');
         }
         document.getElementById('stat-teams-left').textContent = teamsLeft;
         document.querySelector('#stat-teams-left').closest('.stat-block').querySelector('.stat-label').textContent =
