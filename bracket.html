@@ -890,7 +890,7 @@
     }
 
     // ── Shared fixture table renderer ─────────────────────────
-    function renderFixtureRounds(rounds, matches, wrapEl, pickedTeamIds, picksByTeam, minKickoff) {
+    function renderFixtureRounds(rounds, matches, wrapEl, pickedTeamIds, picksByTeam, deadlineMap) {
       function windowKey(isoStr) {
         const d = new Date(isoStr), h = d.getUTCHours();
         const base = h < 11
@@ -939,8 +939,10 @@
             scoreHtml = `<span style="font-weight:700;color:var(--green)">${m.home_score}–${m.away_score}${pens}</span>`;
           }
 
-          const minKo = minKickoff ? minKickoff.get(m.round_id) : null;
-          const deadlinePassed = m.status === 'complete' || (minKo ? (getEffectiveDate().getTime() > new Date(minKo).getTime() - 3600000) : false);
+          const roundDeadline = deadlineMap ? deadlineMap.get(m.round_id) : null;
+          const deadlinePassed = m.status === 'complete' || (roundDeadline ? getEffectiveDate() >= roundDeadline : false);
+
+
 
           const homePickNames = (picksByTeam && m.home_team)
             ? (picksByTeam.get(m.round_id + ':' + m.home_team.id) || []) : [];
@@ -985,16 +987,16 @@
       _fixturesLoaded = true;
       const wrap = document.getElementById('fixtures-group-wrap');
 
-      // Default to knockout sub-tab if any KO match has a result
-      const { data: koCheck } = await db.from('matches')
-        .select('id, rounds!inner(round_type)')
-        .eq('rounds.round_type', 'knockout')
-        .not('home_score', 'is', null)
+      // Default to knockout sub-tab if R32 round exists with a deadline set
+      const { data: r32Check } = await db.from('rounds')
+        .select('id')
+        .eq('name', 'Round of 32')
+        .not('deadline', 'is', null)
         .limit(1);
-      if (koCheck && koCheck.length > 0) switchFixturesSubtab('knockout');
+      if (r32Check && r32Check.length > 0) switchFixturesSubtab('knockout');
 
       const { data: rounds, error: rErr } = await db.from('rounds')
-        .select('id, name, sort_order')
+        .select('id, name, sort_order, deadline')
         .eq('round_type', 'group')
         .order('sort_order');
 
@@ -1018,13 +1020,16 @@
         const pname = p.players ? (p.players.display_name || shortName(p.players.name)) : '?';
         picksByTeam.get(key).push(pname);
       });
-      // Min kickoff per round for deadline calc
-      const minKickoff = new Map();
-      matches.forEach(m => {
-        const cur = minKickoff.get(m.round_id);
-        if (!cur || m.kickoff < cur) minKickoff.set(m.round_id, m.kickoff);
-      });
-      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIds, picksByTeam, minKickoff);
+      const deadlineMap = new Map();
+      rounds.forEach(r => { if (r.deadline) deadlineMap.set(r.id, new Date(r.deadline)); });
+      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIds, picksByTeam, deadlineMap);
+
+
+
+
+
+
+
       wrap.innerHTML = html || '<p style="color:var(--text-muted)">No group fixtures found.</p>';
     }
 
@@ -1033,7 +1038,7 @@
       const wrap = document.getElementById('fixtures-ko-wrap');
 
       const { data: rounds, error: rErr } = await db.from('rounds')
-        .select('id, name, sort_order')
+        .select('id, name, sort_order, deadline')
         .eq('round_type', 'knockout')
         .not('name', 'eq', '3rd Place')
         .order('sort_order');
@@ -1064,12 +1069,15 @@
         const pname = p.players ? (p.players.display_name || shortName(p.players.name)) : '?';
         picksByTeamKO.get(key).push(pname);
       });
-      const minKickoffKO = new Map();
-      matches.forEach(m => {
-        const cur = minKickoffKO.get(m.round_id);
-        if (!cur || m.kickoff < cur) minKickoffKO.set(m.round_id, m.kickoff);
-      });
-      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIdsKO, picksByTeamKO, minKickoffKO);
+      const deadlineMapKO = new Map();
+      rounds.forEach(r => { if (r.deadline) deadlineMapKO.set(r.id, new Date(r.deadline)); });
+      const html = renderFixtureRounds(rounds, matches, wrap, pickedTeamIdsKO, picksByTeamKO, deadlineMapKO);
+
+
+
+
+
+
       wrap.innerHTML = html || '<p style="color:var(--text-muted)">No knockout fixtures found.</p>';
     }
 

@@ -2906,7 +2906,10 @@ Good luck! ⚽🏆`;
           if (dbMatch && homeOutcome && awayOutcome) {
             const { error } = await db.from('matches').update({ odds_home: homeOutcome.price, odds_away: awayOutcome.price, odds_draw: drawOutcome ? drawOutcome.price : null }).eq('id', dbMatch.id);
             if (!error) matchedCount++;
-          } else unmatchedCount++;
+          } else {
+            unmatchedCount++;
+            console.warn('[Match Odds] Unmatched:', apiMatch.home_team, 'v', apiMatch.away_team, '| kickoff:', apiMatch.commence_time, '| dbMatch:', dbMatch ? 'found' : 'not found', '| homeOutcome:', homeOutcome ? 'found' : 'not found', '| awayOutcome:', awayOutcome ? 'found' : 'not found');
+          }
         }
         remainingEl.textContent = quotaInfo;
         msg.style.color = 'var(--green)';
@@ -2969,7 +2972,7 @@ Good luck! ⚽🏆`;
       wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
       const { data: rounds } = await db.from('rounds').select('id, name, sort_order, round_type').order('sort_order');
       const { data: matches } = await db.from('matches')
-        .select('id, kickoff, round_id, status, home_score, away_score, odds_home, odds_away, odds_draw, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji)')
+        .select('id, kickoff, round_id, status, home_score, away_score, odds_home, odds_away, odds_draw, home_team:teams!matches_home_team_id_fkey(name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(name, flag_emoji, is_longshot)')
         .not('home_team_id', 'is', null)
         .not('away_team_id', 'is', null)
         .neq('is_third_place', true)
@@ -2985,9 +2988,10 @@ Good luck! ⚽🏆`;
         const g = gcd(num, den);
         return (num/g) + '/' + (den/g);
       }
-      function oddsCell(dec) {
+      function oddsCell(dec, isWinner) {
         if (!dec) return '<span style="color:var(--border)">—</span>';
-        return `<strong>${dec.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${frac(dec)}</span>`;
+        const valStyle = isWinner ? ' style="color:var(--green)"' : '';
+        return `<strong${valStyle}>${dec.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${frac(dec)}</span>`;
       }
       let html = '';
       for (const r of sortedRounds) {
@@ -3006,15 +3010,20 @@ Good luck! ⚽🏆`;
           const ko = new Date(m.kickoff).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'});
           const t  = new Date(m.kickoff).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
           const isDone = m.status === 'complete';
+          const homeWon = isDone && m.home_score > m.away_score;
+          const awayWon = isDone && m.away_score > m.home_score;
+          const isDraw  = isDone && m.home_score === m.away_score;
           const score = isDone ? `<span style="color:var(--green);font-weight:700">${m.home_score}–${m.away_score}</span>` : '<span style="color:var(--text-muted)">—</span>';
+          const homeLs = m.home_team.is_longshot ? ' ⭐' : '';
+          const awayLs = m.away_team.is_longshot ? ' ⭐' : '';
           html += `<tr style="border-bottom:1px solid var(--border);${isDone?'opacity:0.55':''}">
             <td style="padding:7px 6px">
-              <div style="font-weight:600">${m.home_team.flag_emoji} ${m.home_team.name} v ${m.away_team.flag_emoji} ${m.away_team.name}</div>
+              <div style="font-weight:600">${m.home_team.flag_emoji} ${m.home_team.name}${homeLs} v ${m.away_team.flag_emoji} ${m.away_team.name}${awayLs}</div>
               <div style="font-size:11px;color:var(--text-muted)">${ko} · ${t}</div>
             </td>
-            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_home)}</td>
-            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_draw)}</td>
-            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_away)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_home, homeWon)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_draw, isDraw)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_away, awayWon)}</td>
             <td style="text-align:center;padding:7px 6px">${score}</td>
           </tr>`;
         }

@@ -1125,8 +1125,8 @@
         const p3 = roundPicks.find(p => p.multiplier === 3);
         const p2 = roundPicks.find(p => p.multiplier === 2);
         html += '<div class="pick-summary">';
-        if (p3) html += '<div class="pick-slot filled-3"><div class="pick-slot-label label-3">3-Pointer' + (p3.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (p3.teams ? p3.teams.flag_emoji + ' ' + p3.teams.name : '—') + '</div>' + (p3.teams && p3.teams.is_longshot ? '<div class="longshot-tag"><a href="/leaderboard#longshots" style="color:var(--gold);text-decoration:none">⭐ Longshot bonus eligible</a></div>' : '') + '</div>';
-        if (p2) html += '<div class="pick-slot filled-2"><div class="pick-slot-label label-2">2-Pointer' + (p2.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (p2.teams ? p2.teams.flag_emoji + ' ' + p2.teams.name : '—') + '</div>' + (p2.teams && p2.teams.is_longshot ? '<div class="longshot-tag"><a href="/leaderboard#longshots" style="color:var(--gold);text-decoration:none">⭐ Longshot bonus eligible</a></div>' : '') + '</div>';
+        if (p3) html += '<div class="pick-slot filled-3"><div class="pick-slot-label label-3">3-Pointer' + (p3.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (p3.teams ? p3.teams.flag_emoji + ' ' + p3.teams.name : '—') + '</div>' + (p3.is_assigned ? '<div style="margin-top:4px"><span class="badge badge-grey" style="font-size:10px">auto</span></div>' : '') + (p3.teams && p3.teams.is_longshot ? '<div class="longshot-tag"><a href="/leaderboard#longshots" style="color:var(--gold);text-decoration:none">⭐ Longshot bonus eligible</a></div>' : '') + '</div>';
+        if (p2) html += '<div class="pick-slot filled-2"><div class="pick-slot-label label-2">2-Pointer' + (p2.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (p2.teams ? p2.teams.flag_emoji + ' ' + p2.teams.name : '—') + '</div>' + (p2.is_assigned ? '<div style="margin-top:4px"><span class="badge badge-grey" style="font-size:10px">auto</span></div>' : '') + (p2.teams && p2.teams.is_longshot ? '<div class="longshot-tag"><a href="/leaderboard#longshots" style="color:var(--gold);text-decoration:none">⭐ Longshot bonus eligible</a></div>' : '') + '</div>';
         html += '</div>';
       } else {
         const single = roundPicks[0];
@@ -1692,7 +1692,7 @@
         } else {
           return '<tr style="opacity:0.7">' +
             '<td class="history-round">' + shortRoundName(r.name) + (extraTdAttr ? ' <span style="color:var(--accent);font-size:10px">(upcoming)</span>' : '') + '</td>' +
-            '<td style="white-space:nowrap">' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + '</td>' +
+            '<td style="white-space:nowrap">' + (p.teams ? p.teams.flag_emoji + ' ' + p.teams.name : '—') + (p.teams && p.teams.is_longshot ? ' ⭐' : '') + autoBadge + '</td>' +
             '<td><span class="badge badge-' + (p.multiplier===3?'gold':'blue') + '">' + p.multiplier + 'pt</span></td>' +
             '<td style="text-align:center"><span class="badge badge-grey" style="font-size:10px">P</span></td>' +
             '<td style="color:var(--text-muted);text-align:center">—</td>' +

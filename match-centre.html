@@ -698,7 +698,7 @@
           db.from('picks').select('player_id, team_id, multiplier, round_id, pick_results(points_earned, longshot_bonus, match_result)')
         ]);
 
-        const matchSel = 'id, kickoff, status, elapsed_minutes, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, round_id, pens_winner_id, venue, rounds(id, name, sort_order), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)';
+        const matchSel = 'id, kickoff, status, elapsed_minutes, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, round_id, pens_winner_id, venue, rounds(id, name, sort_order, deadline), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)';
 
         // ── TODAY ──────────────────────────────────────────
         const { data: todayMatches } = await db.from('matches').select(matchSel)
@@ -710,8 +710,9 @@
         document.getElementById('today-loading').style.display = 'none';
         const todayContent = document.getElementById('today-content');
 
-        // Today's picks are visible only once today's window is closed
-        const todayPicksVisible = isWindowClosed(windowEnd.getTime());
+        // Today's picks are visible once the round deadline has passed
+        const todayRoundDeadline = todayMatches && todayMatches[0]?.rounds?.deadline ? new Date(todayMatches[0].rounds.deadline) : null;
+        const todayPicksVisible = todayRoundDeadline ? getEffectiveDate() >= todayRoundDeadline : isWindowClosed(windowEnd.getTime());
 
         if (!todayMatches || todayMatches.length === 0) {
           todayContent.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:24px">No matches today.</p>';
@@ -759,8 +760,11 @@
           Object.values(buckets).sort((a,b) => a.wsMs - b.wsMs).forEach(b => {
             const rid    = b.matches[0].round_id;
             const dayNum = roundFirstCache[rid] ? getDayNumber(new Date(b.wsMs).toISOString(), roundFirstCache[rid]) : 1;
-            // Picks visible for this bucket only if its window is already closed
-            const bucketPicksVisible = isWindowClosed(b.wsMs + WINDOW_DURATION_MS);
+            // Picks visible once the round deadline has passed
+            const bucketDeadline = b.matches[0]?.rounds?.deadline ? new Date(b.matches[0].rounds.deadline) : null;
+            const bucketPicksVisible = bucketDeadline ? getEffectiveDate() >= bucketDeadline : isWindowClosed(b.wsMs + WINDOW_DURATION_MS);
+
+
             html += dayHeaderHtml(b.roundName, dayNum, b.wsMs);
             html += b.matches.map(m => upcomingCardHtml(m, picks, players, bucketPicksVisible)).join('');
           });
