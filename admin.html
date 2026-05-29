@@ -1005,16 +1005,17 @@
     }
 
     function sendWelcomeWA(name, url) {
-      const msg = `Hi ${name}! 👋 Welcome to LMS 2026 — World Cup Last Man Standing!
+      const firstName = name.split(' ')[0];
+      const msg = `Hi ${firstName}! LMS 2026 is go. ⚽
 
-Here's your personal link — bookmark it, it's the only way in:
+Mexico kick off the World Cup against South Africa at 8pm on Thursday 11 June — and you need to be ready.
+
+Your dashboard:
 ${url}
 
-A few things to do before the first deadline (Thursday 11 June at 8pm BST):
-• Enter your total goals prediction for the tournament
-• Check out the rules: https://lms2026.netlify.app/rules
+Bookmark it — it's the only way in. Log in and enter your goals prediction before 7pm Thursday.
 
-Good luck! ⚽🏆`;
+"Sixty years of hurt... never stopped us dreaming." ⚽`;
       const encoded = encodeURIComponent(msg);
       window.open('https://wa.me/?text=' + encoded, '_blank');
     }
