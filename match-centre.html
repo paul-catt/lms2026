@@ -725,7 +725,7 @@
         }
 
         // ── UPCOMING ───────────────────────────────────────
-        const upcoming2End = new Date(windowEnd.getTime() + 2 * WINDOW_DURATION_MS);
+        const upcoming2End = new Date(windowEnd.getTime() + 5 * WINDOW_DURATION_MS);
         const { data: upcomingMatches } = await db.from('matches').select(matchSel)
           .gte('kickoff', windowEnd.toISOString())
           .lt('kickoff',  upcoming2End.toISOString())
@@ -757,7 +757,7 @@
             if (!roundFirstCache[rid]) roundFirstCache[rid] = await getRoundFirstKickoff(rid);
           }
           let html = '';
-          Object.values(buckets).sort((a,b) => a.wsMs - b.wsMs).forEach(b => {
+          Object.values(buckets).sort((a,b) => a.wsMs - b.wsMs).slice(0, 2).forEach(b => {
             const rid    = b.matches[0].round_id;
             const dayNum = roundFirstCache[rid] ? getDayNumber(new Date(b.wsMs).toISOString(), roundFirstCache[rid]) : 1;
             // Picks visible once the round deadline has passed

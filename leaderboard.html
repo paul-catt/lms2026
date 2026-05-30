@@ -1655,11 +1655,34 @@
       const eliminated = sorted.filter(p => p.is_eliminated);
       const alive      = sorted.filter(p => !p.is_eliminated);
 
+      const finalRound = (rounds || []).find(r => r.name === 'Final');
+      const finalComplete = finalRound && finalRound.is_complete;
+
+      let headingText, headingColour;
+      if (!finalComplete) {
+        headingText   = `${alive.length} still standing`;
+        headingColour = 'var(--green)';
+      } else if (alive.length === 0) {
+        headingText   = 'The last man has fallen.';
+        headingColour = 'var(--text-muted)';
+      } else if (alive.length === 1) {
+        const dn = p => p.display_name || p.name.split(' ')[0];
+        headingText   = `${dn(alive[0])} is the last man standing!`;
+        headingColour = 'var(--accent)';
+      } else if (alive.length === 2) {
+        const dn = p => p.display_name || p.name.split(' ')[0];
+        headingText   = `${dn(alive[0])} & ${dn(alive[1])} are the last men standing!`;
+        headingColour = 'var(--accent)';
+      } else {
+        headingText   = `${alive.length} last men standing!`;
+        headingColour = 'var(--accent)';
+      }
+
       header.innerHTML = `
         <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; font-size:13px;">
           <span style="font-size:22px">🟢</span>
           <div>
-            <div style="font-weight:700; font-size:16px; color:var(--green)">${alive.length} still standing</div>
+            <div style="font-weight:700; font-size:16px; color:${headingColour}">${headingText}</div>
             <div style="color:var(--text-muted); font-size:12px">${eliminated.length} eliminated so far</div>
           </div>
         </div>`;
@@ -1766,7 +1789,11 @@
           ? new Date(b.info.match.kickoff).getTime()
           : b.info.lastPickKickoff ? new Date(b.info.lastPickKickoff).getTime() : 0;
         if (aKickoff !== bKickoff) return aKickoff - bKickoff;
-        return 0;
+        // Within same kickoff: "ran out of teams" first, then alpha
+        const aNoPick = a.info.noPicks ? 1 : 0;
+        const bNoPick = b.info.noPicks ? 1 : 0;
+        if (aNoPick !== bNoPick) return aNoPick - bNoPick;
+        return (b.player.name || '').localeCompare(a.player.name || '');
       });
 
       // Pre-compute sort keys for tie detection

@@ -454,7 +454,7 @@
 
         // FIX 2: Build snapshot map for the last completed round (for movement arrows)
         const completedRoundsSorted = (rounds || [])
-          .filter(r => r.is_complete)
+          .filter(r => r.is_complete && r.name !== '3rd Place' && r.name !== 'Group Phase 0')
           .sort((a, b) => b.sort_order - a.sort_order);
         const lastCompletedRound = completedRoundsSorted[0] || null;
         const prevCompletedRound = completedRoundsSorted[1] || null;
@@ -776,13 +776,13 @@
         const unpickedNames = unpicked.map(p => `• ${p.name}`).join('\n');
         msg = `⏰ *LMS 2026 — ${roundLabelText} Picks*\n\n`;
         msg += `${picked.length}/${players.filter(p => !p.is_eliminated).length} players have picked\n\n`;
+        if (firstGameStr) msg += `${firstGameStr}\n\n`;
         if (isGroupRound) {
           msg += `Still need to pick (3pt + 2pt):\n${unpickedNames}\n\n`;
         } else {
           msg += `Still need to pick:\n${unpickedNames}\n\n`;
         }
-        if (firstGameStr) msg += `${firstGameStr}\n`;
-        msg += `\nUse your personal link to submit before the deadline locks! 🔒`;
+        msg += `Use your personal link to submit before the deadline locks! 🔒`;
       }
 
       document.getElementById('reminder-copy-text').textContent = msg;

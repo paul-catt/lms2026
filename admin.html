@@ -1094,12 +1094,40 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
     let _pendingRoundId = null;
     let _pendingRoundType = null;
 
+    // Returns a warning string if the previous KO round has unconfirmed results for picked matches, else null
+    async function checkPrevRoundComplete(roundId, roundType) {
+      if (roundType !== 'knockout') return null;
+      const { data: allRounds } = await db.from('rounds').select('id, name, round_type, sort_order').order('sort_order');
+      if (!allRounds) return null;
+      const koRounds = allRounds.filter(r => r.round_type === 'knockout').sort((a, b) => a.sort_order - b.sort_order);
+      const idx = koRounds.findIndex(r => r.id === roundId);
+      if (idx <= 0) return null;
+      const prevRound = koRounds[idx - 1];
+      const { data: unconfirmed } = await db.from('matches')
+        .select('id')
+        .eq('round_id', prevRound.id)
+        .neq('status', 'confirmed');
+      if (!unconfirmed || unconfirmed.length === 0) return null;
+      const unconfirmedIds = unconfirmed.map(m => m.id);
+      const { data: unconfirmedMatches } = await db.from('matches')
+        .select('id, home_team_id, away_team_id')
+        .in('id', unconfirmedIds);
+      const teamIds = new Set();
+      (unconfirmedMatches || []).forEach(m => { teamIds.add(m.home_team_id); teamIds.add(m.away_team_id); });
+      const { data: affectedPicks } = await db.from('picks')
+        .select('id')
+        .eq('round_id', prevRound.id)
+        .in('team_id', [...teamIds]);
+      if (!affectedPicks || affectedPicks.length === 0) return null;
+      return `⚠️ ${prevRound.name} has ${unconfirmed.length} unconfirmed result(s) with player picks. Eliminations may not have run yet.`;
+    }
+
     function closeAssignModal() {
       document.getElementById('assign-modal').classList.remove('open');
       _pendingAssignments = [];
     }
 
-    async function autoAssignMissingPicks() {
+    async function autoAssignMissingPicks(skipWarning = false) {
       const btn = document.getElementById('btn-auto-assign');
       const msg = document.getElementById('assign-msg');
       const detail = document.getElementById('assign-detail');
@@ -1111,6 +1139,17 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       btn.disabled = true; btn.textContent = 'Loading...';
       msg.style.color = 'var(--text-muted)'; msg.textContent = 'Calculating assignments...';
       detail.textContent = '';
+
+      // Warn if previous KO round has unconfirmed results
+      const prevRoundWarning = skipWarning ? null : await checkPrevRoundComplete(roundId, roundType);
+      if (prevRoundWarning) {
+        btn.disabled = false; btn.textContent = '🤖 Assign Unpicked Players';
+        msg.style.color = 'var(--red)'; msg.textContent = prevRoundWarning;
+        detail.innerHTML = '<button class="btn btn-secondary" style="margin-top:8px;font-size:12px" id="btn-proceed-anyway">Proceed anyway</button>';
+        document.getElementById('btn-proceed-anyway').onclick = () => { detail.innerHTML = ''; autoAssignMissingPicks(true); };
+        return;
+      }
+
       try {
         const { data: players } = await db.from('players').select('id, name').eq('is_eliminated', false);
         const { data: existingPicks } = await db.from('picks').select('player_id, multiplier').eq('round_id', roundId);
@@ -1194,7 +1233,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
     }
 
     // ── Random assign (testing only) ──────────────────────────
-    async function randomAssignMissingPicks() {
+    async function randomAssignMissingPicks(skipWarning = false) {
       const btn = document.getElementById('btn-random-assign');
       const msg = document.getElementById('assign-msg');
       const sel = document.getElementById('assign-round-select');
@@ -1205,6 +1244,17 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
 
       btn.disabled = true; btn.textContent = 'Calculating...';
       msg.style.color = 'var(--text-muted)'; msg.textContent = 'Calculating random assignments...';
+
+      // Warn if previous KO round has unconfirmed results
+      const prevRoundWarning = skipWarning ? null : await checkPrevRoundComplete(roundId, roundType);
+      if (prevRoundWarning) {
+        btn.disabled = false; btn.textContent = '🎲 Random Assign (test)';
+        msg.style.color = 'var(--red)'; msg.textContent = prevRoundWarning;
+        const detail = document.getElementById('assign-detail');
+        detail.innerHTML = '<button class="btn btn-secondary" style="margin-top:8px;font-size:12px" id="btn-proceed-anyway">Proceed anyway</button>';
+        document.getElementById('btn-proceed-anyway').onclick = () => { detail.innerHTML = ''; randomAssignMissingPicks(true); };
+        return;
+      }
 
       try {
         const isGroup = roundType === 'group';
