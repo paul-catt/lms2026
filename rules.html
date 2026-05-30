@@ -175,16 +175,66 @@
     .hero-logo { width: 288px; margin-bottom: 12px; }
     .hero-title { font-family: 'Rajdhani', sans-serif; font-size: 28px; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.02em; }
     .hero-sub { color: var(--text-muted); font-size: 13px; font-style: italic; }
+
+    /* Tabs Explained section */
+    .tabs-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .tab-row {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab-row:last-child { border-bottom: none; }
+    .tab-row-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .tab-pill {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .tab-row-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+    .tab-sub {
+      margin-top: 8px;
+      padding-left: 14px;
+      border-left: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .tab-sub-item {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .tab-sub-item strong { color: var(--text); font-size: 12px; }
   </style>
 </head>
 <body>
   <nav>
-    <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
+      <a href="/">Home</a>
       <a href="/leaderboard">Leaderboard</a>
-      <a href="/match-centre">Matches</a>
+      <a href="/match-centre">Match Centre</a>
+      <a href="/bracket">Fixtures</a>
       <a id="nav-my-page" href="/">My Page</a>
-      <a href="/bracket">Draw</a>
       <a href="/rules" class="active">FAQ</a>
     </div>
   </nav>
@@ -465,6 +515,110 @@
       </div>
     </div>
 
+    <!-- TABS EXPLAINED -->
+    <div class="card">
+      <div class="rules-section" style="margin-bottom:0">
+        <details>
+          <summary style="cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; padding:2px 0; margin-bottom:0">
+            <h2 style="margin-bottom:0; border-bottom:none; padding-bottom:0">🗂️ Tabs Explained</h2>
+            <span id="tabs-chevron" style="font-size:12px; color:var(--text-muted); flex-shrink:0">▼ expand</span>
+          </summary>
+          <p style="margin-top:16px; margin-bottom:20px"><em>A quick tour of every page and what's on it.</em></p>
+
+          <div class="tabs-grid">
+
+            <!-- Home -->
+            <div class="tab-row">
+              <div class="tab-row-header">
+                <span style="font-size:20px">🏠</span>
+                <span class="tab-pill">Home</span>
+              </div>
+              <div class="tab-row-desc">
+                The home page. Shows how many players are still standing, a countdown to the next deadline, and quick links to every section. The launchpad — nothing to interact with directly.
+              </div>
+            </div>
+
+            <!-- Leaderboard -->
+            <div class="tab-row">
+              <div class="tab-row-header">
+                <span class="tab-pill">Leaderboard</span>
+              </div>
+              <div class="tab-row-desc">
+                The main hub for standings and stats. Refreshes automatically every 60 seconds. Six sub-tabs:
+              </div>
+              <div class="tab-sub">
+                <div class="tab-sub-item"><strong>📊 Table</strong> — The main standings. Position, movement arrows, points, furthest KO round reached, goal difference, goals prediction difference, and form pips. Tap any player's name to go to their page. The <span style="color:var(--gold);font-weight:600">⚽ column</span> shows how far off your goals prediction is from the current projected total — lower is better. Purple row = that player has a match today. Blue row = they played last night.</div>
+                <div class="tab-sub-item"><strong>🏁 Picks</strong> — Every player's pick for every round, shown as flag chips. Green border = win, amber = draw, red = loss. Before a round's deadline the picks are hidden (shown as ?). Tap a chip to see the team name and result. Rotate your phone for the full table.</div>
+                <div class="tab-sub-item"><strong>💰 Prizes</strong> — Live prize calculations based on current standings. Updates as the tournament progresses. Shows the pot, first-out prize, and provisional payouts for each finishing position.</div>
+                <div class="tab-sub-item"><strong>⭐ Longshots</strong> — Two views: <em>Bonus</em> tracks how many longshot bonus points each player has earned so far. <em>Teams</em> lists all designated longshot teams. Struck-through teams have been eliminated from the tournament.</div>
+                <div class="tab-sub-item"><strong>🔢 Matrix</strong> — <em>Knockout phase only.</em> A grid of every player versus every remaining team, showing what they've picked and what they have left. The <span style="color:var(--green);font-weight:600">Good Left</span> column counts Favourites and Dark Horses still available to you — your quality ammunition. <span style="color:var(--text);font-weight:600">Total Left</span> is all remaining eligible teams. The small subscript letter in each cell (GP, 32, 16, QF etc.) shows which round that team was picked in. Unlocks towards the end of the Round of 32 when 22 or fewer teams remain. Click any team flag header to see the team name.</div>
+                <div class="tab-sub-item"><strong>💀 Fallen</strong> — <em>Knockout phase only.</em> The wall of shame. Shows every eliminated player in order from most recently out (top) to first out (bottom), with the match that ended their run and the timestamp. The 🪦 First Out pill marks whoever bit the dust first. The 💀 Last Man/Men Standing pill appears when the competition is over.</div>
+              </div>
+            </div>
+
+            <!-- Matches -->
+            <div class="tab-row">
+              <div class="tab-row-header">
+                <span class="tab-pill">Match Centre</span>
+              </div>
+              <div class="tab-row-desc">
+                The match centre. At the top, a countdown to the next picks deadline. Below that:
+              </div>
+              <div class="tab-sub">
+                <div class="tab-sub-item"><strong>Today</strong> — All matches in the current game day window (noon–noon BST). Shows the round, day number, date, kick-off time, venue, score (or upcoming), and which players picked each team with their points earned. Stars (⭐) next to a team flag mean that team is a longshot.</div>
+                <div class="tab-sub-item"><strong>Next 3 days</strong> — Upcoming fixtures over the next three game day windows, so you can plan ahead.</div>
+                <div class="tab-sub-item"><strong>Results Archive</strong> — All completed matches, grouped by round. Same format as Today. Scroll down to see earlier rounds.</div>
+              </div>
+            </div>
+
+            <!-- My Page -->
+            <div class="tab-row">
+              <div class="tab-row-header">
+                <span class="tab-pill">My Page</span>
+              </div>
+              <div class="tab-row-desc">
+                Your personal dashboard. Only accessible via your unique link — bookmark it or add it to your home screen. Everything here is specific to you:
+              </div>
+              <div class="tab-sub">
+                <div class="tab-sub-item"><strong>Header</strong> — Your name, status (Still In / Eliminated), performance badge, and which KO rounds you've made picks in (ticked when a result is confirmed).</div>
+                <div class="tab-sub-item"><strong>Stats bar</strong> — Points, leaderboard position, teams left (colour-coded by band), and your goals prediction vs the projected total.</div>
+                <div class="tab-sub-item"><strong>Submit Your Pick</strong> — The pick form for the current (or any future) round. Use the dropdown to switch between open rounds and submit picks in advance. Your pick is locked once the round deadline passes. You can cancel or change it any time before then.</div>
+                <div class="tab-sub-item"><strong>Pick History</strong> — Every pick you've made, with the round, team, value (3pt or 2pt), points earned, and score of the match. Auto-assigned picks are labelled <em>auto</em>.</div>
+                <div class="tab-sub-item"><strong>🔮 The Oracle</strong> — Hit the button to get a suggested pick, rated by confidence. It factors in your remaining teams, the current round, and the odds. The rating reflects how good a fit the suggestion is — five stars means textbook, one star means it's doing its best.</div>
+                <div class="tab-sub-item"><strong>Goals Prediction</strong> — Set or update your total goals prediction before the Group Phase 1 deadline. Used as tiebreaker #3.</div>
+                <div class="tab-sub-item"><strong>Notifications</strong> — Enable deadline reminders so you get a nudge 1 hour before the deadline if you haven't picked yet. iPhone users must add to home screen first.</div>
+              </div>
+            </div>
+
+            <!-- Fixtures -->
+            <div class="tab-row">
+              <div class="tab-row-header">
+                <span class="tab-pill">Fixtures</span>
+              </div>
+              <div class="tab-row-desc">
+                Two sub-tabs:
+              </div>
+              <div class="tab-sub">
+                <div class="tab-sub-item"><strong>🏆 Bracket</strong> — The full tournament bracket from Round of 32 to Final. Scroll right to see all rounds. Each match card shows the date, time, both teams, their outright odds (the blue dot), and the score once played. A solid green border means the result is confirmed; a blue dashed border means teams are assigned but the match hasn't been played yet. Toggle <em>All Rounds</em> / <em>From Current Round</em> to focus on what's still live. Toggle <em>Highlight my available teams</em> to light up the teams you still have left to pick — making it easy to spot potential routes through the bracket. Click any match card to see it in more detail.</div>
+                <div class="tab-sub-item"><strong>📅 Fixtures</strong> — A flat list of all 104 matches. Switch between <em>Group Stage</em> and <em>Knockout</em> views. Shows date, time, teams, and scores. A gold highlight on a team means they were picked this round (post-deadline reveal).</div>
+              </div>
+            </div>
+
+            <!-- FAQ -->
+            <div class="tab-row">
+              <div class="tab-row-header">
+                <span class="tab-pill">FAQ</span>
+              </div>
+              <div class="tab-row-desc">
+                You're already here. The rules, scoring, deadlines, prizes, and all the detail you could possibly want. The <em>For Geeks Only</em> section below covers the technical internals for anyone who wants to understand exactly how everything works under the hood.
+              </div>
+            </div>
+
+          </div>
+        </details>
+      </div>
+    </div>
+
     <!-- FOR GEEKS ONLY -->
     <div class="card">
       <div class="rules-section" style="margin-bottom:0">
@@ -507,6 +661,18 @@
 
           <p style="font-weight:600;color:var(--text);margin-bottom:4px;margin-top:16px">What the 🏆 trophy badge means</p>
           <p>Awarded to the player with the highest points in a given round — Pick of the Round. Tiebroken by goal difference from that round's picks. If still tied, the badge is shared. Bragging rights only, no extra points.</p>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px;margin-top:16px">What the flag next to a player's name means</p>
+          <p>In the group stages, flag(s) next to a player's name on the main table show which team(s) they picked this round, once the deadline has passed. A gold underline = 3-point pick; a grey underline = 2-point pick. A double underline (either colour) means that team is a longshot. Tap the flag to see the team name and result.</p>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px;margin-top:16px">What ✔ and ✕ mean next to a name</p>
+          <p>In the knockout phase, <span style="color:#10b981;font-weight:700">✔</span> means that player's pick for the current round has a confirmed result. <span style="color:var(--red);font-weight:700">✕</span> means they've been eliminated. The ✔ clears when the next round begins.</p>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px;margin-top:16px">What the small number in a Matrix cell means</p>
+          <p>Each cell in the Matrix shows a result letter (W, D, L or ?) plus a small subscript showing <span class="highlight">which round that team was used</span> — GP for group phases, then 32, 16, QF, SF, F for knockout rounds. It's there so you can quickly see not just that a team was used, but when. Useful for understanding how far back someone burned a key pick.</p>
+
+          <p style="font-weight:600;color:var(--text);margin-bottom:4px;margin-top:16px">What "Good Left" means in the Matrix</p>
+          <p>The <span style="color:var(--green);font-weight:600">Good Left</span> column counts how many Favourites and Dark Horses you still have available — your quality picks. <span class="highlight">Total Left</span> is all eligible teams including Long Shots and No Hopers. A player with a high Total but low Good Left is running on fumes.</p>
         </div>
 
         <!-- THE ORACLE -->
@@ -600,10 +766,16 @@
 
   </main>
   <script>
-    const geekDetails = document.querySelector('details');
+    const geekDetails = document.querySelector('details:last-of-type');
     if (geekDetails) {
       geekDetails.addEventListener('toggle', function() {
         document.getElementById('geek-chevron').textContent = this.open ? '▲ collapse' : '▼ expand';
+      });
+    }
+    const tabsDetails = document.querySelector('details:first-of-type');
+    if (tabsDetails) {
+      tabsDetails.addEventListener('toggle', function() {
+        document.getElementById('tabs-chevron').textContent = this.open ? '▲ collapse' : '▼ expand';
       });
     }
   </script>

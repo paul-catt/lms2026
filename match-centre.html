@@ -216,12 +216,12 @@
 <body>
 
   <nav>
-    <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
+      <a href="/">Home</a>
       <a href="/leaderboard">Leaderboard</a>
-      <a href="/match-centre" class="active">Matches</a>
+      <a href="/match-centre" class="active">Match Centre</a>
+      <a href="/bracket">Fixtures</a>
       <a id="nav-my-page" href="/">My Page</a>
-      <a href="/bracket">Draw</a>
       <a href="/rules">FAQ</a>
     </div>
   </nav>
@@ -769,7 +769,7 @@
             html += b.matches.map(m => upcomingCardHtml(m, picks, players, bucketPicksVisible)).join('');
           });
           upcomingContent.innerHTML = html;
-          nudgeEl.innerHTML = 'Full fixtures in the <a href="' + fixturesUrl + '">Draw tab →</a>';
+          nudgeEl.innerHTML = 'Full fixtures in the <a href="' + fixturesUrl + '">Fixtures tab →</a>';
           upcomingCardEl.style.display = 'block';
         } else {
           upcomingCardEl.style.display = 'none';

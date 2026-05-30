@@ -325,6 +325,9 @@
       margin-top: 12px; line-height: 1.5;
     }
 
+    /* Prevents iOS Safari from collapsing fixed nav when sheet opens */
+    body.sheet-open { overflow: hidden; position: fixed; width: 100%; }
+
     /* ── Submit toast ──────────────────────────────────────────────────────── */
     #submit-toast {
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -401,12 +404,12 @@
 <body>
 
   <nav>
-    <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
-      <a href="/leaderboard" id="leaderboard-link">Leaderboard</a>
-      <a href="/match-centre">Matches</a>
+      <a href="/">Home</a>
+      <a href="/leaderboard">Leaderboard</a>
+      <a href="/match-centre">Match Centre</a>
+      <a href="/bracket">Fixtures</a>
       <a id="nav-my-page" href="/" class="active">My Page</a>
-      <a href="/bracket">Draw</a>
       <a href="/rules">FAQ</a>
     </div>
   </nav>
@@ -552,7 +555,7 @@
     if (slug && !localStorage.getItem('lms2026_my_slug')) localStorage.setItem('lms2026_my_slug', slug);
 
     const lbLink = document.getElementById('leaderboard-link');
-    if (slug) lbLink.href = '/leaderboard?me=' + slug;
+    if (slug && lbLink) lbLink.href = '/leaderboard?me=' + slug;
 
     const BAND_CONFIG = [
       { key:'favourite',  label:'Favourite',  dot:'■', css:'#22c55e' },
@@ -2611,7 +2614,7 @@
 
       document.getElementById('oracle-backdrop').classList.add('open');
       document.getElementById('oracle-sheet').classList.add('open');
-      document.body.style.overflow = 'hidden';
+      document.body.classList.add('sheet-open');
 
       // Auto-fire immediately
       oracleConsult();
@@ -2620,7 +2623,7 @@
     function closeOracle() {
       document.getElementById('oracle-sheet').classList.remove('open');
       document.getElementById('oracle-backdrop').classList.remove('open');
-      document.body.style.overflow = '';
+      document.body.classList.remove('sheet-open');
     }
 
     // ── Drag to dismiss ───────────────────────────────────────────────────────

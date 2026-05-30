@@ -107,12 +107,12 @@
 <body>
 
   <nav>
-    <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
+      <a href="/">Home</a>
       <a href="/leaderboard">Leaderboard</a>
-      <a href="/match-centre">Matches</a>
+      <a href="/match-centre">Match Centre</a>
+      <a href="/bracket" class="active">Fixtures</a>
       <a id="nav-my-page" href="/">My Page</a>
-      <a href="/bracket" class="active">Draw</a>
       <a href="/rules">FAQ</a>
     </div>
   </nav>
@@ -134,29 +134,7 @@
 
       <!-- BRACKET PANEL -->
       <div class="page-tab-panel active" id="panel-bracket">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; flex-wrap:wrap; gap:8px">
-          <div class="card-title" style="margin-bottom:0">🏆 Tournament Bracket</div>
-          <span id="bracket-meta" class="bracket-meta"></span>
-        </div>
-
-        <div class="legend">
-          <div class="legend-item">
-            <div style="width:14px;height:14px;border-radius:3px;border:1px solid var(--green);border-left:3px solid var(--green);background:var(--surface2)"></div>
-            Result confirmed
-          </div>
-          <div class="legend-item">
-            <div style="width:14px;height:14px;border-radius:3px;border:1px solid #3b82f6;border-left:3px solid #3b82f6;background:var(--surface2)"></div>
-            Teams assigned
-          </div>
-          <div class="legend-item">
-            <div style="width:14px;height:14px;border-radius:3px;border:1px solid #4b5563;border-left:2px dashed #4b5563;background:rgba(255,255,255,0.02)"></div>
-            <em style="font-size:10px">Predicted</em>
-          </div>
-          <div class="legend-item">
-            <div class="legend-dot" style="background:#3b82f6"></div>
-            Predicted winner (odds)
-          </div>
-        </div>
+        <div class="card-title">🏆 Tournament Bracket</div>
 
         <div id="loading" class="loading"><div class="spinner"></div>Loading bracket...</div>
 
@@ -173,6 +151,22 @@
               <span id="my-teams-track" style="position:absolute; inset:0; background:#374151; border-radius:20px; transition:background 0.2s"></span>
               <span id="my-teams-thumb" style="position:absolute; top:2px; left:2px; width:16px; height:16px; background:#fff; border-radius:50%; transition:transform 0.2s"></span>
             </label>
+          </div>
+          <div class="legend" style="margin-bottom:10px">
+            <div class="legend-item">
+              <div style="width:14px;height:14px;border-radius:3px;border:1px solid var(--green);border-left:3px solid var(--green);background:var(--surface2)"></div>
+              Confirmed
+            </div>
+            <div class="legend-item">
+              <div style="width:14px;height:14px;border-radius:3px;border:1px solid #3b82f6;border-left:3px solid #3b82f6;background:var(--surface2)"></div>
+              Assigned
+            </div>
+            <div class="legend-item">
+              <div style="width:14px;height:14px;border-radius:3px;border:1px solid #4b5563;border-left:2px dashed #4b5563;background:rgba(255,255,255,0.02)"></div>
+              /
+              <div class="legend-dot" style="background:#3b82f6"></div>
+              <em style="font-size:10px">Predicted</em>
+            </div>
           </div>
           <div class="scroll-hint">↔ Scroll right to see the full bracket</div>
           <div class="bracket-outer">
@@ -363,8 +357,6 @@
           day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
         });
         const labelStr = pred.label ? `"${pred.label}" · ` : '';
-        document.getElementById('bracket-meta').textContent =
-          `${labelStr}Predictions updated ${uploaded}`;
 
         document.getElementById('loading').style.display         = 'none';
         document.getElementById('bracket-content').style.display = 'block';
@@ -903,10 +895,11 @@
       rounds.forEach(r => { byRound[r.id] = { name: r.name, matches: [] }; });
       matches.forEach(m => { if (byRound[m.round_id]) byRound[m.round_id].matches.push(m); });
 
-      let html = '<div style="margin-bottom:16px; font-size:12px; color:var(--text-muted); display:flex; gap:16px; align-items:center">'
+      let html = '<div style="margin-bottom:4px; font-size:12px; color:var(--text-muted); display:flex; gap:16px; align-items:center">'
         + '<span style="font-weight:700; text-transform:uppercase; letter-spacing:0.05em">Key:</span>'
         + '<span><span style="color:#c9a84c; font-weight:600">■</span> Picked this round (post-deadline)</span>'
-        + '</div>';
+        + '</div>'
+        + '<div style="margin-bottom:16px; font-size:11px; color:var(--text-muted); font-style:italic">Tap a match to see who picked it</div>';
       rounds.forEach(r => {
         const group = byRound[r.id];
         if (!group || !group.matches.length) return;

@@ -145,12 +145,12 @@
 <body>
 
   <nav>
-    <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
+      <a href="/">Home</a>
       <a href="/leaderboard">Leaderboard</a>
-      <a href="/match-centre">Matches</a>
+      <a href="/match-centre">Match Centre</a>
+      <a href="/bracket">Fixtures</a>
       <a id="nav-my-page" href="/">My Page</a>
-      <a href="/bracket">Draw</a>
       <a href="/rules">FAQ</a>
     </div>
   </nav>
@@ -620,7 +620,7 @@
         <div class="card">
           <div class="card-title">👁 Picks Audit</div>
           <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
-            All players × all rounds. Most recent round on the left. <span style="color:var(--red); font-weight:600">Red = missing pick.</span> Timestamps shown where available. (auto) = admin-assigned.
+            All players × all rounds. Most recent round on the left. <span style="color:var(--red); font-weight:600">Red = missing pick.</span> Timestamps shown where available. (auto) = admin-assigned missed pick.
           </p>
           <div id="picks-audit-wrap"><div class="loading"><div class="spinner"></div></div></div>
         </div>
@@ -1006,16 +1006,16 @@
 
     function sendWelcomeWA(name, url) {
       const firstName = name.split(' ')[0];
-      const msg = `Hi ${firstName}! LMS 2026 is go. ⚽
+      const msg = `Hi ${firstName}! LMS 2026 is go.
 
 Mexico kick off the World Cup against South Africa at 8pm on Thursday 11 June — and you need to be ready.
 
 Your dashboard:
 ${url}
 
-Bookmark it — it's the only way in. Log in and enter your goals prediction before 7pm Thursday.
+Bookmark it — it's the only way in. Log in and make your first picks before 7pm Thursday.
 
-"Sixty years of hurt... never stopped us dreaming." ⚽`;
+"Sixty years of hurt... never stopped us dreaming."`;
       const encoded = encodeURIComponent(msg);
       window.open('https://wa.me/?text=' + encoded, '_blank');
     }
@@ -1276,7 +1276,7 @@ Bookmark it — it's the only way in. Log in and enter your goals prediction bef
           for (const a of pendingAssignments) {
             const { error } = await db.from('picks').insert({
               player_id: a.player_id, round_id: a.round_id,
-              team_id: a.team_id, multiplier: a.multiplier, is_assigned: true
+              team_id: a.team_id, multiplier: a.multiplier, is_assigned: false
             });
             if (!error) assignCount++;
           }
@@ -3421,7 +3421,7 @@ Bookmark it — it's the only way in. Log in and enter your goals prediction bef
               const name = p.teams?.name || '?';
               const multColor = p.multiplier === 3 ? 'var(--gold)' : 'var(--text-muted)';
               const multLabel = isGroup ? `<span style="color:${multColor}; font-weight:700">${p.multiplier}pt</span> ` : '';
-              const auto = p.is_assigned ? ` (a)` : '';
+              const auto = p.is_assigned ? ` (auto)` : '';
               const ts = p.created_at ? new Date(p.created_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : null;
               const tsHtml = ts ? `<div style="color:var(--text-muted); font-size:10px; margin-top:2px">${ts}${auto}</div>` : (auto ? `<div style="color:var(--text-muted); font-size:10px; margin-top:2px">${auto.trim()}</div>` : '');
               return `<div style="line-height:1.4; white-space:nowrap">${multLabel}${flag} ${name}${p.oracle_pick ? ' 🔮' : ''}${tsHtml}</div>`;

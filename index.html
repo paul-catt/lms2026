@@ -27,7 +27,7 @@
 
     .hero {
       text-align: center;
-      padding: 52px 16px 36px;
+      padding: 32px 16px 24px;
     }
     .hero-title {
       font-family: 'Rajdhani', sans-serif;
@@ -49,7 +49,7 @@
     .hero-subtitle {
       color: var(--text-muted);
       font-size: 13px;
-      margin-bottom: 32px;
+      margin-bottom: 16px;
     }
 
     /* ── Flip counter ── */
@@ -57,7 +57,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin: 0 auto 32px;
+      margin: 0 auto 16px;
     }
     .flip-counter {
       display: flex;
@@ -218,7 +218,7 @@
       display: flex;
       flex-direction: column;
       gap: 0;
-      margin: 28px 0 0;
+      margin: 12px 0 0;
       background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -248,12 +248,12 @@
 </head>
 <body>
   <nav>
-    <a class="nav-logo" href="/"><img src="/logo.svg" alt="LMS 2026" height="34"></a>
     <div class="nav-links">
+      <a href="/">Home</a>
       <a href="/leaderboard">Leaderboard</a>
-      <a href="/match-centre">Matches</a>
+      <a href="/match-centre">Match Centre</a>
+      <a href="/bracket">Fixtures</a>
       <a id="nav-my-page" href="/">My Page</a>
-      <a href="/bracket">Draw</a>
       <a href="/rules">FAQ</a>
     </div>
   </nav>
@@ -310,12 +310,12 @@
           <span class="hero-btn-sub">Tables & stats</span>
         </a>
         <a href="/match-centre" class="hero-btn">
-          <span class="hero-btn-label">⚽ Matches</span>
+          <span class="hero-btn-label">⚽ Match Centre</span>
           <span class="hero-btn-sub">Results & upcoming fixtures</span>
         </a>
         <a href="/bracket" class="hero-btn">
-          <span class="hero-btn-label">🏆 Draw</span>
-          <span class="hero-btn-sub">Routes to the final</span>
+          <span class="hero-btn-label">📅 Fixtures</span>
+          <span class="hero-btn-sub">Bracket & all fixtures</span>
         </a>
         <a href="/rules" class="hero-btn">
           <span class="hero-btn-label">📋 FAQ</span>
