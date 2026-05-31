@@ -128,12 +128,12 @@
   <main>
     <div class="card">
       <div class="page-tabs">
-        <button class="page-tab-btn active" id="ptab-bracket" onclick="switchPageTab('bracket')">🏆 Bracket</button>
-        <button class="page-tab-btn" id="ptab-fixtures" onclick="switchPageTab('fixtures')">📅 Fixtures</button>
+        <button class="page-tab-btn active" id="ptab-fixtures" onclick="switchPageTab('fixtures')">📅 Fixtures</button>
+        <button class="page-tab-btn" id="ptab-bracket" onclick="switchPageTab('bracket')">🏆 Bracket</button>
       </div>
 
       <!-- BRACKET PANEL -->
-      <div class="page-tab-panel active" id="panel-bracket">
+      <div class="page-tab-panel" id="panel-bracket">
         <div class="card-title">🏆 Tournament Bracket</div>
 
         <div id="loading" class="loading"><div class="spinner"></div>Loading bracket...</div>
@@ -185,7 +185,7 @@
       </div>
 
       <!-- FIXTURES PANEL -->
-      <div class="page-tab-panel" id="panel-fixtures">
+      <div class="page-tab-panel active" id="panel-fixtures">
         <div class="card-title">📅 Fixtures</div>
         <div style="display:flex; gap:6px; margin-bottom:16px;">
           <button class="btn btn-primary" id="fixtures-sub-group" onclick="switchFixturesSubtab('group')">🌍 Group Stage</button>
@@ -850,7 +850,6 @@
       document.getElementById('ptab-fixtures').classList.toggle('active', name === 'fixtures');
       if (name === 'fixtures') {
         if (!_fixturesLoaded) {
-          // loadFixtures has its own auto-KO logic; apply sectionOverride after it resolves
           loadFixtures().then(() => {
             if (sectionOverride === 'knockout') switchFixturesSubtab('knockout');
             else if (sectionOverride === 'group') switchFixturesSubtab('group');
@@ -863,12 +862,13 @@
     }
 
     // ── URL param handling ─────────────────────────────────────
-    // Supports: /bracket?tab=fixtures&section=group|knockout
     (function applyUrlParams() {
       const params  = new URLSearchParams(location.search);
       const tab     = params.get('tab');
       const section = params.get('section');
-      if (tab === 'fixtures') {
+      if (tab === 'bracket') {
+        switchPageTab('bracket');
+      } else {
         switchPageTab('fixtures', section || null);
       }
     })();
@@ -980,12 +980,11 @@
       _fixturesLoaded = true;
       const wrap = document.getElementById('fixtures-group-wrap');
 
-      // Default to knockout sub-tab if R32 round exists with a deadline set
-      const { data: r32Check } = await db.from('rounds')
-        .select('id')
-        .eq('name', 'Round of 32')
-        .not('deadline', 'is', null)
-        .limit(1);
+      // Default to knockout sub-tab if any R32 match has teams assigned
+      const { data: r32Round } = await db.from('rounds').select('id').eq('name', 'Round of 32').single();
+      const { data: r32Check } = r32Round
+        ? await db.from('matches').select('id').eq('round_id', r32Round.id).not('home_team_id', 'is', null).limit(1)
+        : { data: [] };
       if (r32Check && r32Check.length > 0) switchFixturesSubtab('knockout');
 
       const { data: rounds, error: rErr } = await db.from('rounds')

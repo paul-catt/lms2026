@@ -454,7 +454,7 @@
 
         // FIX 2: Build snapshot map for the last completed round (for movement arrows)
         const completedRoundsSorted = (rounds || [])
-          .filter(r => r.is_complete && r.name !== '3rd Place' && r.name !== 'Group Phase 0')
+          .filter(r => r.is_complete)
           .sort((a, b) => b.sort_order - a.sort_order);
         const lastCompletedRound = completedRoundsSorted[0] || null;
         const prevCompletedRound = completedRoundsSorted[1] || null;
@@ -1189,7 +1189,7 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Top Combinations', fullRoundLabel);
       html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
         <th style="width:20px">#</th>
-        <th class="left">Teams</th>
+        <th class="left" style="width:160px">Teams</th>
         <th style="width:38px">Odds</th>
         <th style="width:38px">Picks</th>
         <th style="width:46px">Result</th>
@@ -1197,8 +1197,8 @@
 
       sortedCombos.forEach((key, i) => {
         const { tidA, tidB } = comboPickMap[key];
-        const nameA = `${teamFlags[tidA]||''} ${teamNames[tidA]||'?'}`;
-        const nameB = `${teamFlags[tidB]||''} ${teamNames[tidB]||'?'}`;
+        const nameA = `${teamFlags[tidA]||''} ${teamNames[tidA]||'?'}${teamIsLongshot[tidA] ? ' ⭐' : ''}`;
+        const nameB = `${teamFlags[tidB]||''} ${teamNames[tidB]||'?'}${teamIsLongshot[tidB] ? ' ⭐' : ''}`;
         const count = comboCounts[key];
         const odds  = comboOdds(key);
         const hasOdds = odds > 0;
@@ -1261,7 +1261,7 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
       html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
         <th style="width:50px;text-align:left">Pos</th>
-        <th class="left" style="width:${showPld ? 154 : 176}px">Name</th>
+        <th class="left" style="width:${showPld ? 124 : 146}px">Name</th>
         ${showPld ? '<th style="width:28px">Pld</th>' : ''}
         <th style="width:34px">Pts</th>
         ${!isGroupRound ? '<th style="width:32px">Rnd</th>' : ''}

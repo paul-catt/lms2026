@@ -803,8 +803,9 @@
         document.getElementById('stat-position').textContent  = position;
         document.getElementById('stat-position-sub').textContent = allScores && allScores.length > 0 ? 'out of ' + allScores.length : '';
 
-        // Position label pill (top-right of name card)
-        if (allScores && allScores.length > 0 && positionIdx !== -1) {
+        // Position label pill (top-right of name card) — only once player has at least one settled result
+        const hasSettledPick = allPicks.some(p => p.pick_results && p.pick_results.length > 0);
+        if (hasSettledPick && allScores && allScores.length > 0 && positionIdx !== -1) {
           const total = allScores.length;
           const pct   = (positionIdx + 1) / total * 100;
           let label;
@@ -823,13 +824,27 @@
         document.querySelector('#stat-teams-left').closest('.stat-block').querySelector('.stat-label').textContent =
           teamsLeft === 1 ? 'Team Left' : 'Teams Left';
 
-        // Band counts under teams left
+        // Band counts under teams left — single row if it fits, else 2+2
         const subEl = document.getElementById('stat-teams-sub');
-        subEl.style.whiteSpace = '';
-        subEl.style.maxWidth = '';
-        subEl.innerHTML = Object.entries(bandCounts).map(([band, count]) =>
+        const bandEntries = Object.entries(bandCounts);
+        const makeSpans = () => bandEntries.map(([band, count]) =>
           '<span class="stat-sub-band" style="color:' + bandColors[band] + '">■' + count + '</span>'
-        ).join('');
+        );
+        // Render single row first, then check for overflow
+        subEl.style.flexWrap = 'nowrap';
+        subEl.innerHTML = makeSpans().join('');
+        // Use rAF so layout is computed
+        requestAnimationFrame(() => {
+          const overflows = subEl.scrollWidth > subEl.clientWidth + 2;
+          if (overflows) {
+            // Split 2 + 2
+            const sp = makeSpans();
+            subEl.style.flexWrap = 'wrap';
+            subEl.innerHTML =
+              '<span style="display:flex;gap:4px;justify-content:center">' + sp[0] + sp[1] + '</span>' +
+              '<span style="display:flex;gap:4px;justify-content:center">' + sp[2] + sp[3] + '</span>';
+          }
+        });
 
         const hasGoals = player.total_goals_prediction !== null && player.total_goals_prediction !== undefined;
         document.getElementById('stat-goals').textContent = hasGoals ? player.total_goals_prediction : '—';
