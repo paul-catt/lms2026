@@ -1157,7 +1157,7 @@
     // ── 3. Combinations ───────────────────────────────────────
     function renderCombinations() {
       if (!roundData) return;
-      const { playerCurrentPicks, teamNames, teamFlags, fullRoundLabel } = roundData;
+      const { playerCurrentPicks, teamNames, teamFlags, teamIsLongshot, fullRoundLabel } = roundData;
 
       const comboCounts = {}, comboPickMap = {};
       Object.values(playerCurrentPicks).forEach(pPicks => {

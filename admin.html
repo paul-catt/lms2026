@@ -1601,6 +1601,27 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       }
     }
 
+    async function recomputeEliminationsForRound(roundId) {
+      // After an undo, resetMatchEliminations clears ALL player eliminations in the round.
+      // This re-derives them from all remaining completed pick_results in that round.
+      const { data: roundPicks } = await db.from('picks')
+        .select('player_id, round_id, pick_results(match_result)')
+        .eq('round_id', roundId);
+      if (!roundPicks) return;
+      const koLosers = [];
+      for (const pk of roundPicks) {
+        const res = pk.pick_results && pk.pick_results[0];
+        if (res && res.match_result === 'loss') koLosers.push(pk.player_id);
+      }
+      if (koLosers.length > 0) {
+        await db.from('players')
+          .update({ is_eliminated: true, eliminated_at: new Date().toISOString(), eliminated_in_round_id: roundId })
+          .in('id', [...new Set(koLosers)]);
+      }
+      // Re-run exhaustion check in case someone ran out of teams
+      await runExhaustionCheck(roundId);
+    }
+
     async function resetMatchEliminations(matchId) {
       const { data: match } = await db.from('matches')
         .select('round_id, home_team_id, away_team_id, rounds(round_type)')
@@ -1660,7 +1681,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         }
 
         // Re-run no-teams check — calculatePickResults may have skipped it due to pending picks timing
-        await runExhaustionCheck(match.round_id);
+        await recomputeEliminationsForRound(match.round_id);
       }
 
       msg.style.color='var(--green)'; msg.textContent='✅ Correction saved and points recalculated.';
@@ -1692,6 +1713,9 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
           await db.from('rounds').update({ is_complete: false }).eq('id', undoneMatch.round_id);
         }
       }
+
+      // Re-derive eliminations from remaining completed results in this round
+      if (undoneMatch?.round_id) await recomputeEliminationsForRound(undoneMatch.round_id);
 
       msg.style.color='var(--green)'; msg.textContent='✅ Result undone. Match is back to pending.';
       loadMatchesForResult();
@@ -1900,7 +1924,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         const isPens = pensChecked && homeScore === awayScore;
         let losingTeamId = isPens ? (pensWinner === match.home_team_id ? match.away_team_id : match.home_team_id) : (homeScore > awayScore ? match.away_team_id : match.home_team_id);
         if (losingTeamId) await db.from('teams').update({ is_eliminated: true, eliminated_in_round_id: match.round_id }).eq('id', losingTeamId);
-        await runExhaustionCheck(match.round_id);
+        await recomputeEliminationsForRound(match.round_id);
       }
       msg.style.color='var(--green)';
       msg.textContent = isThird ? '✅ 3rd place result saved.' : '✅ Result saved and points calculated.';
@@ -3303,6 +3327,12 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       msg.style.color = saved > 0 ? 'var(--green)' : (warnings.length ? 'var(--gold)' : 'var(--text-muted)');
       msg.textContent = resultMsg || 'Nothing saved.';
 
+      // Recompute eliminations once after all matches processed (handles undo/re-entry edge cases)
+      if (saved > 0 && roundId) {
+        const processedRound = toProcess.find(p => matchDataById[p.matchId]?.rounds?.round_type === 'knockout');
+        if (processedRound) await recomputeEliminationsForRound(roundId);
+      }
+
       if (saved > 0) {
         loadMatchesForResult(); loadCompletedMatchesForCorrection(); loadSnapshotStatus();
         if (roundId) await maybeAutoSnapshot(roundId, msg);
@@ -3960,7 +3990,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
             loserId = homeScore > awayScore ? match.away_team_id : match.home_team_id;
           }
           if (loserId) await db.from('teams').update({ is_eliminated: true, eliminated_in_round_id: match.round_id }).eq('id', loserId);
-          await runExhaustionCheck(match.round_id);
+          await recomputeEliminationsForRound(match.round_id);
           await advanceWinnerToNextMatch(matchId, match, homeScore, awayScore, isPens, pensWinnerId);
         }
         await maybeAutoSnapshot(match.round_id, { style: {}, textContent: '' });

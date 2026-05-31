@@ -508,6 +508,9 @@
             <button class="btn-oracle-trigger" id="oracle-trigger-btn" onclick="openOracle()" title="Ask the Oracle">🔮</button>
           </div>
           <div id="pick-msg" style="margin-top:8px; font-size:12px; text-align:center"></div>
+          <div id="fixtures-incomplete-warning" style="display:none; margin-top:10px; padding:10px 14px; background:rgba(220,50,50,0.15); border:1px solid var(--red); border-radius:8px; font-size:12px; color:var(--red); text-align:center">
+            ⚠️ Not all fixtures are confirmed yet — more teams may still qualify for this round. Check back closer to the deadline before submitting.
+          </div>
         </div>
       </div>
 
@@ -979,13 +982,31 @@
         document.getElementById('submit-oracle-row-top').style.display = 'flex';
 
         const now = getEffectiveDate();
-        // Prefer the most recent round that has started (deadline passed but not complete),
-        // falling back to the next upcoming round, then the first open round.
         const inProgress = openRounds.filter(r => new Date(r.deadline) <= now);
         const upcoming   = openRounds.filter(r => new Date(r.deadline) > now);
-        const activeRound = (inProgress.length ? inProgress[inProgress.length - 1] : null)
-                         || upcoming[0]
-                         || openRounds[0];
+
+        // For group rounds: if all this player's picks for the current in-progress round
+        // have settled results, jump ahead to the next open round so they can pick early.
+        // For KO rounds: if player has a settled result in the current round AND already
+        // has a pick in the next round, show the next round.
+        let activeRound;
+        const currentInProgress = inProgress.length ? inProgress[inProgress.length - 1] : null;
+        if (currentInProgress && currentInProgress.round_type === 'group') {
+          const picksThisRound = allPicks.filter(p => p.round_id === currentInProgress.id);
+          const allSettled = picksThisRound.length > 0 &&
+            picksThisRound.every(p => p.pick_results && p.pick_results.length > 0);
+          if (allSettled && upcoming.length > 0) {
+            activeRound = upcoming[0];
+          }
+        } else if (currentInProgress && currentInProgress.round_type === 'knockout') {
+          const picksThisRound = allPicks.filter(p => p.round_id === currentInProgress.id);
+          const hasSettledResult = picksThisRound.some(p => p.pick_results && p.pick_results.length > 0);
+          if (hasSettledResult && upcoming.length > 0) {
+            const hasPickInNext = allPicks.some(p => p.round_id === upcoming[0].id);
+            if (hasPickInNext) activeRound = upcoming[0];
+          }
+        }
+        activeRound = activeRound || currentInProgress || upcoming[0] || openRounds[0];
         selectRound(activeRound.id);
 
       } catch(err) {
@@ -1120,7 +1141,7 @@
             allPicks = allPicks.filter(p => p.round_id !== round.id);
             usedTeamIdsGlobal = new Set(allPicks.map(p => p.team_id));
             db.from('picks').delete().eq('player_id', player.id).eq('round_id', round.id);
-            renderPickForm(round2);
+            renderPickForm(round2, false);
           }
           return;
         }
@@ -1135,7 +1156,7 @@
         document.getElementById('submit-oracle-row-top').style.display = 'none';
         return;
       }
-      renderPickForm(round);
+      renderPickForm(round, hasSubmitted);
     }
 
     function showSubmittedPicks(round, roundPicks, isLocked, isKO) {
@@ -1187,10 +1208,10 @@
       tick();
       deadlineInterval = setInterval(tick, 1000);
 
-      renderPickForm(round);
+      renderPickForm(round, false);
     }
 
-    function renderPickForm(round) {
+    function renderPickForm(round, hasSubmitted) {
       const isGroup = round.round_type === 'group';
       const isKO    = KO_ROUNDS.includes(round.name);
       const currentRoundPickTeamIds = new Set(allPicks.filter(p => p.round_id === round.id).map(p => p.team_id));
@@ -1345,8 +1366,20 @@
       }
 
       document.getElementById('pick-form-inner').innerHTML = gridHtml;
-      // Top button always shown; bottom button only for group + R32/R16
-      const showBottomBtn = isGroup || ['Round of 32','Round of 16'].includes(round.name);
+
+      // Incomplete fixtures warning: R16+ only, and only when deadline hasn't passed yet
+      const fixturesWarningEl = document.getElementById('fixtures-incomplete-warning');
+      const EXPECTED_KO_MATCHES = { 'Round of 16': 8, 'Quarter Finals': 4, 'Semi Finals': 2, 'Final': 1, '3rd Place': 1 };
+      if (!isGroup && fixturesWarningEl && EXPECTED_KO_MATCHES[round.name]) {
+        const isUpcoming = getEffectiveDate() < new Date(round.deadline);
+        const expected   = EXPECTED_KO_MATCHES[round.name];
+        const actual     = allMatches.filter(m => m.round_id === round.id && m.home_team && m.away_team).length;
+        fixturesWarningEl.style.display = (isUpcoming && !hasSubmitted && actual > 0 && actual < expected) ? 'block' : 'none';
+      } else if (fixturesWarningEl) {
+        fixturesWarningEl.style.display = 'none';
+      }
+      // Top button always shown; bottom button only for group + R32
+      const showBottomBtn = isGroup || round.name === 'Round of 32';
       document.getElementById('submit-oracle-row').style.display = showBottomBtn ? 'flex' : 'none';
       document.getElementById('submit-oracle-row-top').style.display = 'flex';
       updateSubmitButton(isGroup, round);
@@ -1460,6 +1493,8 @@
 
       const topBtn = document.getElementById('submit-pick-btn-top');
       topBtn.disabled = !ready;
+      // Ensure top row is visible (may be hidden if prior round was in submitted state)
+      document.getElementById('submit-oracle-row-top').style.display = 'flex';
       topBtn.textContent = ready ? readyLabel : topNotReady;
 
       const botBtn = document.getElementById('submit-pick-btn');
@@ -1837,11 +1872,12 @@
       clearTimeout(loadTimeout);
       initNotifBar();
 
-      // Silent background refresh every 60s — skips if modal or oracle is open
+      // Silent background refresh every 60s — skips if modal or oracle is open, or mid-pick
       setInterval(() => {
         const modalOpen  = document.getElementById('pick-modal-backdrop').classList.contains('open');
         const oracleOpen = document.getElementById('oracle-sheet').classList.contains('open');
-        if (!modalOpen && !oracleOpen) loadDashboard();
+        const midPick    = !!(pickSingle || pick3 || pick2);
+        if (!modalOpen && !oracleOpen && !midPick) loadDashboard();
       }, 60000);
     });
   </script>
