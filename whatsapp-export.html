@@ -155,6 +155,71 @@
       </div>
     </div>
 
+    <!-- Tab bar -->
+    <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid var(--border)">
+      <button id="tab-btn-group" onclick="switchTab('group')" style="padding:10px 24px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:3px solid var(--gold);margin-bottom:-2px;color:var(--gold);cursor:pointer;font-family:inherit">Group Stage</button>
+      <button id="tab-btn-ko" onclick="switchTab('ko')" style="padding:10px 24px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--text-muted);cursor:pointer;font-family:inherit">Knockout</button>
+      <button id="tab-btn-old" onclick="switchTab('old')" style="padding:10px 24px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--text-muted);cursor:pointer;font-family:inherit">Old</button>
+    </div>
+
+    <!-- ══ GROUP TAB ══ -->
+    <div id="tab-group">
+
+
+    <div style="margin:32px 0 12px;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">New Formats</div>
+
+    <!-- NEW: Picks by Player -->
+    <div class="card section-block">
+      <div class="section-header">
+        <div class="card-title" style="margin-bottom:0">📋 Picks by Player</div>
+        <button class="btn btn-primary" id="btn-dl-pn2" style="display:none">⬇️ Download</button>
+      </div>
+      <div class="preview-wrap" id="pn2-preview-wrap" style="display:none">
+        <div id="pn2-render" class="render-root"></div>
+      </div>
+      <div class="status-msg" id="pn2-status">Click "Load Round Data" to generate.</div>
+    </div>
+
+    <!-- NEW: Teams Picked -->
+    <div class="card section-block">
+      <div class="section-header">
+        <div class="card-title" style="margin-bottom:0">🏳️ Teams Picked</div>
+        <button class="btn btn-primary" id="btn-dl-tp2" style="display:none">⬇️ Download</button>
+      </div>
+      <div class="preview-wrap" id="tp2-preview-wrap" style="display:none">
+        <div id="tp2-render" class="render-root"></div>
+      </div>
+      <div class="status-msg" id="tp2-status">Click "Load Round Data" to generate.</div>
+    </div>
+
+    <!-- NEW: Combinations -->
+    <div class="card section-block">
+      <div class="section-header">
+        <div class="card-title" style="margin-bottom:0">🔢 Combinations</div>
+        <button class="btn btn-primary" id="btn-dl-cb2" style="display:none">⬇️ Download</button>
+      </div>
+      <div class="preview-wrap" id="cb2-preview-wrap" style="display:none">
+        <div id="cb2-render" class="render-root"></div>
+      </div>
+      <div class="status-msg" id="cb2-status">Click "Load Round Data" to generate.</div>
+    </div>
+
+    <!-- NEW: Leaderboard -->
+    <div class="card section-block">
+      <div class="section-header">
+        <div class="card-title" style="margin-bottom:0">📊 Leaderboard</div>
+        <button class="btn btn-primary" id="btn-dl-lb2" style="display:none">⬇️ Download</button>
+      </div>
+      <div class="preview-wrap" id="lb2-preview-wrap" style="display:none">
+        <div id="lb2-render" class="render-root"></div>
+      </div>
+      <div class="status-msg" id="lb2-status">Click "Load Round Data" to generate.</div>
+    </div>
+
+    </div><!-- /tab-group -->
+
+    <!-- ══ OLD TAB ══ -->
+    <div id="tab-old" style="display:none">
     <!-- VERIFY: Leaderboard cross-check -->
     <div class="card section-block" id="verify-card" style="display:none">
       <div class="section-header">
@@ -243,6 +308,50 @@
       </div>
       <div class="status-msg" id="lb-status">Click "Load Round Data" to generate.</div>
     </div>
+
+    </div><!-- /tab-old -->
+
+    <!-- ══ KO TAB ══ -->
+    <div id="tab-ko" style="display:none">
+
+    <!-- KO: Picks by Player -->
+    <div class="card section-block">
+      <div class="section-header">
+        <div class="card-title" style="margin-bottom:0">📋 Picks by Player</div>
+        <button class="btn btn-primary" id="btn-dl-ko-pn" style="display:none">⬇️ Download</button>
+      </div>
+      <div class="preview-wrap" id="ko-pn-preview-wrap" style="display:none">
+        <div id="ko-pn-render" class="render-root"></div>
+      </div>
+      <div class="status-msg" id="ko-pn-status">Click "Load Round Data" to generate.</div>
+    </div>
+
+    <!-- KO: Teams Picked -->
+    <div class="card section-block">
+      <div class="section-header">
+        <div class="card-title" style="margin-bottom:0">🏳️ Teams Picked</div>
+        <button class="btn btn-primary" id="btn-dl-ko-tp" style="display:none">⬇️ Download</button>
+      </div>
+      <div class="preview-wrap" id="ko-tp-preview-wrap" style="display:none">
+        <div id="ko-tp-render" class="render-root"></div>
+      </div>
+      <div class="status-msg" id="ko-tp-status">Click "Load Round Data" to generate.</div>
+    </div>
+
+    <!-- KO: Leaderboard -->
+    <div class="card section-block">
+      <div class="section-header">
+        <div class="card-title" style="margin-bottom:0">📊 Leaderboard</div>
+        <button class="btn btn-primary" id="btn-dl-ko-lb" style="display:none">⬇️ Download</button>
+      </div>
+      <div class="preview-wrap" id="ko-lb-preview-wrap" style="display:none">
+        <div id="ko-lb-render" class="render-root"></div>
+      </div>
+      <div class="status-msg" id="ko-lb-status">Click "Load Round Data" to generate.</div>
+    </div>
+
+    </div><!-- /tab-ko -->
+
   </main>
 
   <script>
@@ -276,6 +385,13 @@
     document.getElementById('btn-dl-tp').addEventListener('click', () => downloadRender('tp-render', 'TeamsPicked'));
     document.getElementById('btn-dl-cb').addEventListener('click', () => downloadRender('cb-render', 'Combinations'));
     document.getElementById('btn-dl-lb').addEventListener('click', () => downloadRender('lb-render', 'Leaderboard'));
+    document.getElementById('btn-dl-pn2').addEventListener('click', () => downloadRender('pn2-render', 'PicksByPlayer'));
+    document.getElementById('btn-dl-tp2').addEventListener('click', () => downloadRender('tp2-render', 'TeamsPicked'));
+    document.getElementById('btn-dl-cb2').addEventListener('click', () => downloadRender('cb2-render', 'Combinations'));
+    document.getElementById('btn-dl-lb2').addEventListener('click', () => downloadRender('lb2-render', 'Leaderboard'));
+    document.getElementById('btn-dl-ko-pn').addEventListener('click', () => downloadRender('ko-pn-render', 'KO_Picks'));
+    document.getElementById('btn-dl-ko-tp').addEventListener('click', () => downloadRender('ko-tp-render', 'KO_Teams'));
+    document.getElementById('btn-dl-ko-lb').addEventListener('click', () => downloadRender('ko-lb-render', 'KO_Leaderboard'));
     document.getElementById('btn-copy-reminder').addEventListener('click', () => {
       const text = document.getElementById('reminder-copy-text').textContent;
       navigator.clipboard.writeText(text).then(() => {
@@ -702,6 +818,13 @@
         renderTeamsPicked();
         renderCombinations();
         renderLeaderboard();
+        renderPicksByNameNew();
+        renderTeamsPickedNew();
+        renderCombinationsNew();
+        renderLeaderboardNew();
+        renderKOPicksByPlayer();
+        renderKOTeamsPicked();
+        renderKOLeaderboard();
         renderReminderCopy();
         renderRoundSummary();
         runLeaderboardVerify();
@@ -1043,9 +1166,12 @@
           const pick2Html = pick2
             ? `<div style="font-size:12px;font-weight:700;color:#1a202c;margin-top:2px">${teamFlags[pick2.team_id]||''} ${teamNames[pick2.team_id]||'?'} <span style="font-size:10px;color:#2b6cb0;font-weight:700">2pt</span></div>`
             : `<div style="font-size:11px;color:#a0aec0;font-style:italic;margin-top:2px">No 2pt pick</div>`;
+          const nameWithOut = p.isOut
+            ? `<span class="r-name">${p.display_name || shortName(p.name)}</span> <span style="font-size:9px;font-weight:800;color:#e53e3e;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:3px;padding:1px 4px;vertical-align:middle">OUT</span>`
+            : `<span class="r-name">${p.display_name || shortName(p.name)}</span>`;
           html += `<tr class="${rowClass}">
             <td style="font-weight:700;color:#4a5568">${posLabel}</td>
-            <td class="left"><span class="r-name">${p.display_name || shortName(p.name)}</span></td>
+            <td class="left">${nameWithOut}</td>
             <td class="left">${pick3Html}${pick2Html}</td>
             <td style="color:#4a5568">${p.pld}</td>
             <td style="font-weight:800;color:#1a202c">${p.totalPoints}</td>
@@ -1068,9 +1194,12 @@
           const posLabel = isTied ? pos + '=' : String(pos);
           const pick = (playerCurrentPicks[p.id] || [])[0] || null;
           const rowClass = p.isOut ? 'elim' : '';
+          const nameWithOut = p.isOut
+            ? `<span class="r-name">${p.display_name || shortName(p.name)}</span> <span style="font-size:9px;font-weight:800;color:#e53e3e;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:3px;padding:1px 4px;vertical-align:middle">OUT</span>`
+            : `<span class="r-name">${p.display_name || shortName(p.name)}</span>`;
           html += `<tr class="${rowClass}">
             <td style="font-weight:700;color:#4a5568">${posLabel}</td>
-            <td class="left"><span class="r-name">${p.display_name || shortName(p.name)}</span></td>
+            <td class="left">${nameWithOut}</td>
             <td class="left">${teamCell(pick)}</td>
             <td style="font-weight:800;color:#1a202c">${p.totalPoints}</td>
           </tr>`;
@@ -1104,7 +1233,7 @@
       if (isGroupRound) {
         html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
           <th style="width:18px">#</th>
-          <th class="left">Team &amp; Opponent</th>
+          <th class="left" style="width:160px">Team &amp; Opponent</th>
           <th style="width:34px">Odds</th>
           <th style="width:28px">2pt</th>
           <th style="width:28px">3pt</th>
@@ -1128,7 +1257,7 @@
       } else {
         html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
           <th style="width:18px">#</th>
-          <th class="left">Team &amp; Opponent</th>
+          <th class="left" style="width:220px">Team &amp; Opponent</th>
           <th style="width:34px">Odds</th>
           <th style="width:38px">Picks</th>
         </tr></thead><tbody>`;
@@ -1350,7 +1479,114 @@
     }
 
 
-    // ── Leaderboard Cross-Check ───────────────────────────────
+
+    // ── NEW: Leaderboard ──────────────────────────────────────
+    function renderLeaderboardNew() {
+      if (!roundData) return;
+      const { sortedPlayers, fullRoundLabel, snapshotPosMap, prevSnapshotPosMap, rankMap,
+              matchesOnDay, isGroupRound, rounds, currentRoundSortOrder, projectedTotal } = roundData;
+
+      const testDateStr = localStorage.getItem('lms2026_test_date');
+      const nowUtc = testDateStr ? new Date(testDateStr) : new Date();
+      const utcH = nowUtc.getUTCHours();
+      const isLastNight = utcH >= 6 && utcH < 11;
+
+      const OUT_BADGE = '<span style="font-size:9px;font-weight:800;color:#e53e3e;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:3px;padding:1px 4px;vertical-align:middle;margin-left:3px">OUT</span>';
+
+      const showPld   = isGroupRound;
+      const currentRoundName = (rounds || []).find(r => r.sort_order === currentRoundSortOrder)?.name || '';
+      const showGoals = !isGroupRound && !currentRoundName.toLowerCase().includes('32');
+
+      const koRoundLabels = {};
+      (rounds || []).filter(r => r.round_type === 'knockout').forEach(r => {
+        const n = r.name.toLowerCase();
+        if (n.includes('final') && !n.includes('semi') && !n.includes('3rd') && !n.includes('quarter')) koRoundLabels[r.sort_order] = 'F';
+        else if (n.includes('semi'))    koRoundLabels[r.sort_order] = 'SF';
+        else if (n.includes('quarter')) koRoundLabels[r.sort_order] = 'QF';
+        else if (n.includes('16'))      koRoundLabels[r.sort_order] = 'R16';
+        else if (n.includes('32'))      koRoundLabels[r.sort_order] = 'R32';
+        else koRoundLabels[r.sort_order] = r.name.substring(0, 3);
+      });
+
+      const rankCounts = {};
+      sortedPlayers.forEach(p => { const r = rankMap[p.id]; if (r !== undefined) rankCounts[r] = (rankCounts[r]||0)+1; });
+
+      let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
+      html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
+        <thead><tr style="background:#eef2f7;border-bottom:1px solid #d1dbe8">
+          <th style="width:22px;padding:4px 2px 4px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</th>
+          <th style="width:30px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Prior</th>
+          <th style="padding:4px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Player</th>
+          ${showPld ? '<th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Pld</th>' : ''}
+          <th style="width:28px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Pts</th>
+          ${!isGroupRound ? '<th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Rnd</th>' : ''}
+          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">GD</th>
+          <th style="width:26px;padding:4px 4px 4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">⚽</th>
+        </tr></thead><tbody>`;
+
+      sortedPlayers.forEach((p, i) => {
+        const pos = rankMap[p.id] ?? (i + 1);
+        const isTied = isGroupRound ? false : (rankCounts[pos]||0) > 1;
+        const posLabel = isTied ? pos + '=' : String(pos);
+
+        const snapPos = snapshotPosMap[p.id];
+        // Movement: last completed snapshot position vs current live position
+        let priorHtml = '<span style="color:#cbd5e0;font-size:9px">—</span>';
+        if (snapPos !== undefined) {
+          const move = snapPos - pos;
+          if (move > 0)      priorHtml = `<span style="color:#38a169;font-size:9px;font-weight:700">▲${move}</span>`;
+          else if (move < 0) priorHtml = `<span style="color:#e53e3e;font-size:9px;font-weight:700">▼${Math.abs(move)}</span>`;
+          else               priorHtml = `<span style="color:#a0aec0;font-size:9px">—</span>`;
+        }
+
+        const gd = p.gd ?? 0;
+        const gdStr = gd > 0 ? `+${gd}` : String(gd);
+        const gdColor = gd < 0 ? '#c53030' : gd > 0 ? '#276749' : '#718096';
+
+        const flags = (p.todayFlags || []).slice(0, 2).join(' ');
+        const isPlayingToday = (p.todayFlags || []).length > 0;
+        const rowBg = isPlayingToday ? (isLastNight ? '#e0f2fe' : '#bfdbfe') : p.isOut ? '#fff5f5' : (i % 2 === 0 ? '#ffffff' : '#f8fafc');
+
+        const nameCell = p.isOut
+          ? `<span style="font-size:11px;font-weight:700;color:#a0aec0">${p.display_name || shortName(p.name)}</span>${OUT_BADGE}`
+          : `<span style="font-size:11px;font-weight:700;color:#1a202c">${p.display_name || shortName(p.name)}</span>${flags ? ' <span style="font-size:13px">' + flags + '</span>' : ''}`;
+
+        const frLabel = !isGroupRound ? (koRoundLabels[p.furthestRound] || '—') : '';
+        const goalsDiff = projectedTotal > 0 ? Math.abs(Math.round((p.goalsPredict||0) - projectedTotal)) : '—';
+
+        html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
+          <td style="padding:4px 2px 4px 8px;font-size:11px;font-weight:800;color:#718096;text-align:center">${posLabel}</td>
+          <td style="padding:4px 2px;text-align:center">${priorHtml}</td>
+          <td style="padding:4px 4px">${nameCell}</td>
+          ${showPld ? `<td style="padding:4px 2px;font-size:10px;color:#9aa5b4;text-align:center">${p.pld}</td>` : ''}
+          <td style="padding:4px 2px;font-size:12px;font-weight:800;color:#b7791f;text-align:center">${p.totalPoints}</td>
+          ${!isGroupRound ? `<td style="padding:4px 2px;font-size:10px;color:#4a5568;font-weight:600;text-align:center">${frLabel}</td>` : ''}
+          <td style="padding:4px 2px;font-size:11px;font-weight:700;color:${gdColor};text-align:center">${gdStr}</td>
+          <td style="padding:4px 4px 4px 2px;font-size:10px;color:#9aa5b4;text-align:center">${goalsDiff}</td>
+        </tr>`;
+      });
+
+      html += `</tbody></table>`;
+
+      if (matchesOnDay) {
+        const dayLabel = matchesOnDay.replace('Matches on', '').trim();
+        const hasToday = sortedPlayers.some(p => (p.todayFlags||[]).length > 0);
+        if (hasToday) {
+          const msg = isLastNight ? `🟦 Pick played ${dayLabel} night` : `🟦 Pick playing ${dayLabel} night`;
+          html += `<div style="background:#dbeafe;border-top:1px solid #bfdbfe;padding:6px 12px;font-size:12px;font-weight:600;color:#1e40af;text-align:center">${msg}</div>`;
+        } else {
+          html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:6px 12px;font-size:11px;font-weight:600;color:#4a5568;text-align:center">No picks playing ${dayLabel} night</div>`;
+        }
+      }
+
+      document.getElementById('lb2-render').innerHTML = html;
+      document.getElementById('lb2-preview-wrap').style.display = 'block';
+      document.getElementById('btn-dl-lb2').style.display = 'inline-block';
+      const noSnapshot = !roundData.lastCompletedRound;
+      setStatus('lb2-status', noSnapshot ? '⚠️ No completed rounds yet — order is points desc (no snapshot).' : '');
+    }
+
+        // ── Leaderboard Cross-Check ───────────────────────────────
     function runLeaderboardVerify() {
       if (!roundData) return;
       const { sortedPlayers, snapshots, lastCompletedRound } = roundData;
@@ -1424,7 +1660,436 @@
     }
 
     // ── Download ──────────────────────────────────────────────
-    async function downloadRender(elId, label) {
+
+
+    // ── KO: Picks by Player ───────────────────────────────────
+    function renderKOPicksByPlayer() {
+      if (!roundData) return;
+      const { sortedPlayers, playerCurrentPicks, teamNames, teamFlags, teamOpponents, teamIsLongshot, isGroupRound, fullRoundLabel, rankMap } = roundData;
+      if (isGroupRound) { setStatus('ko-pn-status', 'Knockout rounds only.'); return; }
+
+      const OUT_BADGE = '<span style="font-size:9px;font-weight:800;color:#e53e3e;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:3px;padding:1px 4px;vertical-align:middle;margin-left:3px">OUT</span>';
+
+      const rankCounts = {};
+      sortedPlayers.forEach(q => { const r = rankMap[q.id]; if (r !== undefined) rankCounts[r] = (rankCounts[r]||0)+1; });
+
+      let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
+      html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
+        <thead><tr style="background:#eef2f7;border-bottom:1px solid #d1dbe8">
+          <th style="width:20px;padding:5px 4px 5px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</th>
+          <th style="width:70px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Name</th>
+          <th style="padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Pick</th>
+          <th style="width:80px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Opponent</th>
+          <th style="width:34px;padding:5px 8px 5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Odds</th>
+        </tr></thead><tbody>`;
+
+      sortedPlayers.forEach((p, i) => {
+        const pos = rankMap[p.id] ?? (i + 1);
+        const isTied = (rankCounts[pos]||0) > 1;
+        const posLabel = isTied ? pos + '=' : String(pos);
+        const pick = (playerCurrentPicks[p.id] || [])[0] || null;
+        const rowBg = p.isOut ? '#fff5f5' : (i % 2 === 0 ? '#ffffff' : '#f8fafc');
+
+        const nameCell = p.isOut
+          ? `<span style="font-size:11px;font-weight:700;color:#a0aec0">${p.display_name || shortName(p.name)}</span>${OUT_BADGE}`
+          : `<span style="font-size:11px;font-weight:700;color:#1a202c">${p.display_name || shortName(p.name)}</span>`;
+
+        const ls = pick && teamIsLongshot[pick.team_id] ? ' ⭐' : '';
+        const pickCell = pick
+          ? `<span style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[pick.team_id]||''} ${teamNames[pick.team_id]||'?'}${ls}</span>`
+          : `<span style="font-size:10px;color:#a0aec0;font-style:italic">—</span>`;
+
+        const oppCell = pick && teamOpponents[pick.team_id]
+          ? `<span style="font-size:10px;color:#718096">v ${teamOpponents[pick.team_id]}</span>`
+          : `<span style="font-size:10px;color:#cbd5e0">—</span>`;
+
+        const odds = pick ? parseFloat(oddsMap[pick.team_id]) : NaN;
+        const oddsCell = !isNaN(odds) && odds > 0
+          ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>`
+          : `<span style="font-size:10px;color:#cbd5e0">—</span>`;
+
+        html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
+          <td style="padding:5px 4px 5px 8px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
+          <td style="padding:5px 4px">${nameCell}</td>
+          <td style="padding:5px 4px">${pickCell}</td>
+          <td style="padding:5px 4px">${oppCell}</td>
+          <td style="padding:5px 8px 5px 4px;text-align:center">${oddsCell}</td>
+        </tr>`;
+      });
+
+      html += `</tbody></table>`;
+      document.getElementById('ko-pn-render').innerHTML = html;
+      document.getElementById('ko-pn-preview-wrap').style.display = 'block';
+      document.getElementById('btn-dl-ko-pn').style.display = 'inline-block';
+      setStatus('ko-pn-status', '');
+    }
+
+    // ── KO: Teams Picked ──────────────────────────────────────
+    function renderKOTeamsPicked() {
+      if (!roundData) return;
+      const { teamCounts, teamNames, teamFlags, teamOpponents, teamIsLongshot, isGroupRound, fullRoundLabel } = roundData;
+      if (isGroupRound) { setStatus('ko-tp-status', 'Knockout rounds only.'); return; }
+
+      const sorted = Object.keys(teamCounts).sort((a,b) => {
+        const cd = teamCounts[b] - teamCounts[a];
+        if (cd !== 0) return cd;
+        return (parseFloat(oddsMap[a])||999) - (parseFloat(oddsMap[b])||999);
+      }).slice(0, 15);
+
+      const maxCount = Math.max(...Object.values(teamCounts));
+      const total = Object.keys(teamCounts).length;
+
+      let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
+      html += `<div style="display:flex;align-items:center;background:#eef2f7;border-bottom:1px solid #d1dbe8;padding:4px 12px">
+        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568">Team</span>
+        <span style="width:80px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568">Opponent</span>
+        <span style="width:36px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Odds</span>
+        <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Picks</span>
+      </div>`;
+
+      sorted.forEach((tid, i) => {
+        const count = teamCounts[tid];
+        const odds = parseFloat(oddsMap[tid]);
+        const hasOdds = !isNaN(odds) && odds > 0;
+        const ls = teamIsLongshot[tid] ? ' ⭐' : '';
+        const pct = Math.round((count / maxCount) * 100);
+        const barColor = count >= maxCount * 0.7 ? '#2b6cb0' : count >= maxCount * 0.35 ? '#b7791f' : '#718096';
+        const countColor = barColor;
+        const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+        const opp = teamOpponents[tid] || '?';
+
+        html += `<div style="display:flex;align-items:center;padding:7px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
+          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
+          <div style="flex:1;min-width:0;font-size:12px;font-weight:800;color:#1a202c">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
+          <div style="width:80px;font-size:10px;color:#718096">v ${opp}</div>
+          <div style="width:36px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? odds.toFixed(1) : '<span style="color:#cbd5e0">—</span>'}</div>
+          <div style="width:46px;display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <div style="width:28px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div></div>
+            <span style="font-size:11px;font-weight:800;color:${countColor};min-width:10px;text-align:right">${count}</span>
+          </div>
+        </div>`;
+      });
+
+      if (total > 15) html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:6px 12px;font-size:11px;font-weight:600;color:#4a5568;text-align:center">Top 15 of ${total} teams picked</div>`;
+
+      document.getElementById('ko-tp-render').innerHTML = html;
+      document.getElementById('ko-tp-preview-wrap').style.display = 'block';
+      document.getElementById('btn-dl-ko-tp').style.display = 'inline-block';
+      setStatus('ko-tp-status', '');
+    }
+
+    // ── KO: Leaderboard ───────────────────────────────────────
+    function renderKOLeaderboard() {
+      if (!roundData) return;
+      const { sortedPlayers, fullRoundLabel, snapshotPosMap, rankMap,
+              matchesOnDay, isGroupRound, rounds, currentRoundSortOrder, projectedTotal } = roundData;
+      if (isGroupRound) { setStatus('ko-lb-status', 'Knockout rounds only.'); return; }
+
+      const testDateStr = localStorage.getItem('lms2026_test_date');
+      const nowUtc = testDateStr ? new Date(testDateStr) : new Date();
+      const utcH = nowUtc.getUTCHours();
+      const isLastNight = utcH >= 6 && utcH < 11;
+
+      const OUT_BADGE = '<span style="font-size:9px;font-weight:800;color:#e53e3e;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:3px;padding:1px 4px;vertical-align:middle;margin-left:3px">OUT</span>';
+
+      const showGoals = true; // always show goals in KO
+
+      const koRoundLabels = {};
+      (rounds || []).filter(r => r.round_type === 'knockout').forEach(r => {
+        const n = r.name.toLowerCase();
+        if (n.includes('final') && !n.includes('semi') && !n.includes('3rd') && !n.includes('quarter')) koRoundLabels[r.sort_order] = 'F';
+        else if (n.includes('semi'))    koRoundLabels[r.sort_order] = 'SF';
+        else if (n.includes('quarter')) koRoundLabels[r.sort_order] = 'QF';
+        else if (n.includes('16'))      koRoundLabels[r.sort_order] = 'R16';
+        else if (n.includes('32'))      koRoundLabels[r.sort_order] = 'R32';
+        else koRoundLabels[r.sort_order] = r.name.substring(0, 3);
+      });
+
+      const rankCounts = {};
+      sortedPlayers.forEach(p => { const r = rankMap[p.id]; if (r !== undefined) rankCounts[r] = (rankCounts[r]||0)+1; });
+
+      let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
+      html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
+        <thead><tr style="background:#eef2f7;border-bottom:1px solid #d1dbe8">
+          <th style="width:22px;padding:4px 2px 4px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</th>
+          <th style="width:30px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Prior</th>
+          <th style="padding:4px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Player</th>
+          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Pld</th>
+          <th style="width:28px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Pts</th>
+          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Rnd</th>
+          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">GD</th>
+          ${showGoals ? '<th style="width:26px;padding:4px 4px 4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">⚽</th>' : ''}
+        </tr></thead><tbody>`;
+
+      sortedPlayers.forEach((p, i) => {
+        const pos = rankMap[p.id] ?? (i + 1);
+        const isTied = (rankCounts[pos]||0) > 1;
+        const posLabel = isTied ? pos + '=' : String(pos);
+
+        const snapPos = snapshotPosMap[p.id];
+        let priorHtml = '<span style="color:#cbd5e0;font-size:9px">—</span>';
+        if (snapPos !== undefined) {
+          const move = snapPos - pos;
+          if (move > 0)      priorHtml = `<span style="color:#38a169;font-size:9px;font-weight:700">▲${move}</span>`;
+          else if (move < 0) priorHtml = `<span style="color:#e53e3e;font-size:9px;font-weight:700">▼${Math.abs(move)}</span>`;
+          else               priorHtml = `<span style="color:#a0aec0;font-size:9px">—</span>`;
+        }
+
+        const gd = p.gd ?? 0;
+        const gdStr = gd > 0 ? `+${gd}` : String(gd);
+        const gdColor = gd < 0 ? '#c53030' : gd > 0 ? '#276749' : '#718096';
+
+        const flags = (p.todayFlags || []).slice(0, 2).join(' ');
+        const isPlayingToday = (p.todayFlags || []).length > 0;
+        const rowBg = isPlayingToday ? (isLastNight ? '#e0f2fe' : '#bfdbfe') : p.isOut ? '#fff5f5' : (i % 2 === 0 ? '#ffffff' : '#f8fafc');
+
+        const nameCell = p.isOut
+          ? `<span style="font-size:11px;font-weight:700;color:#a0aec0">${p.display_name || shortName(p.name)}</span>${OUT_BADGE}`
+          : `<span style="font-size:11px;font-weight:700;color:#1a202c">${p.display_name || shortName(p.name)}</span>${flags ? ' <span style="font-size:13px">' + flags + '</span>' : ''}`;
+
+        const effectiveFR = p.isOut ? (p.furthestRound || 0) : Math.max(p.furthestRound || 0, currentRoundSortOrder);
+        const frLabel = koRoundLabels[effectiveFR] || '—';
+        const goalsDiff = showGoals && projectedTotal > 0 ? Math.abs(Math.round((p.goalsPredict||0) - projectedTotal)) : '—';
+
+        html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
+          <td style="padding:4px 2px 4px 8px;font-size:11px;font-weight:800;color:#718096;text-align:center">${posLabel}</td>
+          <td style="padding:4px 2px;text-align:center">${priorHtml}</td>
+          <td style="padding:4px 4px">${nameCell}</td>
+          <td style="padding:4px 2px;font-size:10px;color:#9aa5b4;text-align:center">${p.pld}</td>
+          <td style="padding:4px 2px;font-size:12px;font-weight:800;color:#b7791f;text-align:center">${p.totalPoints}</td>
+          <td style="padding:4px 2px;font-size:10px;color:#4a5568;font-weight:600;text-align:center">${frLabel}</td>
+          <td style="padding:4px 2px;font-size:11px;font-weight:700;color:${gdColor};text-align:center">${gdStr}</td>
+          ${showGoals ? `<td style="padding:4px 4px 4px 2px;font-size:10px;color:#9aa5b4;text-align:center">${goalsDiff}</td>` : ''}
+        </tr>`;
+      });
+
+      html += `</tbody></table>`;
+
+      if (matchesOnDay) {
+        const dayLabel = matchesOnDay.replace('Matches on', '').trim();
+        const hasToday = sortedPlayers.some(p => (p.todayFlags||[]).length > 0);
+        if (hasToday) {
+          const msg = isLastNight ? `🟦 Pick played ${dayLabel} night` : `🟦 Pick playing ${dayLabel} night`;
+          html += `<div style="background:#dbeafe;border-top:1px solid #bfdbfe;padding:6px 12px;font-size:12px;font-weight:600;color:#1e40af;text-align:center">${msg}</div>`;
+        } else {
+          html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:6px 12px;font-size:11px;font-weight:600;color:#4a5568;text-align:center">No picks playing ${dayLabel} night</div>`;
+        }
+      }
+
+      document.getElementById('ko-lb-render').innerHTML = html;
+      document.getElementById('ko-lb-preview-wrap').style.display = 'block';
+      document.getElementById('btn-dl-ko-lb').style.display = 'inline-block';
+      const noSnapshot = !roundData.lastCompletedRound;
+      setStatus('ko-lb-status', noSnapshot ? '⚠️ No snapshot yet.' : '');
+    }
+
+        // ── Tab switching ─────────────────────────────────────────
+    function switchTab(tab) {
+      document.getElementById('tab-group').style.display = tab === 'group' ? '' : 'none';
+      document.getElementById('tab-ko').style.display    = tab === 'ko'    ? '' : 'none';
+      document.getElementById('tab-old').style.display   = tab === 'old'   ? '' : 'none';
+      const gold = 'var(--gold)', muted = 'var(--text-muted)';
+      ['group','ko','old'].forEach(t => {
+        const btn = document.getElementById('tab-btn-' + t);
+        btn.style.color = tab === t ? gold : muted;
+        btn.style.borderBottom = tab === t ? '3px solid var(--gold)' : '3px solid transparent';
+      });
+    }
+
+    // ── NEW: Picks by Player (group) ──────────────────────────
+    function renderPicksByNameNew() {
+      if (!roundData) return;
+      const { sortedPlayers, playerCurrentPicks, teamNames, teamFlags, teamIsLongshot, isGroupRound, fullRoundLabel, rankMap } = roundData;
+      if (!isGroupRound) { setStatus('pn2-status', 'Group stage only.'); return; }
+
+      const OUT_BADGE = '<span style="font-size:9px;font-weight:800;color:#e53e3e;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:3px;padding:1px 4px;vertical-align:middle;margin-left:3px">OUT</span>';
+
+      let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
+      html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
+        <thead><tr style="background:#eef2f7;border-bottom:1px solid #d1dbe8">
+          <th style="width:20px;padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</th>
+          <th style="width:72px;padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Name</th>
+          <th style="padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Picks</th>
+        </tr></thead><tbody>`;
+
+      const rankCounts = {};
+      sortedPlayers.forEach(q => { const r = rankMap[q.id]; if (r !== undefined) rankCounts[r] = (rankCounts[r]||0)+1; });
+
+      sortedPlayers.forEach((p, i) => {
+        const pos = rankMap[p.id] ?? (i + 1);
+        const posLabel = (rankCounts[pos]||0) > 1 ? pos + '=' : String(pos);
+        const pPicks = playerCurrentPicks[p.id] || [];
+        const pick3 = pPicks.find(pk => pk.multiplier === 3);
+        const pick2 = pPicks.find(pk => pk.multiplier === 2);
+        const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+        const elimBg = p.isOut ? '#fff5f5' : rowBg;
+        const nameCell = p.isOut
+          ? `<span style="font-size:11px;font-weight:700;color:#a0aec0">${p.display_name || shortName(p.name)}</span>${OUT_BADGE}`
+          : `<span style="font-size:11px;font-weight:700;color:#1a202c">${p.display_name || shortName(p.name)}</span>`;
+
+        const p3html = pick3
+          ? `<span style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[pick3.team_id]||''} ${teamNames[pick3.team_id]||'?'}${teamIsLongshot[pick3.team_id] ? ' ⭐' : ''}</span><span style="font-size:9px;font-weight:700;color:#b7791f;background:#fffbeb;padding:1px 3px;border-radius:2px;margin-left:2px">3pt</span>`
+          : `<span style="font-size:10px;color:#a0aec0;font-style:italic">—</span>`;
+        const p2html = pick2
+          ? `<span style="font-size:9px;color:#a0aec0;margin:0 4px">·</span><span style="font-size:11px;font-weight:800;color:#2b4a8a">${teamFlags[pick2.team_id]||''} ${teamNames[pick2.team_id]||'?'}${teamIsLongshot[pick2.team_id] ? ' ⭐' : ''}</span><span style="font-size:9px;font-weight:700;color:#2b6cb0;background:#ebf8ff;padding:1px 3px;border-radius:2px;margin-left:2px">2pt</span>`
+          : '';
+
+        html += `<tr style="background:${elimBg};border-bottom:1px solid #edf0f5">
+          <td style="padding:5px 6px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
+          <td style="padding:5px 6px">${nameCell}</td>
+          <td style="padding:5px 6px">${p3html}${p2html}</td>
+        </tr>`;
+      });
+
+      html += `</tbody></table>`;
+      document.getElementById('pn2-render').innerHTML = html;
+      document.getElementById('pn2-preview-wrap').style.display = 'block';
+      document.getElementById('btn-dl-pn2').style.display = 'inline-block';
+      setStatus('pn2-status', '');
+    }
+
+    // ── NEW: Teams Picked (group) ─────────────────────────────
+    function renderTeamsPickedNew() {
+      if (!roundData) return;
+      const { teamCounts, teamCounts2, teamCounts3, teamNames, teamFlags, teamOpponents, teamIsLongshot, isGroupRound, fullRoundLabel } = roundData;
+      if (!isGroupRound) { setStatus('tp2-status', 'Group stage only.'); return; }
+
+      const sorted = Object.keys(teamCounts).sort((a,b) => {
+        const cd = teamCounts[b] - teamCounts[a];
+        if (cd !== 0) return cd;
+        return (parseFloat(oddsMap[a])||999) - (parseFloat(oddsMap[b])||999);
+      }).slice(0, 10);
+
+      const maxCount = Math.max(...Object.values(teamCounts));
+
+      let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
+
+      // col headers
+      html += `<div style="display:flex;align-items:center;background:#eef2f7;border-bottom:1px solid #d1dbe8;padding:4px 12px;gap:0">
+        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568">Team &amp; opponent</span>
+        <span style="width:36px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Odds</span>
+        <span style="width:62px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">2pt / 3pt</span>
+        <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Picks</span>
+      </div>`;
+
+      sorted.forEach((tid, i) => {
+        const count = teamCounts[tid];
+        const count2 = teamCounts2[tid] || 0;
+        const count3 = teamCounts3[tid] || 0;
+        const odds = parseFloat(oddsMap[tid]);
+        const hasOdds = !isNaN(odds) && odds > 0;
+        const ls = teamIsLongshot[tid] ? ' ⭐' : '';
+        const pct = Math.round((count / maxCount) * 100);
+        // colour by dominant pick type: gold = mostly 3pt, blue = mostly 2pt, grey = equal/mixed
+        const barColor = count3 > count2 ? '#b7791f' : count2 > count3 ? '#2b6cb0' : '#718096';
+        const countColor = barColor;
+        const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+        const pill2 = count2 ? `<span style="font-size:9px;font-weight:700;color:#2b6cb0;background:#ebf8ff;border:1px solid #bee3f8;padding:1px 4px;border-radius:3px">${count2}×2pt</span>` : '';
+        const pill3 = count3 ? `<span style="font-size:9px;font-weight:700;color:#b7791f;background:#fffbeb;border:1px solid #f6e05e;padding:1px 4px;border-radius:3px">${count3}×3pt</span>` : '';
+
+        html += `<div style="display:flex;align-items:center;gap:0;padding:6px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
+          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:800;color:#1a202c">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
+            <div style="font-size:10px;color:#718096">v ${teamOpponents[tid]||'?'}</div>
+          </div>
+          <div style="width:36px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? odds.toFixed(1) : '<span style="color:#cbd5e0">—</span>'}</div>
+          <div style="width:62px;display:flex;gap:3px;justify-content:center;flex-wrap:wrap">${pill3}${pill2}</div>
+          <div style="width:46px;display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <div style="width:28px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div></div>
+            <span style="font-size:11px;font-weight:800;color:${countColor};min-width:10px;text-align:right">${count}</span>
+          </div>
+        </div>`;
+      });
+
+      const total = Object.keys(teamCounts).length;
+      if (total > 10) html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:6px 12px;font-size:11px;font-weight:600;color:#4a5568;text-align:center">Top 10 of ${total} teams picked</div>`;
+
+      document.getElementById('tp2-render').innerHTML = html;
+      document.getElementById('tp2-preview-wrap').style.display = 'block';
+      document.getElementById('btn-dl-tp2').style.display = 'inline-block';
+      setStatus('tp2-status', '');
+    }
+
+    // ── NEW: Combinations (group) ─────────────────────────────
+    function renderCombinationsNew() {
+      if (!roundData) return;
+      const { playerCurrentPicks, teamNames, teamFlags, teamOpponents, teamIsLongshot, isGroupRound, fullRoundLabel } = roundData;
+      if (!isGroupRound) { setStatus('cb2-status', 'Group stage only.'); return; }
+
+      const comboCounts = {}, comboPickMap = {};
+      Object.values(playerCurrentPicks).forEach(pPicks => {
+        if (pPicks.length < 2) return;
+        const s = [...pPicks].sort((a,b) => a.team_id.localeCompare(b.team_id));
+        const key = s[0].team_id + '|' + s[1].team_id;
+        comboCounts[key] = (comboCounts[key] || 0) + 1;
+        comboPickMap[key] = { tidA: s[0].team_id, tidB: s[1].team_id };
+      });
+
+      if (!Object.keys(comboCounts).length) {
+        setStatus('cb2-status', 'No combinations yet.');
+        document.getElementById('cb2-preview-wrap').style.display = 'none';
+        document.getElementById('btn-dl-cb2').style.display = 'none';
+        return;
+      }
+
+      function comboOdds2(key) {
+        const { tidA, tidB } = comboPickMap[key];
+        const oA = parseFloat(oddsMap[tidA]) || 0;
+        const oB = parseFloat(oddsMap[tidB]) || 0;
+        return oA > 0 && oB > 0 ? oA * oB : 0;
+      }
+
+      const sorted = Object.keys(comboCounts).sort((a,b) => {
+        const cd = comboCounts[b] - comboCounts[a];
+        if (cd !== 0) return cd;
+        return (comboOdds2(a)||999) - (comboOdds2(b)||999);
+      }).slice(0, 10);
+
+      const total = Object.keys(comboCounts).length;
+
+      let html = makeHeader('LMS WORLD CUP 2026', 'Top Combinations', fullRoundLabel);
+
+      html += `<div style="display:flex;align-items:center;background:#eef2f7;border-bottom:1px solid #d1dbe8;padding:4px 12px">
+        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568">Teams</span>
+        <span style="width:48px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Odds</span>
+        <span style="width:30px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Picks</span>
+      </div>`;
+
+      sorted.forEach((key, i) => {
+        const { tidA, tidB } = comboPickMap[key];
+        const count = comboCounts[key];
+        const odds = comboOdds2(key);
+        const lsA = teamIsLongshot[tidA] ? ' ⭐' : '';
+        const lsB = teamIsLongshot[tidB] ? ' ⭐' : '';
+        const oppA = teamOpponents[tidA] ? ` <span style="font-size:9px;font-weight:400;color:#a0aec0">v ${teamOpponents[tidA]}</span>` : '';
+        const oppB = teamOpponents[tidB] ? ` <span style="font-size:9px;font-weight:400;color:#a0aec0">v ${teamOpponents[tidB]}</span>` : '';
+        const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+
+        html += `<div style="display:flex;align-items:center;padding:6px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
+          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[tidA]||''} ${teamNames[tidA]||'?'}${lsA}${oppA}</div>
+            <div style="height:4px"></div>
+            <div style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[tidB]||''} ${teamNames[tidB]||'?'}${lsB}${oppB}</div>
+          </div>
+          <div style="width:48px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${odds > 0 ? odds.toFixed(1) : '—'}</div>
+          <div style="width:30px;text-align:center"><span style="font-size:11px;font-weight:800;color:#fff;background:#2b6cb0;padding:2px 6px;border-radius:4px">${count}</span></div>
+        </div>`;
+      });
+
+      if (total > 10) html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:6px 12px;font-size:11px;font-weight:600;color:#4a5568;text-align:center">Top 10 of ${total} combinations</div>`;
+
+      document.getElementById('cb2-render').innerHTML = html;
+      document.getElementById('cb2-preview-wrap').style.display = 'block';
+      document.getElementById('btn-dl-cb2').style.display = 'inline-block';
+      setStatus('cb2-status', '');
+    }
+
+        async function downloadRender(elId, label) {
       const btn = event.target;
       btn.textContent = 'Generating...';
       btn.disabled = true;

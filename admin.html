@@ -186,6 +186,7 @@
         <div class="tab-bar" style="margin-bottom:0">
           <div class="tab" data-tab="matches">🏆 R32</div>
           <div class="tab" data-tab="teams">🏳️ Teams</div>
+          <div class="tab" data-tab="pool">🎱 Pool</div>
           <div class="tab" data-tab="bracket">🏆 Bracket</div>
           <div class="tab" data-tab="goals">🎯 Goals</div>
           <div class="tab" data-tab="odds">📈 Odds</div>
@@ -552,6 +553,17 @@
       </div>
     </div>
 
+    <!-- POOL TAB -->
+    <div class="tab-content" id="tab-pool">
+      <div class="card">
+        <div class="card-title">🎱 Default Pool</div>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
+          Teams assigned to players who miss a deadline, in priority order. Only teams still alive and not already used by a player are eligible.
+        </p>
+        <div id="pool-list"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+
     <!-- BRACKET TAB -->
     <div class="tab-content" id="tab-bracket">
       <div class="card">
@@ -830,7 +842,7 @@
     }
 
     function switchTab(name) {
-      const setupTabs = ['matches', 'teams', 'bracket', 'goals', 'odds', 'testdate'];
+      const setupTabs = ['matches', 'teams', 'pool', 'bracket', 'goals', 'odds', 'testdate'];
       if (setupTabs.includes(name)) toggleSetup(true);
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -839,6 +851,7 @@
       if (name === 'goals') loadGoalsTab();
       if (name === 'odds') { loadOddsTable(); if (document.getElementById('odds-sub-match')?.style.display !== 'none') loadMatchOddsTable(); }
       if (name === 'teams' && !_teamsLoaded) { _teamsLoaded = true; loadTeamsLongshot(); }
+      if (name === 'pool') loadPoolTab();
       if (name === 'bracket') loadBracketVersions();
       if (name === 'matches') loadR32Matches();
       if (name === 'picks') loadPicksAudit();
@@ -2686,6 +2699,72 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
           sel.addEventListener('change', function() { teamUpdate(this.dataset.teamId, { band: this.value || null }); });
         });
       }
+    }
+
+    // ── Pool tab ──────────────────────────────────────────────
+    async function loadPoolTab() {
+      const el = document.getElementById('pool-list');
+      const [{ data: pool }, { data: rounds }] = await Promise.all([
+        db.from('default_pool').select('priority_order, team_id, teams(id, name, flag_emoji, is_eliminated, eliminated_in_round_id)').order('priority_order'),
+        db.from('rounds').select('id, name, sort_order').order('sort_order')
+      ]);
+      if (!pool) { el.innerHTML = '<p style="color:var(--red)">Failed to load pool.</p>'; return; }
+
+      const roundMap = {};
+      (rounds || []).forEach(r => { roundMap[r.id] = r.name; });
+
+      const ROUND_ABBREV = {
+        'Group Phase 1': 'GP1', 'Group Phase 2': 'GP2', 'Group Phase 3': 'Group',
+        'Round of 32': 'R32', 'Round of 16': 'R16',
+        'Quarter Finals': 'QF', 'Semi Finals': 'SF', 'Final': 'Final'
+      };
+      const ROUND_SORT = ['Group Phase 1','Group Phase 2','Group Phase 3','Round of 32','Round of 16','Quarter Finals','Semi Finals','Final'];
+
+      const stillIn = pool.filter(p => p.teams && !p.teams.is_eliminated);
+      const out     = pool.filter(p => p.teams && p.teams.is_eliminated);
+
+      const byRound = {};
+      out.forEach(p => {
+        const rName = roundMap[p.teams.eliminated_in_round_id] || 'Unknown';
+        if (!byRound[rName]) byRound[rName] = [];
+        byRound[rName].push(p);
+      });
+
+      function teamPill(p, dimmed) {
+        const t = p.teams;
+        return `<div style="display:inline-flex; align-items:center; gap:8px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 14px; font-size:14px; font-weight:600;${dimmed ? ' opacity:0.45;' : ''}">
+          <span style="color:var(--text-muted); font-size:11px; font-weight:700; min-width:18px">${p.priority_order}.</span>
+          ${t.flag_emoji} ${t.name}
+        </div>`;
+      }
+
+      let html = '';
+
+      if (stillIn.length) {
+        html += `<div style="margin-bottom:20px">
+          <div style="font-size:12px; font-weight:700; color:var(--green); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px">
+            🟢 Still In · ${stillIn.length}
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px">
+            ${stillIn.map(p => teamPill(p, false)).join('')}
+          </div>
+        </div>`;
+      }
+
+      ROUND_SORT.filter(r => byRound[r]).forEach(rName => {
+        const abbrev = ROUND_ABBREV[rName] || rName;
+        html += `<div style="margin-bottom:20px">
+          <div style="font-size:12px; font-weight:700; color:var(--red); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px">
+            💀 Out in ${abbrev} · ${byRound[rName].length}
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px">
+            ${byRound[rName].map(p => teamPill(p, true)).join('')}
+          </div>
+        </div>`;
+      });
+
+      if (!html) html = '<p style="color:var(--text-muted); font-size:13px">No pool teams found.</p>';
+      el.innerHTML = html;
     }
 
     // ── Snapshot ──────────────────────────────────────────────

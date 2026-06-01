@@ -670,7 +670,7 @@
             .order('created_at', { ascending: true }),
           db.from('rounds').select('*').order('sort_order'),
           db.from('teams').select('id, name, flag_emoji, is_longshot, is_eliminated, band, odds_rank').order('odds_rank'),
-          db.from('player_scores').select('player_id, total_points, name, is_eliminated, total_goals_prediction').order('total_points', { ascending: false }),
+          db.from('player_scores').select('player_id, total_points, name, is_eliminated, total_goals_prediction, eliminated_in_round_id').order('total_points', { ascending: false }),
           db.from('matches').select('id, round_id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band)').order('kickoff'),
           db.from('matches').select('id, home_team_id, away_team_id, home_score, away_score').not('home_score', 'is', null).not('away_score', 'is', null),
           db.from('player_gd').select('player_id, gd'),
@@ -799,6 +799,135 @@
           no_hoper:   availableTeams.filter(t => t.band === 'no_hoper').length,
         };
         const bandColors = { favourite:'#22c55e', dark_horse:'#f59e0b', long_shot:'#f97316', no_hoper:'#ef4444' };
+
+        // ── Competition ended + prize calculation ─────────────────────────
+        const activePlayers = (allScores || []).filter(p => !p.is_eliminated);
+        const competitionEnded = (!currentRound && (allRounds || []).length > 0) ||
+                                 (allScores || []).every(p => p.is_eliminated) ||
+                                 activePlayers.length === 0;
+
+        let winningsMap = {};
+        if (competitionEnded && allScores && allScores.length > 0) {
+          // Fetch all players' picks for first-out detection
+          const { data: allPlayersPicksRaw } = await db.from('picks')
+            .select('player_id, team_id, round_id, pick_results(match_result)');
+          const allPlayersPicks = allPlayersPicksRaw || [];
+
+          const totalPlayers = allScores.length;
+          const pot = totalPlayers * 10;
+          let splits;
+          if (totalPlayers >= 30)      splits = [0.45, 0.25, 0.15, 0.10, 0.05];
+          else if (totalPlayers >= 21) splits = [0.50, 0.25, 0.15, 0.10];
+          else                         splits = [0.60, 0.25, 0.15];
+          const FIRST_OUT_PRIZE = 10;
+          const remainingPot = pot - FIRST_OUT_PRIZE;
+
+          // Build posMap (tie detection)
+          const posMap = {};
+          (allScores || []).forEach((p, i) => {
+            if (i === 0) { posMap[p.player_id] = { pos: 1, tied: false }; return; }
+            const prev = allScores[i - 1];
+            if (p.total_points === prev.total_points && posMap[prev.player_id].pos === (posMap[prev.player_id]?.pos)) {
+              posMap[prev.player_id].tied = true;
+              posMap[p.player_id] = { pos: posMap[prev.player_id].pos, tied: true };
+            } else {
+              posMap[p.player_id] = { pos: i + 1, tied: false };
+            }
+          });
+
+          // First-out detection
+          const roundMap3 = {};
+          (allRounds || []).forEach(r => { roundMap3[r.id] = r; });
+          const kickoffByTeamRound3 = {};
+          (allMatches || []).forEach(m => {
+            if (!m.kickoff) return;
+            if (m.home_team_id) kickoffByTeamRound3[m.home_team_id + '|' + m.round_id] = m.kickoff;
+            if (m.away_team_id) kickoffByTeamRound3[m.away_team_id + '|' + m.round_id] = m.kickoff;
+          });
+          const matchByTeam3 = {};
+          (allMatches || []).forEach(m => {
+            if (m.home_team_id) matchByTeam3[m.home_team_id + '|' + m.round_id] = m;
+            if (m.away_team_id) matchByTeam3[m.away_team_id + '|' + m.round_id] = m;
+          });
+          const picksByPlayer3 = {};
+          allPlayersPicks.forEach(pk => {
+            if (!picksByPlayer3[pk.player_id]) picksByPlayer3[pk.player_id] = [];
+            picksByPlayer3[pk.player_id].push(pk);
+          });
+          const eliminated3 = (allScores || []).filter(p => p.is_eliminated);
+          const koRoundNames3 = new Set(['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final']);
+          const koRoundIds3 = new Set((allRounds || []).filter(r => koRoundNames3.has(r.name)).map(r => r.id));
+          function getElimInfo3(p) {
+            const playerPicks = picksByPlayer3[p.player_id] || [];
+            const losingPick = [...playerPicks].reverse().find(pk => {
+              const res = pk.pick_results && pk.pick_results[0];
+              return res && res.match_result === 'loss' && koRoundIds3.has(pk.round_id);
+            });
+            if (losingPick) {
+              const match = matchByTeam3[losingPick.team_id + '|' + losingPick.round_id] || null;
+              return { match, noPicks: false, elimRoundId: null, lastPickKickoff: null };
+            }
+            const elimRoundId = p.eliminated_in_round_id ||
+              (playerPicks.length > 0
+                ? [...playerPicks].sort((a, b) => (roundMap3[b.round_id]?.sort_order||0) - (roundMap3[a.round_id]?.sort_order||0))[0].round_id
+                : null);
+            const lastPick = playerPicks.length > 0
+              ? [...playerPicks].sort((a, b) => (roundMap3[b.round_id]?.sort_order||0) - (roundMap3[a.round_id]?.sort_order||0))[0]
+              : null;
+            const lastPickKickoff = lastPick ? kickoffByTeamRound3[lastPick.team_id + '|' + lastPick.round_id] || null : null;
+            return { match: null, noPicks: true, elimRoundId, lastPickKickoff };
+          }
+          const elimWithInfo3 = eliminated3.map(p => ({ player: p, info: getElimInfo3(p) }));
+          elimWithInfo3.sort((a, b) => {
+            const aSO = a.info.match ? (roundMap3[a.info.match.round_id]?.sort_order||0) : a.info.elimRoundId ? (roundMap3[a.info.elimRoundId]?.sort_order||0) : 0;
+            const bSO = b.info.match ? (roundMap3[b.info.match.round_id]?.sort_order||0) : b.info.elimRoundId ? (roundMap3[b.info.elimRoundId]?.sort_order||0) : 0;
+            if (aSO !== bSO) return aSO - bSO;
+            const aK = a.info.match?.kickoff ? new Date(a.info.match.kickoff).getTime() : a.info.lastPickKickoff ? new Date(a.info.lastPickKickoff).getTime() : 0;
+            const bK = b.info.match?.kickoff ? new Date(b.info.match.kickoff).getTime() : b.info.lastPickKickoff ? new Date(b.info.lastPickKickoff).getTime() : 0;
+            return aK - bK;
+          });
+          const firstSO3 = elimWithInfo3.length > 0 ? (elimWithInfo3[0].info.match ? (roundMap3[elimWithInfo3[0].info.match.round_id]?.sort_order||0) : elimWithInfo3[0].info.elimRoundId ? (roundMap3[elimWithInfo3[0].info.elimRoundId]?.sort_order||0) : 0) : null;
+          const firstK3  = elimWithInfo3.length > 0 ? (elimWithInfo3[0].info.match?.kickoff ? new Date(elimWithInfo3[0].info.match.kickoff).getTime() : elimWithInfo3[0].info.lastPickKickoff ? new Date(elimWithInfo3[0].info.lastPickKickoff).getTime() : 0) : null;
+          const firstOutPlayers3 = firstSO3 !== null
+            ? elimWithInfo3.filter(e => {
+                const so = e.info.match ? (roundMap3[e.info.match.round_id]?.sort_order||0) : e.info.elimRoundId ? (roundMap3[e.info.elimRoundId]?.sort_order||0) : 0;
+                const k  = e.info.match?.kickoff ? new Date(e.info.match.kickoff).getTime() : e.info.lastPickKickoff ? new Date(e.info.lastPickKickoff).getTime() : 0;
+                return so === firstSO3 && k === firstK3;
+              }).map(e => e.player)
+            : [];
+          const firstOutShare3 = firstOutPlayers3.length > 0 ? Math.round((FIRST_OUT_PRIZE / firstOutPlayers3.length) * 100) / 100 : 0;
+          firstOutPlayers3.forEach(p => { winningsMap[p.player_id] = (winningsMap[p.player_id] || 0) + firstOutShare3; });
+
+          // Prize places
+          const prizeGroups3 = {};
+          (allScores || []).forEach(p => {
+            const pos = posMap[p.player_id] ? posMap[p.player_id].pos : (allScores.indexOf(p) + 1);
+            if (!prizeGroups3[pos]) prizeGroups3[pos] = [];
+            prizeGroups3[pos].push(p.player_id);
+          });
+          let placeIdx3 = 0;
+          const sortedPos3 = Object.keys(prizeGroups3).map(Number).sort((a,b) => a-b);
+          for (const pos of sortedPos3) {
+            if (placeIdx3 >= splits.length) break;
+            const group = prizeGroups3[pos];
+            let totalShare = 0;
+            for (let k = placeIdx3; k < placeIdx3 + group.length && k < splits.length; k++) {
+              totalShare += splits[k] * remainingPot;
+            }
+            const perPlayer = Math.round((totalShare / group.length) * 100) / 100;
+            group.forEach(pid => { winningsMap[pid] = (winningsMap[pid] || 0) + perPlayer; });
+            placeIdx3 += group.length;
+          }
+
+          // Show prize badge next to player name
+          if (winningsMap[player.id]) {
+            const amt = winningsMap[player.id];
+            const amtStr = amt % 1 === 0 ? amt : amt.toFixed(2);
+            const statusEl = document.getElementById('player-status');
+            if (statusEl) statusEl.insertAdjacentHTML('beforeend',
+              '<span style="font-weight:700;color:var(--gold);font-size:13px;padding:2px 8px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:20px">💰 £' + amtStr + '</span>');
+          }
+        }
 
         document.getElementById('stat-points').textContent    = totalPoints;
         document.querySelector('#stat-points').closest('.stat-block').querySelector('.stat-label').textContent = totalPoints === 1 ? 'Point' : 'Points';

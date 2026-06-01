@@ -914,7 +914,21 @@
         const roundMap = {};
         (rounds || []).forEach(r => { roundMap[r.id] = r; });
 
+        const kickoffByTeamRound = {};
+        (completedMatches || []).forEach(m => {
+          if (m.home_team_id) kickoffByTeamRound[m.home_team_id + '|' + m.round_id] = m.kickoff;
+          if (m.away_team_id) kickoffByTeamRound[m.away_team_id + '|' + m.round_id] = m.kickoff;
+        });
+
         const formMap = {};
+        (allPicks || []).sort((a, b) => {
+          const soA = roundMap[a.round_id]?.sort_order || 0;
+          const soB = roundMap[b.round_id]?.sort_order || 0;
+          if (soA !== soB) return soA - soB;
+          const koA = new Date(kickoffByTeamRound[a.team_id + '|' + a.round_id] || 0).getTime();
+          const koB = new Date(kickoffByTeamRound[b.team_id + '|' + b.round_id] || 0).getTime();
+          return koA - koB;
+        });
         (allPicks || []).forEach(pick => {
           const res = pick.pick_results && pick.pick_results[0];
           if (!res || !res.match_result) return;
