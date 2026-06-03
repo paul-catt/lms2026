@@ -418,7 +418,7 @@
       const slug = localStorage.getItem('lms2026_my_slug');
       const link = document.getElementById('nav-my-page');
       if (slug) { link.href = '/' + slug; }
-      else { link.href = '/'; link.title = 'Find your link in the WhatsApp group'; }
+      else { link.href = '/?ref=mypage'; link.title = 'Find your link in the WhatsApp group'; }
     })();
   </script>
 
