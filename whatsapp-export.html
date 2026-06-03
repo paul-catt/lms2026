@@ -39,9 +39,9 @@
     .r-header-sub { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 2px; }
     .r-table { width: 100%; border-collapse: collapse; }
     .r-table thead th {
-      background: #eef2f7; color: #4a5568; font-size: 8px; font-weight: 700;
+      background: #2c3e50; color: #e2e8f0; font-size: 8px; font-weight: 700;
       letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 5px;
-      text-align: center; border-bottom: 1px solid #d1dbe8; white-space: nowrap;
+      text-align: center; border-bottom: 1px solid #1a2533; white-space: nowrap;
     }
     .r-table thead th.left { text-align: left; }
     .r-table tbody td {
@@ -131,29 +131,7 @@
       <div class="status-msg" id="load-status"></div>
     </div>
 
-    <!-- WA Image Top Padding Controls -->
-    <div class="card" style="margin-bottom:24px">
-      <div class="card-title" style="margin-bottom:12px">📐 WhatsApp Image Top Padding</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Adds blank space above each image so the header lands in WhatsApp's inline preview crop. Tune by eye — adjust, download, check on your phone.</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 24px">
-        <div>
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Picks by Name <span id="pad-pn-val" style="color:var(--gold)">0px</span></label>
-          <input type="range" id="pad-pn" min="0" max="600" step="10" value="0" style="width:100%">
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Teams Picked <span id="pad-tp-val" style="color:var(--gold)">0px</span></label>
-          <input type="range" id="pad-tp" min="0" max="600" step="10" value="0" style="width:100%">
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Combinations <span id="pad-cb-val" style="color:var(--gold)">0px</span></label>
-          <input type="range" id="pad-cb" min="0" max="600" step="10" value="0" style="width:100%">
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Leaderboard <span id="pad-lb-val" style="color:var(--gold)">0px</span></label>
-          <input type="range" id="pad-lb" min="0" max="600" step="10" value="0" style="width:100%">
-        </div>
-      </div>
-    </div>
+
 
     <!-- Tab bar -->
     <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid var(--border)">
@@ -166,6 +144,28 @@
     <div id="tab-group">
 
 
+    <div class="card section-block" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:8px;font-size:12px">📐 Image Top Padding</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Adjust so header lands in WhatsApp's crop. Tune by eye.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px">
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Picks by Player <span id="pad-pn2-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-pn2" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Teams Picked <span id="pad-tp2-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-tp2" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Combinations <span id="pad-cb2-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-cb2" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Leaderboard <span id="pad-lb2-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-lb2" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+      </div>
+    </div>
     <div style="margin:32px 0 12px;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">New Formats</div>
 
     <!-- NEW: Picks by Player -->
@@ -220,6 +220,28 @@
 
     <!-- ══ OLD TAB ══ -->
     <div id="tab-old" style="display:none">
+    <div class="card section-block" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:8px;font-size:12px">📐 Image Top Padding</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Adjust so header lands in WhatsApp's crop. Tune by eye.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px">
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Picks by Name <span id="pad-pn-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-pn" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Teams Picked <span id="pad-tp-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-tp" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Combinations <span id="pad-cb-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-cb" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Leaderboard <span id="pad-lb-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-lb" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+      </div>
+    </div>
     <!-- VERIFY: Leaderboard cross-check -->
     <div class="card section-block" id="verify-card" style="display:none">
       <div class="section-header">
@@ -313,6 +335,25 @@
 
     <!-- ══ KO TAB ══ -->
     <div id="tab-ko" style="display:none">
+
+    <div class="card section-block" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:8px;font-size:12px">📐 Image Top Padding</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Adjust so header lands in WhatsApp's crop. Tune by eye.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px">
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Picks by Player <span id="pad-ko-pn-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-ko-pn" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Teams Picked <span id="pad-ko-tp-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-ko-tp" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Leaderboard <span id="pad-ko-lb-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-ko-lb" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+      </div>
+    </div>
 
     <!-- KO: Picks by Player -->
     <div class="card section-block">
@@ -410,11 +451,11 @@
     });
 
     // ── WA Top Padding sliders ─────────────────────────────────
-    const PAD_KEYS = { pn: 'lms2026_wa_pad_pn', tp: 'lms2026_wa_pad_tp', cb: 'lms2026_wa_pad_cb', lb: 'lms2026_wa_pad_lb' };
+    const PAD_KEYS = { pn: 'lms2026_wa_pad_pn', tp: 'lms2026_wa_pad_tp', cb: 'lms2026_wa_pad_cb', lb: 'lms2026_wa_pad_lb', pn2: 'lms2026_wa_pad_pn2', tp2: 'lms2026_wa_pad_tp2', cb2: 'lms2026_wa_pad_cb2', lb2: 'lms2026_wa_pad_lb2', 'ko-pn': 'lms2026_wa_pad_ko_pn', 'ko-tp': 'lms2026_wa_pad_ko_tp', 'ko-lb': 'lms2026_wa_pad_ko_lb' };
     function getPad(key) { return parseInt(localStorage.getItem(PAD_KEYS[key]) || '0', 10); }
     function setPad(key, v) { localStorage.setItem(PAD_KEYS[key], v); }
 
-    ['pn','tp','cb','lb'].forEach(key => {
+    ['pn','tp','cb','lb','pn2','tp2','cb2','lb2','ko-pn','ko-tp','ko-lb'].forEach(key => {
       const slider = document.getElementById('pad-' + key);
       const label  = document.getElementById('pad-' + key + '-val');
       const saved  = getPad(key);
@@ -1513,15 +1554,15 @@
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
       html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
-        <thead><tr style="background:#eef2f7;border-bottom:1px solid #d1dbe8">
-          <th style="width:22px;padding:4px 2px 4px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</th>
-          <th style="width:30px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Prior</th>
-          <th style="padding:4px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Player</th>
-          ${showPld ? '<th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Pld</th>' : ''}
-          <th style="width:28px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Pts</th>
-          ${!isGroupRound ? '<th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Rnd</th>' : ''}
-          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">GD</th>
-          <th style="width:26px;padding:4px 4px 4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">⚽</th>
+        <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
+          <th style="width:22px;padding:4px 2px 4px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+          <th style="width:30px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Prior</th>
+          <th style="padding:4px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Player</th>
+          ${showPld ? '<th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Pld</th>' : ''}
+          <th style="width:28px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Pts</th>
+          ${!isGroupRound ? '<th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Rnd</th>' : ''}
+          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">GD</th>
+          <th style="width:26px;padding:4px 4px 4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">⚽</th>
         </tr></thead><tbody>`;
 
       sortedPlayers.forEach((p, i) => {
@@ -1675,12 +1716,12 @@
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
       html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
-        <thead><tr style="background:#eef2f7;border-bottom:1px solid #d1dbe8">
-          <th style="width:20px;padding:5px 4px 5px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</th>
-          <th style="width:70px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Name</th>
-          <th style="padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Pick</th>
-          <th style="width:80px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Opponent</th>
-          <th style="width:34px;padding:5px 8px 5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Odds</th>
+        <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
+          <th style="width:20px;padding:5px 4px 5px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+          <th style="width:68px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
+          <th style="width:125px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Pick</th>
+          <th style="width:75px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Opponent</th>
+          <th style="width:34px;padding:5px 8px 5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</th>
         </tr></thead><tbody>`;
 
       sortedPlayers.forEach((p, i) => {
@@ -1740,12 +1781,12 @@
       const total = Object.keys(teamCounts).length;
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
-      html += `<div style="display:flex;align-items:center;background:#eef2f7;border-bottom:1px solid #d1dbe8;padding:4px 12px">
-        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</span>
-        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568">Team</span>
-        <span style="width:80px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568">Opponent</span>
-        <span style="width:36px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Odds</span>
-        <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Picks</span>
+      html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px">
+        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team</span>
+        <span style="width:80px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Opponent</span>
+        <span style="width:36px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
+        <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
       </div>`;
 
       sorted.forEach((tid, i) => {
@@ -1811,15 +1852,15 @@
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
       html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
-        <thead><tr style="background:#eef2f7;border-bottom:1px solid #d1dbe8">
-          <th style="width:22px;padding:4px 2px 4px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</th>
-          <th style="width:30px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Prior</th>
-          <th style="padding:4px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Player</th>
-          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Pld</th>
-          <th style="width:28px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Pts</th>
-          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Rnd</th>
-          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">GD</th>
-          ${showGoals ? '<th style="width:26px;padding:4px 4px 4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">⚽</th>' : ''}
+        <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
+          <th style="width:22px;padding:4px 2px 4px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+          <th style="width:30px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Prior</th>
+          <th style="padding:4px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Player</th>
+          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Pld</th>
+          <th style="width:28px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Pts</th>
+          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Rnd</th>
+          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">GD</th>
+          ${showGoals ? '<th style="width:26px;padding:4px 4px 4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">⚽</th>' : ''}
         </tr></thead><tbody>`;
 
       sortedPlayers.forEach((p, i) => {
@@ -1907,10 +1948,10 @@
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
       html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
-        <thead><tr style="background:#eef2f7;border-bottom:1px solid #d1dbe8">
-          <th style="width:20px;padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</th>
-          <th style="width:72px;padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Name</th>
-          <th style="padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:left">Picks</th>
+        <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
+          <th style="width:20px;padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+          <th style="width:72px;padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
+          <th style="padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Picks</th>
         </tr></thead><tbody>`;
 
       const rankCounts = {};
@@ -1966,12 +2007,12 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
 
       // col headers
-      html += `<div style="display:flex;align-items:center;background:#eef2f7;border-bottom:1px solid #d1dbe8;padding:4px 12px;gap:0">
-        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</span>
-        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568">Team &amp; opponent</span>
-        <span style="width:36px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Odds</span>
-        <span style="width:62px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">2pt / 3pt</span>
-        <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Picks</span>
+      html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px;gap:0">
+        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team &amp; opponent</span>
+        <span style="width:36px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
+        <span style="width:62px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">2pt / 3pt</span>
+        <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
       </div>`;
 
       sorted.forEach((tid, i) => {
@@ -2052,11 +2093,11 @@
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Top Combinations', fullRoundLabel);
 
-      html += `<div style="display:flex;align-items:center;background:#eef2f7;border-bottom:1px solid #d1dbe8;padding:4px 12px">
-        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">#</span>
-        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568">Teams</span>
-        <span style="width:48px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Odds</span>
-        <span style="width:30px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4a5568;text-align:center">Picks</span>
+      html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px">
+        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Teams</span>
+        <span style="width:48px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
+        <span style="width:30px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
       </div>`;
 
       sorted.forEach((key, i) => {

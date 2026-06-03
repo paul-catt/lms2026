@@ -557,6 +557,10 @@
       : window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
     if (slug && !localStorage.getItem('lms2026_my_slug')) localStorage.setItem('lms2026_my_slug', slug);
 
+    const mySlug = localStorage.getItem('lms2026_my_slug');
+    const isReadOnly = false;
+    if (slug && !localStorage.getItem('lms2026_my_slug')) localStorage.setItem('lms2026_my_slug', slug);
+
     const lbLink = document.getElementById('leaderboard-link');
     if (slug && lbLink) lbLink.href = '/leaderboard?me=' + slug;
 
@@ -1623,15 +1627,17 @@
       const topBtn = document.getElementById('submit-pick-btn-top');
       topBtn.disabled = !ready;
       // Ensure top row is visible (may be hidden if prior round was in submitted state)
-      document.getElementById('submit-oracle-row-top').style.display = 'flex';
+      document.getElementById('submit-oracle-row-top').style.display = isReadOnly ? 'none' : 'flex';
       topBtn.textContent = ready ? readyLabel : topNotReady;
 
       const botBtn = document.getElementById('submit-pick-btn');
       botBtn.disabled = !ready;
+      botBtn.style.display = isReadOnly ? 'none' : '';
       botBtn.textContent = ready ? readyLabel : botNotReady;
     }
 
     async function submitPick() {
+      if (isReadOnly) return;
       const btn   = document.getElementById('submit-pick-btn');
       const btnT  = document.getElementById('submit-pick-btn-top');
       const msg   = document.getElementById('pick-msg');

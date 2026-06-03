@@ -163,6 +163,24 @@
     })();
   </script>
 
+  <script>
+    (function() {
+      const KEY = 'lms2026_admin_auth';
+      const PWD = 'lms2026admin';
+      if (sessionStorage.getItem(KEY) !== '1') {
+        const attempt = prompt('Admin password:');
+        if (attempt !== PWD) {
+          document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('admin-panel').innerHTML =
+              '<div style="text-align:center;padding:60px 20px;color:var(--red);font-size:18px;font-weight:700">🔒 Access denied</div>';
+          });
+          return;
+        }
+        sessionStorage.setItem(KEY, '1');
+      }
+    })();
+  </script>
+
   <main id="admin-panel" style="max-width:1000px">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px">
       <h1 style="font-size:20px; font-weight:800">⚙️ Admin Panel</h1>
