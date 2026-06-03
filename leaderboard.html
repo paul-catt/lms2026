@@ -382,7 +382,6 @@
     const mySlug = urlParams.get('me') || localStorage.getItem('lms2026_my_slug') || null;
 
     function playerLinkAttrs(slug) {
-      if (!mySlug) return `href="/?ref=mypage" style="color:inherit;text-decoration:none"`;
       return `href="#" onclick="return false" style="color:inherit;text-decoration:none;cursor:default"`;
     }
 
