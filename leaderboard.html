@@ -1414,10 +1414,16 @@
             ? '<span title="Pick of the Round" style="margin-left:5px;font-size:13px">🏆</span>'
             : '';
 
+          const gp1Round = (rounds || []).find(r => r.name === 'Group Phase 1');
+          const gp1DeadlinePassed = gp1Round?.deadline ? now >= new Date(gp1Round.deadline) : true;
           let goalsDiffHtml = '<span style="color:var(--text-muted)">—</span>';
-          if (projectedTotal !== null && p.total_goals_prediction !== null && p.total_goals_prediction !== undefined) {
-            const diff = Math.abs(Math.round(p.total_goals_prediction - projectedTotal));
-            goalsDiffHtml = `<span style="color:var(--text-muted)">${diff}</span>`;
+          if (p.total_goals_prediction !== null && p.total_goals_prediction !== undefined) {
+            if (!gp1DeadlinePassed) {
+              goalsDiffHtml = '<span style="color:var(--text-muted)">*</span>';
+            } else if (projectedTotal !== null) {
+              const diff = Math.abs(Math.round(p.total_goals_prediction - projectedTotal));
+              goalsDiffHtml = `<span style="color:var(--text-muted)">${diff}</span>`;
+            }
           }
 
           const noPicksLeft = !playerHasPendingPick[p.player_id] && getPlayerRemainingTeams(p.player_id).length === 0;
