@@ -208,6 +208,7 @@
       <div class="tab" data-tab="players">👥 Players</div>
       <div class="tab" data-tab="picks">👁 Picks</div>
       <div class="tab" data-tab="livescores">📡 Live Scores</div>
+      <div class="tab" data-tab="odds">📈 Odds</div>
       <a href="/whatsapp-export" class="tab" style="text-decoration:none; background:var(--surface2); color:var(--text-muted)">📱 WhatsApp</a>
     </div>
 
@@ -223,7 +224,6 @@
           <div class="tab" data-tab="pool">🎱 Pool</div>
           <div class="tab" data-tab="bracket">🏆 Bracket</div>
           <div class="tab" data-tab="goals">🎯 Goals</div>
-          <div class="tab" data-tab="odds">📈 Odds</div>
           <div class="tab" data-tab="testdate">🧪 Test Date</div>
         </div>
       </div>
@@ -368,6 +368,15 @@
       <!-- DANGER ZONE -->
       <div class="card" style="border:1px solid var(--red); margin-top:16px">
         <div class="card-title" style="color:var(--red)">⚠️ Danger Zone</div>
+
+        <!-- Clear Prior Movements -->
+        <div style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border)">
+          <p style="font-size:13px; color:var(--text-muted); margin-bottom:10px">
+            <strong>Clear Prior Movements:</strong> Resets the baseline snapshot used to calculate leaderboard movement arrows. Use if players show spurious ▲▼ before any results were entered. Does not affect any other data.
+          </p>
+          <button class="btn" id="btn-clear-prior" style="background:var(--green); color:white; border:none; border-radius:6px; cursor:pointer; padding:8px 16px; font-weight:600">↺ Clear Prior Movements</button>
+          <div id="clear-prior-msg" style="margin-top:8px; font-size:12px"></div>
+        </div>
 
         <!-- Reset Results only -->
         <div style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border)">
@@ -2990,6 +2999,41 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         await db.from('leaderboard_snapshots').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         msg.style.color = 'var(--green)'; msg.textContent = '✅ Match reset complete. KO fixture shells retained. All results, team assignments, eliminations and round progress cleared.';
         loadMatchesForResult(); loadCompletedMatchesForCorrection(); loadTeamsLongshot();
+      } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message; }
+    });
+
+    // ── Clear Prior Movements (GP0 baseline reset) ────────────
+    document.getElementById('btn-clear-prior').addEventListener('click', async () => {
+      const msg = document.getElementById('clear-prior-msg');
+      if (!confirm('This will rewrite the GP0 baseline snapshot using the current leaderboard sort order.\n\nMovement arrows will reset to zero. No results, picks or other data are affected.\n\nProceed?')) return;
+      msg.style.color = 'var(--text-muted)'; msg.textContent = 'Resetting...';
+      try {
+        // Replicate leaderboard sort exactly:
+        // points (all 0) → GD (all 0) → goals proximity to projectedTotal → alpha
+        // With no matches played, projectedTotal = 290 (pre-tournament baseline)
+        const { data: completedMatches } = await db.from('matches').select('home_score, away_score').eq('status', 'complete');
+        let projectedTotal = 290;
+        if (completedMatches && completedMatches.length > 0) {
+          const goals = completedMatches.reduce((s, m) => s + (m.home_score||0) + (m.away_score||0), 0);
+          projectedTotal = (goals / completedMatches.length) * 104;
+        }
+        const { data: players, error: plErr } = await db.from('players').select('id, name, total_goals_prediction');
+        if (plErr) throw plErr;
+        if (!players || players.length === 0) throw new Error('No players found');
+        players.sort((a, b) => {
+          const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
+          const bDiff = Math.abs((b.total_goals_prediction || 0) - projectedTotal);
+          if (aDiff !== bDiff) return aDiff - bDiff;
+          return a.name.localeCompare(b.name);
+        });
+        const { error: delErr } = await db.from('leaderboard_snapshots').delete().eq('round_id', GP0_ROUND_ID);
+        if (delErr) throw delErr;
+        const inserts = players.map((p, i) => ({ round_id: GP0_ROUND_ID, player_id: p.id, position: i + 1, total_points: 0 }));
+        const { error: insErr } = await db.from('leaderboard_snapshots').insert(inserts);
+        if (insErr) throw insErr;
+        await db.from('rounds').update({ is_complete: true }).eq('id', GP0_ROUND_ID);
+        msg.style.color = 'var(--green)'; msg.textContent = '✅ GP0 baseline rewritten. Movement arrows cleared.';
+        loadSnapshotStatus();
       } catch(err) { msg.style.color = 'var(--red)'; msg.textContent = '❌ Error: ' + err.message; }
     });
 
