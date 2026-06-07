@@ -2009,8 +2009,8 @@
       // col headers
       html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px;gap:0">
         <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
-        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team &amp; opponent</span>
-        <span style="width:36px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
+        <span style="width:120px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team &amp; opp</span>
+        <span style="width:32px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
         <span style="width:62px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">2pt / 3pt</span>
         <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
       </div>`;
@@ -2032,11 +2032,11 @@
 
         html += `<div style="display:flex;align-items:center;gap:0;padding:6px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
           <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:800;color:#1a202c">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
-            <div style="font-size:10px;color:#718096">v ${teamOpponents[tid]||'?'}</div>
+          <div style="width:120px;min-width:0;overflow:hidden">
+            <div style="font-size:12px;font-weight:800;color:#1a202c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
+            <div style="font-size:10px;color:#718096;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">v ${teamOpponents[tid]||'?'}</div>
           </div>
-          <div style="width:36px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? odds.toFixed(1) : '<span style="color:#cbd5e0">—</span>'}</div>
+          <div style="width:32px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? odds.toFixed(1) : '<span style="color:#cbd5e0">—</span>'}</div>
           <div style="width:62px;display:flex;gap:3px;justify-content:center;flex-wrap:wrap">${pill3}${pill2}</div>
           <div style="width:46px;display:flex;align-items:center;gap:4px;justify-content:flex-end">
             <div style="width:28px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div></div>
@@ -2095,7 +2095,7 @@
 
       html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px">
         <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
-        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Teams</span>
+        <span style="width:160px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Teams</span>
         <span style="width:48px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
         <span style="width:30px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
       </div>`;
@@ -2112,7 +2112,7 @@
 
         html += `<div style="display:flex;align-items:center;padding:6px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
           <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
-          <div style="flex:1;min-width:0">
+          <div style="width:160px;min-width:0;overflow:hidden">
             <div style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[tidA]||''} ${teamNames[tidA]||'?'}${lsA}${oppA}</div>
             <div style="height:4px"></div>
             <div style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[tidB]||''} ${teamNames[tidB]||'?'}${lsB}${oppB}</div>
@@ -2163,11 +2163,15 @@
         parent.removeChild(wrapper);
         if (spacer && spacer.parentNode === el) el.removeChild(spacer);
 
-        const link = document.createElement('a');
-        const rnd  = (roundData?.fullRoundLabel || 'Round').replace(/[\s·]+/g,'_');
-        link.download = `LMS2026_${rnd}_${label}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        const rnd = (roundData?.fullRoundLabel || 'Round').replace(/[\s·]+/g,'_');
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.download = `LMS2026_${rnd}_${label}.png`;
+          link.href = url;
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 5000);
+        }, 'image/png');
       } catch(err) { alert('Download failed: ' + err.message); }
       btn.textContent = '⬇️ Download';
       btn.disabled = false;
