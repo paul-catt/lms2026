@@ -130,6 +130,8 @@
       <div class="page-tabs">
         <button class="page-tab-btn active" id="ptab-fixtures" onclick="switchPageTab('fixtures')">📅 Fixtures</button>
         <button class="page-tab-btn" id="ptab-bracket" onclick="switchPageTab('bracket')">🏆 Bracket</button>
+        <button class="page-tab-btn" id="ptab-odds" onclick="switchPageTab('odds')">📈 Odds</button>
+        <button class="page-tab-btn" id="ptab-groups" onclick="switchPageTab('groups')">🌍 Groups</button>
       </div>
 
       <!-- BRACKET PANEL -->
@@ -181,6 +183,29 @@
           <div style="font-size:32px; margin-bottom:12px">🏗️</div>
           <div style="font-weight:700; margin-bottom:6px">Bracket not yet published</div>
           <div style="font-size:13px">Check back soon.</div>
+        </div>
+      </div>
+
+      <!-- GROUPS PANEL -->
+      <div class="page-tab-panel" id="panel-groups">
+        <div class="card-title">🌍 Groups</div>
+        <div id="groups-wrap"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+
+      <!-- ODDS PANEL -->
+      <div class="page-tab-panel" id="panel-odds">
+        <div class="card-title">📈 Odds</div>
+        <div style="display:flex; gap:6px; margin-bottom:16px;">
+          <button class="btn btn-primary" id="odds-subtab-outright-b" onclick="switchOddsSubtabB('outright')">📈 Outrights</button>
+          <button class="btn btn-secondary" id="odds-subtab-match-b" onclick="switchOddsSubtabB('match')">⚽ Match Odds</button>
+        </div>
+        <div id="odds-sub-outright-b">
+          <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">Tournament winner odds (William Hill). Indicative — updated periodically.</p>
+          <div id="odds-table-wrap-b"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+        <div id="odds-sub-match-b" style="display:none">
+          <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">H2H match odds (William Hill). Indicative — updated periodically.</p>
+          <div id="match-odds-wrap-b"><div class="loading"><div class="spinner"></div></div></div>
         </div>
       </div>
 
@@ -395,15 +420,7 @@
     }
 
     function decimalToFractional(dec) {
-      if (!dec || dec <= 1) return '';
-      const raw = dec - 1;
-      let rounded;
-      if (raw > 200)      rounded = Math.round(raw / 50) * 50;
-      else if (raw > 100) rounded = Math.round(raw / 20) * 20;
-      else if (raw > 25)  rounded = Math.round(raw / 5) * 5;
-      else                rounded = Math.round(raw);
-      if (rounded <= 0) rounded = 1;
-      return rounded + '/1';
+      return _bookieFraction(dec);
     }
 
     // ── Derive predicted teams ────────────────────────────────────
@@ -847,8 +864,12 @@
     function switchPageTab(name, sectionOverride) {
       document.getElementById('panel-bracket').classList.toggle('active', name === 'bracket');
       document.getElementById('panel-fixtures').classList.toggle('active', name === 'fixtures');
+      document.getElementById('panel-odds').classList.toggle('active', name === 'odds');
+      document.getElementById('panel-groups').classList.toggle('active', name === 'groups');
       document.getElementById('ptab-bracket').classList.toggle('active', name === 'bracket');
       document.getElementById('ptab-fixtures').classList.toggle('active', name === 'fixtures');
+      document.getElementById('ptab-odds').classList.toggle('active', name === 'odds');
+      document.getElementById('ptab-groups').classList.toggle('active', name === 'groups');
       if (name === 'fixtures') {
         if (!_fixturesLoaded) {
           loadFixtures().then(() => {
@@ -860,6 +881,8 @@
           else if (sectionOverride === 'group') switchFixturesSubtab('group');
         }
       }
+      if (name === 'odds' && !_oddsLoaded) { loadOddsTabB(); }
+      if (name === 'groups' && !_groupsLoaded) { loadGroupsTab(); }
     }
 
     // ── URL param handling ─────────────────────────────────────
@@ -948,10 +971,11 @@
 
           function teamSpan(team, col, pickNames, pickId) {
             if (!team) return '<span style="color:var(--text-muted)">TBD</span>';
+            const ls = team.is_longshot ? ' ⭐' : '';
             if (deadlinePassed && pickNames.length > 0) {
-              return `<span style="${col} cursor:pointer;" data-pick-id="${pickId}" onclick="showTeamPicksPopup(event,this)">${team.flag_emoji} ${team.name}</span>`;
+              return `<span style="${col} cursor:pointer;" data-pick-id="${pickId}" onclick="showTeamPicksPopup(event,this)">${team.flag_emoji} ${team.name}${ls}</span>`;
             }
-            return `<span style="${col}">${team.flag_emoji} ${team.name}</span>`;
+            return `<span style="${col}">${team.flag_emoji} ${team.name}${ls}</span>`;
           }
 
           const homePickId = 'pick_' + m.round_id + '_' + (m.home_team ? m.home_team.id : 'h');
@@ -996,7 +1020,7 @@
       if (rErr || !rounds) { wrap.innerHTML = '<p style="color:var(--red)">Error loading rounds.</p>'; return; }
 
       const { data: matches, error: mErr } = await db.from('matches')
-        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)')
+        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
         .in('round_id', rounds.map(r => r.id))
         .order('kickoff');
 
@@ -1039,7 +1063,7 @@
       if (rErr || !rounds) { wrap.innerHTML = '<p style="color:var(--red)">Error loading rounds.</p>'; return; }
 
       const { data: matches, error: mErr } = await db.from('matches')
-        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, is_third_place, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)')
+        .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, is_third_place, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
         .in('round_id', rounds.map(r => r.id))
         .not('home_team_id', 'is', null)
         .order('kickoff');
@@ -1074,6 +1098,208 @@
       wrap.innerHTML = html || '<p style="color:var(--text-muted)">No knockout fixtures found.</p>';
     }
 
+    // ── Odds tab ──────────────────────────────────────────────
+    let _oddsLoaded = false;
+    let _oddsMatchLoaded = false;
+
+    function switchOddsSubtabB(name) {
+      document.getElementById('odds-sub-outright-b').style.display = name === 'outright' ? '' : 'none';
+      document.getElementById('odds-sub-match-b').style.display    = name === 'match'    ? '' : 'none';
+      document.getElementById('odds-subtab-outright-b').className  = name === 'outright' ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('odds-subtab-match-b').className     = name === 'match'    ? 'btn btn-primary' : 'btn btn-secondary';
+      if (name === 'match' && !_oddsMatchLoaded) loadMatchOddsTabB();
+    }
+
+    // ── Bookie fractional odds lookup ─────────────────────────
+    const _BOOKIE_FRACTIONS = {
+      '1.04':'1/25', '1.05':'1/20', '1.06':'1/16', '1.07':'1/14', '1.08':'1/12', '1.09':'1/11',
+      '1.10':'1/10', '1.11':'1/9',  '1.13':'2/15', '1.14':'1/7',  '1.15':'2/13', '1.17':'1/6',
+      '1.18':'2/11', '1.20':'1/5',  '1.22':'2/9',  '1.25':'1/4',  '1.28':'2/7',  '1.30':'3/10',
+      '1.33':'1/3',  '1.36':'4/11', '1.40':'2/5',  '1.44':'4/9',  '1.50':'1/2',  '1.53':'8/15',
+      '1.57':'4/7',  '1.62':'8/13', '1.67':'4/6',  '1.73':'8/11', '1.80':'4/5',  '1.83':'5/6',
+      '1.91':'10/11','2.00':'Evens','2.10':'11/10','2.20':'6/5',  '2.25':'5/4',  '2.38':'11/8',
+      '2.50':'6/4',  '2.63':'13/8', '2.75':'7/4',  '2.88':'15/8', '3.00':'2/1',  '3.25':'9/4',
+      '3.50':'5/2',  '3.75':'11/4', '4.00':'3/1',  '4.33':'10/3', '4.50':'7/2',  '5.00':'4/1',
+      '5.50':'9/2',  '6.00':'5/1',  '6.50':'11/2', '7.00':'6/1',  '7.50':'13/2', '8.00':'7/1',
+      '9.00':'8/1',  '10.00':'9/1', '11.00':'10/1','12.00':'11/1','13.00':'12/1','15.00':'14/1',
+      '17.00':'16/1','19.00':'18/1','21.00':'20/1','26.00':'25/1','34.00':'33/1','41.00':'40/1',
+      '51.00':'50/1','67.00':'66/1','81.00':'80/1','101.00':'100/1','151.00':'150/1','201.00':'200/1',
+      '251.00':'250/1','501.00':'500/1'
+    };
+    function _bookieFraction(dec) {
+      if (!dec || dec <= 1) return '—';
+      // exact match
+      const exact = _BOOKIE_FRACTIONS[parseFloat(dec).toFixed(2)];
+      if (exact) return exact;
+      // nearest key
+      const keys = Object.keys(_BOOKIE_FRACTIONS).map(Number);
+      let nearest = keys[0], minDist = Math.abs(dec - keys[0]);
+      for (const k of keys) { const d = Math.abs(dec - k); if (d < minDist) { minDist = d; nearest = k; } }
+      if (minDist < 0.15) return _BOOKIE_FRACTIONS[nearest.toFixed(2)] || _BOOKIE_FRACTIONS[nearest];
+      // fallback: calculated
+      const num = Math.round((dec - 1) * 100), den = 100;
+      function _gcd(a, b) { return b === 0 ? a : _gcd(b, a % b); }
+      const g = _gcd(num, den);
+      return (num / g) + '/' + (den / g);
+    }
+
+    function gcdB(a, b) { return b === 0 ? a : gcdB(b, a % b); }
+    function decimalToFractionalB(dec) {
+      return _bookieFraction(dec);
+    }
+
+    async function loadOddsTabB() {
+      _oddsLoaded = true;
+      const wrap = document.getElementById('odds-table-wrap-b');
+      if (!wrap) return;
+      const { data: allOdds } = await db.from('team_odds').select('team_id, odds_decimal, odds_fractional, fetched_at, teams(flag_emoji, name, is_longshot)').order('fetched_at', { ascending: false });
+      if (!allOdds || allOdds.length === 0) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No odds available yet.</p>'; return; }
+      const byTeam = {};
+      allOdds.forEach(r => {
+        if (!byTeam[r.team_id]) { byTeam[r.team_id] = { flag: r.teams?.flag_emoji || '', name: r.teams?.name || '?', isLongshot: r.teams?.is_longshot || false, current: parseFloat(r.odds_decimal), currentFrac: r.odds_fractional || decimalToFractionalB(r.odds_decimal), history: [] }; }
+        else { byTeam[r.team_id].history.push(parseFloat(r.odds_decimal)); }
+      });
+      const sorted = Object.values(byTeam).sort((a, b) => a.current - b.current);
+      const lastFetchedStr = allOdds[0].fetched_at ? new Date(allOdds[0].fetched_at).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+      let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Last updated: <strong>${lastFetchedStr}</strong> · ${sorted.length} teams</div>`;
+      html += `<div class="table-wrap"><table><thead><tr><th class="left">Team</th><th>Odds</th><th>Move</th></tr></thead><tbody>`;
+      sorted.forEach(t => {
+        const hist = t.history;
+        let moveHtml = '<span style="color:var(--text-muted)">—</span>';
+        if (hist.length > 0) { const diff = t.current - hist[0]; if (Math.abs(diff) > 0.01) moveHtml = diff < 0 ? `<span style="color:var(--green)">▼ ${Math.abs(diff).toFixed(2)}</span>` : `<span style="color:var(--red)">▲ ${diff.toFixed(2)}</span>`; }
+        html += `<tr><td class="left">${t.flag} <strong>${t.name}</strong>${t.isLongshot ? ' ⭐' : ''}</td><td><strong>${t.current.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${t.currentFrac}</span></td><td>${moveHtml}</td></tr>`;
+      });
+      html += '</tbody></table></div>';
+      wrap.innerHTML = html;
+    }
+
+    async function loadMatchOddsTabB() {
+      _oddsMatchLoaded = true;
+      const wrap = document.getElementById('match-odds-wrap-b');
+      if (!wrap) return;
+      wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      const { data: rounds } = await db.from('rounds').select('id, name, sort_order, round_type').order('sort_order');
+      const { data: matches } = await db.from('matches')
+        .select('id, kickoff, round_id, status, home_score, away_score, odds_home, odds_away, odds_draw, home_team:teams!matches_home_team_id_fkey(name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(name, flag_emoji, is_longshot)')
+        .not('home_team_id', 'is', null)
+        .not('away_team_id', 'is', null)
+        .neq('is_third_place', true)
+        .order('kickoff');
+      if (!matches || matches.length === 0) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No match odds available.</p>'; return; }
+      const byRound = {};
+      matches.forEach(m => { if (!byRound[m.round_id]) byRound[m.round_id] = []; byRound[m.round_id].push(m); });
+      const sortedRounds = (rounds || []).filter(r => byRound[r.id] && r.name !== '3rd Place').sort((a, b) => a.sort_order - b.sort_order);
+      function fracB(dec) { return _bookieFraction(dec); }
+      function oddsCellB(dec, isWinner) {
+        const n = parseFloat(dec);
+        if (!dec || isNaN(n)) return '<span style="color:var(--border)">—</span>';
+        const valStyle = isWinner ? ' style="color:var(--green)"' : '';
+        return `<strong${valStyle}>${n.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${fracB(n)}</span>`;
+      }
+      let html = '';
+      for (const r of sortedRounds) {
+        const rMatches = byRound[r.id] || [];
+        html += `<div style="margin-bottom:24px">
+          <div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">${r.name}</div>
+          <div class="table-wrap"><table style="width:100%;font-size:13px">
+            <thead><tr>
+              <th class="left">Match</th>
+              <th style="text-align:center;width:80px">Home</th>
+              <th style="text-align:center;width:80px">Draw</th>
+              <th style="text-align:center;width:80px">Away</th>
+              <th style="text-align:center;width:70px">Result</th>
+            </tr></thead><tbody>`;
+        for (const m of rMatches) {
+          const ko = new Date(m.kickoff).toLocaleDateString('en-GB', {weekday:'short',day:'numeric',month:'short'});
+          const t  = new Date(m.kickoff).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+          const isDone  = m.status === 'complete';
+          const homeWon = isDone && m.home_score > m.away_score;
+          const awayWon = isDone && m.away_score > m.home_score;
+          const isDraw  = isDone && m.home_score === m.away_score;
+          const score = isDone ? `<span style="color:var(--green);font-weight:700">${m.home_score}–${m.away_score}</span>` : '<span style="color:var(--text-muted)">—</span>';
+          const homeLs = m.home_team?.is_longshot ? ' ⭐' : '';
+          const awayLs = m.away_team?.is_longshot ? ' ⭐' : '';
+          html += `<tr style="border-bottom:1px solid var(--border);${isDone?'opacity:0.55':''}">
+            <td style="padding:7px 6px">
+              <div style="font-weight:600">${m.home_team?.flag_emoji || ''} ${m.home_team?.name || 'TBD'}${homeLs} v ${m.away_team?.flag_emoji || ''} ${m.away_team?.name || 'TBD'}${awayLs}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${ko} · ${t}</div>
+            </td>
+            <td style="text-align:center;padding:7px 6px">${oddsCellB(m.odds_home, homeWon)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCellB(m.odds_draw, isDraw)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCellB(m.odds_away, awayWon)}</td>
+            <td style="text-align:center;padding:7px 6px">${score}</td>
+          </tr>`;
+        }
+        html += '</tbody></table></div></div>';
+      }
+      wrap.innerHTML = html;
+    }
+
+    // ── Groups tab ────────────────────────────────────────────
+    let _groupsLoaded = false;
+
+    const GROUP_TEAMS = {
+      'A': ['Mexico', 'South Africa', 'South Korea', 'Czech Rep'],
+      'B': ['Canada', 'Bosnia/Herzeg', 'Qatar', 'Switzerland'],
+      'C': ['Brazil', 'Morocco', 'Haiti', 'Scotland'],
+      'D': ['USA', 'Paraguay', 'Australia', 'Turkey'],
+      'E': ['Germany', 'Curaçao', 'Ivory Coast', 'Ecuador'],
+      'F': ['Netherlands', 'Japan', 'Sweden', 'Tunisia'],
+      'G': ['Belgium', 'Egypt', 'Iran', 'New Zealand'],
+      'H': ['Spain', 'Cape Verde', 'Saudi Arabia', 'Uruguay'],
+      'I': ['France', 'Senegal', 'Iraq', 'Norway'],
+      'J': ['Argentina', 'Algeria', 'Austria', 'Jordan'],
+      'K': ['Portugal', 'DR Congo', 'Uzbekistan', 'Colombia'],
+      'L': ['England', 'Croatia', 'Ghana', 'Panama'],
+    };
+
+    const BAND_COLOURS = {
+      'favourite':  '#10b981',
+      'dark_horse': '#facc15',
+      'long_shot':  '#f97316',
+      'no_hoper':   '#ef4444',
+    };
+
+    async function loadGroupsTab() {
+      _groupsLoaded = true;
+      const wrap = document.getElementById('groups-wrap');
+      if (!wrap) return;
+
+      const { data: teams } = await db.from('teams').select('id, name, flag_emoji, is_longshot, is_eliminated, band, pot');
+      if (!teams) { wrap.innerHTML = '<p style="color:var(--red)">Error loading teams.</p>'; return; }
+
+      const byName = {};
+      teams.forEach(t => { byName[t.name] = t; });
+
+      const bandOrder = { 'favourite': 1, 'dark_horse': 2, 'long_shot': 3, 'no_hoper': 4 };
+
+      let html = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px;">';
+
+      for (const [letter, teamNames] of Object.entries(GROUP_TEAMS)) {
+        html += `<div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+          <div style="background:var(--surface); padding:7px 12px; border-bottom:1px solid var(--border); font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; color:var(--accent); letter-spacing:0.06em;">GROUP ${letter}</div>`;
+
+        const sorted = teamNames
+          .map(n => byName[n] || { name: n, flag_emoji: '🏳️', is_longshot: false, is_eliminated: false, pot: 99 })
+          .sort((a, b) => (a.pot || 99) - (b.pot || 99));
+
+        sorted.forEach((t, i) => {
+          const ls = t.is_longshot ? ' ⭐' : '';
+          const elimStyle = t.is_eliminated ? 'opacity:0.35; text-decoration:line-through;' : '';
+          const border = i < sorted.length - 1 ? 'border-bottom:1px solid var(--border);' : '';
+          const bandCol = BAND_COLOURS[t.band] || 'var(--border)';
+          html += `<div style="display:flex; align-items:center; gap:8px; padding:7px 12px; ${border} ${elimStyle}">
+            <span style="font-size:15px; flex-shrink:0">${t.flag_emoji || '🏳️'}</span>
+            <span style="font-size:13px; font-weight:600; flex:1">${t.name}${ls}</span>
+            <span style="width:8px; height:8px; border-radius:2px; background:${bandCol}; flex-shrink:0"></span>
+          </div>`;
+        });
+
+        html += '</div>';
+      }
+
+      html += '</div>';
+      wrap.innerHTML = html;
+    }
+
   </script>
-</body>
-</html>
