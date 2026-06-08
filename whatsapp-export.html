@@ -11,8 +11,10 @@
     .section-block { margin-bottom: 32px; }
     .section-header {
       display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
+      margin-bottom: 12px; flex-wrap: nowrap; gap: 8px;
     }
+    .btn-group-export { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn-group-export .btn { font-size: 12px; padding: 6px 10px; white-space: nowrap; }
     .preview-wrap {
       overflow-x: auto; background: #1a1a2e; padding: 20px;
       border-radius: 10px; margin-bottom: 8px;
@@ -172,7 +174,8 @@
     <div class="card section-block">
       <div class="section-header">
         <div class="card-title" style="margin-bottom:0">📋 Picks by Player</div>
-        <div style="display:flex;gap:8px">
+        <div class="btn-group-export">
+          <button class="btn btn-secondary" id="btn-sh-pn2" style="display:none">📤 Share</button>
           <button class="btn btn-secondary" id="btn-cp-pn2" style="display:none">📋 Copy</button>
           <button class="btn btn-primary" id="btn-dl-pn2" style="display:none">⬇️ Download</button>
         </div>
@@ -187,7 +190,8 @@
     <div class="card section-block">
       <div class="section-header">
         <div class="card-title" style="margin-bottom:0">🏳️ Teams Picked</div>
-        <div style="display:flex;gap:8px">
+        <div class="btn-group-export">
+          <button class="btn btn-secondary" id="btn-sh-tp2" style="display:none">📤 Share</button>
           <button class="btn btn-secondary" id="btn-cp-tp2" style="display:none">📋 Copy</button>
           <button class="btn btn-primary" id="btn-dl-tp2" style="display:none">⬇️ Download</button>
         </div>
@@ -202,7 +206,8 @@
     <div class="card section-block">
       <div class="section-header">
         <div class="card-title" style="margin-bottom:0">🔢 Combinations</div>
-        <div style="display:flex;gap:8px">
+        <div class="btn-group-export">
+          <button class="btn btn-secondary" id="btn-sh-cb2" style="display:none">📤 Share</button>
           <button class="btn btn-secondary" id="btn-cp-cb2" style="display:none">📋 Copy</button>
           <button class="btn btn-primary" id="btn-dl-cb2" style="display:none">⬇️ Download</button>
         </div>
@@ -217,7 +222,8 @@
     <div class="card section-block">
       <div class="section-header">
         <div class="card-title" style="margin-bottom:0">📊 Leaderboard</div>
-        <div style="display:flex;gap:8px">
+        <div class="btn-group-export">
+          <button class="btn btn-secondary" id="btn-sh-lb2" style="display:none">📤 Share</button>
           <button class="btn btn-secondary" id="btn-cp-lb2" style="display:none">📋 Copy</button>
           <button class="btn btn-primary" id="btn-dl-lb2" style="display:none">⬇️ Download</button>
         </div>
@@ -299,7 +305,8 @@
     <div class="card section-block">
       <div class="section-header">
         <div class="card-title" style="margin-bottom:0">📋 Picks by Name</div>
-        <div style="display:flex;gap:8px">
+        <div class="btn-group-export">
+          <button class="btn btn-secondary" id="btn-sh-pn" style="display:none">📤 Share</button>
           <button class="btn btn-secondary" id="btn-cp-pn" style="display:none">📋 Copy</button>
           <button class="btn btn-primary" id="btn-dl-pn" style="display:none">⬇️ Download</button>
         </div>
@@ -314,7 +321,8 @@
     <div class="card section-block">
       <div class="section-header">
         <div class="card-title" style="margin-bottom:0">🏳️ Teams Picked</div>
-        <div style="display:flex;gap:8px">
+        <div class="btn-group-export">
+          <button class="btn btn-secondary" id="btn-sh-tp" style="display:none">📤 Share</button>
           <button class="btn btn-secondary" id="btn-cp-tp" style="display:none">📋 Copy</button>
           <button class="btn btn-primary" id="btn-dl-tp" style="display:none">⬇️ Download</button>
         </div>
@@ -329,7 +337,8 @@
     <div class="card section-block">
       <div class="section-header">
         <div class="card-title" style="margin-bottom:0">🔢 Combinations</div>
-        <div style="display:flex;gap:8px">
+        <div class="btn-group-export">
+          <button class="btn btn-secondary" id="btn-sh-cb" style="display:none">📤 Share</button>
           <button class="btn btn-secondary" id="btn-cp-cb" style="display:none">📋 Copy</button>
           <button class="btn btn-primary" id="btn-dl-cb" style="display:none">⬇️ Download</button>
         </div>
@@ -344,7 +353,8 @@
     <div class="card section-block">
       <div class="section-header">
         <div class="card-title" style="margin-bottom:0">📊 Leaderboard Image</div>
-        <div style="display:flex;gap:8px">
+        <div class="btn-group-export">
+          <button class="btn btn-secondary" id="btn-sh-lb" style="display:none">📤 Share</button>
           <button class="btn btn-secondary" id="btn-cp-lb" style="display:none">📋 Copy</button>
           <button class="btn btn-primary" id="btn-dl-lb" style="display:none">⬇️ Download</button>
         </div>
@@ -383,7 +393,8 @@
     <div class="card section-block">
       <div class="section-header">
         <div class="card-title" style="margin-bottom:0">📋 Picks by Player</div>
-        <div style="display:flex;gap:8px">
+        <div class="btn-group-export">
+          <button class="btn btn-secondary" id="btn-sh-ko-pn" style="display:none">📤 Share</button>
           <button class="btn btn-secondary" id="btn-cp-ko-pn" style="display:none">📋 Copy</button>
           <button class="btn btn-primary" id="btn-dl-ko-pn" style="display:none">⬇️ Download</button>
         </div>
@@ -398,7 +409,8 @@
     <div class="card section-block">
       <div class="section-header">
         <div class="card-title" style="margin-bottom:0">🏳️ Teams Picked</div>
-        <div style="display:flex;gap:8px">
+        <div class="btn-group-export">
+          <button class="btn btn-secondary" id="btn-sh-ko-tp" style="display:none">📤 Share</button>
           <button class="btn btn-secondary" id="btn-cp-ko-tp" style="display:none">📋 Copy</button>
           <button class="btn btn-primary" id="btn-dl-ko-tp" style="display:none">⬇️ Download</button>
         </div>
@@ -413,7 +425,8 @@
     <div class="card section-block">
       <div class="section-header">
         <div class="card-title" style="margin-bottom:0">📊 Leaderboard</div>
-        <div style="display:flex;gap:8px">
+        <div class="btn-group-export">
+          <button class="btn btn-secondary" id="btn-sh-ko-lb" style="display:none">📤 Share</button>
           <button class="btn btn-secondary" id="btn-cp-ko-lb" style="display:none">📋 Copy</button>
           <button class="btn btn-primary" id="btn-dl-ko-lb" style="display:none">⬇️ Download</button>
         </div>
@@ -477,6 +490,17 @@
     document.getElementById('btn-cp-ko-pn').addEventListener('click', () => copyRender('ko-pn-render'));
     document.getElementById('btn-cp-ko-tp').addEventListener('click', () => copyRender('ko-tp-render'));
     document.getElementById('btn-cp-ko-lb').addEventListener('click', () => copyRender('ko-lb-render'));
+    document.getElementById('btn-sh-pn').addEventListener('click', () => shareRender('pn-render'));
+    document.getElementById('btn-sh-tp').addEventListener('click', () => shareRender('tp-render'));
+    document.getElementById('btn-sh-cb').addEventListener('click', () => shareRender('cb-render'));
+    document.getElementById('btn-sh-lb').addEventListener('click', () => shareRender('lb-render'));
+    document.getElementById('btn-sh-pn2').addEventListener('click', () => shareRender('pn2-render'));
+    document.getElementById('btn-sh-tp2').addEventListener('click', () => shareRender('tp2-render'));
+    document.getElementById('btn-sh-cb2').addEventListener('click', () => shareRender('cb2-render'));
+    document.getElementById('btn-sh-lb2').addEventListener('click', () => shareRender('lb2-render'));
+    document.getElementById('btn-sh-ko-pn').addEventListener('click', () => shareRender('ko-pn-render'));
+    document.getElementById('btn-sh-ko-tp').addEventListener('click', () => shareRender('ko-tp-render'));
+    document.getElementById('btn-sh-ko-lb').addEventListener('click', () => shareRender('ko-lb-render'));
     document.getElementById('btn-copy-reminder').addEventListener('click', () => {
       const text = document.getElementById('reminder-copy-text').textContent;
       navigator.clipboard.writeText(text).then(() => {
@@ -1294,7 +1318,7 @@
       html += `</tbody></table>`;
       document.getElementById('pn-render').innerHTML = html;
       document.getElementById('pn-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-pn').style.display = 'inline-block'; document.getElementById('btn-cp-pn').style.display = 'inline-block';
+      document.getElementById('btn-dl-pn').style.display = 'inline-block'; document.getElementById('btn-cp-pn').style.display = 'inline-block'; document.getElementById('btn-sh-pn').style.display = 'inline-block';
       setStatus('pn-status', '');
     }
 
@@ -1364,7 +1388,7 @@
       html += `</tbody></table>`;
       document.getElementById('tp-render').innerHTML = html;
       document.getElementById('tp-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-tp').style.display = 'inline-block'; document.getElementById('btn-cp-tp').style.display = 'inline-block';
+      document.getElementById('btn-dl-tp').style.display = 'inline-block'; document.getElementById('btn-cp-tp').style.display = 'inline-block'; document.getElementById('btn-sh-tp').style.display = 'inline-block';
       setStatus('tp-status', '');
     }
 
@@ -1432,7 +1456,7 @@
       html += `</tbody></table>`;
       document.getElementById('cb-render').innerHTML = html;
       document.getElementById('cb-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-cb').style.display = 'inline-block'; document.getElementById('btn-cp-cb').style.display = 'inline-block';
+      document.getElementById('btn-dl-cb').style.display = 'inline-block'; document.getElementById('btn-cp-cb').style.display = 'inline-block'; document.getElementById('btn-sh-cb').style.display = 'inline-block';
       setStatus('cb-status', `${sortedCombos.length} combinations.`);
     }
 
@@ -1558,7 +1582,7 @@
       }
       document.getElementById('lb-render').innerHTML = html;
       document.getElementById('lb-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-lb').style.display = 'inline-block'; document.getElementById('btn-cp-lb').style.display = 'inline-block';
+      document.getElementById('btn-dl-lb').style.display = 'inline-block'; document.getElementById('btn-cp-lb').style.display = 'inline-block'; document.getElementById('btn-sh-lb').style.display = 'inline-block';
       const noSnapshot = !roundData.lastCompletedRound;
       setStatus('lb-status', noSnapshot ? '⚠️ No completed rounds yet — order is points desc (no snapshot).' : '');
     }
@@ -1666,7 +1690,7 @@
 
       document.getElementById('lb2-render').innerHTML = html;
       document.getElementById('lb2-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-lb2').style.display = 'inline-block'; document.getElementById('btn-cp-lb2').style.display = 'inline-block';
+      document.getElementById('btn-dl-lb2').style.display = 'inline-block'; document.getElementById('btn-cp-lb2').style.display = 'inline-block'; document.getElementById('btn-sh-lb2').style.display = 'inline-block';
       const noSnapshot = !roundData.lastCompletedRound;
       setStatus('lb2-status', noSnapshot ? '⚠️ No completed rounds yet — order is points desc (no snapshot).' : '');
     }
@@ -1805,7 +1829,7 @@
       html += `</tbody></table>`;
       document.getElementById('ko-pn-render').innerHTML = html;
       document.getElementById('ko-pn-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-ko-pn').style.display = 'inline-block'; document.getElementById('btn-cp-ko-pn').style.display = 'inline-block';
+      document.getElementById('btn-dl-ko-pn').style.display = 'inline-block'; document.getElementById('btn-cp-ko-pn').style.display = 'inline-block'; document.getElementById('btn-sh-ko-pn').style.display = 'inline-block';
       setStatus('ko-pn-status', '');
     }
 
@@ -1860,7 +1884,7 @@
 
       document.getElementById('ko-tp-render').innerHTML = html;
       document.getElementById('ko-tp-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-ko-tp').style.display = 'inline-block'; document.getElementById('btn-cp-ko-tp').style.display = 'inline-block';
+      document.getElementById('btn-dl-ko-tp').style.display = 'inline-block'; document.getElementById('btn-cp-ko-tp').style.display = 'inline-block'; document.getElementById('btn-sh-ko-tp').style.display = 'inline-block';
       setStatus('ko-tp-status', '');
     }
 
@@ -1964,7 +1988,7 @@
 
       document.getElementById('ko-lb-render').innerHTML = html;
       document.getElementById('ko-lb-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-ko-lb').style.display = 'inline-block'; document.getElementById('btn-cp-ko-lb').style.display = 'inline-block';
+      document.getElementById('btn-dl-ko-lb').style.display = 'inline-block'; document.getElementById('btn-cp-ko-lb').style.display = 'inline-block'; document.getElementById('btn-sh-ko-lb').style.display = 'inline-block';
       const noSnapshot = !roundData.lastCompletedRound;
       setStatus('ko-lb-status', noSnapshot ? '⚠️ No snapshot yet.' : '');
     }
@@ -2030,7 +2054,7 @@
       html += `</tbody></table>`;
       document.getElementById('pn2-render').innerHTML = html;
       document.getElementById('pn2-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-pn2').style.display = 'inline-block'; document.getElementById('btn-cp-pn2').style.display = 'inline-block';
+      document.getElementById('btn-dl-pn2').style.display = 'inline-block'; document.getElementById('btn-cp-pn2').style.display = 'inline-block'; document.getElementById('btn-sh-pn2').style.display = 'inline-block';
       setStatus('pn2-status', '');
     }
 
@@ -2094,7 +2118,7 @@
 
       document.getElementById('tp2-render').innerHTML = html;
       document.getElementById('tp2-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-tp2').style.display = 'inline-block'; document.getElementById('btn-cp-tp2').style.display = 'inline-block';
+      document.getElementById('btn-dl-tp2').style.display = 'inline-block'; document.getElementById('btn-cp-tp2').style.display = 'inline-block'; document.getElementById('btn-sh-tp2').style.display = 'inline-block';
       setStatus('tp2-status', '');
     }
 
@@ -2170,8 +2194,54 @@
 
       document.getElementById('cb2-render').innerHTML = html;
       document.getElementById('cb2-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-cb2').style.display = 'inline-block'; document.getElementById('btn-cp-cb2').style.display = 'inline-block';
+      document.getElementById('btn-dl-cb2').style.display = 'inline-block'; document.getElementById('btn-cp-cb2').style.display = 'inline-block'; document.getElementById('btn-sh-cb2').style.display = 'inline-block';
       setStatus('cb2-status', '');
+    }
+
+        async function shareRender(elId) {
+      const btn = event.target;
+      const orig = btn.textContent;
+      btn.textContent = 'Sharing...';
+      btn.disabled = true;
+      try {
+        const el = document.getElementById(elId);
+        const padKey = elId.replace('-render', '');
+        const padPx = getPad(padKey);
+        let spacer = null;
+        if (padPx > 0) {
+          spacer = document.createElement('div');
+          spacer.style.cssText = `height:${padPx}px;background:#ffffff;width:100%`;
+          el.insertBefore(spacer, el.firstChild);
+        }
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'display:inline-block;padding:12px;background:#ffffff';
+        const parent = el.parentNode;
+        parent.insertBefore(wrapper, el);
+        wrapper.appendChild(el);
+        const canvas = await html2canvas(wrapper, { scale:2, backgroundColor:'#ffffff', useCORS:true, logging:false });
+        parent.insertBefore(el, wrapper);
+        parent.removeChild(wrapper);
+        if (spacer && spacer.parentNode === el) el.removeChild(spacer);
+        await new Promise((resolve, reject) => {
+          canvas.toBlob(async blob => {
+            try {
+              const rnd = (roundData?.fullRoundLabel || 'Round').replace(/[\s·]+/g,'_');
+              const file = new File([blob], `LMS2026_${rnd}.png`, { type: 'image/png' });
+              await navigator.share({ files: [file] });
+              resolve();
+            } catch(e) { reject(e); }
+          }, 'image/png');
+        });
+        btn.textContent = orig;
+        btn.disabled = false;
+        return;
+      } catch(err) {
+        if (!err.message?.includes('AbortError') && !err.name?.includes('AbortError')) {
+          alert('Share failed: ' + err.message);
+        }
+      }
+      btn.textContent = orig;
+      btn.disabled = false;
     }
 
         async function copyRender(elId) {
