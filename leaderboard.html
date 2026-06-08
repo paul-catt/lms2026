@@ -1230,7 +1230,7 @@
           }
           const agd = gdMap[a.player_id] || 0, bgd = gdMap[b.player_id] || 0;
           if (bgd !== agd) return bgd - agd;
-          if (projectedTotal !== null) {
+          if (matchesPlayed > 0) {
             const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
             const bDiff = Math.abs((b.total_goals_prediction || 0) - projectedTotal);
             if (aDiff !== bDiff) return aDiff - bDiff;
@@ -1253,7 +1253,7 @@
           const sameRnd   = !isKnockout || (furthestMap[prev.player_id] || 0) === (furthestMap[p.player_id] || 0);
           const sameGd    = (gdMap[prev.player_id] || 0) === (gdMap[p.player_id] || 0);
           const samePrevSO = isKnockout ? (() => { const currentSO = currentRound ? currentRound.sort_order : 0; const pBonus = wonCurrentRound.has(prev.player_id) ? 1 : 0; const cBonus = wonCurrentRound.has(p.player_id) ? 1 : 0; const pfr = prev.is_eliminated ? (furthestMap[prev.player_id]||0) : Math.max(furthestMap[prev.player_id]||0, currentSO) + pBonus; const cfr = p.is_eliminated ? (furthestMap[p.player_id]||0) : Math.max(furthestMap[p.player_id]||0, currentSO) + cBonus; return pfr === cfr; })() : true;
-          const sameGoals = projectedTotal === null || Math.abs((prev.total_goals_prediction||0) - projectedTotal) === Math.abs((p.total_goals_prediction||0) - projectedTotal);
+          const sameGoals = matchesPlayed === 0 || Math.abs((prev.total_goals_prediction||0) - projectedTotal) === Math.abs((p.total_goals_prediction||0) - projectedTotal);
           const isTied = isKnockout && samePts && samePrevSO && sameGd && sameGoals;
           if (isTied) {
             posMap[prev.player_id].tied = true;

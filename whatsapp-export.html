@@ -839,9 +839,11 @@
             if (bfr !== afr) return bfr - afr;
           }
           if (b.gd !== a.gd) return b.gd - a.gd;
-          const aDiff = Math.abs((a.goalsPredict || 0) - projectedTotal);
-          const bDiff = Math.abs((b.goalsPredict || 0) - projectedTotal);
-          if (aDiff !== bDiff) return aDiff - bDiff;
+          if (completedMatches.length > 0) {
+            const aDiff = Math.abs((a.goalsPredict || 0) - projectedTotal);
+            const bDiff = Math.abs((b.goalsPredict || 0) - projectedTotal);
+            if (aDiff !== bDiff) return aDiff - bDiff;
+          }
           return a.name.localeCompare(b.name);
         });
 
@@ -861,7 +863,7 @@
             const isTied = prev.totalPoints === p.totalPoints
               && pfr === cfr
               && (prev.gd || 0) === (p.gd || 0)
-              && Math.abs((prev.goalsPredict || 0) - projectedTotal) === Math.abs((p.goalsPredict || 0) - projectedTotal);
+              && (completedMatches.length === 0 || Math.abs((prev.goalsPredict || 0) - projectedTotal) === Math.abs((p.goalsPredict || 0) - projectedTotal));
             rankMap[p.id] = isTied ? rankMap[prev.id] : i + 1;
           });
         }
