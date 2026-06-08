@@ -481,7 +481,7 @@
         const mins  = Math.floor((diff % 3600000)  / 60000);
         const secs  = Math.floor((diff % 60000)    / 1000);
         timer.textContent = days > 0
-          ? days + 'd ' + String(hours).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm'
+          ? days + 'd ' + hours + 'h ' + String(mins).padStart(2,'0') + 'm'
           : String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
         timer.className = 'deadline-timer ' + (diff < 3 * 3600000 ? 'urgent' : 'open');
       }

@@ -27,7 +27,7 @@
 
     .hero {
       text-align: center;
-      padding: 32px 16px 24px;
+      padding: 16px 16px 24px;
     }
     .hero-title {
       font-family: 'Rajdhani', sans-serif;
@@ -517,7 +517,7 @@
       const hours = Math.floor((diff % 86400000) / 3600000);
       const mins  = Math.floor((diff % 3600000)  / 60000);
       const secs  = Math.floor((diff % 60000)    / 1000);
-      if (days > 0) return days + 'd ' + String(hours).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm';
+      if (days > 0) return days + 'd ' + hours + 'h ' + String(mins).padStart(2,'0') + 'm';
       return String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
     }
 

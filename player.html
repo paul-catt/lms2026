@@ -186,7 +186,7 @@
 
     .oracle-sheet {
       position: fixed; bottom: 0; left: 0; right: 0;
-      height: 82%;
+      height: 72%;
       background: #0c0e16;
       border-radius: 18px 18px 0 0;
       border-top: 1px solid rgba(139,92,246,0.35);
@@ -230,12 +230,12 @@
 
     .oracle-sheet-body {
       flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
-      padding: 10px 20px 28px; text-align: center;
+      padding: 8px 20px 20px; text-align: center;
     }
 
     /* ── Header ── */
     .oracle-eye {
-      font-size: 44px; line-height: 1; margin-bottom: 4px; display: block;
+      font-size: 28px; line-height: 1; margin-bottom: 2px; display: block;
       animation: oracle-pulse 3s ease-in-out infinite;
       filter: drop-shadow(0 0 14px rgba(139,92,246,0.55));
     }
@@ -244,14 +244,11 @@
       50%       { transform: scale(1.07); filter: drop-shadow(0 0 26px rgba(139,92,246,0.9)); }
     }
     .oracle-title {
-      font-family: 'Rajdhani', sans-serif; font-size: 26px; font-weight: 700;
-      letter-spacing: 0.1em; color: #c4b5fd; margin-bottom: 4px;
+      font-family: 'Rajdhani', sans-serif; font-size: 18px; font-weight: 700;
+      letter-spacing: 0.1em; color: #c4b5fd; margin-bottom: 8px;
       text-shadow: 0 0 20px rgba(139,92,246,0.4);
     }
-    .oracle-subtitle {
-      font-size: 11px; color: rgba(148,163,184,0.55);
-      max-width: 300px; margin: 0 auto 12px; line-height: 1.4;
-    }
+    .oracle-subtitle { display: none; }
 
     /* ── Thinking ── */
     .oracle-thinking { display:none; padding:16px; color:var(--text-muted); font-size:13px; }
@@ -264,32 +261,32 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     .oracle-stars {
-      font-size: 18px; margin-bottom: 6px; letter-spacing: 4px;
+      font-size: 16px; margin-bottom: 4px; letter-spacing: 3px;
       color: var(--gold); text-shadow: 0 0 10px rgba(245,158,11,0.6); display: block;
     }
-    .oracle-flag { font-size: 48px; display: block; margin-bottom: 4px; }
+    .oracle-flag { font-size: 36px; display: block; margin-bottom: 2px; }
     .oracle-team-name {
-      font-family: 'Rajdhani', sans-serif; font-size: 38px; font-weight: 700;
+      font-family: 'Rajdhani', sans-serif; font-size: 28px; font-weight: 700;
       color: #f1f5f9; line-height: 1.05; margin-bottom: 2px; letter-spacing: -0.01em;
     }
-    .oracle-team-longshot { font-size: 14px; margin-left: 4px; vertical-align: middle; }
+    .oracle-team-longshot { font-size: 13px; margin-left: 4px; vertical-align: middle; }
     .oracle-opponent {
       font-size: 12px; color: rgba(148,163,184,0.6);
-      margin-bottom: 8px; line-height: 1.4;
+      margin-bottom: 6px; line-height: 1.4;
     }
     .oracle-band-chip {
-      display: inline-block; padding: 3px 12px; border-radius: 20px;
+      display: inline-block; padding: 2px 10px; border-radius: 20px;
       font-size: 10px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.08em; margin-bottom: 10px;
+      letter-spacing: 0.08em; margin-bottom: 8px;
       border: 1px solid currentColor; opacity: 0.9;
     }
     .oracle-why {
       font-size: 11px; font-weight: 600; color: rgba(167,139,250,0.7);
-      margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em;
+      margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.06em;
     }
     .oracle-verdict {
-      font-size: 14px; color: rgba(226,232,240,0.78); line-height: 1.6;
-      max-width: 290px; margin: 0 auto 12px; font-style: italic;
+      font-size: 13px; color: rgba(226,232,240,0.78); line-height: 1.5;
+      max-width: 290px; margin: 0 auto 8px; font-style: italic;
     }
     .oracle-verdict::before { content: '"'; color: #a78bfa; font-size: 18px; font-style: normal; }
     .oracle-verdict::after  { content: '"'; color: #a78bfa; font-size: 18px; font-style: normal; }
@@ -301,7 +298,7 @@
     }
 
     /* ── Buttons ── */
-    .oracle-btn-wrap { margin-top: 10px; }
+    .oracle-btn-wrap { margin-top: 6px; }
     .btn-oracle {
       background: linear-gradient(135deg, #6d28d9, #7c3aed, #6d28d9);
       background-size: 200% 100%; color: #fff; border: none;
@@ -619,7 +616,7 @@
       const hours = Math.floor((diff % 86400000) / 3600000);
       const mins  = Math.floor((diff % 3600000)  / 60000);
       const secs  = Math.floor((diff % 60000)    / 1000);
-      if (days > 0) return days + 'd ' + String(hours).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm';
+      if (days > 0) return days + 'd ' + hours + 'h ' + String(mins).padStart(2,'0') + 'm';
       return String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
     }
 
@@ -785,10 +782,12 @@
         if (allScores && allScores.length > 0 && positionIdx !== -1) {
           if (positionIdx === 0) {
             const gap = allScores.length > 1 ? totalPoints - allScores[1].total_points : 0;
-            pointsSub = gap > 0 ? '+' + gap + ' ahead' : 'Leader';
+            const tied = allScores.length > 1 && allScores[1].total_points === totalPoints;
+            pointsSub = gap > 0 ? '+' + gap + ' ahead' : (tied ? 'Joint Leader' : 'Leader');
           } else {
             const gap = allScores[positionIdx - 1].total_points - totalPoints;
-            pointsSub = gap > 0 ? gap + ' to ' + ordinal(positionIdx) : '';
+            const tied = gap === 0;
+            pointsSub = tied ? 'Joint ' + ordinal(positionIdx) : (gap > 0 ? gap + ' to ' + ordinal(positionIdx) : '');
           }
         }
 

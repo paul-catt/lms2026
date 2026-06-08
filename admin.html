@@ -168,7 +168,7 @@
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;width:90%;max-width:340px;text-align:center">
       <div style="font-size:32px;margin-bottom:12px">🔒</div>
       <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;margin-bottom:20px">Admin Access</div>
-      <input id="pwd-input" type="password" placeholder="Password" autocomplete="current-password"
+      <input id="pwd-input" type="password" placeholder="Password" autocomplete="off"
         style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:16px;margin-bottom:12px"
         onkeydown="if(event.key==='Enter')checkPwd()">
       <button onclick="checkPwd()" class="btn btn-primary" style="width:100%">Enter</button>
@@ -179,7 +179,7 @@
     (function() {
       const KEY = 'lms2026_admin_auth';
       const gate = document.getElementById('pwd-gate');
-      if (sessionStorage.getItem(KEY) !== '1') {
+      if (localStorage.getItem(KEY) !== '1') {
         gate.style.display = 'flex';
         setTimeout(() => document.getElementById('pwd-input').focus(), 100);
       }
@@ -187,7 +187,7 @@
     function checkPwd() {
       const val = document.getElementById('pwd-input').value;
       if (val === 'lms2026admin') {
-        sessionStorage.setItem('lms2026_admin_auth', '1');
+        localStorage.setItem('lms2026_admin_auth', '1');
         document.getElementById('pwd-gate').style.display = 'none';
       } else {
         document.getElementById('pwd-error').style.display = 'block';
