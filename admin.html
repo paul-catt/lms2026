@@ -3009,22 +3009,24 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       msg.style.color = 'var(--text-muted)'; msg.textContent = 'Resetting...';
       try {
         // Replicate leaderboard sort exactly:
-        // points (all 0) → GD (all 0) → goals proximity to projectedTotal → alpha
-        // With no matches played, projectedTotal = 290 (pre-tournament baseline)
+        // points (all 0) → GD (all 0) → goals proximity (only if matches played) → alpha
         const { data: completedMatches } = await db.from('matches').select('home_score, away_score').eq('status', 'complete');
-        let projectedTotal = 294;
-        if (completedMatches && completedMatches.length > 0) {
+        const matchesPlayed = (completedMatches || []).length;
+        let projectedTotal = null;
+        if (matchesPlayed > 0) {
           const goals = completedMatches.reduce((s, m) => s + (m.home_score||0) + (m.away_score||0), 0);
-          projectedTotal = (goals / completedMatches.length) * 104;
+          projectedTotal = (goals / matchesPlayed) * 104;
         }
-        const { data: players, error: plErr } = await db.from('players').select('id, name, total_goals_prediction');
+        const { data: players, error: plErr } = await db.from('players').select('id, name, display_name, total_goals_prediction');
         if (plErr) throw plErr;
         if (!players || players.length === 0) throw new Error('No players found');
         players.sort((a, b) => {
-          const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
-          const bDiff = Math.abs((b.total_goals_prediction || 0) - projectedTotal);
-          if (aDiff !== bDiff) return aDiff - bDiff;
-          return a.name.localeCompare(b.name);
+          if (matchesPlayed > 0) {
+            const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
+            const bDiff = Math.abs((b.total_goals_prediction || 0) - projectedTotal);
+            if (aDiff !== bDiff) return aDiff - bDiff;
+          }
+          return (a.display_name || shortName(a.name)).localeCompare(b.display_name || shortName(b.name));
         });
         const { error: delErr } = await db.from('leaderboard_snapshots').delete().eq('round_id', GP0_ROUND_ID);
         if (delErr) throw delErr;

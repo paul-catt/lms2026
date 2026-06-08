@@ -767,7 +767,7 @@
         const statsMap = {};
         players.forEach(p => {
           statsMap[p.id] = {
-            id: p.id, name: p.name, slug: p.slug, isOut: p.is_eliminated,
+            id: p.id, name: p.display_name || shortName(p.name), slug: p.slug, isOut: p.is_eliminated,
             totalPoints: 0, pld: 0, teamsUsed: 0,
             gd: gdMap[p.id] ?? 0,
             furthestRound: furthestRoundMap[p.id] ?? 0,
@@ -844,7 +844,7 @@
             const bDiff = Math.abs((b.goalsPredict || 0) - projectedTotal);
             if (aDiff !== bDiff) return aDiff - bDiff;
           }
-          return a.name.localeCompare(b.name);
+          return (a.display_name || shortName(a.name)).localeCompare(b.display_name || shortName(b.name));
         });
 
         // Build rankMap matching leaderboard posMap logic exactly

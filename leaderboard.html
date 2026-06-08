@@ -1235,8 +1235,8 @@
             const bDiff = Math.abs((b.total_goals_prediction || 0) - projectedTotal);
             if (aDiff !== bDiff) return aDiff - bDiff;
           }
-          if (!isKnockout) return a.name.localeCompare(b.name);
-          return a.name.localeCompare(b.name); // display-only tiebreak within tied KO groups
+          if (!isKnockout) return (a.display_name || shortName(a.name)).localeCompare(b.display_name || shortName(b.name));
+          return (a.display_name || shortName(a.name)).localeCompare(b.display_name || shortName(b.name)); // display-only tiebreak within tied KO groups
         });
 
         // ── WINNINGS CALCULATION (final table only) ──────────────────────────
@@ -1537,7 +1537,7 @@
         if (b.bonusPoints !== a.bonusPoints) return b.bonusPoints - a.bonusPoints;
         if (a.longshotLosses.length !== b.longshotLosses.length) return a.longshotLosses.length - b.longshotLosses.length;
         if (a.longshotPicks !== b.longshotPicks) return a.longshotPicks - b.longshotPicks;
-        return a.name.localeCompare(b.name);
+        return (a.display_name || shortName(a.name)).localeCompare(b.display_name || shortName(b.name));
       });
       const hasAny = lsSorted.some(p => p.longshotPicks > 0);
       if (!hasAny) {
