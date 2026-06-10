@@ -2816,12 +2816,14 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         db.from('player_scores').select('player_id, total_points'),
         db.from('player_gd').select('player_id, gd'),
         db.from('player_furthest_round').select('player_id, furthest_round'),
-        db.from('players').select('id, name, total_goals_prediction')
+        db.from('players').select('id, name, total_goals_prediction, is_bot')
       ]);
       const gdMap = {}, furthestMap = {}, nameMap = {}, goalsMap = {};
+      const botIds = new Set((playersData||[]).filter(p => p.is_bot).map(p => p.id));
+      const realScores = (scores||[]).filter(s => !botIds.has(s.player_id));
       (gdData||[]).forEach(r => { gdMap[r.player_id] = r.gd; });
       (furthestData||[]).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
-      (playersData||[]).forEach(r => { nameMap[r.id] = r.name; goalsMap[r.id] = r.total_goals_prediction; });
+      (playersData||[]).filter(r => !r.is_bot).forEach(r => { nameMap[r.id] = r.name; goalsMap[r.id] = r.total_goals_prediction; });
       const round = roundsCache.find(r => r.id === roundId);
       const isKnockout = round && round.round_type === 'knockout';
       // Use same projected total approach as leaderboard — null if no matches played yet
@@ -2831,7 +2833,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         const goals = completedMatches.reduce((s, m) => s + (m.home_score||0) + (m.away_score||0), 0);
         projectedTotal = (goals / completedMatches.length) * 104;
       }
-      const sorted = (scores||[]).sort((a,b) => {
+      const sorted = (realScores||[]).sort((a,b) => {
         if (b.total_points !== a.total_points) return b.total_points - a.total_points;
         if (isKnockout) { const afr = furthestMap[a.player_id]||0, bfr = furthestMap[b.player_id]||0; if (bfr !== afr) return bfr - afr; }
         const gdDiff = (gdMap[b.player_id]||0) - (gdMap[a.player_id]||0);
@@ -2935,7 +2937,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       // Alphabetical baseline — always correct, powers GP1 movement arrows
       const { data: existing } = await db.from('leaderboard_snapshots').select('id').eq('round_id', GP0_ROUND_ID).limit(1);
       if (existing && existing.length > 0) return; // already exists, don't overwrite
-      const { data: players } = await db.from('players').select('id, name').order('name', { ascending: true });
+      const { data: players } = await db.from('players').select('id, name').eq('is_bot', false).order('name', { ascending: true });
       if (!players) return;
       const inserts = players.map((p, i) => ({ round_id: GP0_ROUND_ID, player_id: p.id, position: i + 1, total_points: 0 }));
       await db.from('leaderboard_snapshots').insert(inserts);
@@ -3017,7 +3019,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
           const goals = completedMatches.reduce((s, m) => s + (m.home_score||0) + (m.away_score||0), 0);
           projectedTotal = (goals / matchesPlayed) * 104;
         }
-        const { data: players, error: plErr } = await db.from('players').select('id, name, display_name, total_goals_prediction');
+        const { data: players, error: plErr } = await db.from('players').select('id, name, display_name, total_goals_prediction').eq('is_bot', false);
         if (plErr) throw plErr;
         if (!players || players.length === 0) throw new Error('No players found');
         players.sort((a, b) => {

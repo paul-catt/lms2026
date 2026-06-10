@@ -232,6 +232,7 @@
 
       <!-- MAIN LEADERBOARD -->
       <div class="lb-view active" id="view-main">
+        <div class="rotate-hint" style="margin-bottom:8px">↔ Rotate for full table</div>
         <div id="final-table-banner" style="display:none; margin-bottom:16px; padding:12px 16px; background:linear-gradient(135deg,rgba(245,158,11,0.12),rgba(239,68,68,0.08)); border:1px solid rgba(245,158,11,0.3); border-radius:10px;">
           <div style="font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:700; color:var(--gold); letter-spacing:0.06em;">🏆 FINAL TABLE</div>
           <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">The dust has settled. Here's how it ended.</div>
@@ -303,7 +304,6 @@
           </div>
 
         </div>
-        <div class="rotate-hint">↔ Rotate for full table</div>
       </div>
 
       <!-- LONGSHOT LEADERBOARD -->
@@ -1037,16 +1037,21 @@
                                          : '');
             }
 
-            if (!liveByPlayer[pick.player_id]) liveByPlayer[pick.player_id] = { delta: 0, lines: [], danger: false, provOut: false };
+            // Provisional GD delta: pick-relative goals_for minus goals_against
+            const gdDelta = ps - os;
+
+            if (!liveByPlayer[pick.player_id]) liveByPlayer[pick.player_id] = { delta: 0, gdDelta: 0, lines: [], danger: false, provOut: false };
             const L = liveByPlayer[pick.player_id];
             L.delta += delta;
+            L.gdDelta += gdDelta;
             L.lines.push(line);
             L.danger = L.danger || danger;
             L.provOut = L.provOut || provOut;
           });
         }
-        // Provisional points: confirmed total + live delta (display/sort only)
+        // Provisional points/GD: confirmed total + live delta (display/sort only)
         const effPts = p => (p.total_points || 0) + (liveMode && liveByPlayer[p.player_id] ? liveByPlayer[p.player_id].delta : 0);
+        const effGd  = p => (gdMap[p.player_id] || 0) + (liveMode && liveByPlayer[p.player_id] ? liveByPlayer[p.player_id].gdDelta : 0);
 
         // Build pens lookup: team_id|round_id -> pens_winner_id
         const pensWinnerByTeamRound = {};
@@ -1381,7 +1386,7 @@
             const bfr = b.is_eliminated ? (furthestMap[b.player_id] || 0) : Math.max(furthestMap[b.player_id] || 0, currentSO) + bBonus;
             if (bfr !== afr) return bfr - afr;
           }
-          const agd = gdMap[a.player_id] || 0, bgd = gdMap[b.player_id] || 0;
+          const agd = effGd(a), bgd = effGd(b);
           if (bgd !== agd) return bgd - agd;
           if (matchesPlayed > 0) {
             const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
@@ -1404,7 +1409,7 @@
           const prev = sorted[i - 1];
           const samePts   = effPts(prev) === effPts(p);
           const sameRnd   = !isKnockout || (furthestMap[prev.player_id] || 0) === (furthestMap[p.player_id] || 0);
-          const sameGd    = (gdMap[prev.player_id] || 0) === (gdMap[p.player_id] || 0);
+          const sameGd    = effGd(prev) === effGd(p);
           const samePrevSO = isKnockout ? (() => { const currentSO = currentRound ? currentRound.sort_order : 0; const pBonus = wonCurrentRound.has(prev.player_id) ? 1 : 0; const cBonus = wonCurrentRound.has(p.player_id) ? 1 : 0; const pfr = prev.is_eliminated ? (furthestMap[prev.player_id]||0) : Math.max(furthestMap[prev.player_id]||0, currentSO) + pBonus; const cfr = p.is_eliminated ? (furthestMap[p.player_id]||0) : Math.max(furthestMap[p.player_id]||0, currentSO) + cBonus; return pfr === cfr; })() : true;
           const sameGoals = matchesPlayed === 0 || Math.abs((prev.total_goals_prediction||0) - projectedTotal) === Math.abs((p.total_goals_prediction||0) - projectedTotal);
           const isTied = isKnockout && samePts && samePrevSO && sameGd && sameGoals;
@@ -1534,7 +1539,7 @@
         sorted.forEach((p, i) => {
           const { pos, tied } = posMap[p.player_id];
           const medal = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
-          const gd    = gdMap[p.player_id] || 0;
+          const gd    = liveMode ? effGd(p) : (gdMap[p.player_id] || 0);
           const form  = formMap[p.player_id] || { group: [], ko: [] };
           const todayData      = playerTodayMap[p.player_id];
           const isPlayingToday = !!todayData;

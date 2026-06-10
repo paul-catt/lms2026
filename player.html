@@ -457,12 +457,6 @@
 
       <div id="teams-warning" class="alert alert-warning" style="display:none"></div>
 
-      <!-- Push notification opt-in -->
-      <div id="notif-bar" style="display:none; margin-bottom:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 14px; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-        <span style="font-size:12px; color:var(--text-muted)">🔔 Get a nudge 1hr before the deadline if you haven't picked.</span>
-        <button id="notif-btn" class="btn btn-secondary" style="font-size:12px; padding:6px 14px; white-space:nowrap">Enable notifications</button>
-      </div>
-
       <!-- Goals prediction card -->
       <div id="goals-prediction-card" style="display:none" class="goals-inline-card">
         <div class="card-title">🎯 Tournament Goals Prediction</div>
@@ -527,6 +521,12 @@
             <tbody id="history-body"></tbody>
           </table>
         </div>
+      </div>
+
+      <!-- Push notification opt-in -->
+      <div id="notif-card" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+        <span id="notif-label" style="font-size:12px; color:var(--text-muted)">🔔 Get a nudge 1hr before the deadline if you haven't picked.</span>
+        <button id="notif-btn" class="btn btn-secondary" style="font-size:12px; padding:6px 14px; white-space:nowrap">Enable notifications</button>
       </div>
     </div>
   </main>
@@ -1932,33 +1932,37 @@
 
       async function initNotifBar() {
         if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
-        const bar = document.getElementById('notif-bar');
+        const card = document.getElementById('notif-card');
         const btn = document.getElementById('notif-btn');
-        if (!bar || !btn) return;
+        const label = document.getElementById('notif-label');
+        if (!card || !btn) return;
 
-        // Already granted — check if we have a sub saved
-        if (Notification.permission === 'granted') {
+        const perm = Notification.permission;
+
+        if (perm === 'granted') {
           const reg = await navigator.serviceWorker.ready;
           const existing = await reg.pushManager.getSubscription();
           if (existing) {
-            bar.style.display = 'none'; // already subscribed — hide bar
+            label.textContent = '🔔 Deadline reminders on.';
+            btn.textContent = '✅ Subscribed';
+            btn.style.color = 'var(--green)';
+            btn.style.borderColor = 'var(--green)';
+            if (player && player.id) {
+              await db.from('push_subscriptions')
+                .upsert({ player_id: player.id, subscription: existing.toJSON() }, { onConflict: 'player_id' });
+            }
             return;
           }
         }
 
-        if (Notification.permission === 'denied') {
-          // Past first deadline — don't bother showing
-          const firstDeadline = new Date('2026-06-12T11:00:00Z');
-          if (new Date() > firstDeadline) return;
-          bar.style.display = 'flex';
-          btn.textContent = '🔔 Enable in browser settings';
+        if (perm === 'denied') {
+          label.textContent = '🔔 Notifications blocked — enable in browser settings to get deadline reminders.';
+          btn.textContent = 'How to enable';
           btn.addEventListener('click', () => {
             alert('Notifications are blocked on this device.\n\nTo enable: open your browser settings, find Notifications, and allow lms2026.netlify.app.\n\nThen reload the page.');
           });
           return;
         }
-
-        bar.style.display = 'flex';
 
         btn.addEventListener('click', async () => {
           btn.disabled = true;
@@ -1967,7 +1971,8 @@
             const permission = await Notification.requestPermission();
             if (permission !== 'granted') {
               btn.disabled = false;
-              btn.textContent = '🔔 Enable in browser settings';
+              btn.textContent = 'Enable in browser settings';
+              label.textContent = '🔔 Notifications blocked — enable in browser settings.';
               return;
             }
             const reg = await navigator.serviceWorker.ready;
@@ -1975,15 +1980,15 @@
               userVisibleOnly: true,
               applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
             });
-            // Save to Supabase
             if (player && player.id) {
               await db.from('push_subscriptions')
                 .upsert({ player_id: player.id, subscription: sub.toJSON() }, { onConflict: 'player_id' });
             }
-            btn.textContent = '✅ Notifications on';
+            label.textContent = '🔔 Deadline reminders on.';
+            btn.textContent = '✅ Subscribed';
             btn.style.color = 'var(--green)';
             btn.style.borderColor = 'var(--green)';
-            setTimeout(() => { bar.style.display = 'none'; }, 2000);
+            btn.disabled = false;
           } catch(err) {
             console.error('Push subscription failed:', err);
             btn.disabled = false;
@@ -1992,7 +1997,7 @@
         });
       }
 
-      // 5-second spinner timeout
+            // 5-second spinner timeout
       const loadTimeout = setTimeout(() => {
         const loading = document.getElementById('loading');
         if (loading.style.display !== 'none') {

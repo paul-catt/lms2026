@@ -144,6 +144,8 @@
     .badge-ft    { background:rgba(148,163,184,0.12); color:var(--text-muted); }
     .badge-live  { background:rgba(59,130,246,0.15); color:#3b82f6; }
     .badge-elapsed { background:rgba(245,158,11,0.15); color:var(--gold); }
+    @keyframes live-pulse { 0%,100% { opacity:1; } 50% { opacity:0.25; } }
+    .badge-live .live-dot { display:inline-block; animation: live-pulse 1.2s ease-in-out infinite; }
 
     .match-sub { margin-top:6px; }
     .match-aet { font-size:11px; color:var(--text-muted); margin-bottom:4px; }
@@ -532,9 +534,11 @@
       if (isComplete) {
         badgeHtml = '<span class="match-badge badge-ft">FT</span>';
       } else if (isLive) {
-        badgeHtml = '<span class="match-badge badge-live">🔴 Live</span>';
+        badgeHtml = '<span class="match-badge badge-live"><span class="live-dot">🔴</span> Live</span>';
         if (match.elapsed_minutes) {
-          badgeHtml += '<span class="match-badge badge-elapsed">' + match.elapsed_minutes + '\'</span>';
+          const el = String(match.elapsed_minutes);
+          const isHT = el === '45' || el.startsWith('45+');
+          badgeHtml += '<span class="match-badge badge-elapsed">' + (isHT ? 'HT' : el + '\'') + '</span>';
         }
       }
 
