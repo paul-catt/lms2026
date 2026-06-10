@@ -611,7 +611,7 @@
           { data: playerScores },
           { data: allTeams }
         ] = await Promise.all([
-          db.from('players').select('id, name, slug, display_name, is_eliminated, total_goals_prediction'),
+          db.from('players').select('id, name, slug, display_name, is_eliminated, total_goals_prediction, is_bot'),
           // FIX 3: order pick_results by match kickoff so form is chronological
           db.from('picks').select(`
             id, player_id, team_id, multiplier, round_id,
@@ -767,7 +767,7 @@
         const statsMap = {};
         players.forEach(p => {
           statsMap[p.id] = {
-            id: p.id, name: p.display_name || shortName(p.name), slug: p.slug, isOut: p.is_eliminated,
+            id: p.id, name: p.display_name || shortName(p.name), slug: p.slug, isOut: p.is_eliminated, is_bot: p.is_bot,
             totalPoints: 0, pld: 0, teamsUsed: 0,
             gd: gdMap[p.id] ?? 0,
             furthestRound: furthestRoundMap[p.id] ?? 0,
@@ -848,13 +848,15 @@
         });
 
         // Build rankMap matching leaderboard posMap logic exactly
+        // Oracle (is_bot) is excluded from ranking — unranked, so humans stay contiguous 1..N
         const rankMap = {};
+        const rankable = sortedPlayers.filter(p => !p.is_bot);
         if (isGroupRound) {
-          sortedPlayers.forEach((p, i) => { rankMap[p.id] = i + 1; });
+          rankable.forEach((p, i) => { rankMap[p.id] = i + 1; });
         } else {
-          sortedPlayers.forEach((p, i) => {
+          rankable.forEach((p, i) => {
             if (i === 0) { rankMap[p.id] = 1; return; }
-            const prev = sortedPlayers[i - 1];
+            const prev = rankable[i - 1];
             const currentSO = currentRoundSortOrder;
             const pBonus = wonCurrentRound.has(prev.id) ? 1 : 0;
             const cBonus = wonCurrentRound.has(p.id) ? 1 : 0;
@@ -976,8 +978,8 @@
         .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
       const firstMatch = currentRoundMatches[0] || null;
 
-      const unpicked = players.filter(p => !p.is_eliminated && !playerCurrentPicks[p.id]);
-      const picked   = players.filter(p => !p.is_eliminated && playerCurrentPicks[p.id]);
+      const unpicked = players.filter(p => !p.is_eliminated && !p.is_bot && !playerCurrentPicks[p.id]);
+      const picked   = players.filter(p => !p.is_eliminated && !p.is_bot && playerCurrentPicks[p.id]);
 
       let deadlineStr = '';
       if (deadline) {
@@ -1009,7 +1011,7 @@
       } else {
         const unpickedNames = unpicked.map(p => `• ${p.name}`).join('\n');
         msg = `⏰ *LMS 2026 — ${roundLabelText} Picks*\n\n`;
-        msg += `${picked.length}/${players.filter(p => !p.is_eliminated).length} players have picked\n\n`;
+        msg += `${picked.length}/${players.filter(p => !p.is_eliminated && !p.is_bot).length} players have picked\n\n`;
         if (firstGameStr) msg += `${firstGameStr}\n\n`;
         if (isGroupRound) {
           msg += `Still need to pick (3pt + 2pt):\n${unpickedNames}\n\n`;
@@ -1263,10 +1265,11 @@
         </tr></thead><tbody>`;
         const rankCounts3 = {};
         sortedPlayers.forEach(q => { const r = rankMap[q.id]; if (r !== undefined) rankCounts3[r] = (rankCounts3[r]||0)+1; });
-        sortedPlayers.forEach((p, i) => {
-          const pos = rankMap[p.id] ?? (i + 1);
-          const isTied = isGroupRound ? false : (rankCounts3[pos]||0) > 1;
-          const posLabel = isTied ? pos + '=' : String(pos);
+        const _orderedG = [...sortedPlayers.filter(p => p.is_bot), ...sortedPlayers.filter(p => !p.is_bot)];
+        _orderedG.forEach((p, i) => {
+          let posLabel;
+          if (p.is_bot) { posLabel = '–'; }
+          else { const pos = rankMap[p.id] ?? (i + 1); const isTied = isGroupRound ? false : (rankCounts3[pos]||0) > 1; posLabel = isTied ? pos + '=' : String(pos); }
           const pPicks = playerCurrentPicks[p.id] || [];
           const pick3 = pPicks.find(pk => pk.multiplier === 3);
           const pick2 = pPicks.find(pk => pk.multiplier === 2);
@@ -1794,10 +1797,11 @@
           <th style="width:34px;padding:2px 8px 2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</th>
         </tr></thead><tbody>`;
 
-      sortedPlayers.forEach((p, i) => {
-        const pos = rankMap[p.id] ?? (i + 1);
-        const isTied = (rankCounts[pos]||0) > 1;
-        const posLabel = isTied ? pos + '=' : String(pos);
+      const _orderedKO = [...sortedPlayers.filter(p => p.is_bot), ...sortedPlayers.filter(p => !p.is_bot)];
+      _orderedKO.forEach((p, i) => {
+        let posLabel;
+        if (p.is_bot) { posLabel = '–'; }
+        else { const pos = rankMap[p.id] ?? (i + 1); const isTied = (rankCounts[pos]||0) > 1; posLabel = isTied ? pos + '=' : String(pos); }
         const pick = (playerCurrentPicks[p.id] || [])[0] || null;
         const rowBg = p.isOut ? '#fff5f5' : (i % 2 === 0 ? '#ffffff' : '#f8fafc');
 
@@ -1909,10 +1913,11 @@
           <th style="width:34px;padding:2px 8px 2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</th>
         </tr></thead><tbody>`;
 
-      sortedPlayers.forEach((p, i) => {
-        const pos = rankMap[p.id] ?? (i + 1);
-        const isTied = (rankCounts[pos]||0) > 1;
-        const posLabel = isTied ? pos + '=' : String(pos);
+      const _orderedKO = [...sortedPlayers.filter(p => p.is_bot), ...sortedPlayers.filter(p => !p.is_bot)];
+      _orderedKO.forEach((p, i) => {
+        let posLabel;
+        if (p.is_bot) { posLabel = '–'; }
+        else { const pos = rankMap[p.id] ?? (i + 1); const isTied = (rankCounts[pos]||0) > 1; posLabel = isTied ? pos + '=' : String(pos); }
         const pick = (playerCurrentPicks[p.id] || [])[0] || null;
         const rowBg = p.isOut ? '#fff5f5' : (i % 2 === 0 ? '#ffffff' : '#f8fafc');
 
@@ -2140,9 +2145,11 @@
       const rankCounts = {};
       sortedPlayers.forEach(q => { const r = rankMap[q.id]; if (r !== undefined) rankCounts[r] = (rankCounts[r]||0)+1; });
 
-      sortedPlayers.forEach((p, i) => {
-        const pos = rankMap[p.id] ?? (i + 1);
-        const posLabel = (rankCounts[pos]||0) > 1 ? pos + '=' : String(pos);
+      const _ordered = [...sortedPlayers.filter(p => p.is_bot), ...sortedPlayers.filter(p => !p.is_bot)];
+      _ordered.forEach((p, i) => {
+        let posLabel;
+        if (p.is_bot) { posLabel = '–'; }
+        else { const pos = rankMap[p.id] ?? (i + 1); posLabel = (rankCounts[pos]||0) > 1 ? pos + '=' : String(pos); }
         const pPicks = playerCurrentPicks[p.id] || [];
         const pick3 = pPicks.find(pk => pk.multiplier === 3);
         const pick2 = pPicks.find(pk => pk.multiplier === 2);

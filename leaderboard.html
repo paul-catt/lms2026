@@ -157,6 +157,14 @@
     .live-pill { display:inline-flex; align-items:center; gap:5px; font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.08em; color:var(--red); border:1px solid rgba(239,68,68,0.4); background:rgba(239,68,68,0.08); border-radius:20px; padding:1px 9px; margin-left:8px; vertical-align:middle; }
     .live-dot { width:6px; height:6px; border-radius:50%; background:var(--red); animation:lbLivePulse 1.2s infinite; }
     @keyframes lbLivePulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
+    /* Live mode, portrait: drop Pld and ⚽ to make room for LIVE */
+    @media (max-width:600px), (orientation:portrait) {
+      .live-mode .col-pld, .live-mode .col-goals { display:none; }
+    }
+    /* Live mode, landscape: keep everything, swap Form for LIVE */
+    @media (min-width:601px) and (orientation:landscape) {
+      .live-mode .col-form { display:none; }
+    }
   </style>
 </head>
 <body>
@@ -237,13 +245,13 @@
                 <!-- No medal column: medals removed from portrait, hidden in landscape via CSS -->
                 <th class="landscape-only medal"></th>
                 <th>Player</th>
-                <th id="pld-col-header">Pld</th>
+                <th id="pld-col-header" class="col-pld">Pld</th>
                 <th>Pts</th>
                 <th id="rnd-col-header" style="display:none">Rnd</th>
                 <th>GD</th>
-                <th title="Goals prediction difference" id="goals-col-header">⚽</th>
+                <th title="Goals prediction difference" id="goals-col-header" class="col-goals">⚽</th>
                 <th id="live-col-header" style="display:none" title="Live — provisional, confirmed in the morning">Live</th>
-                <th class="hide-mobile" style="text-align:left">Form</th>
+                <th class="hide-mobile col-form" style="text-align:left">Form</th>
                 <!-- Status: landscape shows full reason, portrait shows dot only -->
                 <th id="status-col-header" style="display:none" class="landscape-only">Status</th>
               </tr>
@@ -836,6 +844,13 @@
 
         if (error) throw error;
 
+        // Strip bot players (Oracle) from all downstream data
+        const botIds = new Set((scores || []).filter(p => p.is_bot).map(p => p.player_id));
+        const humanScores = (scores || []).filter(p => !p.is_bot);
+        // Reassign so all downstream code sees only human players
+        scores.length = 0; humanScores.forEach(p => scores.push(p));
+        if (allPicks) { const hp = allPicks.filter(p => !botIds.has(p.player_id)); allPicks.length = 0; hp.forEach(p => allPicks.push(p)); }
+
         const { windowStart, windowEnd } = getGameDayWindow(now);
 
         // ── LIVE LAYER (read-only, provisional — never writes to the DB) ──
@@ -1267,12 +1282,11 @@
         // Hide Pld header on portrait in KO (cells handled via hide-portrait-ko class)
         const pldHeader = document.getElementById('pld-col-header');
         if (pldHeader) pldHeader.classList.toggle('hide-portrait-ko', !!isKnockout);
-        // LIVE mode column swap: Pld and ⚽ out, LIVE in (reverts when nothing is live/unconfirmed)
-        const goalsHeader = document.getElementById('goals-col-header');
-        const liveHeader  = document.getElementById('live-col-header');
-        if (pldHeader)   pldHeader.style.display   = liveMode ? 'none' : '';
-        if (goalsHeader) goalsHeader.style.display = liveMode ? 'none' : '';
-        if (liveHeader)  liveHeader.style.display  = liveMode ? '' : 'none';
+        // LIVE mode column swap — orientation-dependent via CSS:
+        // portrait drops Pld and ⚽ for LIVE; landscape keeps them and swaps Form for LIVE.
+        const liveHeader = document.getElementById('live-col-header');
+        if (liveHeader) liveHeader.style.display = liveMode ? '' : 'none';
+        document.getElementById('leaderboard-wrap').classList.toggle('live-mode', liveMode);
 
         function exitReasonHtml(player) {
           const playerPicks = (allPicks || []).filter(p => p.player_id === player.player_id);
@@ -1605,15 +1619,15 @@
             '<td class="prior">' + arrowHtml + '</td>' +
             '<td class="medal landscape-only">' + medal + '</td>' +
             '<td class="player-name"><a ' + playerLinkAttrs(p.slug) + '>' + (p.display_name || shortName(p.name)) + '</a>' + (competitionEnded ? '' : (p.is_eliminated ? '<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:4px">✕</span>' : (isKnockout && resultInThisRound.has(p.player_id) ? '<span style="color:#10b981;font-size:11px;font-weight:700;margin-left:4px" title="Result in">✔</span>' : ''))) + (competitionEnded ? portraitFinalistBadge(p) : trophyHtml + portraitFinalistBadge(p) + flagHtml) + (competitionEnded && winningsMap[p.player_id] ? '<span style="font-weight:700;color:var(--gold);margin-left:6px">(£' + (winningsMap[p.player_id] % 1 === 0 ? winningsMap[p.player_id] : winningsMap[p.player_id].toFixed(2)) + ')</span>' : '') + '</td>' +
-            '<td style="color:var(--text-muted);text-align:center' + (liveMode ? ';display:none' : '') + '" class="' + (isKnockout ? 'hide-portrait-ko' : '') + '">' + (p.rounds_played || 0) + '</td>' +
+            '<td style="color:var(--text-muted);text-align:center" class="col-pld' + (isKnockout ? ' hide-portrait-ko' : '') + '">' + (p.rounds_played || 0) + '</td>' +
             (liveMode
               ? '<td class="points tight-col"><span class="pts-num">' + effPts(p) + '</span><span class="pts-zap">' + ((liveByPlayer[p.player_id] && liveByPlayer[p.player_id].delta > 0) ? '⚡' : '') + '</span></td>'
               : '<td class="points tight-col">' + (p.total_points || 0) + '</td>') +
             (showRndCol ? '<td style="color:var(--text-muted);font-size:12px" class="tight-col">' + rndHtml + '</td>' : '') +
             '<td class="tight-col">' + gdHtml + '</td>' +
-            '<td class="tiebreak-val" style="text-align:center' + (liveMode ? ';display:none' : '') + '">' + goalsDiffHtml + '</td>' +
+            '<td class="tiebreak-val col-goals" style="text-align:center">' + goalsDiffHtml + '</td>' +
             (liveMode ? '<td class="live-cell">' + liveCellHtml(p.player_id) + '</td>' : '') +
-            '<td class="hide-mobile" style="text-align:left">' + formHtml + '</td>' +
+            '<td class="hide-mobile col-form" style="text-align:left">' + formHtml + '</td>' +
             '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="landscape-only">' + statusCellHtml + '</td>';
 
           tbody.appendChild(row);
