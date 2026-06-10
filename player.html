@@ -24,11 +24,6 @@
 
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(console.error);
-    }
-  </script>
   <style>
     body { font-family: 'Inter', sans-serif; }
     nav, .nav-logo, .card-title, thead th { font-family: 'Rajdhani', sans-serif; }
@@ -396,6 +391,66 @@
     .pick-modal-warning { background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:8px 12px; font-size:12px; color:var(--red); margin-bottom:14px; }
     .pick-modal-btns { display:flex; gap:8px; margin-top:16px; }
     .pick-modal-btns .btn { flex:1; margin:0; }
+
+    /* ── Today strip ─────────────────────────────────────────────────────── */
+    #today-strip {
+      background: rgba(15,25,55,0.7);
+      border: 1px solid rgba(99,130,220,0.28);
+      border-radius: 14px;
+      padding: 12px 12px 10px;
+      margin-bottom: 16px;
+      box-shadow: 0 0 0 1px rgba(99,130,220,0.07) inset;
+    }
+    .ts-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:9px; }
+    .ts-heading { font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.09em; color:rgba(147,197,253,0.65); }
+    .ts-rank { font-size:12px; font-weight:700; color:#94a3b8; display:flex; align-items:center; gap:5px; }
+    .ts-rank-label { font-size:11px; font-weight:600; color:#64748b; }
+    .ts-rank-val { color:#cbd5e1; }
+    .ts-rank-delta { font-size:10px; font-weight:800; }
+    .ts-rows { display:flex; flex-direction:column; gap:5px; }
+    .ts-row {
+      display: grid;
+      grid-template-columns: 34px 26px 1fr auto auto;
+      align-items: center;
+      gap: 7px;
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .ts-mult { font-family:'Rajdhani',sans-serif; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:2px 0; border-radius:20px; text-align:center; }
+    .ts-flag { font-size:17px; text-align:center; }
+    .ts-team-name { font-weight:700; font-size:13px; color:#f1f5f9; line-height:1.2; }
+    .ts-team-opp { font-size:11px; color:rgba(148,163,184,0.5); margin-top:1px; }
+    .ts-score-wrap { text-align:right; flex-shrink:0; }
+    .ts-score { font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:800; line-height:1.2; }
+    .ts-time { display:flex; align-items:center; justify-content:flex-end; gap:3px; margin-top:1px; }
+    .ts-time-label { font-size:10px; font-weight:700; letter-spacing:0.04em; }
+    .ts-live-dot { width:6px; height:6px; border-radius:50%; background:#ef4444; flex-shrink:0; animation:livepulse 1.2s ease-in-out infinite; }
+    @keyframes livepulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:0.25; transform:scale(0.8); }
+    }
+    .ts-pts { font-family:'Rajdhani',sans-serif; font-size:16px; font-weight:900; flex-shrink:0; min-width:26px; text-align:right; }
+    .ts-footer { display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding-top:7px; border-top:1px solid rgba(255,255,255,0.05); }
+    .ts-footer-note { font-size:10px; color:rgba(148,163,184,0.35); font-style:italic; }
+    .ts-footer-total { font-family:'Rajdhani',sans-serif; font-size:13px; font-weight:900; color:#f1f5f9; }
+    /* eliminated state */
+    .ts-elim {
+      background: rgba(239,68,68,0.07);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      font-size:13px; font-weight:600; color:#ef4444;
+      display:flex; align-items:center; gap:8px;
+    }
+    /* rank delta animation */
+    @keyframes rank-flash {
+      0%   { opacity:0; transform:translateY(4px); }
+      15%  { opacity:1; transform:translateY(0); }
+      85%  { opacity:1; }
+      100% { opacity:0.6; }
+    }
+    .ts-rank-delta.animate { animation: rank-flash 1.4s ease forwards; }
   </style>
 </head>
 <body>
@@ -469,6 +524,8 @@
       </div>
 
       <!-- Pick section -->
+      <div id="today-strip" style="display:none"></div>
+
       <div id="pick-section" style="display:none">
         <div class="card">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
@@ -523,11 +580,6 @@
         </div>
       </div>
 
-      <!-- Push notification opt-in -->
-      <div id="notif-card" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-        <span id="notif-label" style="font-size:12px; color:var(--text-muted)">🔔 Get a nudge 1hr before the deadline if you haven't picked.</span>
-        <button id="notif-btn" class="btn btn-secondary" style="font-size:12px; padding:6px 14px; white-space:nowrap">Enable notifications</button>
-      </div>
     </div>
   </main>
 
@@ -672,7 +724,7 @@
           db.from('rounds').select('*').order('sort_order'),
           db.from('teams').select('id, name, flag_emoji, is_longshot, is_eliminated, band, odds_rank').order('odds_rank'),
           db.from('player_scores').select('player_id, total_points, name, is_eliminated, total_goals_prediction, eliminated_in_round_id').order('total_points', { ascending: false }),
-          db.from('matches').select('id, round_id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band)').order('kickoff'),
+          db.from('matches').select('id, round_id, kickoff, home_team_id, away_team_id, api_status, elapsed_minutes, home_score, away_score, confirmed, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band)').order('kickoff'),
           db.from('matches').select('id, home_team_id, away_team_id, home_score, away_score').not('home_score', 'is', null).not('away_score', 'is', null),
           db.from('player_gd').select('player_id, gd'),
           db.from('player_furthest_round').select('*'),
@@ -1008,6 +1060,7 @@
           warn.textContent = teamsLeftMessage(teamsLeft);
         }
 
+        renderTodayStrip(positionIdx);
         renderHistory();
 
         if (player.is_eliminated) {
@@ -1839,6 +1892,258 @@
       return map[name] || name;
     }
 
+    function renderTodayStrip(positionIdx) {
+      const stripEl = document.getElementById('today-strip');
+      if (!stripEl) return;
+
+      // ── Eliminated: show a simple banner instead ──────────────────────────
+      if (player.is_eliminated) {
+        stripEl.style.display = 'block';
+        stripEl.className = 'ts-elim';
+        stripEl.innerHTML = '<span style="font-size:18px">💀</span> You\'re eliminated — still watching though, right?';
+        return;
+      }
+
+      // ── Time window: which picks are "today"? ─────────────────────────────
+      // 7am–noon BST = show last night's results
+      // noon onwards = show today/tonight's picks
+      const now       = getEffectiveDate();
+      const nowHourUTC = now.getUTCHours();
+      // BST = UTC+1; 7am BST = 6 UTC, noon BST = 11 UTC
+      const morningMode = nowHourUTC >= 6 && nowHourUTC < 11; // 7am–noon BST
+      const heading     = morningMode ? 'Last night for you' : 'Today for you';
+
+      // Day window: noon BST = 11:00 UTC
+      const windowStart = new Date(now);
+      if (morningMode) {
+        // Look at yesterday noon → today noon
+        windowStart.setUTCHours(11, 0, 0, 0);
+        windowStart.setUTCDate(windowStart.getUTCDate() - 1);
+      } else {
+        // Look at today noon → tomorrow noon
+        windowStart.setUTCHours(11, 0, 0, 0);
+        if (now.getUTCHours() < 11) windowStart.setUTCDate(windowStart.getUTCDate() - 1);
+      }
+      const windowEnd = new Date(windowStart);
+      windowEnd.setUTCDate(windowEnd.getUTCDate() + 1);
+
+      // ── Find matches in window that this player has a pick for ────────────
+      const matchesInWindow = allMatches.filter(m => {
+        const ko = new Date(m.kickoff);
+        return ko >= windowStart && ko < windowEnd;
+      });
+      if (matchesInWindow.length === 0) { stripEl.style.display = 'none'; return; }
+
+      const matchIds = new Set(matchesInWindow.map(m => m.id));
+
+      // Find player's picks whose pick_results reference a match in window,
+      // OR whose team plays in a match in window (for pending picks)
+      const relevantPicks = allPicks.filter(p => {
+        const res = p.pick_results && p.pick_results[0];
+        if (res && res.match_id && matchIds.has(res.match_id)) return true;
+        // pending: team plays in window
+        const m = matchesInWindow.find(m => m.home_team_id === p.team_id || m.away_team_id === p.team_id);
+        return !!m;
+      });
+
+      if (relevantPicks.length === 0) { stripEl.style.display = 'none'; return; }
+
+      // ── Rank delta vs last session ────────────────────────────────────────
+      const LS_RANK_KEY = 'lms2026_last_rank_' + (player ? player.id : '');
+      const lastRank    = parseInt(localStorage.getItem(LS_RANK_KEY) || '0', 10);
+      const currentRank = positionIdx + 1;
+      const delta       = lastRank > 0 ? lastRank - currentRank : 0; // positive = moved up
+      localStorage.setItem(LS_RANK_KEY, currentRank);
+
+      function ord(n) {
+        const s = ['th','st','nd','rd'], v = n % 100;
+        return n + (s[(v-20)%10] || s[v] || s[0]);
+      }
+
+      // ── Build pick rows ───────────────────────────────────────────────────
+      function pickRowHtml(pick) {
+        const res     = pick.pick_results && pick.pick_results[0];
+        const teamId  = pick.team_id;
+        const team    = pick.teams;
+
+        // Find the match
+        let match = null;
+        if (res && res.match_id) {
+          match = allMatches.find(m => m.id === res.match_id);
+        }
+        if (!match) {
+          match = matchesInWindow.find(m => m.home_team_id === teamId || m.away_team_id === teamId);
+        }
+        if (!match) return '';
+
+        const isHome   = match.home_team_id === teamId;
+        const opponent = isHome ? match.away_team : match.home_team;
+        const oppName  = opponent ? opponent.name : '?';
+
+        // Determine display state
+        const apiStatus = (match.api_status || '').toUpperCase();
+        const isLive    = ['IN_PLAY','LIVE','HT','PAUSED','EXTRA_TIME','PENALTY'].includes(apiStatus);
+        const isFinishedStatus = ['FINISHED','FT','AET','PEN'].includes(apiStatus);
+        const isFT      = isFinishedStatus || !!(match.confirmed);
+        const kickoff   = new Date(match.kickoff);
+        const upcoming  = !isLive && !isFT && now < kickoff;
+
+        // Score
+        let scoreStr = '';
+        let resultKey = 'upcoming';
+        if (isLive || isFT) {
+          const hScore = match.home_score ?? null;
+          const aScore = match.away_score ?? null;
+          if (hScore !== null && aScore !== null) {
+            const myScore  = isHome ? hScore : aScore;
+            const oppScore = isHome ? aScore : hScore;
+            scoreStr = myScore + '–' + oppScore;
+            if      (myScore > oppScore) resultKey = isFT ? 'won'    : 'winning';
+            else if (myScore < oppScore) resultKey = isFT ? 'lost'   : 'losing';
+            else                         resultKey = isFT ? 'drawn'  : 'drawing';
+          }
+        }
+        // Fallback: derive resultKey from confirmed pick_result if live score not available
+        if (resultKey === 'upcoming' && res && res.match_result) {
+          if      (res.match_result === 'win')  resultKey = isFT ? 'won'   : 'winning';
+          else if (res.match_result === 'loss') resultKey = isFT ? 'lost'  : 'losing';
+          else if (res.match_result === 'draw') resultKey = isFT ? 'drawn' : 'drawing';
+          // Also try to show score from matchScoreMap if available
+          if (!scoreStr && res.match_id && matchScoreMap[res.match_id]) {
+            const ms = matchScoreMap[res.match_id];
+            const pickedHomeMs = ms.home_team_id === teamId;
+            const myS  = pickedHomeMs ? ms.home_score : ms.away_score;
+            const oppS = pickedHomeMs ? ms.away_score : ms.home_score;
+            scoreStr = myS + '–' + oppS;
+          }
+        }
+
+        // Points (incl. provisional longshot bonus)
+        let ptsNum = null;
+        if (res && res.match_result) {
+          ptsNum = (res.points_earned || 0) + (res.longshot_bonus || 0);
+        } else if (isLive || isFT) {
+          if      (resultKey === 'winning' || resultKey === 'won')  ptsNum = pick.multiplier;
+          else if (resultKey === 'drawing' || resultKey === 'drawn') ptsNum = 1;
+          else if (resultKey === 'losing'  || resultKey === 'lost')  ptsNum = 0;
+        }
+
+        // Longshot breakdown — add +1 bonus to provisional wins too
+        const isLS = team && team.is_longshot;
+        let ptsLabel = ptsNum !== null ? ptsNum + 'pt' : '';
+        if (isLS && ptsNum !== null && (resultKey === 'winning' || resultKey === 'won') && !res) {
+          // provisional win with longshot — show breakdown and include bonus in total
+          ptsNum   = Math.min(pick.multiplier + 1, 4);
+          ptsLabel = pick.multiplier + 'pt +1⭐';
+        } else if (res && res.longshot_bonus) {
+          ptsLabel = (res.points_earned || 0) + 'pt +' + res.longshot_bonus + '⭐';
+        }
+
+        // Time badge
+        let timeStr = '', timeLive = false;
+        if (upcoming) {
+          // Show kick-off time
+          const hrs  = kickoff.getUTCHours() + 1; // BST
+          const mins = String(kickoff.getUTCMinutes()).padStart(2, '0');
+          const ampm = hrs >= 12 ? (hrs > 12 ? (hrs-12) + ':' + mins + 'pm' : '12:' + mins + 'pm') : hrs + ':' + mins + 'am';
+          timeStr = 'KO ' + ampm;
+        } else if (isLive) {
+          const el = match.elapsed_minutes;
+          timeStr  = el ? el + '\'' : 'LIVE';
+          timeLive = true;
+        } else if (isFT) {
+          timeStr = apiStatus === 'AET' ? 'FT AET' : apiStatus === 'PEN' ? 'FT (pens)' : 'FT';
+        }
+
+        // Colours
+        const RC = {
+          winning: { bg:'rgba(16,185,129,0.10)',  border:'rgba(16,185,129,0.28)',  text:'#10b981' },
+          won:     { bg:'rgba(16,185,129,0.10)',  border:'rgba(16,185,129,0.28)',  text:'#10b981' },
+          drawing: { bg:'rgba(245,158,11,0.10)',  border:'rgba(245,158,11,0.28)',  text:'#f59e0b' },
+          drawn:   { bg:'rgba(245,158,11,0.10)',  border:'rgba(245,158,11,0.28)',  text:'#f59e0b' },
+          losing:  { bg:'rgba(239,68,68,0.10)',   border:'rgba(239,68,68,0.28)',   text:'#ef4444' },
+          lost:    { bg:'rgba(239,68,68,0.10)',   border:'rgba(239,68,68,0.28)',   text:'#ef4444' },
+          upcoming:{ bg:'rgba(255,255,255,0.03)', border:'rgba(255,255,255,0.1)',  text:'#94a3b8' },
+        };
+        const rc = RC[resultKey] || RC.upcoming;
+        const MC = pick.multiplier === 3
+          ? { bg:'rgba(245,158,11,0.18)', color:'#f59e0b', label:'3PT' }
+          : { bg:'rgba(59,130,246,0.18)', color:'#3b82f6', label:'2PT' };
+
+        return {
+          html: '<div class="ts-row" style="background:' + rc.bg + ';border:1px solid ' + rc.border + '">' +
+            '<span class="ts-mult" style="background:' + MC.bg + ';color:' + MC.color + '">' + MC.label + '</span>' +
+            '<span class="ts-flag">' + (team ? team.flag_emoji : '') + '</span>' +
+            '<div>' +
+              '<div class="ts-team-name">' + (team ? team.name : '—') + (isLS ? ' <span style="font-size:11px;color:#f59e0b">⭐</span>' : '') + '</div>' +
+              '<div class="ts-team-opp">vs ' + oppName + '</div>' +
+            '</div>' +
+            '<div class="ts-score-wrap">' +
+              (scoreStr ? '<div class="ts-score" style="color:' + rc.text + '">' + scoreStr + '</div>' : '') +
+              '<div class="ts-time">' +
+                (timeLive ? '<span class="ts-live-dot"></span>' : '') +
+                '<span class="ts-time-label" style="color:' + (timeLive ? '#ef4444' : 'rgba(148,163,184,0.5)') + '">' + timeStr + '</span>' +
+              '</div>' +
+            '</div>' +
+            (ptsLabel ? '<span class="ts-pts" style="color:' + rc.text + '">' + ptsLabel + '</span>' : '<span class="ts-pts" style="color:#64748b">—</span>') +
+          '</div>',
+          points: ptsNum,
+          matchId: match.id,
+          live: timeLive,
+          settled: isFT || !!(res && res.match_result),
+        };
+      }
+
+      const rowData  = relevantPicks.map(pickRowHtml).filter(Boolean);
+      const rowsHtml = rowData.map(r => r.html).join('');
+      if (!rowsHtml) { stripEl.style.display = 'none'; return; }
+
+      const anyLive      = rowData.some(r => r.live);
+      const anySettled   = rowData.some(r => r.settled);
+      // Total = sum of all known points (provisional + confirmed), matching the rows
+      const totalPts     = rowData.reduce((s, r) => s + (r.points || 0), 0);
+      const hasAnyPoints = rowData.some(r => r.points !== null);
+      const firstMatchId = rowData.length ? rowData[0].matchId : null;
+
+      const deltaColor  = delta > 0 ? '#10b981' : delta < 0 ? '#ef4444' : '#64748b';
+      const deltaArrow  = delta > 0 ? '▲' : delta < 0 ? '▼' : '';
+      const deltaHtml   = delta !== 0
+        ? '<span class="ts-rank-delta animate" style="color:' + deltaColor + '">' + deltaArrow + Math.abs(delta) + '</span>'
+        : '';
+
+      // Deep-link to the specific match in Match Centre (falls back to the page top)
+      const mcHref = firstMatchId ? '/match-centre#match-' + firstMatchId : '/match-centre';
+      stripEl.onclick = () => { window.location.href = mcHref; };
+      stripEl.style.cursor = 'pointer';
+
+      // Footer total: include provisional points, labelled when not yet confirmed
+      const totalLabel = hasAnyPoints
+        ? totalPts + 'pt' + (anyLive && !anySettled ? ' so far' : '')
+        : '';
+      const footerNote = anyLive
+        ? 'Provisional · tap for Match Centre'
+        : anySettled
+          ? 'Confirmed · tap for Match Centre'
+          : 'Tap for Match Centre';
+
+      stripEl.innerHTML =
+        '<div class="ts-header">' +
+          '<span class="ts-heading">' + heading + '</span>' +
+          '<div class="ts-rank">' +
+            '<span class="ts-rank-label">Rank</span>' +
+            '<span class="ts-rank-val">' + ord(currentRank) + '</span>' +
+            deltaHtml +
+          '</div>' +
+        '</div>' +
+        '<div class="ts-rows">' + rowsHtml + '</div>' +
+        '<div class="ts-footer">' +
+          '<span class="ts-footer-note">' + footerNote + '</span>' +
+          (totalLabel ? '<span class="ts-footer-total">' + totalLabel + '</span>' : '') +
+        '</div>';
+
+      stripEl.style.display = 'block';
+    }
+
     function renderHistory() {
       const tbody = document.getElementById('history-body');
       const picksByRound = {};
@@ -1920,83 +2225,6 @@
       document.getElementById('submit-pick-btn').addEventListener('click', submitPick);
       document.getElementById('submit-pick-btn-top').addEventListener('click', submitPick);
 
-      // ── Push notification opt-in ──────────────────────────────────────────────
-      const VAPID_PUBLIC_KEY = 'BFv-J5fCtRvSjQLZi8_RpOUGQUYxQh7JUD4VFY-Gl4M6-XdHtUQv7wd7-6Bx73Kw5dV660I2HS_xBFZoJfkpGzE';
-
-      function urlBase64ToUint8Array(base64String) {
-        const padding = '='.repeat((4 - base64String.length % 4) % 4);
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-        const rawData = atob(base64);
-        return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
-      }
-
-      async function initNotifBar() {
-        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
-        const card = document.getElementById('notif-card');
-        const btn = document.getElementById('notif-btn');
-        const label = document.getElementById('notif-label');
-        if (!card || !btn) return;
-
-        const perm = Notification.permission;
-
-        if (perm === 'granted') {
-          const reg = await navigator.serviceWorker.ready;
-          const existing = await reg.pushManager.getSubscription();
-          if (existing) {
-            label.textContent = '🔔 Deadline reminders on.';
-            btn.textContent = '✅ Subscribed';
-            btn.style.color = 'var(--green)';
-            btn.style.borderColor = 'var(--green)';
-            if (player && player.id) {
-              await db.from('push_subscriptions')
-                .upsert({ player_id: player.id, subscription: existing.toJSON() }, { onConflict: 'player_id' });
-            }
-            return;
-          }
-        }
-
-        if (perm === 'denied') {
-          label.textContent = '🔔 Notifications blocked — enable in browser settings to get deadline reminders.';
-          btn.textContent = 'How to enable';
-          btn.addEventListener('click', () => {
-            alert('Notifications are blocked on this device.\n\nTo enable: open your browser settings, find Notifications, and allow lms2026.netlify.app.\n\nThen reload the page.');
-          });
-          return;
-        }
-
-        btn.addEventListener('click', async () => {
-          btn.disabled = true;
-          btn.textContent = 'Enabling...';
-          try {
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') {
-              btn.disabled = false;
-              btn.textContent = 'Enable in browser settings';
-              label.textContent = '🔔 Notifications blocked — enable in browser settings.';
-              return;
-            }
-            const reg = await navigator.serviceWorker.ready;
-            const sub = await reg.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-            });
-            if (player && player.id) {
-              await db.from('push_subscriptions')
-                .upsert({ player_id: player.id, subscription: sub.toJSON() }, { onConflict: 'player_id' });
-            }
-            label.textContent = '🔔 Deadline reminders on.';
-            btn.textContent = '✅ Subscribed';
-            btn.style.color = 'var(--green)';
-            btn.style.borderColor = 'var(--green)';
-            btn.disabled = false;
-          } catch(err) {
-            console.error('Push subscription failed:', err);
-            btn.disabled = false;
-            btn.textContent = 'Failed — try again';
-          }
-        });
-      }
-
             // 5-second spinner timeout
       const loadTimeout = setTimeout(() => {
         const loading = document.getElementById('loading');
@@ -2009,8 +2237,6 @@
       await syncTestDateFromSupabase();
       await loadDashboard();
       clearTimeout(loadTimeout);
-      initNotifBar();
-
       // Silent background refresh every 60s — skips if modal or oracle is open, or mid-pick
       setInterval(() => {
         const modalOpen  = document.getElementById('pick-modal-backdrop').classList.contains('open');

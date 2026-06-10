@@ -971,11 +971,12 @@
 
           function teamSpan(team, col, pickNames, pickId) {
             if (!team) return '<span style="color:var(--text-muted)">TBD</span>';
-            const ls = team.is_longshot ? ' ⭐' : '';
+            const ls = team.is_longshot ? '&nbsp;⭐' : '';
+            const inner = `${team.flag_emoji}&nbsp;${team.name}${ls}`;
             if (deadlinePassed && pickNames.length > 0) {
-              return `<span style="${col} cursor:pointer;" data-pick-id="${pickId}" onclick="showTeamPicksPopup(event,this)">${team.flag_emoji} ${team.name}${ls}</span>`;
+              return `<span style="${col} white-space:nowrap; cursor:pointer;" data-pick-id="${pickId}" onclick="showTeamPicksPopup(event,this)">${inner}</span>`;
             }
-            return `<span style="${col}">${team.flag_emoji} ${team.name}${ls}</span>`;
+            return `<span style="${col} white-space:nowrap;">${inner}</span>`;
           }
 
           const homePickId = 'pick_' + m.round_id + '_' + (m.home_team ? m.home_team.id : 'h');
@@ -990,7 +991,7 @@
           html += `<tr style="border-bottom:1px solid var(--border);${divider}">
             <td style="padding:7px 6px; white-space:nowrap; font-size:12px">${date}</td>
             <td style="padding:7px 6px; white-space:nowrap; color:var(--text-muted); font-size:12px">${time}</td>
-            <td style="padding:7px 6px; font-weight:600; font-size:13px">${home} <span style="color:var(--text-muted); font-weight:400">v</span> ${away}</td>
+            <td style="padding:7px 6px; font-weight:600; font-size:13px; word-break:normal;">${home} <span style="color:var(--text-muted); font-weight:400">v</span> ${away}</td>
             <td style="padding:7px 6px; font-size:13px; white-space:nowrap">${scoreHtml}</td>
           </tr>`;
         });
@@ -1218,7 +1219,7 @@
           const awayLs = m.away_team?.is_longshot ? ' ⭐' : '';
           html += `<tr style="border-bottom:1px solid var(--border);${isDone?'opacity:0.55':''}">
             <td style="padding:7px 6px">
-              <div style="font-weight:600">${m.home_team?.flag_emoji || ''} ${m.home_team?.name || 'TBD'}${homeLs} v ${m.away_team?.flag_emoji || ''} ${m.away_team?.name || 'TBD'}${awayLs}</div>
+              <div style="font-weight:600"><span style="white-space:nowrap">${m.home_team?.flag_emoji || ''}&nbsp;${m.home_team?.name || 'TBD'}${homeLs}</span> v <span style="white-space:nowrap">${m.away_team?.flag_emoji || ''}&nbsp;${m.away_team?.name || 'TBD'}${awayLs}</span></div>
               <div style="font-size:11px;color:var(--text-muted)">${ko} · ${t}</div>
             </td>
             <td style="text-align:center;padding:7px 6px">${oddsCellB(m.odds_home, homeWon)}</td>

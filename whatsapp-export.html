@@ -806,7 +806,7 @@
         const statsMap = {};
         players.forEach(p => {
           statsMap[p.id] = {
-            id: p.id, name: p.display_name || shortName(p.name), slug: p.slug, isOut: p.is_eliminated, is_bot: p.is_bot,
+            id: p.id, name: p.name, display_name: p.display_name, slug: p.slug, isOut: p.is_eliminated, is_bot: p.is_bot,
             totalPoints: 0, pld: 0, teamsUsed: 0,
             gd: gdMap[p.id] ?? 0,
             furthestRound: furthestRoundMap[p.id] ?? 0,
@@ -1048,7 +1048,7 @@
         msg = `✅ Everyone has picked for ${roundLabelText}!\n\nAll ${picked.length} players are locked in.`;
         if (firstGameStr) msg += `\n\n${firstGameStr}`;
       } else {
-        const unpickedNames = unpicked.map(p => `• ${p.name}`).join('\n');
+        const unpickedNames = unpicked.map(p => `• ${p.display_name || shortName(p.name)}`).join('\n');
         msg = `⏰ *LMS 2026 — ${roundLabelText} Picks*\n\n`;
         msg += `${picked.length}/${players.filter(p => !p.is_eliminated && !p.is_bot).length} players have picked\n\n`;
         if (firstGameStr) msg += `${firstGameStr}\n\n`;
@@ -1134,7 +1134,7 @@
         });
       } else {
         sortedPlayers.slice(0, 3).forEach((p, i) => {
-          msg += `${'🥇🥈🥉'[i]} ${p.name} — ${p.totalPoints}pts\n`;
+          msg += `${'🥇🥈🥉'[i]} ${p.display_name || shortName(p.name)} — ${p.totalPoints}pts\n`;
         });
       }
 
@@ -1162,7 +1162,7 @@
             const player = sortedPlayers.find(q => q.id === p.player_id);
             const flag = p.teams?.flag_emoji || '';
             const team = p.teams?.name || '?';
-            return player ? `${player.name} ${flag} ${team}` : '';
+            return player ? `${player.display_name || shortName(player.name)} ${flag} ${team}` : '';
           }).filter(Boolean);
 
           msg += `\n⭐ ${longshotPicks.length} player${longshotPicks.length !== 1 ? 's' : ''} went for a longshot — `;
