@@ -1625,14 +1625,14 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
       html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
         <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
-          <th style="width:22px;padding:4px 2px 4px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
-          <th style="width:30px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Prior</th>
-          <th style="padding:4px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Player</th>
-          ${showPld ? '<th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Pld</th>' : ''}
-          <th style="width:28px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Pts</th>
-          ${!isGroupRound ? '<th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Rnd</th>' : ''}
-          <th style="width:26px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">GD</th>
-          <th style="width:26px;padding:4px 4px 4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">⚽</th>
+          <th style="width:22px;padding:2px 2px 2px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+          <th style="width:30px;padding:2px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Prior</th>
+          <th style="padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Player</th>
+          ${showPld ? '<th style="width:26px;padding:2px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Pld</th>' : ''}
+          <th style="width:28px;padding:2px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Pts</th>
+          ${!isGroupRound ? '<th style="width:26px;padding:2px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Rnd</th>' : ''}
+          <th style="width:26px;padding:2px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">GD</th>
+          <th style="width:26px;padding:2px 4px 4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">⚽</th>
         </tr></thead><tbody>`;
 
       sortedPlayers.forEach((p, i) => {
@@ -1666,14 +1666,14 @@
         const goalsDiff = projectedTotal > 0 ? Math.abs(Math.round((p.goalsPredict||0) - projectedTotal)) : '—';
 
         html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
-          <td style="padding:4px 2px 4px 8px;font-size:11px;font-weight:800;color:#718096;text-align:center">${posLabel}</td>
-          <td style="padding:4px 2px;text-align:center">${priorHtml}</td>
-          <td style="padding:4px 4px">${nameCell}</td>
-          ${showPld ? `<td style="padding:4px 2px;font-size:10px;color:#9aa5b4;text-align:center">${p.pld}</td>` : ''}
-          <td style="padding:4px 2px;font-size:12px;font-weight:800;color:#b7791f;text-align:center">${p.totalPoints}</td>
-          ${!isGroupRound ? `<td style="padding:4px 2px;font-size:10px;color:#4a5568;font-weight:600;text-align:center">${frLabel}</td>` : ''}
-          <td style="padding:4px 2px;font-size:11px;font-weight:700;color:${gdColor};text-align:center">${gdStr}</td>
-          <td style="padding:4px 4px 4px 2px;font-size:10px;color:#9aa5b4;text-align:center">${goalsDiff}</td>
+          <td style="padding:2px 2px 2px 8px;font-size:11px;font-weight:800;color:#718096;text-align:center">${posLabel}</td>
+          <td style="padding:2px 2px;text-align:center">${priorHtml}</td>
+          <td style="padding:2px 4px">${nameCell}</td>
+          ${showPld ? `<td style="padding:2px 2px;font-size:10px;color:#9aa5b4;text-align:center">${p.pld}</td>` : ''}
+          <td style="padding:2px 2px;font-size:12px;font-weight:800;color:#b7791f;text-align:center">${p.totalPoints}</td>
+          ${!isGroupRound ? `<td style="padding:2px 2px;font-size:10px;color:#4a5568;font-weight:600;text-align:center">${frLabel}</td>` : ''}
+          <td style="padding:2px 2px;font-size:11px;font-weight:700;color:${gdColor};text-align:center">${gdStr}</td>
+          <td style="padding:2px 4px 4px 2px;font-size:10px;color:#9aa5b4;text-align:center">${goalsDiff}</td>
         </tr>`;
       });
 
@@ -1787,11 +1787,11 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
       html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
         <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
-          <th style="width:20px;padding:5px 4px 5px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
-          <th style="width:68px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
-          <th style="width:125px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Pick</th>
-          <th style="width:75px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Opponent</th>
-          <th style="width:34px;padding:5px 8px 5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</th>
+          <th style="width:20px;padding:2px 4px 2px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+          <th style="width:68px;padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
+          <th style="width:125px;padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Pick</th>
+          <th style="width:75px;padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Opponent</th>
+          <th style="width:34px;padding:2px 8px 2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</th>
         </tr></thead><tbody>`;
 
       sortedPlayers.forEach((p, i) => {
@@ -1820,11 +1820,11 @@
           : `<span style="font-size:10px;color:#cbd5e0">—</span>`;
 
         html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
-          <td style="padding:5px 4px 5px 8px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
-          <td style="padding:5px 4px">${nameCell}</td>
-          <td style="padding:5px 4px">${pickCell}</td>
-          <td style="padding:5px 4px">${oppCell}</td>
-          <td style="padding:5px 8px 5px 4px;text-align:center">${oddsCell}</td>
+          <td style="padding:2px 4px 2px 8px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
+          <td style="padding:2px 4px">${nameCell}</td>
+          <td style="padding:2px 4px">${pickCell}</td>
+          <td style="padding:2px 4px">${oppCell}</td>
+          <td style="padding:2px 8px 2px 4px;text-align:center">${oddsCell}</td>
         </tr>`;
       });
 
@@ -1856,7 +1856,7 @@
         <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team</span>
         <span style="width:80px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Opponent</span>
         <span style="width:36px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
-        <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;padding-left:8px">Picks</span>
       </div>`;
 
       sorted.forEach((tid, i) => {
@@ -1865,19 +1865,132 @@
         const hasOdds = !isNaN(odds) && odds > 0;
         const ls = teamIsLongshot[tid] ? ' ⭐' : '';
         const pct = Math.round((count / maxCount) * 100);
-        const barColor = count >= maxCount * 0.7 ? '#2b6cb0' : count >= maxCount * 0.35 ? '#b7791f' : '#718096';
-        const countColor = barColor;
         const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
         const opp = teamOpponents[tid] || '?';
 
-        html += `<div style="display:flex;align-items:center;padding:7px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
+        html += `<div style="display:flex;align-items:center;padding:4px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
           <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
           <div style="flex:1;min-width:0;font-size:12px;font-weight:800;color:#1a202c">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
           <div style="width:80px;font-size:10px;color:#718096">v ${opp}</div>
           <div style="width:36px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? odds.toFixed(1) : '<span style="color:#cbd5e0">—</span>'}</div>
-          <div style="width:46px;display:flex;align-items:center;gap:4px;justify-content:flex-end">
-            <div style="width:28px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div></div>
-            <span style="font-size:11px;font-weight:800;color:${countColor};min-width:10px;text-align:right">${count}</span>
+          <div style="flex:1;padding-left:8px;display:flex;align-items:center;gap:5px">
+            <div style="flex:1;height:7px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#4a5568;border-radius:4px"></div></div>
+            <span style="font-size:13px;font-weight:800;color:#4a5568;min-width:16px;text-align:right">${count}</span>
+          </div>
+        </div>`;
+      });
+
+      if (total > 15) html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:6px 12px;font-size:11px;font-weight:600;color:#4a5568;text-align:center">Top 15 of ${total} teams picked</div>`;
+
+      document.getElementById('ko-tp-render').innerHTML = html;
+      document.getElementById('ko-tp-preview-wrap').style.display = 'block';
+      document.getElementById('btn-dl-ko-tp').style.display = 'inline-block'; document.getElementById('btn-cp-ko-tp').style.display = 'inline-block'; document.getElementById('btn-sh-ko-tp').style.display = 'inline-block';
+      setStatus('ko-tp-status', '');
+    }
+
+    // ── KO: Leaderboard ───────────────────────────────────────
+    function renderKOPicksByPlayer() {
+      if (!roundData) return;
+      const { sortedPlayers, playerCurrentPicks, teamNames, teamFlags, teamOpponents, teamIsLongshot, isGroupRound, fullRoundLabel, rankMap } = roundData;
+      if (isGroupRound) { setStatus('ko-pn-status', 'Knockout rounds only.'); return; }
+
+      const OUT_BADGE = '<span style="font-size:9px;font-weight:800;color:#e53e3e;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:3px;padding:1px 4px;vertical-align:middle;margin-left:3px">OUT</span>';
+
+      const rankCounts = {};
+      sortedPlayers.forEach(q => { const r = rankMap[q.id]; if (r !== undefined) rankCounts[r] = (rankCounts[r]||0)+1; });
+
+      let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
+      html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
+        <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
+          <th style="width:20px;padding:2px 4px 2px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+          <th style="width:68px;padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
+          <th style="width:125px;padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Pick</th>
+          <th style="width:75px;padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Opponent</th>
+          <th style="width:34px;padding:2px 8px 2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</th>
+        </tr></thead><tbody>`;
+
+      sortedPlayers.forEach((p, i) => {
+        const pos = rankMap[p.id] ?? (i + 1);
+        const isTied = (rankCounts[pos]||0) > 1;
+        const posLabel = isTied ? pos + '=' : String(pos);
+        const pick = (playerCurrentPicks[p.id] || [])[0] || null;
+        const rowBg = p.isOut ? '#fff5f5' : (i % 2 === 0 ? '#ffffff' : '#f8fafc');
+
+        const nameCell = p.isOut
+          ? `<span style="font-size:11px;font-weight:700;color:#a0aec0">${p.display_name || shortName(p.name)}</span>${OUT_BADGE}`
+          : `<span style="font-size:11px;font-weight:700;color:#1a202c">${p.display_name || shortName(p.name)}</span>`;
+
+        const ls = pick && teamIsLongshot[pick.team_id] ? ' ⭐' : '';
+        const pickCell = pick
+          ? `<span style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[pick.team_id]||''} ${teamNames[pick.team_id]||'?'}${ls}</span>`
+          : `<span style="font-size:10px;color:#a0aec0;font-style:italic">—</span>`;
+
+        const oppCell = pick && teamOpponents[pick.team_id]
+          ? `<span style="font-size:10px;color:#718096">v ${teamOpponents[pick.team_id]}</span>`
+          : `<span style="font-size:10px;color:#cbd5e0">—</span>`;
+
+        const odds = pick ? parseFloat(oddsMap[pick.team_id]) : NaN;
+        const oddsCell = !isNaN(odds) && odds > 0
+          ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>`
+          : `<span style="font-size:10px;color:#cbd5e0">—</span>`;
+
+        html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
+          <td style="padding:2px 4px 2px 8px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
+          <td style="padding:2px 4px">${nameCell}</td>
+          <td style="padding:2px 4px">${pickCell}</td>
+          <td style="padding:2px 4px">${oppCell}</td>
+          <td style="padding:2px 8px 2px 4px;text-align:center">${oddsCell}</td>
+        </tr>`;
+      });
+
+      html += `</tbody></table>`;
+      document.getElementById('ko-pn-render').innerHTML = html;
+      document.getElementById('ko-pn-preview-wrap').style.display = 'block';
+      document.getElementById('btn-dl-ko-pn').style.display = 'inline-block'; document.getElementById('btn-cp-ko-pn').style.display = 'inline-block'; document.getElementById('btn-sh-ko-pn').style.display = 'inline-block';
+      setStatus('ko-pn-status', '');
+    }
+
+    // ── KO: Teams Picked ──────────────────────────────────────
+    function renderKOTeamsPicked() {
+      if (!roundData) return;
+      const { teamCounts, teamNames, teamFlags, teamOpponents, teamIsLongshot, isGroupRound, fullRoundLabel } = roundData;
+      if (isGroupRound) { setStatus('ko-tp-status', 'Knockout rounds only.'); return; }
+
+      const sorted = Object.keys(teamCounts).sort((a,b) => {
+        const cd = teamCounts[b] - teamCounts[a];
+        if (cd !== 0) return cd;
+        return (parseFloat(oddsMap[a])||999) - (parseFloat(oddsMap[b])||999);
+      }).slice(0, 15);
+
+      const maxCount = Math.max(...Object.values(teamCounts));
+      const total = Object.keys(teamCounts).length;
+
+      let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
+      html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px">
+        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team</span>
+        <span style="width:80px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Opponent</span>
+        <span style="width:36px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;padding-left:8px">Picks</span>
+      </div>`;
+
+      sorted.forEach((tid, i) => {
+        const count = teamCounts[tid];
+        const odds = parseFloat(oddsMap[tid]);
+        const hasOdds = !isNaN(odds) && odds > 0;
+        const ls = teamIsLongshot[tid] ? ' ⭐' : '';
+        const pct = Math.round((count / maxCount) * 100);
+        const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+        const opp = teamOpponents[tid] || '?';
+
+        html += `<div style="display:flex;align-items:center;padding:4px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
+          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
+          <div style="flex:1;min-width:0;font-size:12px;font-weight:800;color:#1a202c">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
+          <div style="width:80px;font-size:10px;color:#718096">v ${opp}</div>
+          <div style="width:36px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? odds.toFixed(1) : '<span style="color:#cbd5e0">—</span>'}</div>
+          <div style="flex:1;padding-left:8px;display:flex;align-items:center;gap:5px">
+            <div style="flex:1;height:7px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#4a5568;border-radius:4px"></div></div>
+            <span style="font-size:13px;font-weight:800;color:#4a5568;min-width:16px;text-align:right">${count}</span>
           </div>
         </div>`;
       });
@@ -2019,9 +2132,9 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
       html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
         <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
-          <th style="width:20px;padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
-          <th style="width:72px;padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
-          <th style="padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Picks</th>
+          <th style="width:20px;padding:2px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+          <th style="width:72px;padding:2px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
+          <th style="padding:2px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Picks</th>
         </tr></thead><tbody>`;
 
       const rankCounts = {};
@@ -2047,9 +2160,9 @@
           : '';
 
         html += `<tr style="background:${elimBg};border-bottom:1px solid #edf0f5">
-          <td style="padding:5px 6px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
-          <td style="padding:5px 6px">${nameCell}</td>
-          <td style="padding:5px 6px">${p3html}${p2html}</td>
+          <td style="padding:2px 6px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
+          <td style="padding:2px 6px">${nameCell}</td>
+          <td style="padding:2px 6px">${p3html}${p2html}</td>
         </tr>`;
       });
 
@@ -2070,19 +2183,20 @@
         const cd = teamCounts[b] - teamCounts[a];
         if (cd !== 0) return cd;
         return (parseFloat(oddsMap[a])||999) - (parseFloat(oddsMap[b])||999);
-      }).slice(0, 10);
+      }).slice(0, 12);
 
       const maxCount = Math.max(...Object.values(teamCounts));
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
 
-      // col headers
+      // col headers — 3pt first, then 2pt
       html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px;gap:0">
         <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
         <span style="width:120px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team &amp; opp</span>
         <span style="width:32px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
-        <span style="width:62px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">2pt / 3pt</span>
-        <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
+        <span style="width:48px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">3pt / 2pt</span>
+        <span style="width:8px"></span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
       </div>`;
 
       sorted.forEach((tid, i) => {
@@ -2093,30 +2207,29 @@
         const hasOdds = !isNaN(odds) && odds > 0;
         const ls = teamIsLongshot[tid] ? ' ⭐' : '';
         const pct = Math.round((count / maxCount) * 100);
-        // colour by dominant pick type: gold = mostly 3pt, blue = mostly 2pt, grey = equal/mixed
-        const barColor = count3 > count2 ? '#b7791f' : count2 > count3 ? '#2b6cb0' : '#718096';
-        const countColor = barColor;
         const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-        const pill2 = count2 ? `<span style="font-size:9px;font-weight:700;color:#2b6cb0;background:#ebf8ff;border:1px solid #bee3f8;padding:1px 4px;border-radius:3px">${count2}×2pt</span>` : '';
-        const pill3 = count3 ? `<span style="font-size:9px;font-weight:700;color:#b7791f;background:#fffbeb;border:1px solid #f6e05e;padding:1px 4px;border-radius:3px">${count3}×3pt</span>` : '';
+        // compact pills: gold box = 3pt count, blue box = 2pt count, number only
+        const pill3 = count3 ? `<span style="font-size:10px;font-weight:800;color:#fff;background:#b7791f;padding:1px 5px;border-radius:3px;min-width:14px;text-align:center;display:inline-block">${count3}</span>` : `<span style="font-size:10px;font-weight:800;color:#fff;background:#b7791f;padding:1px 5px;border-radius:3px;min-width:14px;text-align:center;display:inline-block">0</span>`;
+        const pill2 = count2 ? `<span style="font-size:10px;font-weight:800;color:#fff;background:#2b6cb0;padding:1px 5px;border-radius:3px;min-width:14px;text-align:center;display:inline-block">${count2}</span>` : `<span style="font-size:10px;font-weight:800;color:#fff;background:#2b6cb0;padding:1px 5px;border-radius:3px;min-width:14px;text-align:center;display:inline-block">0</span>`;
 
-        html += `<div style="display:flex;align-items:center;gap:0;padding:6px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
+        html += `<div style="display:flex;align-items:center;gap:0;padding:4px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
           <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
           <div style="width:120px;min-width:0;overflow:hidden">
             <div style="font-size:12px;font-weight:800;color:#1a202c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
             <div style="font-size:10px;color:#718096;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">v ${teamOpponents[tid]||'?'}</div>
           </div>
           <div style="width:32px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? odds.toFixed(1) : '<span style="color:#cbd5e0">—</span>'}</div>
-          <div style="width:62px;display:flex;gap:3px;justify-content:center;flex-wrap:wrap">${pill3}${pill2}</div>
-          <div style="width:46px;display:flex;align-items:center;gap:4px;justify-content:flex-end">
-            <div style="width:28px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div></div>
-            <span style="font-size:11px;font-weight:800;color:${countColor};min-width:10px;text-align:right">${count}</span>
+          <div style="width:48px;display:flex;gap:3px;justify-content:center;align-items:center">${pill3}${pill2}</div>
+          <div style="width:8px"></div>
+          <div style="flex:1;display:flex;align-items:center;gap:5px">
+            <div style="flex:1;height:7px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#4a5568;border-radius:4px"></div></div>
+            <span style="font-size:13px;font-weight:800;color:#4a5568;min-width:16px;text-align:right">${count}</span>
           </div>
         </div>`;
       });
 
       const total = Object.keys(teamCounts).length;
-      if (total > 10) html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:6px 12px;font-size:11px;font-weight:600;color:#4a5568;text-align:center">Top 10 of ${total} teams picked</div>`;
+      if (total > 12) html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:6px 12px;font-size:11px;font-weight:600;color:#4a5568;text-align:center">Top 12 of ${total} teams picked</div>`;
 
       document.getElementById('tp2-render').innerHTML = html;
       document.getElementById('tp2-preview-wrap').style.display = 'block';
@@ -2167,7 +2280,7 @@
         <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
         <span style="width:160px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Teams</span>
         <span style="width:48px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
-        <span style="width:30px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left;padding-left:8px">Picks</span>
       </div>`;
 
       sorted.forEach((key, i) => {
@@ -2179,6 +2292,7 @@
         const oppA = teamOpponents[tidA] ? ` <span style="font-size:9px;font-weight:400;color:#a0aec0">v ${teamOpponents[tidA]}</span>` : '';
         const oppB = teamOpponents[tidB] ? ` <span style="font-size:9px;font-weight:400;color:#a0aec0">v ${teamOpponents[tidB]}</span>` : '';
         const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+        const blocks = Array.from({length: count}, () => `<span style="display:inline-block;width:14px;height:14px;background:#2b6cb0;border-radius:3px"></span>`).join('');
 
         html += `<div style="display:flex;align-items:center;padding:6px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
           <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
@@ -2188,7 +2302,7 @@
             <div style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[tidB]||''} ${teamNames[tidB]||'?'}${lsB}${oppB}</div>
           </div>
           <div style="width:48px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${odds > 0 ? odds.toFixed(1) : '—'}</div>
-          <div style="width:30px;text-align:center"><span style="font-size:11px;font-weight:800;color:#fff;background:#2b6cb0;padding:2px 6px;border-radius:4px">${count}</span></div>
+          <div style="flex:1;padding-left:8px;display:flex;gap:3px;align-items:center;flex-wrap:wrap">${blocks}</div>
         </div>`;
       });
 

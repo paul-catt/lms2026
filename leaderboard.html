@@ -143,6 +143,20 @@
     #fallen-wrap > div > div { padding-top:7px !important; padding-bottom:7px !important; }
     #pk-toast { position:fixed; background:rgba(15,17,23,0.96); border:1px solid var(--border); color:var(--text); font-family:'Inter',sans-serif; font-size:13px; font-weight:600; padding:5px 12px; border-radius:10px; pointer-events:none; opacity:0; transition:opacity 0.12s; z-index:9999; white-space:nowrap; transform:translateY(-4px); }
     #pk-toast.show { opacity:1; transform:translateY(0); }
+    /* ── LIVE mode (provisional scores layer) ── */
+    #live-col-header { color:var(--red); }
+    td.live-cell { font-size:12px; white-space:nowrap; line-height:1.5; text-align:center; padding-left:4px !important; padding-right:4px !important; }
+    .ls-score { font-weight:700; }
+    .ls-marker { font-size:10px; font-weight:700; color:var(--text-muted); letter-spacing:0.05em; margin-right:3px; }
+    .ls-delta { font-weight:800; color:var(--gold); margin-left:4px; }
+    .ls-delta-zero { color:var(--text-muted); font-weight:700; margin-left:4px; }
+    .ls-zap { font-size:11px; }
+    .badge-provout { display:inline-block; font-size:11px; font-weight:700; color:var(--red); background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:4px; padding:0 5px; }
+    .pts-num { display:inline-block; min-width:24px; text-align:right; font-variant-numeric:tabular-nums; }
+    .pts-zap { display:inline-block; width:12px; text-align:left; font-size:11px; vertical-align:top; }
+    .live-pill { display:inline-flex; align-items:center; gap:5px; font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.08em; color:var(--red); border:1px solid rgba(239,68,68,0.4); background:rgba(239,68,68,0.08); border-radius:20px; padding:1px 9px; margin-left:8px; vertical-align:middle; }
+    .live-dot { width:6px; height:6px; border-radius:50%; background:var(--red); animation:lbLivePulse 1.2s infinite; }
+    @keyframes lbLivePulse { 0%,100%{opacity:1} 50%{opacity:0.25} }
   </style>
 </head>
 <body>
@@ -227,7 +241,8 @@
                 <th>Pts</th>
                 <th id="rnd-col-header" style="display:none">Rnd</th>
                 <th>GD</th>
-                <th title="Goals prediction difference">⚽</th>
+                <th title="Goals prediction difference" id="goals-col-header">⚽</th>
+                <th id="live-col-header" style="display:none" title="Live — provisional, confirmed in the morning">Live</th>
                 <th class="hide-mobile" style="text-align:left">Form</th>
                 <!-- Status: landscape shows full reason, portrait shows dot only -->
                 <th id="status-col-header" style="display:none" class="landscape-only">Status</th>
@@ -800,7 +815,8 @@
           { data: completedMatches },
           { data: todayMatchRows },
           { data: allPicks },
-          { data: allTeams }
+          { data: allTeams },
+          { data: liveMatchRows }
         ] = await Promise.all([
           db.from('player_scores').select('*'),
           db.from('player_gd').select('*'),
@@ -812,12 +828,28 @@
           db.from('matches').select('round_id, home_score, away_score, home_team_id, away_team_id, pens_winner_id, kickoff, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji)').eq('status', 'complete').not('home_score', 'is', null),
           db.from('matches').select('home_team_id, away_team_id, round_id, kickoff, status, home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)').not('home_team_id', 'is', null),
           db.from('picks').select('player_id, team_id, multiplier, round_id, teams(flag_emoji, name, is_longshot), players(slug), pick_results(points_earned, longshot_bonus, match_result)'),
-          db.from('teams').select('id, name, flag_emoji, band, is_eliminated, is_longshot')
+          db.from('teams').select('id, name, flag_emoji, band, is_eliminated, is_longshot'),
+          // LIVE layer: unconfirmed matches with provisional scores (live or finished, awaiting admin confirm).
+          // Non-fatal: if api_status column doesn't exist yet, this returns null and live mode stays off.
+          db.from('matches').select('id, round_id, home_team_id, away_team_id, home_score, away_score, status, api_status, elapsed_minutes, kickoff, is_third_place').eq('confirmed', false).not('home_score', 'is', null).in('status', ['live', 'complete'])
         ]);
 
         if (error) throw error;
 
         const { windowStart, windowEnd } = getGameDayWindow(now);
+
+        // ── LIVE LAYER (read-only, provisional — never writes to the DB) ──
+        const liveWindowMatches = (liveMatchRows || []).filter(m => {
+          if (m.is_third_place) return false;
+          const ko = new Date(m.kickoff);
+          return ko >= windowStart && ko < windowEnd;
+        });
+        const liveMode = liveWindowMatches.length > 0;
+        const liveMatchByTeamRound = {};
+        liveWindowMatches.forEach(m => {
+          liveMatchByTeamRound[m.home_team_id + '|' + m.round_id] = m;
+          liveMatchByTeamRound[m.away_team_id + '|' + m.round_id] = m;
+        });
 
         let goalsScored = 0, matchesPlayed = 0;
         (completedMatches || []).forEach(m => { goalsScored += (m.home_score || 0) + (m.away_score || 0); matchesPlayed++; });
@@ -870,7 +902,16 @@
         if (finalRoundForHeading && finalRoundForHeading.is_complete) {
           document.getElementById('round-heading').textContent = 'Final · Complete';
         } else if (currentRound) {
-          document.getElementById('round-heading').textContent = currentRound.name + dayLabel;
+          const headingEl = document.getElementById('round-heading');
+          headingEl.textContent = currentRound.name + dayLabel;
+          if (liveMode) {
+            const inPlay   = liveWindowMatches.filter(m => m.status === 'live').length;
+            const ftUnconf = liveWindowMatches.length - inPlay;
+            let pillTxt = inPlay > 0 ? inPlay + ' LIVE' : '';
+            if (ftUnconf > 0) pillTxt += (pillTxt ? ' · ' : '') + ftUnconf + ' FT';
+            headingEl.insertAdjacentHTML('beforeend',
+              ' <span class="live-pill">' + (inPlay > 0 ? '<span class="live-dot"></span>' : '') + pillTxt + '</span>');
+          }
         }
 
         const gdMap = {};
@@ -899,6 +940,98 @@
 
         const roundTypeMap = {};
         (rounds || []).forEach(r => { roundTypeMap[r.id] = r.round_type; });
+
+        // ── LIVE LAYER: per-player provisional deltas and LIVE-cell lines ──
+        // KO scoring mirrors the rules: 90-min win = 2, ET/pens win = 1,
+        // ET/pens loss = 1, 90-min loss = 0. Group: win = multiplier
+        // (+1 longshot bonus), draw = 1, loss = 0. Elimination is never
+        // derived here — 💀 is cosmetic and only shown once a KO match is
+        // FINISHED and unconfirmed.
+        const liveByPlayer = {}; // player_id -> { delta, lines:[], danger, provOut }
+        if (liveMode) {
+          const liveEntries = [];
+          (allPicks || []).forEach(pick => {
+            const m = liveMatchByTeamRound[pick.team_id + '|' + pick.round_id];
+            if (!m) return;
+            const res = pick.pick_results && pick.pick_results[0];
+            if (res && res.match_result) return; // already settled — not provisional
+            liveEntries.push({ pick, m });
+          });
+          // 3pt line above 2pt line, matching the flag order on the row
+          liveEntries.sort((a, b) => (b.pick.multiplier || 0) - (a.pick.multiplier || 0));
+
+          liveEntries.forEach(({ pick, m }) => {
+            const isHome = m.home_team_id === pick.team_id;
+            const ps = isHome ? m.home_score : m.away_score;
+            const os = isHome ? m.away_score : m.home_score;
+            const isKO = roundTypeMap[pick.round_id] === 'knockout';
+            const st = m.api_status || (m.status === 'complete' ? 'FINISHED' : 'IN_PLAY');
+            const finished     = m.status === 'complete' || st.indexOf('FINISHED') === 0;
+            const finishedET   = st === 'FINISHED_ET';
+            const finishedPens = st.indexOf('FINISHED_PENS') === 0;
+            const pensSideKnown = st === 'FINISHED_PENS_HOME' || st === 'FINISHED_PENS_AWAY';
+            const wonPens = pensSideKnown ? ((st === 'FINISHED_PENS_HOME') === isHome) : null;
+            const isLongshot = !!(pick.teams && pick.teams.is_longshot);
+            const inET = !finished && typeof m.elapsed_minutes === 'number' && m.elapsed_minutes > 90;
+
+            let delta = 0, danger = false, provOut = false, showDelta = true;
+
+            if (!isKO) {
+              delta = ps > os ? Math.min((pick.multiplier || 0) + (isLongshot ? 1 : 0), 4)
+                    : ps === os ? 1 : 0;
+            } else if (finished) {
+              if (finishedPens) {
+                // Level score, decided on pens: both sides bank 1; loser provisionally out
+                delta = 1;
+                if (wonPens === false) provOut = true;
+              } else if (ps > os) {
+                delta = finishedET ? 1 : 2;
+              } else if (ps < os) {
+                delta = finishedET ? 1 : 0;
+                provOut = true;
+              } else {
+                // FINISHED with level score but no pens marker — shouldn't happen; show nothing firm
+                showDelta = false;
+              }
+            } else {
+              // KO, in play
+              if (ps > os)      { delta = inET ? 1 : 2; }
+              else if (ps < os) { delta = 0; danger = true; showDelta = false; }
+              else              { delta = 0; showDelta = false; } // level: outcome unknowable, no badge
+            }
+
+            // Build the LIVE-cell line
+            let marker = '';
+            if (finished) {
+              marker = finishedPens ? 'PENS' : finishedET ? 'AET' : 'FT';
+            } else if (st === 'PAUSED') {
+              marker = (typeof m.elapsed_minutes === 'number' && m.elapsed_minutes > 90) ? 'BRK' : 'HT';
+            } else if (typeof m.elapsed_minutes === 'number') {
+              marker = m.elapsed_minutes + "'";
+            }
+
+            let line;
+            if (provOut) {
+              line = '<span class="badge-provout">💀 OUT (prov.)</span>' +
+                     (delta > 0 ? '<span class="ls-delta">+' + delta + '<span class="ls-zap">⚡</span></span>' : '');
+            } else {
+              line = (marker ? '<span class="ls-marker">' + marker + '</span>' : '') +
+                     '<span class="ls-score">' + ps + '–' + os + '</span>' +
+                     (danger ? ' <span title="Out as it stands">⚠️</span>'
+                             : showDelta ? '<span class="ls-delta' + (delta === 0 ? ' ls-delta-zero' : '') + '">+' + delta + '<span class="ls-zap">⚡</span></span>'
+                                         : '');
+            }
+
+            if (!liveByPlayer[pick.player_id]) liveByPlayer[pick.player_id] = { delta: 0, lines: [], danger: false, provOut: false };
+            const L = liveByPlayer[pick.player_id];
+            L.delta += delta;
+            L.lines.push(line);
+            L.danger = L.danger || danger;
+            L.provOut = L.provOut || provOut;
+          });
+        }
+        // Provisional points: confirmed total + live delta (display/sort only)
+        const effPts = p => (p.total_points || 0) + (liveMode && liveByPlayer[p.player_id] ? liveByPlayer[p.player_id].delta : 0);
 
         // Build pens lookup: team_id|round_id -> pens_winner_id
         const pensWinnerByTeamRound = {};
@@ -1134,6 +1267,12 @@
         // Hide Pld header on portrait in KO (cells handled via hide-portrait-ko class)
         const pldHeader = document.getElementById('pld-col-header');
         if (pldHeader) pldHeader.classList.toggle('hide-portrait-ko', !!isKnockout);
+        // LIVE mode column swap: Pld and ⚽ out, LIVE in (reverts when nothing is live/unconfirmed)
+        const goalsHeader = document.getElementById('goals-col-header');
+        const liveHeader  = document.getElementById('live-col-header');
+        if (pldHeader)   pldHeader.style.display   = liveMode ? 'none' : '';
+        if (goalsHeader) goalsHeader.style.display = liveMode ? 'none' : '';
+        if (liveHeader)  liveHeader.style.display  = liveMode ? '' : 'none';
 
         function exitReasonHtml(player) {
           const playerPicks = (allPicks || []).filter(p => p.player_id === player.player_id);
@@ -1219,7 +1358,7 @@
         }
 
         const sorted = (scores || []).sort((a, b) => {
-          if (b.total_points !== a.total_points) return b.total_points - a.total_points;
+          if (effPts(b) !== effPts(a)) return effPts(b) - effPts(a);
           if (isKnockout) {
             const currentSO = currentRound ? currentRound.sort_order : 0;
             const aBonus = wonCurrentRound.has(a.player_id) ? 1 : 0;
@@ -1249,7 +1388,7 @@
         sorted.forEach((p, i) => {
           if (i === 0) { posMap[p.player_id] = { pos: 1, tied: false }; return; }
           const prev = sorted[i - 1];
-          const samePts   = prev.total_points === p.total_points;
+          const samePts   = effPts(prev) === effPts(p);
           const sameRnd   = !isKnockout || (furthestMap[prev.player_id] || 0) === (furthestMap[p.player_id] || 0);
           const sameGd    = (gdMap[prev.player_id] || 0) === (gdMap[p.player_id] || 0);
           const samePrevSO = isKnockout ? (() => { const currentSO = currentRound ? currentRound.sort_order : 0; const pBonus = wonCurrentRound.has(prev.player_id) ? 1 : 0; const cBonus = wonCurrentRound.has(p.player_id) ? 1 : 0; const pfr = prev.is_eliminated ? (furthestMap[prev.player_id]||0) : Math.max(furthestMap[prev.player_id]||0, currentSO) + pBonus; const cfr = p.is_eliminated ? (furthestMap[p.player_id]||0) : Math.max(furthestMap[p.player_id]||0, currentSO) + cBonus; return pfr === cfr; })() : true;
@@ -1371,6 +1510,12 @@
         const tbody = document.getElementById('leaderboard-body');
         tbody.innerHTML = '';
 
+        function liveCellHtml(playerId) {
+          const L = liveByPlayer[playerId];
+          if (!L || L.lines.length === 0) return '<span style="color:var(--border)">—</span>';
+          return L.lines.join('<br>');
+        }
+
 
         sorted.forEach((p, i) => {
           const { pos, tied } = posMap[p.player_id];
@@ -1460,11 +1605,14 @@
             '<td class="prior">' + arrowHtml + '</td>' +
             '<td class="medal landscape-only">' + medal + '</td>' +
             '<td class="player-name"><a ' + playerLinkAttrs(p.slug) + '>' + (p.display_name || shortName(p.name)) + '</a>' + (competitionEnded ? '' : (p.is_eliminated ? '<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:4px">✕</span>' : (isKnockout && resultInThisRound.has(p.player_id) ? '<span style="color:#10b981;font-size:11px;font-weight:700;margin-left:4px" title="Result in">✔</span>' : ''))) + (competitionEnded ? portraitFinalistBadge(p) : trophyHtml + portraitFinalistBadge(p) + flagHtml) + (competitionEnded && winningsMap[p.player_id] ? '<span style="font-weight:700;color:var(--gold);margin-left:6px">(£' + (winningsMap[p.player_id] % 1 === 0 ? winningsMap[p.player_id] : winningsMap[p.player_id].toFixed(2)) + ')</span>' : '') + '</td>' +
-            '<td style="color:var(--text-muted);text-align:center" class="' + (isKnockout ? 'hide-portrait-ko' : '') + '">' + (p.rounds_played || 0) + '</td>' +
-            '<td class="points tight-col">' + (p.total_points || 0) + '</td>' +
+            '<td style="color:var(--text-muted);text-align:center' + (liveMode ? ';display:none' : '') + '" class="' + (isKnockout ? 'hide-portrait-ko' : '') + '">' + (p.rounds_played || 0) + '</td>' +
+            (liveMode
+              ? '<td class="points tight-col"><span class="pts-num">' + effPts(p) + '</span><span class="pts-zap">' + ((liveByPlayer[p.player_id] && liveByPlayer[p.player_id].delta > 0) ? '⚡' : '') + '</span></td>'
+              : '<td class="points tight-col">' + (p.total_points || 0) + '</td>') +
             (showRndCol ? '<td style="color:var(--text-muted);font-size:12px" class="tight-col">' + rndHtml + '</td>' : '') +
             '<td class="tight-col">' + gdHtml + '</td>' +
-            '<td class="tiebreak-val" style="text-align:center">' + goalsDiffHtml + '</td>' +
+            '<td class="tiebreak-val" style="text-align:center' + (liveMode ? ';display:none' : '') + '">' + goalsDiffHtml + '</td>' +
+            (liveMode ? '<td class="live-cell">' + liveCellHtml(p.player_id) + '</td>' : '') +
             '<td class="hide-mobile" style="text-align:left">' + formHtml + '</td>' +
             '<td style="' + ((isKnockout || competitionEnded) ? '' : 'display:none') + '" class="landscape-only">' + statusCellHtml + '</td>';
 
@@ -1473,7 +1621,7 @@
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('leaderboard-wrap').style.display = 'block';
-        document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+        document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) + (liveMode ? ' · ⚡ = provisional until confirmed' : '');
 
         const finalBanner = document.getElementById('final-table-banner');
         if (finalBanner) finalBanner.style.display = competitionEnded ? '' : 'none';

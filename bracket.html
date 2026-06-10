@@ -1162,12 +1162,9 @@
       const sorted = Object.values(byTeam).sort((a, b) => a.current - b.current);
       const lastFetchedStr = allOdds[0].fetched_at ? new Date(allOdds[0].fetched_at).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
       let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Last updated: <strong>${lastFetchedStr}</strong> · ${sorted.length} teams</div>`;
-      html += `<div class="table-wrap"><table><thead><tr><th class="left">Team</th><th>Odds</th><th>Move</th></tr></thead><tbody>`;
+      html += `<div class="table-wrap"><table><thead><tr><th class="left">Team</th><th>Odds</th></tr></thead><tbody>`;
       sorted.forEach(t => {
-        const hist = t.history;
-        let moveHtml = '<span style="color:var(--text-muted)">—</span>';
-        if (hist.length > 0) { const diff = t.current - hist[0]; if (Math.abs(diff) > 0.01) moveHtml = diff < 0 ? `<span style="color:var(--green)">▼ ${Math.abs(diff).toFixed(2)}</span>` : `<span style="color:var(--red)">▲ ${diff.toFixed(2)}</span>`; }
-        html += `<tr><td class="left">${t.flag} <strong>${t.name}</strong>${t.isLongshot ? ' ⭐' : ''}</td><td><strong>${t.current.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${t.currentFrac}</span></td><td>${moveHtml}</td></tr>`;
+        html += `<tr><td class="left">${t.flag} <strong>${t.name}</strong>${t.isLongshot ? ' ⭐' : ''}</td><td><strong>${t.currentFrac}</strong></td></tr>`;
       });
       html += '</tbody></table></div>';
       wrap.innerHTML = html;
