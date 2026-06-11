@@ -2049,7 +2049,14 @@
           timeStr = 'KO ' + ampm;
         } else if (isLive) {
           const el = match.elapsed_minutes;
-          timeStr  = el ? el + '\'' : 'LIVE';
+          if (apiStatus === 'PAUSED' || apiStatus === 'HT') {
+            timeStr = (typeof el === 'number' && el > 90) ? 'BRK' : 'HT';
+          } else if (typeof el === 'number') {
+            timeStr = el + '\'';
+          } else {
+            const asOf = new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+            timeStr = 'LIVE · ' + asOf;
+          }
           timeLive = true;
         } else if (isFT) {
           timeStr = apiStatus === 'AET' ? 'FT AET' : apiStatus === 'PEN' ? 'FT (pens)' : 'FT';

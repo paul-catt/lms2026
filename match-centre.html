@@ -535,11 +535,21 @@
         badgeHtml = '<span class="match-badge badge-ft">FT</span>';
       } else if (isLive) {
         badgeHtml = '<span class="match-badge badge-live"><span class="live-dot">🔴</span> Live</span>';
-        if (match.elapsed_minutes) {
-          const el = String(match.elapsed_minutes);
-          const isHT = el === '45' || el.startsWith('45+');
-          badgeHtml += '<span class="match-badge badge-elapsed">' + (isHT ? 'HT' : el + '\'') + '</span>';
+        const apiStatus = (match.api_status || '').toUpperCase();
+        const el = match.elapsed_minutes;
+        let elapsedLabel = '';
+        if (apiStatus === 'PAUSED' || apiStatus === 'HT') {
+          elapsedLabel = (typeof el === 'number' && el > 90) ? 'BRK' : 'HT';
+        } else if (typeof el === 'number') {
+          elapsedLabel = el + '\'';
+        } else if (el && (String(el) === '45' || String(el).startsWith('45+'))) {
+          elapsedLabel = 'HT';
+        } else if (el) {
+          elapsedLabel = el + '\'';
+        } else {
+          elapsedLabel = 'as of ' + new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
         }
+        badgeHtml += '<span class="match-badge badge-elapsed">' + elapsedLabel + '</span>';
       }
 
       let aetHtml = '';
@@ -703,7 +713,7 @@
           db.from('picks').select('player_id, team_id, multiplier, round_id, pick_results(points_earned, longshot_bonus, match_result)')
         ]);
 
-        const matchSel = 'id, kickoff, status, elapsed_minutes, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, round_id, pens_winner_id, venue, rounds(id, name, sort_order, deadline), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)';
+        const matchSel = 'id, kickoff, status, api_status, elapsed_minutes, home_score, away_score, odds_home, odds_draw, odds_away, home_team_id, away_team_id, round_id, pens_winner_id, venue, rounds(id, name, sort_order, deadline), home_team:teams!matches_home_team_id_fkey(id,name,flag_emoji,is_longshot), away_team:teams!matches_away_team_id_fkey(id,name,flag_emoji,is_longshot)';
 
         // ── TODAY ──────────────────────────────────────────
         const { data: todayMatches } = await db.from('matches').select(matchSel)

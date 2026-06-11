@@ -4285,13 +4285,15 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         // score.winner: HOME_TEAM | AWAY_TEAM | DRAW | null
         const fdWinner  = f.score?.winner || null;
 
-        const isLive = fdStatus === 'IN_PLAY' || fdStatus === 'PAUSED';
+        const isLive = fdStatus === 'IN_PLAY' || fdStatus === 'PAUSED' || ((fdStatus === 'TIMED' || fdStatus === 'SCHEDULED') && typeof homeGoals === 'number' && typeof awayGoals === 'number');
         const isFT   = fdStatus === 'FINISHED';
 
+        const hasScore = typeof homeGoals === 'number' && typeof awayGoals === 'number';
         const statusLabel =
           fdStatus === 'FINISHED'  ? 'Full Time' :
-          fdStatus === 'IN_PLAY'   ? 'Live' :
+          fdStatus === 'IN_PLAY'   ? (typeof f.minute === 'number' ? f.minute + "'" : 'Live') :
           fdStatus === 'PAUSED'    ? 'Half Time' :
+          (fdStatus === 'TIMED' || fdStatus === 'SCHEDULED') && hasScore ? 'Live' :
           fdStatus === 'TIMED'     ? 'Not Started' :
           fdStatus === 'SCHEDULED' ? 'Scheduled' :
           fdStatus === 'POSTPONED' ? 'Postponed' : fdStatus;

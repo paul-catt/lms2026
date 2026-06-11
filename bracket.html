@@ -1258,6 +1258,57 @@
       'no_hoper':   '#ef4444',
     };
 
+    const GROUP_ODDS = {
+      'Spain':         { win: '8/11',  qualify: '1/100' },
+      'France':        { win: '8/11',  qualify: '1/50'  },
+      'England':       { win: '8/11',  qualify: '1/100' },
+      'Portugal':      { win: 'Evens', qualify: '1/50'  },
+      'Brazil':        { win: '10/11', qualify: '1/100' },
+      'Argentina':     { win: '5/6',   qualify: '1/100' },
+      'Germany':       { win: '6/4',   qualify: '1/100' },
+      'Netherlands':   { win: '13/8',  qualify: '1/14'  },
+      'Norway':        { win: '11/4',  qualify: '1/9'   },
+      'Belgium':       { win: '13/8',  qualify: '1/35'  },
+      'Colombia':      { win: '5/2',   qualify: '1/10'  },
+      'Morocco':       { win: '7/2',   qualify: '1/10'  },
+      'Japan':         { win: '4/1',   qualify: '1/5'   },
+      'USA':           { win: '11/4',  qualify: '2/15'  },
+      'Switzerland':   { win: '11/4',  qualify: '1/16'  },
+      'Uruguay':       { win: '3/1',   qualify: '1/10'  },
+      'Mexico':        { win: '3/1',   qualify: '1/14'  },
+      'Ecuador':       { win: '9/2',   qualify: '1/9'   },
+      'Turkey':        { win: '3/1',   qualify: '1/5'   },
+      'Croatia':       { win: '4/1',   qualify: '1/5'   },
+      'Senegal':       { win: '15/2',  qualify: '4/9'   },
+      'Sweden':        { win: '9/2',   qualify: '1/2'   },
+      'Austria':       { win: '4/1',   qualify: '1/5'   },
+      'Canada':        { win: '7/4',   qualify: '1/10'  },
+      'Scotland':      { win: '10/1',  qualify: '1/3'   },
+      'Ivory Coast':   { win: '6/1',   qualify: '1/5'   },
+      'Czech Rep':     { win: '4/1',   qualify: '1/3'   },
+      'Paraguay':      { win: '4/1',   qualify: '1/2'   },
+      'Egypt':         { win: '4/1',   qualify: '3/10'  },
+      'Ghana':         { win: '11/1',  qualify: '8/11'  },
+      'Algeria':       { win: '8/1',   qualify: '1/3'   },
+      'South Korea':   { win: '7/2',   qualify: '1/3'   },
+      'Bosnia/Herzeg': { win: '13/2',  qualify: '4/9'   },
+      'Tunisia':       { win: '12/1',  qualify: '11/8'  },
+      'Australia':     { win: '8/1',   qualify: '10/11' },
+      'Iran':          { win: '13/2',  qualify: '1/2'   },
+      'DR Congo':      { win: '14/1',  qualify: 'Evens' },
+      'Saudi Arabia':  { win: '30/1',  qualify: 'Evens' },
+      'South Africa':  { win: '13/1',  qualify: '6/5'   },
+      'Panama':        { win: '40/1',  qualify: '2/1'   },
+      'Cape Verde':    { win: '60/1',  qualify: '2/1'   },
+      'Qatar':         { win: '30/1',  qualify: '11/4'  },
+      'Uzbekistan':    { win: '35/1',  qualify: '7/4'   },
+      'New Zealand':   { win: '20/1',  qualify: '6/4'   },
+      'Iraq':          { win: '80/1',  qualify: '9/2'   },
+      'Jordan':        { win: '50/1',  qualify: '7/2'   },
+      'Curaçao':       { win: '120/1', qualify: '10/1'  },
+      'Haiti':         { win: '120/1', qualify: '8/1'   },
+    };
+
     async function loadGroupsTab() {
       _groupsLoaded = true;
       const wrap = document.getElementById('groups-wrap');
@@ -1269,13 +1320,16 @@
       const byName = {};
       teams.forEach(t => { byName[t.name] = t; });
 
-      const bandOrder = { 'favourite': 1, 'dark_horse': 2, 'long_shot': 3, 'no_hoper': 4 };
-
-      let html = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px;">';
+      let html = '<p style="font-size:11px; color:var(--text-muted); margin-bottom:14px">Odds: William Hill pre-tournament. Win Group / Qualify.</p>';
+      html += '<div style="display:flex; flex-direction:column; gap:12px;">';
 
       for (const [letter, teamNames] of Object.entries(GROUP_TEAMS)) {
         html += `<div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
-          <div style="background:var(--surface); padding:7px 12px; border-bottom:1px solid var(--border); font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; color:var(--accent); letter-spacing:0.06em;">GROUP ${letter}</div>`;
+          <div style="background:var(--surface); padding:7px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:0;">
+            <span style="font-family:'Rajdhani',sans-serif; font-size:14px; font-weight:700; color:var(--accent); letter-spacing:0.06em; flex:1;">GROUP ${letter}</span>
+            <span style="font-size:10px; color:var(--text-muted); font-weight:600; width:52px; text-align:right; padding-right:4px;">Win</span>
+            <span style="font-size:10px; color:var(--text-muted); font-weight:600; width:56px; text-align:right;">Qualify</span>
+          </div>`;
 
         const sorted = teamNames
           .map(n => byName[n] || { name: n, flag_emoji: '🏳️', is_longshot: false, is_eliminated: false, pot: 99 })
@@ -1286,10 +1340,15 @@
           const elimStyle = t.is_eliminated ? 'opacity:0.35; text-decoration:line-through;' : '';
           const border = i < sorted.length - 1 ? 'border-bottom:1px solid var(--border);' : '';
           const bandCol = BAND_COLOURS[t.band] || 'var(--border)';
+          const odds = GROUP_ODDS[t.name] || {};
+          const winStr = odds.win || '—';
+          const qualStr = odds.qualify || '—';
           html += `<div style="display:flex; align-items:center; gap:8px; padding:7px 12px; ${border} ${elimStyle}">
             <span style="font-size:15px; flex-shrink:0">${t.flag_emoji || '🏳️'}</span>
-            <span style="font-size:13px; font-weight:600; flex:1">${t.name}${ls}</span>
             <span style="width:8px; height:8px; border-radius:2px; background:${bandCol}; flex-shrink:0"></span>
+            <span style="font-size:13px; font-weight:600; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${t.name}${ls}</span>
+            <span style="font-size:11px; color:var(--text-muted); width:52px; text-align:right; flex-shrink:0; padding-right:4px;">${winStr}</span>
+            <span style="font-size:11px; color:var(--text-muted); width:56px; text-align:right; flex-shrink:0;">${qualStr}</span>
           </div>`;
         });
 
