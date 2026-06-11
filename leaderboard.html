@@ -1640,7 +1640,8 @@
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('leaderboard-wrap').style.display = 'block';
-        document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) + (liveMode ? ' · ⚡ = provisional until confirmed' : '');
+        const anyInPlay = liveWindowMatches.some(m => m.status === 'live');
+        document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}) + (anyInPlay ? ' · ⚡ = provisional until confirmed' : '');
 
         const finalBanner = document.getElementById('final-table-banner');
         if (finalBanner) finalBanner.style.display = competitionEnded ? '' : 'none';

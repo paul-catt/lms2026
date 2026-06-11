@@ -1757,8 +1757,15 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
 
       if (isKnockout && !isThird) await resetMatchEliminations(matchId);
 
+      const _corrApi = isPens
+        ? (pensWinner === match?.home_team_id ? 'FINISHED_PENS_HOME'
+           : pensWinner === match?.away_team_id ? 'FINISHED_PENS_AWAY'
+           : 'FINISHED_PENS')
+        : 'FINISHED';
       const { error } = await db.from('matches').update({
-        home_score: homeScore, away_score: awayScore,
+        home_score: homeScore, away_score: awayScore, status: 'complete',
+        api_status: _corrApi,
+        confirmed: true,
         pens_winner_id: isPens && pensWinner ? pensWinner : null
       }).eq('id', matchId);
       if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; return; }
@@ -1797,7 +1804,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       await db.from('pick_results').delete().eq('match_id', matchId);
 
       const { error } = await db.from('matches').update({
-        status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null
+        status: 'scheduled', api_status: null, confirmed: false, home_score: null, away_score: null, pens_winner_id: null
       }).eq('id', matchId);
       if (error) { msg.style.color='var(--red)'; msg.textContent='❌ '+error.message; return; }
 
@@ -2011,8 +2018,16 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         const ok = await warnIfMissingPicks(match.round_id, match.rounds?.round_type || 'group');
         if (!ok) { msg.style.color='var(--gold)'; msg.textContent='Result not saved — resolve missing picks first.'; return; }
       }
+      const _isPensFin = isKnockout && !isThird && pensChecked && homeScore === awayScore;
+      const _finStatus = _isPensFin
+        ? (pensWinner === match.home_team_id ? 'FINISHED_PENS_HOME'
+           : pensWinner === match.away_team_id ? 'FINISHED_PENS_AWAY'
+           : 'FINISHED_PENS')
+        : 'FINISHED';
       const { error } = await db.from('matches').update({
         home_score: homeScore, away_score: awayScore, status: 'complete',
+        api_status: _finStatus,
+        confirmed: true,
         pens_winner_id: (isKnockout && !isThird && pensChecked && homeScore === awayScore && pensWinner) ? pensWinner : null
       }).eq('id', matchId);
       if (error) { msg.style.color='var(--red)'; msg.textContent=error.message; return; }
@@ -3016,7 +3031,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       try {
         const { error: e1 } = await db.from('pick_results').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         if (e1) throw e1;
-        const { error: e2 } = await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+        const { error: e2 } = await db.from('matches').update({ status: 'scheduled', api_status: null, confirmed: false, home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
         if (e2) throw e2;
         msg.style.color = 'var(--green)'; msg.textContent = '✅ All results cleared.';
         loadMatchesForResult(); loadCompletedMatchesForCorrection();
@@ -3031,7 +3046,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       msg.style.color = 'var(--text-muted)'; msg.textContent = 'Resetting...';
       try {
         await db.from('pick_results').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+        await db.from('matches').update({ status: 'scheduled', api_status: null, confirmed: false, home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
         const { data: koRounds } = await db.from('rounds').select('id').eq('round_type', 'knockout');
         if (koRounds && koRounds.length > 0) {
           const koRoundIds = koRounds.map(r => r.id);
@@ -3091,10 +3106,10 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       try {
         await db.from('pick_results').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         await db.from('picks').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        await db.from('matches').update({ status: 'scheduled', home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+        await db.from('matches').update({ status: 'scheduled', api_status: null, confirmed: false, home_score: null, away_score: null, pens_winner_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
         const { data: koRounds } = await db.from('rounds').select('id').eq('round_type', 'knockout');
         if (koRounds && koRounds.length > 0) {
-          await db.from('matches').update({ home_team_id: null, away_team_id: null, home_score: null, away_score: null, pens_winner_id: null, status: 'scheduled' }).in('round_id', koRounds.map(r => r.id));
+          await db.from('matches').update({ home_team_id: null, away_team_id: null, home_score: null, away_score: null, pens_winner_id: null, status: 'scheduled', api_status: null, confirmed: false }).in('round_id', koRounds.map(r => r.id));
         }
         await db.from('teams').update({ is_eliminated: false, eliminated_in_round_id: null }).neq('id', '00000000-0000-0000-0000-000000000000');
         await db.from('rounds').update({ is_complete: false }).neq('id', '00000000-0000-0000-0000-000000000000');
@@ -3508,12 +3523,20 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
 
       // Parallelise all match score updates
       const updateResults = await Promise.all(
-        toProcess.map(({ matchId, homeScore, awayScore, isPens, pensWinner }) =>
-          db.from('matches').update({
+        toProcess.map(({ matchId, homeScore, awayScore, isPens, pensWinner }) => {
+          const _md = matchDataById[matchId];
+          const _api = (isPens && pensWinner)
+            ? (pensWinner === _md?.home_team_id ? 'FINISHED_PENS_HOME'
+               : pensWinner === _md?.away_team_id ? 'FINISHED_PENS_AWAY'
+               : 'FINISHED_PENS')
+            : 'FINISHED';
+          return db.from('matches').update({
             home_score: homeScore, away_score: awayScore, status: 'complete',
+            api_status: _api,
+            confirmed: true,
             pens_winner_id: isPens && pensWinner ? pensWinner : null
-          }).eq('id', matchId)
-        )
+          }).eq('id', matchId);
+        })
       );
 
       // Process pick results sequentially (order matters for KO progression)
@@ -4394,6 +4417,11 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         away_score:     awayScore,
         status:         'complete',
         confirmed:      true,
+        api_status:     (isKnockout && !isThird && isPens)
+                          ? (pensWinnerId === match.home_team_id ? 'FINISHED_PENS_HOME'
+                             : pensWinnerId === match.away_team_id ? 'FINISHED_PENS_AWAY'
+                             : 'FINISHED_PENS')
+                          : 'FINISHED',
         pens_winner_id: (isKnockout && !isThird && isPens) ? pensWinnerId : null
       }).eq('id', matchId);
 
