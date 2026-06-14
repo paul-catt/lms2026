@@ -53,13 +53,16 @@
 
     /* Pick slots — hero element, bigger and more prominent */
     .pick-summary { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
-    .pick-slot { flex:1; min-width:140px; background:var(--surface2); border:2px dashed rgba(148,163,184,0.15); border-radius:14px; padding:18px 12px; text-align:center; transition:all 0.2s; }
+    .pick-slot { flex:1; min-width:140px; position:relative; background:var(--surface2); border:2px dashed rgba(148,163,184,0.15); border-radius:14px; padding:18px 12px; text-align:center; transition:all 0.2s; }
     .pick-slot.filled-3 { border-style:solid; border-color:var(--gold); background:rgba(245,158,11,0.09); box-shadow:0 0 12px rgba(245,158,11,0.1), 0 0 0 1px rgba(245,158,11,0.08) inset; }
     .pick-slot.filled-2 { border-style:solid; border-color:var(--accent); background:rgba(59,130,246,0.09); box-shadow:0 0 12px rgba(59,130,246,0.1), 0 0 0 1px rgba(59,130,246,0.08) inset; }
     .pick-slot-label { font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; }
     .pick-slot-label.label-3 { color:var(--gold); }
     .pick-slot-label.label-2 { color:var(--accent); }
     .pick-slot-value { font-size:18px; font-weight:800; letter-spacing:-0.01em; }
+    .pick-slot-opp { font-size:11px; font-weight:600; color:var(--text-muted); margin-top:3px; }
+    .pick-slot.has-result { padding-right:48px; }
+    .pick-slot-result { position:absolute; right:12px; top:50%; transform:translateY(-50%); width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:800; line-height:1; box-shadow:0 0 0 3px var(--surface2); flex-shrink:0; }
     .longshot-tag { font-size:10px; color:var(--gold); margin-top:5px; }
 
     /* Fixture grid */
@@ -1170,26 +1173,16 @@
         const inProgress = openRounds.filter(r => new Date(r.deadline) <= now);
         const upcoming   = openRounds.filter(r => new Date(r.deadline) > now);
 
-        // For group rounds: if all this player's picks for the current in-progress round
-        // have settled results, jump ahead to the next open round so they can pick early.
-        // For KO rounds: if player has a settled result in the current round AND already
-        // has a pick in the next round, show the next round.
+        // Advance the default to the next round when it's genuinely pickable and
+        // EITHER we're within 24h of its deadline OR all of the player's
+        // current-round teams have finished playing — whichever comes first.
+        // (Same rule for group and KO; nextRoundReady guards against unresolved
+        //  fixtures so we never land on an unpickable round.)
         let activeRound;
         const currentInProgress = inProgress.length ? inProgress[inProgress.length - 1] : null;
-        if (currentInProgress && currentInProgress.round_type === 'group') {
-          const picksThisRound = allPicks.filter(p => p.round_id === currentInProgress.id);
-          const allSettled = picksThisRound.length > 0 &&
-            picksThisRound.every(p => p.pick_results && p.pick_results.length > 0);
-          if (allSettled && upcoming.length > 0) {
-            activeRound = upcoming[0];
-          }
-        } else if (currentInProgress && currentInProgress.round_type === 'knockout') {
-          const picksThisRound = allPicks.filter(p => p.round_id === currentInProgress.id);
-          const hasSettledResult = picksThisRound.some(p => p.pick_results && p.pick_results.length > 0);
-          if (hasSettledResult && upcoming.length > 0) {
-            const hasPickInNext = allPicks.some(p => p.round_id === upcoming[0].id);
-            if (hasPickInNext) activeRound = upcoming[0];
-          }
+        const nextRound = upcoming.length ? upcoming[0] : null;
+        if (currentInProgress && nextRound && nextRoundReady(nextRound, currentInProgress)) {
+          activeRound = nextRound;
         }
         activeRound = activeRound || currentInProgress || upcoming[0] || openRounds[0];
         selectRound(activeRound.id);
@@ -1344,20 +1337,75 @@
       renderPickForm(round, hasSubmitted);
     }
 
+    function matchIsFinished(m) {
+      // Same definition used by the row renderer: API-final status, or admin-confirmed.
+      const s = (m.api_status || '').toUpperCase();
+      return ['FINISHED','FT','AET','PEN'].includes(s) || !!m.confirmed;
+    }
+
+    function roundHasFixtures(round) {
+      // At least one fixture with both teams set — enough to start picking. R16+
+      // shows a "not all fixtures confirmed" warning while only some are known;
+      // R32 has no partial state (the draw resolves all at once off group standings).
+      return allMatches.some(m => m.round_id === round.id && m.home_team_id && m.away_team_id);
+    }
+
+    function nextRoundReady(nextRound, currentRound) {
+      // Need at least one resolved fixture so there's something to pick.
+      if (!roundHasFixtures(nextRound)) return false;
+      // (a) within 24h of the next round's deadline → advance regardless
+      if (new Date(nextRound.deadline) - getEffectiveDate() <= 24 * 3600 * 1000) return true;
+      // (b) all of the player's current-round teams have finished playing
+      const myPicks = allPicks.filter(p => p.round_id === currentRound.id);
+      if (myPicks.length === 0) return false;
+      return myPicks.every(p => {
+        const m = allMatches.find(mm => mm.round_id === currentRound.id &&
+          (mm.home_team_id === p.team_id || mm.away_team_id === p.team_id));
+        return m && matchIsFinished(m);
+      });
+    }
+
+    function resultCircleHtml(pick) {
+      // Mirrors the Pick History pts circle: points = earned + longshot bonus,
+      // green/gold/red for win/draw/loss. Appears once the result is scored
+      // (pick_results present) — same moment the history circle appears.
+      const res = pick && pick.pick_results && pick.pick_results.length ? pick.pick_results[0] : null;
+      if (!res || !res.match_result) return '';
+      const pts = (res.points_earned || 0) + (res.longshot_bonus || 0);
+      const color = res.match_result === 'win' ? 'var(--green)' : res.match_result === 'draw' ? 'var(--gold)' : 'var(--red)';
+      return '<div class="pick-slot-result" style="background:' + color + '">' + pts + '</div>';
+    }
+
+    function oppLineHtml(pick, roundId) {
+      const tid = pick.team_id;
+      const m = allMatches.find(mm => mm.round_id === roundId && (mm.home_team_id === tid || mm.away_team_id === tid));
+      if (!m) return '';
+      const opp = m.home_team_id === tid ? m.away_team : m.home_team;
+      if (!opp || !opp.name) return '';
+      return '<div class="pick-slot-opp">vs ' + opp.name + '</div>';
+    }
+
     function showSubmittedPicks(round, roundPicks, isLocked, isKO) {
       const isGroup  = round.round_type === 'group';
       const pickWord = isKO ? 'Pick' : 'Picks';
-      let html = '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--green);white-space:nowrap;overflow:hidden">✅ ' + pickWord + ' locked in for ' + round.name + '<span style="font-weight:400;color:var(--text-muted);margin-left:auto;font-size:12px;flex-shrink:0">' + (isLocked ? '🔒 Locked' : '') + '</span></div>';
+      const deadline = new Date(round.deadline);
+      // Pre-deadline (pick still changeable) → live "X to change" countdown.
+      // After deadline → the lock icon. Reuses the banner's right-hand slot,
+      // so no extra height; wraps to a second line only if the row is too narrow.
+      const bannerRight = isLocked
+        ? '🔒 Locked'
+        : '⏳ <span id="change-countdown">' + getTimeLeftStr(deadline) + '</span> to change';
+      let html = '<div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:13px;font-weight:600;color:var(--green)">✅ ' + pickWord + ' locked in for ' + round.name + '<span style="font-weight:400;color:var(--text-muted);margin-left:auto;font-size:12px;flex-shrink:0">' + bannerRight + '</span></div>';
       if (isGroup) {
         const p3 = roundPicks.find(p => p.multiplier === 3);
         const p2 = roundPicks.find(p => p.multiplier === 2);
         html += '<div class="pick-summary">';
-        if (p3) html += '<div class="pick-slot filled-3"><div class="pick-slot-label label-3">3-Pointer' + (p3.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (p3.teams ? p3.teams.flag_emoji + ' ' + p3.teams.name : '—') + '</div>' + (p3.is_assigned ? '<div style="margin-top:4px"><span class="badge badge-grey" style="font-size:10px">auto</span></div>' : '') + (p3.teams && p3.teams.is_longshot ? '<div class="longshot-tag"><a href="/leaderboard#longshots" style="color:var(--gold);text-decoration:none">⭐ Longshot bonus eligible</a></div>' : '') + '</div>';
-        if (p2) html += '<div class="pick-slot filled-2"><div class="pick-slot-label label-2">2-Pointer' + (p2.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (p2.teams ? p2.teams.flag_emoji + ' ' + p2.teams.name : '—') + '</div>' + (p2.is_assigned ? '<div style="margin-top:4px"><span class="badge badge-grey" style="font-size:10px">auto</span></div>' : '') + (p2.teams && p2.teams.is_longshot ? '<div class="longshot-tag"><a href="/leaderboard#longshots" style="color:var(--gold);text-decoration:none">⭐ Longshot bonus eligible</a></div>' : '') + '</div>';
+        if (p3) { const r3 = resultCircleHtml(p3); html += '<div class="pick-slot filled-3' + (r3 ? ' has-result' : '') + '"><div class="pick-slot-label label-3">3-Pointer' + (p3.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (p3.teams ? p3.teams.flag_emoji + ' ' + p3.teams.name : '—') + '</div>' + oppLineHtml(p3, round.id) + (p3.is_assigned ? '<div style="margin-top:4px"><span class="badge badge-grey" style="font-size:10px">auto</span></div>' : '') + (p3.teams && p3.teams.is_longshot ? '<div class="longshot-tag"><a href="/leaderboard#longshots" style="color:var(--gold);text-decoration:none">⭐ Longshot bonus eligible</a></div>' : '') + r3 + '</div>'; }
+        if (p2) { const r2 = resultCircleHtml(p2); html += '<div class="pick-slot filled-2' + (r2 ? ' has-result' : '') + '"><div class="pick-slot-label label-2">2-Pointer' + (p2.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (p2.teams ? p2.teams.flag_emoji + ' ' + p2.teams.name : '—') + '</div>' + oppLineHtml(p2, round.id) + (p2.is_assigned ? '<div style="margin-top:4px"><span class="badge badge-grey" style="font-size:10px">auto</span></div>' : '') + (p2.teams && p2.teams.is_longshot ? '<div class="longshot-tag"><a href="/leaderboard#longshots" style="color:var(--gold);text-decoration:none">⭐ Longshot bonus eligible</a></div>' : '') + r2 + '</div>'; }
         html += '</div>';
       } else {
         const single = roundPicks[0];
-        if (single) html += '<div style="display:flex; justify-content:center"><div class="pick-slot filled-2" style="max-width:200px"><div class="pick-slot-label label-2">Your Pick' + (single.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (single.teams ? single.teams.flag_emoji + ' ' + single.teams.name : '—') + '</div>' + (single.is_assigned ? '<div style="margin-top:4px"><span class="badge badge-grey" style="font-size:10px">auto</span></div>' : '') + '</div></div>';
+        if (single) { const rS = resultCircleHtml(single); html += '<div style="display:flex; justify-content:center"><div class="pick-slot filled-2' + (rS ? ' has-result' : '') + '" style="max-width:200px"><div class="pick-slot-label label-2">Your Pick' + (single.oracle_pick ? ' 🔮' : '') + '</div><div class="pick-slot-value">' + (single.teams ? single.teams.flag_emoji + ' ' + single.teams.name : '—') + '</div>' + oppLineHtml(single, round.id) + (single.is_assigned ? '<div style="margin-top:4px"><span class="badge badge-grey" style="font-size:10px">auto</span></div>' : '') + rS + '</div></div>'; }
       }
       if (!isLocked && getEffectiveDate() < new Date(round.deadline)) {
         const changeLabel = isKO ? 'Change pick' : 'Change picks';
@@ -1368,6 +1416,17 @@
       document.getElementById('pick-form-inner').innerHTML = html;
       document.getElementById('submit-oracle-row').style.display = 'none';
       document.getElementById('submit-oracle-row-top').style.display = 'none';
+
+      // Tick the "X to change" countdown for a pre-picked, still-open round.
+      // Stored in deadlineInterval so the next round-switch clears it.
+      if (!isLocked) {
+        if (deadlineInterval) clearInterval(deadlineInterval);
+        deadlineInterval = setInterval(() => {
+          if (getEffectiveDate() >= deadline) { clearInterval(deadlineInterval); loadDashboard(); return; }
+          const el = document.getElementById('change-countdown');
+          if (el) el.textContent = getTimeLeftStr(deadline);
+        }, 1000);
+      }
     }
 
     function allowResubmit() {
@@ -1941,8 +2000,11 @@
       const relevantPicks = allPicks.filter(p => {
         const res = p.pick_results && p.pick_results[0];
         if (res && res.match_id && matchIds.has(res.match_id)) return true;
-        // pending: team plays in window
-        const m = matchesInWindow.find(m => m.home_team_id === p.team_id || m.away_team_id === p.team_id);
+        // pending: team plays in window IN THIS PICK'S OWN ROUND.
+        // A team plays a match in each of GP1/GP2/GP3, and a player can pre-submit
+        // a future round. Without the round check, a future-round pick (e.g. a GP2
+        // pick on a team playing its GP1 fixture today) gets surfaced as "today".
+        const m = matchesInWindow.find(m => m.round_id === p.round_id && (m.home_team_id === p.team_id || m.away_team_id === p.team_id));
         return !!m;
       });
 
@@ -1972,7 +2034,7 @@
           match = allMatches.find(m => m.id === res.match_id);
         }
         if (!match) {
-          match = matchesInWindow.find(m => m.home_team_id === teamId || m.away_team_id === teamId);
+          match = matchesInWindow.find(m => m.round_id === pick.round_id && (m.home_team_id === teamId || m.away_team_id === teamId));
         }
         if (!match) return '';
 

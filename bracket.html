@@ -1165,7 +1165,9 @@
       let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Last updated: <strong>${lastFetchedStr}</strong> · ${sorted.length} teams</div>`;
       html += `<div class="table-wrap"><table><thead><tr><th class="left">Team</th><th>Odds</th></tr></thead><tbody>`;
       sorted.forEach(t => {
-        html += `<tr><td class="left">${t.flag} <strong>${t.name}</strong>${t.isLongshot ? ' ⭐' : ''}</td><td><strong>${t.currentFrac}</strong></td></tr>`;
+        let oc = '';
+        if (t.history.length > 0) { const cd = t.current - t.history[0]; if (cd < -0.01) oc = 'color:var(--green)'; else if (cd > 0.01) oc = 'color:var(--red)'; }
+        html += `<tr><td class="left">${t.flag} <strong>${t.name}</strong>${t.isLongshot ? ' ⭐' : ''}</td><td><strong style="${oc}">${t.currentFrac}</strong></td></tr>`;
       });
       html += '</tbody></table></div>';
       wrap.innerHTML = html;
@@ -1177,21 +1179,32 @@
       if (!wrap) return;
       wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
       const { data: rounds } = await db.from('rounds').select('id, name, sort_order, round_type').order('sort_order');
-      const { data: matches } = await db.from('matches')
-        .select('id, kickoff, round_id, status, home_score, away_score, odds_home, odds_away, odds_draw, home_team:teams!matches_home_team_id_fkey(name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(name, flag_emoji, is_longshot)')
-        .not('home_team_id', 'is', null)
-        .not('away_team_id', 'is', null)
-        .neq('is_third_place', true)
-        .order('kickoff');
+      const matchColsB = 'id, kickoff, round_id, status, home_score, away_score, odds_home, odds_away, odds_draw, home_team:teams!matches_home_team_id_fkey(name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(name, flag_emoji, is_longshot)';
+      let mqB = await db.from('matches')
+        .select(matchColsB + ', odds_home_prev, odds_draw_prev, odds_away_prev')
+        .not('home_team_id', 'is', null).not('away_team_id', 'is', null).neq('is_third_place', true).order('kickoff');
+      if (mqB.error) {
+        mqB = await db.from('matches')
+          .select(matchColsB)
+          .not('home_team_id', 'is', null).not('away_team_id', 'is', null).neq('is_third_place', true).order('kickoff');
+      }
+      const matches = mqB.data;
       if (!matches || matches.length === 0) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No match odds available.</p>'; return; }
       const byRound = {};
       matches.forEach(m => { if (!byRound[m.round_id]) byRound[m.round_id] = []; byRound[m.round_id].push(m); });
       const sortedRounds = (rounds || []).filter(r => byRound[r.id] && r.name !== '3rd Place').sort((a, b) => a.sort_order - b.sort_order);
       function fracB(dec) { return _bookieFraction(dec); }
-      function oddsCellB(dec, isWinner) {
+      function oddsCellB(dec, prev, isWinner, isDone) {
         const n = parseFloat(dec);
         if (!dec || isNaN(n)) return '<span style="color:var(--border)">—</span>';
-        const valStyle = isWinner ? ' style="color:var(--green)"' : '';
+        let col = '';
+        if (isWinner) { col = 'color:var(--green)'; }
+        else if (!isDone && prev != null && !isNaN(parseFloat(prev))) {
+          const d = n - parseFloat(prev);
+          if (d < -0.01) col = 'color:var(--green)';
+          else if (d > 0.01) col = 'color:var(--red)';
+        }
+        const valStyle = col ? ` style="${col}"` : '';
         return `<strong${valStyle}>${n.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${fracB(n)}</span>`;
       }
       let html = '';
@@ -1222,9 +1235,9 @@
               <div style="font-weight:600"><span style="white-space:nowrap">${m.home_team?.flag_emoji || ''}&nbsp;${m.home_team?.name || 'TBD'}${homeLs}</span> v <span style="white-space:nowrap">${m.away_team?.flag_emoji || ''}&nbsp;${m.away_team?.name || 'TBD'}${awayLs}</span></div>
               <div style="font-size:11px;color:var(--text-muted)">${ko} · ${t}</div>
             </td>
-            <td style="text-align:center;padding:7px 6px">${oddsCellB(m.odds_home, homeWon)}</td>
-            <td style="text-align:center;padding:7px 6px">${oddsCellB(m.odds_draw, isDraw)}</td>
-            <td style="text-align:center;padding:7px 6px">${oddsCellB(m.odds_away, awayWon)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCellB(m.odds_home, m.odds_home_prev, homeWon, isDone)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCellB(m.odds_draw, m.odds_draw_prev, isDraw, isDone)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCellB(m.odds_away, m.odds_away_prev, awayWon, isDone)}</td>
             <td style="text-align:center;padding:7px 6px">${score}</td>
           </tr>`;
         }

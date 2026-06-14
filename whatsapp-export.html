@@ -95,6 +95,41 @@
     .r-table tbody tr.today td, .r-table tbody tr[style*="background:#bfdbfe"] td { background:#bfdbfe !important; }
     .r-today-flags { font-size: 14px; line-height: 1; }
     .r-name { font-weight: 700; font-size: 11px; color: #1a202c; display: inline-block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+    /* ── RIP CARD STYLES (go into the PNGs) ── */
+    .render-root .rip-header { background:linear-gradient(135deg,#16161f 0%,#2a2a3d 55%,#3a3a52 100%); color:#fff; padding:12px 14px 13px; border-bottom:3px solid #6b2737; }
+    .render-root .rip-header.rip-first { border-bottom-color:#1f6b3a; }
+    .render-root .rip-header.rip-mass { background:linear-gradient(135deg,#2a1216 0%,#4a1e24 55%,#6b2737 100%); border-bottom-color:#8b3a3a; }
+    .rip-eyebrow { font-size:10px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:#e08a9b; opacity:0.9; }
+    .rip-header.rip-first .rip-eyebrow { color:#8fe0a8; }
+    .rip-name { font-size:20px; font-weight:800; letter-spacing:0.02em; line-height:1.12; margin-top:3px; }
+    .rip-body { padding:13px 14px 4px; }
+    .rip-epitaph { font-style:italic; font-size:13px; line-height:1.5; color:#3a4452; border-left:3px solid #cbd5e0; padding:2px 0 2px 11px; margin-bottom:13px; }
+    .rip-stats { width:100%; border-collapse:collapse; margin-bottom:10px; }
+    .rip-stats td { padding:4px 0; font-size:12px; border-bottom:1px solid #edf0f5; vertical-align:middle; }
+    .rip-stats tr:last-child td { border-bottom:none; }
+    .rip-stats td.k { color:#718096; font-weight:600; text-transform:uppercase; font-size:9.5px; letter-spacing:0.05em; width:38%; }
+    .rip-stats td.v { color:#1a202c; font-weight:700; text-align:right; }
+    .rip-pos-line { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 11px; border-radius:6px; background:#f5f7fa; margin-bottom:8px; }
+    .rip-pos-line .lbl { font-size:11px; color:#4a5568; font-weight:600; }
+    .rip-pos-line .pos { font-size:15px; font-weight:800; color:#2d3748; }
+    .rip-pos-line.money { background:#fffaf0; border:1px solid #f0d894; }
+    .rip-pos-line.rip-first-line { background:#f0fff4; border:1px solid #9ae6b4; }
+    .rip-money-badge { display:inline-block; background:#b7791f; color:#fff; font-size:9.5px; font-weight:800; letter-spacing:0.04em; padding:2px 7px; border-radius:4px; text-transform:uppercase; }
+    .rip-money-badge.rip-green { background:#1f6b3a; }
+    .rip-verdict { font-size:11.5px; line-height:1.45; color:#5a4a1a; background:#fffbeb; border-left:3px solid #d4a017; padding:7px 10px; border-radius:0 5px 5px 0; margin-bottom:10px; }
+    .rip-verdict b { color:#3a3000; }
+    .rip-verdict.rip-verdict-green { color:#22543d; background:#f0fff4; border-left-color:#38a169; }
+    .rip-footer { background:#16161f; color:#e08a9b; padding:7px 14px; font-size:10.5px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; text-align:center; }
+    .rip-victims { width:100%; border-collapse:collapse; margin:2px 0 12px; }
+    .rip-victims th { font-size:9px; text-transform:uppercase; letter-spacing:0.05em; color:#718096; text-align:left; padding:3px 4px; border-bottom:1px solid #e2e8f0; font-weight:700; }
+    .rip-victims th.r, .rip-victims td.r { text-align:right; }
+    .rip-victims td { font-size:12px; padding:6px 4px; border-bottom:1px solid #f0f3f7; color:#1a202c; }
+    .rip-victims td.name { font-weight:700; }
+    .rip-victims tr:last-child td { border-bottom:none; }
+    .v-money { color:#b7791f; font-weight:800; }
+    /* RIP tab layout (screen only) */
+    .rip-card-block { margin:0 auto 26px; width:380px; max-width:100%; }
+    .rip-btn-row { display:flex; gap:8px; justify-content:center; margin-top:8px; }
   </style>
 </head>
 <body>
@@ -140,6 +175,7 @@
       <button id="tab-btn-group" onclick="switchTab('group')" style="padding:10px 24px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:3px solid var(--gold);margin-bottom:-2px;color:var(--gold);cursor:pointer;font-family:inherit">Group Stage</button>
       <button id="tab-btn-ko" onclick="switchTab('ko')" style="padding:10px 24px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--text-muted);cursor:pointer;font-family:inherit">Knockout</button>
       <button id="tab-btn-old" onclick="switchTab('old')" style="padding:10px 24px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--text-muted);cursor:pointer;font-family:inherit">Old</button>
+      <button id="tab-btn-rip" onclick="switchTab('rip')" style="padding:10px 24px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--text-muted);cursor:pointer;font-family:inherit">🪦 RIP</button>
     </div>
 
     <!-- ══ GROUP TAB ══ -->
@@ -439,6 +475,18 @@
 
     </div><!-- /tab-ko -->
 
+    <!-- ══ RIP TAB ══ -->
+    <div id="tab-rip" style="display:none">
+      <div class="card section-block">
+        <div class="section-header">
+          <div class="card-title" style="margin-bottom:0">🪦 RIP Cards</div>
+        </div>
+        <div class="status-msg" id="rip-status">Click "Load Round Data" to generate elimination cards.</div>
+        <p style="font-size:12px;color:var(--text-muted);margin:6px 0 14px">One card per fallen player. When 2+ go out on the same result, they share a single “mass casualty” card. Each card has its own Share / Copy / Download.</p>
+        <div id="rip-cards-container"></div>
+      </div>
+    </div><!-- /tab-rip -->
+
   </main>
 
   <script>
@@ -449,45 +497,6 @@
 
     let roundData = null;
     let oddsMap = {};
-
-    // Standard UK bookmaker fractional odds lookup
-    // Keys MUST be strings (toFixed(2)) — number keys break the lookup
-    const _BOOKIE_FRACTIONS = {
-      '1.05':'1/20','1.07':'1/14','1.08':'1/12','1.09':'1/11','1.10':'1/10',
-      '1.11':'1/9','1.13':'2/15','1.14':'1/7','1.17':'1/6','1.20':'1/5',
-      '1.22':'2/9','1.25':'1/4','1.29':'2/7','1.30':'3/10','1.33':'1/3',
-      '1.36':'4/11','1.40':'2/5','1.44':'4/9','1.50':'1/2','1.53':'8/15',
-      '1.57':'4/7','1.62':'8/13','1.67':'4/6','1.73':'8/11','1.80':'4/5',
-      '1.83':'5/6','1.91':'10/11','2.00':'Evens','2.10':'11/10','2.20':'6/5',
-      '2.25':'5/4','2.38':'11/8','2.50':'6/4','2.63':'13/8','2.75':'7/4',
-      '2.88':'15/8','3.00':'2/1','3.25':'9/4','3.50':'5/2','3.75':'11/4',
-      '4.00':'3/1','4.33':'10/3','4.50':'7/2','5.00':'4/1','5.50':'9/2',
-      '6.00':'5/1','7.00':'6/1','7.50':'13/2','8.00':'7/1','9.00':'8/1',
-      '10.00':'9/1','11.00':'10/1','13.00':'12/1','15.00':'14/1','17.00':'16/1',
-      '19.00':'18/1','21.00':'20/1','26.00':'25/1','34.00':'33/1','41.00':'40/1',
-      '51.00':'50/1','67.00':'66/1','81.00':'80/1','101.00':'100/1',
-      '151.00':'150/1','201.00':'200/1','251.00':'250/1','501.00':'500/1'
-    };
-    function decToFrac(dec) {
-      if (!dec) return '—';
-      const d = parseFloat(dec);
-      if (isNaN(d) || d <= 0) return '—';
-      const key = d.toFixed(2);
-      const exact = _BOOKIE_FRACTIONS[key];
-      if (exact) return exact;
-      // Nearest-key fallback
-      const keys = Object.keys(_BOOKIE_FRACTIONS).map(Number);
-      let nearest = keys[0], minDist = Math.abs(d - keys[0]);
-      for (let i = 1; i < keys.length; i++) {
-        const dist = Math.abs(d - keys[i]);
-        if (dist < minDist) { minDist = dist; nearest = keys[i]; }
-      }
-      if (minDist < 0.25) return _BOOKIE_FRACTIONS[nearest.toFixed(2)] || '—';
-      // Last resort: calculate
-      const num = Math.round((d - 1) * 100), den = 100;
-      const g = (function gcd(a,b){return b===0?a:gcd(b,a%b);})(num,den);
-      return (num/g) + '/' + (den/g);
-    }
 
     async function syncTestDateFromSupabase() {
       const { data } = await db.from('app_config').select('value').eq('key', 'test_date_override').single();
@@ -658,7 +667,7 @@
             pick_results(points_earned, match_result, base_points, matches(kickoff)),
             teams(id, name, flag_emoji, is_longshot)
           `),
-          db.from('matches').select('id, round_id, home_team_id, away_team_id, kickoff, home_score, away_score, odds_home, odds_away, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji)'),
+          db.from('matches').select('id, round_id, home_team_id, away_team_id, kickoff, home_score, away_score, pens_winner_id, odds_home, odds_away, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji)'),
           db.from('rounds').select('id, name, round_type, sort_order, is_complete, deadline').order('sort_order'),
           db.from('matches').select('round_id, kickoff').order('kickoff'),
           db.from('leaderboard_snapshots').select('player_id, position, round_id, total_points'),
@@ -806,7 +815,7 @@
         const statsMap = {};
         players.forEach(p => {
           statsMap[p.id] = {
-            id: p.id, name: p.name, display_name: p.display_name, slug: p.slug, isOut: p.is_eliminated, is_bot: p.is_bot,
+            id: p.id, name: p.name, display_name: p.display_name, slug: p.slug, isOut: p.is_eliminated,
             totalPoints: 0, pld: 0, teamsUsed: 0,
             gd: gdMap[p.id] ?? 0,
             furthestRound: furthestRoundMap[p.id] ?? 0,
@@ -878,24 +887,20 @@
             if (bfr !== afr) return bfr - afr;
           }
           if (b.gd !== a.gd) return b.gd - a.gd;
-          if (completedMatches.length > 0) {
-            const aDiff = Math.abs((a.goalsPredict || 0) - projectedTotal);
-            const bDiff = Math.abs((b.goalsPredict || 0) - projectedTotal);
-            if (aDiff !== bDiff) return aDiff - bDiff;
-          }
-          return (a.display_name || shortName(a.name)).localeCompare(b.display_name || shortName(b.name));
+          const aDiff = Math.abs((a.goalsPredict || 0) - projectedTotal);
+          const bDiff = Math.abs((b.goalsPredict || 0) - projectedTotal);
+          if (aDiff !== bDiff) return aDiff - bDiff;
+          return a.name.localeCompare(b.name);
         });
 
         // Build rankMap matching leaderboard posMap logic exactly
-        // Oracle (is_bot) is excluded from ranking — unranked, so humans stay contiguous 1..N
         const rankMap = {};
-        const rankable = sortedPlayers.filter(p => !p.is_bot);
         if (isGroupRound) {
-          rankable.forEach((p, i) => { rankMap[p.id] = i + 1; });
+          sortedPlayers.forEach((p, i) => { rankMap[p.id] = i + 1; });
         } else {
-          rankable.forEach((p, i) => {
+          sortedPlayers.forEach((p, i) => {
             if (i === 0) { rankMap[p.id] = 1; return; }
-            const prev = rankable[i - 1];
+            const prev = sortedPlayers[i - 1];
             const currentSO = currentRoundSortOrder;
             const pBonus = wonCurrentRound.has(prev.id) ? 1 : 0;
             const cBonus = wonCurrentRound.has(p.id) ? 1 : 0;
@@ -904,7 +909,7 @@
             const isTied = prev.totalPoints === p.totalPoints
               && pfr === cfr
               && (prev.gd || 0) === (p.gd || 0)
-              && (completedMatches.length === 0 || Math.abs((prev.goalsPredict || 0) - projectedTotal) === Math.abs((p.goalsPredict || 0) - projectedTotal));
+              && Math.abs((prev.goalsPredict || 0) - projectedTotal) === Math.abs((p.goalsPredict || 0) - projectedTotal);
             rankMap[p.id] = isTied ? rankMap[prev.id] : i + 1;
           });
         }
@@ -979,6 +984,7 @@
         renderKOLeaderboard();
         renderReminderCopy();
         renderRoundSummary();
+        renderRIP();
         runLeaderboardVerify();
 
         let statusMsg = `✅ Loaded — ${currentPicks.length} picks in current round · ${completedPicksAll.length} results recorded.`;
@@ -1017,8 +1023,8 @@
         .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
       const firstMatch = currentRoundMatches[0] || null;
 
-      const unpicked = players.filter(p => !p.is_eliminated && !p.is_bot && !playerCurrentPicks[p.id]);
-      const picked   = players.filter(p => !p.is_eliminated && !p.is_bot && playerCurrentPicks[p.id]);
+      const unpicked = players.filter(p => !p.is_eliminated && !playerCurrentPicks[p.id]);
+      const picked   = players.filter(p => !p.is_eliminated && playerCurrentPicks[p.id]);
 
       let deadlineStr = '';
       if (deadline) {
@@ -1048,9 +1054,9 @@
         msg = `✅ Everyone has picked for ${roundLabelText}!\n\nAll ${picked.length} players are locked in.`;
         if (firstGameStr) msg += `\n\n${firstGameStr}`;
       } else {
-        const unpickedNames = unpicked.map(p => `• ${p.display_name || shortName(p.name)}`).join('\n');
+        const unpickedNames = unpicked.map(p => `• ${p.name}`).join('\n');
         msg = `⏰ *LMS 2026 — ${roundLabelText} Picks*\n\n`;
-        msg += `${picked.length}/${players.filter(p => !p.is_eliminated && !p.is_bot).length} players have picked\n\n`;
+        msg += `${picked.length}/${players.filter(p => !p.is_eliminated).length} players have picked\n\n`;
         if (firstGameStr) msg += `${firstGameStr}\n\n`;
         if (isGroupRound) {
           msg += `Still need to pick (3pt + 2pt):\n${unpickedNames}\n\n`;
@@ -1134,7 +1140,7 @@
         });
       } else {
         sortedPlayers.slice(0, 3).forEach((p, i) => {
-          msg += `${'🥇🥈🥉'[i]} ${p.display_name || shortName(p.name)} — ${p.totalPoints}pts\n`;
+          msg += `${'🥇🥈🥉'[i]} ${p.name} — ${p.totalPoints}pts\n`;
         });
       }
 
@@ -1162,7 +1168,7 @@
             const player = sortedPlayers.find(q => q.id === p.player_id);
             const flag = p.teams?.flag_emoji || '';
             const team = p.teams?.name || '?';
-            return player ? `${player.display_name || shortName(player.name)} ${flag} ${team}` : '';
+            return player ? `${player.name} ${flag} ${team}` : '';
           }).filter(Boolean);
 
           msg += `\n⭐ ${longshotPicks.length} player${longshotPicks.length !== 1 ? 's' : ''} went for a longshot — `;
@@ -1304,11 +1310,10 @@
         </tr></thead><tbody>`;
         const rankCounts3 = {};
         sortedPlayers.forEach(q => { const r = rankMap[q.id]; if (r !== undefined) rankCounts3[r] = (rankCounts3[r]||0)+1; });
-        const _orderedG = [...sortedPlayers.filter(p => p.is_bot), ...sortedPlayers.filter(p => !p.is_bot)];
-        _orderedG.forEach((p, i) => {
-          let posLabel;
-          if (p.is_bot) { posLabel = '–'; }
-          else { const pos = rankMap[p.id] ?? (i + 1); const isTied = isGroupRound ? false : (rankCounts3[pos]||0) > 1; posLabel = isTied ? pos + '=' : String(pos); }
+        sortedPlayers.forEach((p, i) => {
+          const pos = rankMap[p.id] ?? (i + 1);
+          const isTied = isGroupRound ? false : (rankCounts3[pos]||0) > 1;
+          const posLabel = isTied ? pos + '=' : String(pos);
           const pPicks = playerCurrentPicks[p.id] || [];
           const pick3 = pPicks.find(pk => pk.multiplier === 3);
           const pick2 = pPicks.find(pk => pk.multiplier === 2);
@@ -1385,7 +1390,7 @@
 
       if (isGroupRound) {
         html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
-          <th style="width:18px;text-align:left;padding-left:4px;padding-right:0">#</th>
+          <th style="width:18px">#</th>
           <th class="left" style="width:160px">Team &amp; Opponent</th>
           <th style="width:34px">Odds</th>
           <th style="width:28px">2pt</th>
@@ -1399,9 +1404,9 @@
           const badgeCls = count >= maxCount*0.7 ? 'hi' : count >= maxCount*0.35 ? 'mid' : 'lo';
           const lsTag = teamIsLongshot[tid] ? ' ⭐' : '';
           html += `<tr>
-            <td class="r-pos" style="text-align:left;padding-left:4px;padding-right:0">${i+1}</td>
+            <td class="r-pos">${i+1}</td>
             <td class="left"><strong>${teamFlags[tid]||''} ${teamNames[tid]||'?'}${lsTag}</strong> <span style="color:#718096;font-size:10px">v ${teamOpponents[tid]||'?'}</span></td>
-            <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${decToFrac(odds)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+            <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
             <td>${count2 ? `<span class="r-split-2">${count2}</span>` : '<span style="color:#cbd5e0">—</span>'}</td>
             <td>${count3 ? `<span class="r-split-3">${count3}</span>` : '<span style="color:#cbd5e0">—</span>'}</td>
             <td><span class="r-badge ${badgeCls}">${count}</span></td>
@@ -1409,7 +1414,7 @@
         });
       } else {
         html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
-          <th style="width:18px;text-align:left;padding-left:4px;padding-right:0">#</th>
+          <th style="width:18px">#</th>
           <th class="left" style="width:220px">Team &amp; Opponent</th>
           <th style="width:34px">Odds</th>
           <th style="width:38px">Picks</th>
@@ -1421,9 +1426,9 @@
           const badgeCls = count >= maxCount*0.7 ? 'hi' : count >= maxCount*0.35 ? 'mid' : 'lo';
           const lsTag = teamIsLongshot[tid] ? ' ⭐' : '';
           html += `<tr>
-            <td class="r-pos" style="text-align:left;padding-left:4px;padding-right:0">${i+1}</td>
+            <td class="r-pos">${i+1}</td>
             <td class="left"><strong>${teamFlags[tid]||''} ${teamNames[tid]||'?'}${lsTag}</strong> <span style="color:#718096;font-size:10px">v ${teamOpponents[tid]||'?'}</span></td>
-            <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${decToFrac(odds)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+            <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
             <td><span class="r-badge ${badgeCls}">${count}</span></td>
           </tr>`;
         });
@@ -1470,7 +1475,7 @@
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Top Combinations', fullRoundLabel);
       html += `<table class="r-table" style="table-layout:fixed;width:100%"><thead><tr>
-        <th style="width:20px;text-align:left;padding-left:4px;padding-right:0">#</th>
+        <th style="width:20px">#</th>
         <th class="left" style="width:160px">Teams</th>
         <th style="width:38px">Odds</th>
         <th style="width:38px">Picks</th>
@@ -1486,12 +1491,12 @@
         const hasOdds = odds > 0;
         const badgeCls = count >= maxCount*0.7 ? 'hi' : count >= maxCount*0.35 ? 'mid' : 'lo';
         html += `<tr>
-          <td class="r-pos" style="text-align:left;padding-left:4px;padding-right:0">${i+1}</td>
+          <td class="r-pos">${i+1}</td>
           <td class="left">
             <div style="font-size:12px;font-weight:700;color:#1a202c">${nameA}</div>
             <div style="font-size:12px;font-weight:700;color:#1a202c;margin-top:2px">${nameB}</div>
           </td>
-          <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${decToFrac(odds)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+          <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
           <td><span class="r-badge ${badgeCls}">${count}</span></td>
           <td><div class="res-dots">${resultDot(tidA)}${resultDot(tidB)}</div></td>
         </tr>`;
@@ -1559,17 +1564,15 @@
       });
 
       sortedPlayers.forEach((p, i) => {
-        const pos = p.is_bot ? null : (rankMap[p.id] ?? (i + 1));
-        const posLabel = p.is_bot ? '–' : (() => {
-          const isTied = isGroupRound ? false : (rankCounts[pos] || 0) > 1;
-          return isTied ? pos + '=' : String(pos);
-        })();
+        const pos = rankMap[p.id] ?? (i + 1);
+        const isTied = isGroupRound ? false : (rankCounts[pos] || 0) > 1;
+        const posLabel = isTied ? pos + '=' : String(pos);
 
         // Prior position + arrow (compressed: ▲3, ▼2, =)
         const snapPos = snapshotPosMap[p.id];
         const prevPos = prevSnapshotPosMap[p.id];
         let priorHtml = '';
-        if (prevPos !== undefined && pos !== null) {
+        if (prevPos !== undefined) {
           const move = prevPos - (snapPos ?? pos);
           if (move > 0) priorHtml = `<span class="r-arrow-up">▲${move}</span>`;
           else if (move < 0) priorHtml = `<span class="r-arrow-dn">▼${Math.abs(move)}</span>`;
@@ -1669,27 +1672,25 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Leaderboard', fullRoundLabel);
       html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
         <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
-          <th style="width:22px;padding:2px 2px 2px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
-          <th style="width:30px;padding:2px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Prior</th>
-          <th style="padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Player</th>
-          ${showPld ? '<th style="width:26px;padding:2px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Pld</th>' : ''}
-          <th style="width:28px;padding:2px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Pts</th>
-          ${!isGroupRound ? '<th style="width:26px;padding:2px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Rnd</th>' : ''}
-          <th style="width:26px;padding:2px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">GD</th>
-          <th style="width:26px;padding:2px 4px 4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">⚽</th>
+          <th style="width:30px;padding:4px 2px 4px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+          <th style="width:36px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Prior</th>
+          <th style="width:128px;padding:4px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Player</th>
+          ${showPld ? '<th style="width:46px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Pld</th>' : ''}
+          <th style="width:46px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Pts</th>
+          ${!isGroupRound ? '<th style="width:46px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Rnd</th>' : ''}
+          <th style="width:46px;padding:4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">GD</th>
+          <th style="width:48px;padding:4px 4px 4px 2px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">⚽</th>
         </tr></thead><tbody>`;
 
       sortedPlayers.forEach((p, i) => {
-        const pos = p.is_bot ? null : (rankMap[p.id] ?? (i + 1));
-        const posLabel = p.is_bot ? '–' : (() => {
-          const isTied = isGroupRound ? false : (rankCounts[pos]||0) > 1;
-          return isTied ? pos + '=' : String(pos);
-        })();
+        const pos = rankMap[p.id] ?? (i + 1);
+        const isTied = isGroupRound ? false : (rankCounts[pos]||0) > 1;
+        const posLabel = isTied ? pos + '=' : String(pos);
 
         const snapPos = snapshotPosMap[p.id];
         // Movement: last completed snapshot position vs current live position
         let priorHtml = '<span style="color:#cbd5e0;font-size:9px">—</span>';
-        if (snapPos !== undefined && pos !== null) {
+        if (snapPos !== undefined) {
           const move = snapPos - pos;
           if (move > 0)      priorHtml = `<span style="color:#38a169;font-size:9px;font-weight:700">▲${move}</span>`;
           else if (move < 0) priorHtml = `<span style="color:#e53e3e;font-size:9px;font-weight:700">▼${Math.abs(move)}</span>`;
@@ -1712,14 +1713,14 @@
         const goalsDiff = projectedTotal > 0 ? Math.abs(Math.round((p.goalsPredict||0) - projectedTotal)) : '—';
 
         html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
-          <td style="padding:2px 2px 2px 8px;font-size:11px;font-weight:800;color:#718096;text-align:center">${posLabel}</td>
-          <td style="padding:2px 2px;text-align:center">${priorHtml}</td>
-          <td style="padding:2px 4px">${nameCell}</td>
-          ${showPld ? `<td style="padding:2px 2px;font-size:10px;color:#9aa5b4;text-align:center">${p.pld}</td>` : ''}
-          <td style="padding:2px 2px;font-size:12px;font-weight:800;color:#b7791f;text-align:center">${p.totalPoints}</td>
-          ${!isGroupRound ? `<td style="padding:2px 2px;font-size:10px;color:#4a5568;font-weight:600;text-align:center">${frLabel}</td>` : ''}
-          <td style="padding:2px 2px;font-size:11px;font-weight:700;color:${gdColor};text-align:center">${gdStr}</td>
-          <td style="padding:2px 4px 4px 2px;font-size:10px;color:#9aa5b4;text-align:center">${goalsDiff}</td>
+          <td style="padding:3px 2px 3px 8px;font-size:11px;font-weight:800;color:#718096;text-align:center">${posLabel}</td>
+          <td style="padding:3px 2px;text-align:center">${priorHtml}</td>
+          <td style="padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:128px">${nameCell}</td>
+          ${showPld ? `<td style="padding:3px 2px;font-size:10px;color:#9aa5b4;text-align:center">${p.pld}</td>` : ''}
+          <td style="padding:3px 2px;font-size:12px;font-weight:800;color:#b7791f;text-align:center">${p.totalPoints}</td>
+          ${!isGroupRound ? `<td style="padding:3px 2px;font-size:10px;color:#4a5568;font-weight:600;text-align:center">${frLabel}</td>` : ''}
+          <td style="padding:3px 2px;font-size:11px;font-weight:700;color:${gdColor};text-align:center">${gdStr}</td>
+          <td style="padding:3px 4px 3px 2px;font-size:10px;color:#9aa5b4;text-align:center">${goalsDiff}</td>
         </tr>`;
       });
 
@@ -1833,18 +1834,17 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
       html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
         <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
-          <th style="width:20px;padding:2px 4px 2px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
-          <th style="width:68px;padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
-          <th style="width:125px;padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Pick</th>
-          <th style="width:75px;padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Opponent</th>
-          <th style="width:34px;padding:2px 8px 2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</th>
+          <th style="width:20px;padding:5px 4px 5px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+          <th style="width:68px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
+          <th style="width:125px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Pick</th>
+          <th style="width:75px;padding:5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Opponent</th>
+          <th style="width:34px;padding:5px 8px 5px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</th>
         </tr></thead><tbody>`;
 
-      const _orderedKO = [...sortedPlayers.filter(p => p.is_bot), ...sortedPlayers.filter(p => !p.is_bot)];
-      _orderedKO.forEach((p, i) => {
-        let posLabel;
-        if (p.is_bot) { posLabel = '–'; }
-        else { const pos = rankMap[p.id] ?? (i + 1); const isTied = (rankCounts[pos]||0) > 1; posLabel = isTied ? pos + '=' : String(pos); }
+      sortedPlayers.forEach((p, i) => {
+        const pos = rankMap[p.id] ?? (i + 1);
+        const isTied = (rankCounts[pos]||0) > 1;
+        const posLabel = isTied ? pos + '=' : String(pos);
         const pick = (playerCurrentPicks[p.id] || [])[0] || null;
         const rowBg = p.isOut ? '#fff5f5' : (i % 2 === 0 ? '#ffffff' : '#f8fafc');
 
@@ -1863,15 +1863,15 @@
 
         const odds = pick ? parseFloat(oddsMap[pick.team_id]) : NaN;
         const oddsCell = !isNaN(odds) && odds > 0
-          ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${decToFrac(odds)}</span>`
+          ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>`
           : `<span style="font-size:10px;color:#cbd5e0">—</span>`;
 
         html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
-          <td style="padding:2px 4px 2px 8px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
-          <td style="padding:2px 4px">${nameCell}</td>
-          <td style="padding:2px 4px">${pickCell}</td>
-          <td style="padding:2px 4px">${oppCell}</td>
-          <td style="padding:2px 8px 2px 4px;text-align:center">${oddsCell}</td>
+          <td style="padding:5px 4px 5px 8px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
+          <td style="padding:5px 4px">${nameCell}</td>
+          <td style="padding:5px 4px">${pickCell}</td>
+          <td style="padding:5px 4px">${oppCell}</td>
+          <td style="padding:5px 8px 5px 4px;text-align:center">${oddsCell}</td>
         </tr>`;
       });
 
@@ -1899,11 +1899,11 @@
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
       html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px">
-        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">#</span>
+        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
         <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team</span>
         <span style="width:80px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Opponent</span>
         <span style="width:36px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
-        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;padding-left:8px">Picks</span>
+        <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
       </div>`;
 
       sorted.forEach((tid, i) => {
@@ -1912,133 +1912,19 @@
         const hasOdds = !isNaN(odds) && odds > 0;
         const ls = teamIsLongshot[tid] ? ' ⭐' : '';
         const pct = Math.round((count / maxCount) * 100);
+        const barColor = count >= maxCount * 0.7 ? '#2b6cb0' : count >= maxCount * 0.35 ? '#b7791f' : '#718096';
+        const countColor = barColor;
         const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
         const opp = teamOpponents[tid] || '?';
 
-        html += `<div style="display:flex;align-items:center;padding:4px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
-          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:left">${i+1}</div>
+        html += `<div style="display:flex;align-items:center;padding:7px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
+          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
           <div style="flex:1;min-width:0;font-size:12px;font-weight:800;color:#1a202c">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
           <div style="width:80px;font-size:10px;color:#718096">v ${opp}</div>
-          <div style="width:36px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? decToFrac(odds) : '<span style="color:#cbd5e0">—</span>'}</div>
-          <div style="flex:1;padding-left:8px;display:flex;align-items:center;gap:5px">
-            <div style="flex:1;height:7px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#4a5568;border-radius:4px"></div></div>
-            <span style="font-size:13px;font-weight:800;color:#4a5568;min-width:16px;text-align:right">${count}</span>
-          </div>
-        </div>`;
-      });
-
-      if (total > 15) html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:6px 12px;font-size:11px;font-weight:600;color:#4a5568;text-align:center">Top 15 of ${total} teams picked</div>`;
-
-      document.getElementById('ko-tp-render').innerHTML = html;
-      document.getElementById('ko-tp-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-ko-tp').style.display = 'inline-block'; document.getElementById('btn-cp-ko-tp').style.display = 'inline-block'; document.getElementById('btn-sh-ko-tp').style.display = 'inline-block';
-      setStatus('ko-tp-status', '');
-    }
-
-    // ── KO: Leaderboard ───────────────────────────────────────
-    function renderKOPicksByPlayer() {
-      if (!roundData) return;
-      const { sortedPlayers, playerCurrentPicks, teamNames, teamFlags, teamOpponents, teamIsLongshot, isGroupRound, fullRoundLabel, rankMap } = roundData;
-      if (isGroupRound) { setStatus('ko-pn-status', 'Knockout rounds only.'); return; }
-
-      const OUT_BADGE = '<span style="font-size:9px;font-weight:800;color:#e53e3e;background:rgba(229,62,62,0.1);border:1px solid rgba(229,62,62,0.3);border-radius:3px;padding:1px 4px;vertical-align:middle;margin-left:3px">OUT</span>';
-
-      const rankCounts = {};
-      sortedPlayers.forEach(q => { const r = rankMap[q.id]; if (r !== undefined) rankCounts[r] = (rankCounts[r]||0)+1; });
-
-      let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
-      html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
-        <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
-          <th style="width:20px;padding:2px 4px 2px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
-          <th style="width:68px;padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
-          <th style="width:125px;padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Pick</th>
-          <th style="width:75px;padding:2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Opponent</th>
-          <th style="width:34px;padding:2px 8px 2px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</th>
-        </tr></thead><tbody>`;
-
-      const _orderedKO = [...sortedPlayers.filter(p => p.is_bot), ...sortedPlayers.filter(p => !p.is_bot)];
-      _orderedKO.forEach((p, i) => {
-        let posLabel;
-        if (p.is_bot) { posLabel = '–'; }
-        else { const pos = rankMap[p.id] ?? (i + 1); const isTied = (rankCounts[pos]||0) > 1; posLabel = isTied ? pos + '=' : String(pos); }
-        const pick = (playerCurrentPicks[p.id] || [])[0] || null;
-        const rowBg = p.isOut ? '#fff5f5' : (i % 2 === 0 ? '#ffffff' : '#f8fafc');
-
-        const nameCell = p.isOut
-          ? `<span style="font-size:11px;font-weight:700;color:#a0aec0">${p.display_name || shortName(p.name)}</span>${OUT_BADGE}`
-          : `<span style="font-size:11px;font-weight:700;color:#1a202c">${p.display_name || shortName(p.name)}</span>`;
-
-        const ls = pick && teamIsLongshot[pick.team_id] ? ' ⭐' : '';
-        const pickCell = pick
-          ? `<span style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[pick.team_id]||''} ${teamNames[pick.team_id]||'?'}${ls}</span>`
-          : `<span style="font-size:10px;color:#a0aec0;font-style:italic">—</span>`;
-
-        const oppCell = pick && teamOpponents[pick.team_id]
-          ? `<span style="font-size:10px;color:#718096">v ${teamOpponents[pick.team_id]}</span>`
-          : `<span style="font-size:10px;color:#cbd5e0">—</span>`;
-
-        const odds = pick ? parseFloat(oddsMap[pick.team_id]) : NaN;
-        const oddsCell = !isNaN(odds) && odds > 0
-          ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${decToFrac(odds)}</span>`
-          : `<span style="font-size:10px;color:#cbd5e0">—</span>`;
-
-        html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
-          <td style="padding:2px 4px 2px 8px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
-          <td style="padding:2px 4px">${nameCell}</td>
-          <td style="padding:2px 4px">${pickCell}</td>
-          <td style="padding:2px 4px">${oppCell}</td>
-          <td style="padding:2px 8px 2px 4px;text-align:center">${oddsCell}</td>
-        </tr>`;
-      });
-
-      html += `</tbody></table>`;
-      document.getElementById('ko-pn-render').innerHTML = html;
-      document.getElementById('ko-pn-preview-wrap').style.display = 'block';
-      document.getElementById('btn-dl-ko-pn').style.display = 'inline-block'; document.getElementById('btn-cp-ko-pn').style.display = 'inline-block'; document.getElementById('btn-sh-ko-pn').style.display = 'inline-block';
-      setStatus('ko-pn-status', '');
-    }
-
-    // ── KO: Teams Picked ──────────────────────────────────────
-    function renderKOTeamsPicked() {
-      if (!roundData) return;
-      const { teamCounts, teamNames, teamFlags, teamOpponents, teamIsLongshot, isGroupRound, fullRoundLabel } = roundData;
-      if (isGroupRound) { setStatus('ko-tp-status', 'Knockout rounds only.'); return; }
-
-      const sorted = Object.keys(teamCounts).sort((a,b) => {
-        const cd = teamCounts[b] - teamCounts[a];
-        if (cd !== 0) return cd;
-        return (parseFloat(oddsMap[a])||999) - (parseFloat(oddsMap[b])||999);
-      }).slice(0, 15);
-
-      const maxCount = Math.max(...Object.values(teamCounts));
-      const total = Object.keys(teamCounts).length;
-
-      let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
-      html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px">
-        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">#</span>
-        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team</span>
-        <span style="width:80px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Opponent</span>
-        <span style="width:36px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
-        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;padding-left:8px">Picks</span>
-      </div>`;
-
-      sorted.forEach((tid, i) => {
-        const count = teamCounts[tid];
-        const odds = parseFloat(oddsMap[tid]);
-        const hasOdds = !isNaN(odds) && odds > 0;
-        const ls = teamIsLongshot[tid] ? ' ⭐' : '';
-        const pct = Math.round((count / maxCount) * 100);
-        const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-        const opp = teamOpponents[tid] || '?';
-
-        html += `<div style="display:flex;align-items:center;padding:4px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
-          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:left">${i+1}</div>
-          <div style="flex:1;min-width:0;font-size:12px;font-weight:800;color:#1a202c">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
-          <div style="width:80px;font-size:10px;color:#718096">v ${opp}</div>
-          <div style="width:36px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? decToFrac(odds) : '<span style="color:#cbd5e0">—</span>'}</div>
-          <div style="flex:1;padding-left:8px;display:flex;align-items:center;gap:5px">
-            <div style="flex:1;height:7px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#4a5568;border-radius:4px"></div></div>
-            <span style="font-size:13px;font-weight:800;color:#4a5568;min-width:16px;text-align:right">${count}</span>
+          <div style="width:36px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? odds.toFixed(1) : '<span style="color:#cbd5e0">—</span>'}</div>
+          <div style="width:46px;display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <div style="width:28px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div></div>
+            <span style="font-size:11px;font-weight:800;color:${countColor};min-width:10px;text-align:right">${count}</span>
           </div>
         </div>`;
       });
@@ -2161,12 +2047,316 @@
       document.getElementById('tab-group').style.display = tab === 'group' ? '' : 'none';
       document.getElementById('tab-ko').style.display    = tab === 'ko'    ? '' : 'none';
       document.getElementById('tab-old').style.display   = tab === 'old'   ? '' : 'none';
+      document.getElementById('tab-rip').style.display   = tab === 'rip'   ? '' : 'none';
       const gold = 'var(--gold)', muted = 'var(--text-muted)';
-      ['group','ko','old'].forEach(t => {
+      ['group','ko','old','rip'].forEach(t => {
         const btn = document.getElementById('tab-btn-' + t);
         btn.style.color = tab === t ? gold : muted;
         btn.style.borderBottom = tab === t ? '3px solid var(--gold)' : '3px solid transparent';
       });
+    }
+
+    // ── RIP CARDS (Knockout eliminations) ─────────────────────
+    function ripOrdinal(n) {
+      if (n == null) return '?';
+      const s = ['th','st','nd','rd'], v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+
+    function renderRIP() {
+      if (!roundData) return;
+      const { players, picks, matches, rounds, rankMap, statsMap, sortedPlayers, currentRoundSortOrder } = roundData;
+      const container = document.getElementById('rip-cards-container');
+      if (!container) return;
+
+      // Humans only — exclude the Oracle bot
+      const isBot = p => p.is_bot === true || p.slug === 'the-oracle';
+      const humans = (players || []).filter(p => !isBot(p));
+      const totalPlayers = humans.length;
+      const paidPlaces = totalPlayers <= 20 ? 3 : (totalPlayers <= 29 ? 4 : 5);
+
+      const roundById = {}; (rounds || []).forEach(r => { roundById[r.id] = r; });
+      const KO_NAMES = new Set(['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final']);
+      const koRoundIds = new Set((rounds || []).filter(r => KO_NAMES.has(r.name)).map(r => r.id));
+
+      // Match lookup keyed by round_id|team_id (a team plays one match per KO round)
+      const matchByTeamRound = {};
+      (matches || []).forEach(m => {
+        matchByTeamRound[m.round_id + '|' + m.home_team_id] = m;
+        matchByTeamRound[m.round_id + '|' + m.away_team_id] = m;
+      });
+
+      // Picks grouped by player
+      const picksByPlayer = {};
+      (picks || []).forEach(pk => {
+        if (!pk.rounds) return;
+        (picksByPlayer[pk.player_id] = picksByPlayer[pk.player_id] || []).push(pk);
+      });
+
+      const fallen = humans.filter(p => p.is_eliminated);
+      if (fallen.length === 0) {
+        container.innerHTML = '';
+        setStatus('rip-status', 'No eliminations yet. The graveyard is empty — for now.');
+        return;
+      }
+
+      // Work out each fallen player's manner of death
+      function deathInfo(p) {
+        const ppicks = (picksByPlayer[p.id] || []);
+        let fatal = null;
+        ppicks.forEach(pk => {
+          const res = pk.pick_results && pk.pick_results[0];
+          if (res && res.match_result === 'loss' && koRoundIds.has(pk.round_id)) {
+            if (!fatal || pk.rounds.sort_order > fatal.rounds.sort_order) fatal = pk;
+          }
+        });
+        let diedRound = null, kickoff = '9999', cause, resultLine = null;
+        let killerName = null, doomedTeamId = null, isPens = false, isLongshot = false;
+        if (fatal) {
+          diedRound = fatal.rounds;
+          doomedTeamId = fatal.team_id;
+          isLongshot = !!(fatal.teams && fatal.teams.is_longshot);
+          const m = matchByTeamRound[fatal.round_id + '|' + fatal.team_id];
+          const myTeam = fatal.teams || {};
+          if (m) {
+            kickoff = m.kickoff || '9999';
+            const home = m.home_team_id === fatal.team_id;
+            const oppName = home ? (m.away_team && m.away_team.name) : (m.home_team && m.home_team.name);
+            const oppFlag = home ? (m.away_team && m.away_team.flag_emoji) : (m.home_team && m.home_team.flag_emoji);
+            const myFlag = myTeam.flag_emoji || '';
+            const myScore = home ? m.home_score : m.away_score;
+            const oppScore = home ? m.away_score : m.home_score;
+            killerName = oppName || '?';
+            isPens = !!m.pens_winner_id && m.pens_winner_id !== fatal.team_id;
+            const sc = (myScore != null && oppScore != null) ? (myScore + '\u2013' + oppScore) : 'v';
+            resultLine = (myFlag ? myFlag + ' ' : '') + (myTeam.name || '?') + ' ' + sc + ' ' + (oppName || '?') + (oppFlag ? ' ' + oppFlag : '') + (isPens ? ' (pens)' : '');
+          } else {
+            killerName = '?';
+            resultLine = (myTeam.name || '?');
+          }
+          cause = isPens ? 'Death by penalties' : 'Knockout loss';
+        } else {
+          // No losing pick on record → ran out of eligible teams
+          cause = 'Out of eligible teams';
+          ppicks.forEach(pk => { if (!diedRound || pk.rounds.sort_order > diedRound.sort_order) diedRound = pk.rounds; });
+        }
+        return { p, fatal, diedRound, kickoff, cause, resultLine, killerName, doomedTeamId, isPens, isLongshot,
+                 exhaustion: !fatal };
+      }
+
+      let info = fallen.map(deathInfo);
+      // Death order: by round, then kickoff
+      info.sort((a, b) => {
+        const ao = a.diedRound ? a.diedRound.sort_order : 0, bo = b.diedRound ? b.diedRound.sort_order : 0;
+        if (ao !== bo) return ao - bo;
+        return String(a.kickoff).localeCompare(String(b.kickoff));
+      });
+      info.forEach((f, i) => { f.deathOrder = i + 1; });
+
+      // First-out: those sharing the earliest (round, kickoff)
+      const first = info[0];
+      const firstKey = first ? ((first.diedRound ? first.diedRound.sort_order : 0) + '|' + first.kickoff) : null;
+      const firstOutIds = new Set(info.filter(f => (((f.diedRound ? f.diedRound.sort_order : 0) + '|' + f.kickoff) === firstKey) && !f.exhaustion).map(f => f.p.id));
+      const firstOutPrize = 10;
+      const firstOutSplit = firstOutIds.size > 0 ? (firstOutPrize / firstOutIds.size) : firstOutPrize;
+      const fmtMoney = n => '\u00a3' + (Number.isInteger(n) ? n : n.toFixed(2));
+
+      // Helpers for standings
+      const ptsOf = p => (statsMap[p.id] ? statsMap[p.id].totalPoints : 0);
+      const posOf = p => rankMap[p.id];
+      const inMoney = p => { const r = posOf(p); return r != null && r <= paidPlaces; };
+
+      // "Will it hold?" — how many survivors can still mathematically overtake this frozen score
+      const remainingRounds = (rounds || []).filter(r => !r.is_complete && r.name !== '3rd Place' && r.sort_order >= currentRoundSortOrder).length;
+      const maxPerRound = 2; // realistic KO ceiling: 2pts for a win
+      function verdict(p) {
+        const myPts = ptsOf(p), myPos = posOf(p);
+        if (myPos == null) return '';
+        const headroom = remainingRounds * maxPerRound;
+        const catchers = humans.filter(q => !q.is_eliminated && q.id !== p.id && (ptsOf(q) + headroom) > myPts && ptsOf(q) <= myPts);
+        const above = humans.filter(q => !q.is_eliminated && ptsOf(q) > myPts).length;
+        if (myPos > paidPlaces + 2) {
+          return 'And sinking. The survivors keep scoring; this one keeps dropping.';
+        }
+        if (catchers.length === 0 && above === 0) {
+          return '<b>Locked.</b> Nobody left alive can catch this score. A corpse on the podium.';
+        }
+        if (catchers.length === 0) {
+          return '<b>Will it hold?</b> Only the players already above can stay there — nobody can climb past from below. This might just stick.';
+        }
+        return '<b>Will it hold?</b> ' + catchers.length + ' survivor' + (catchers.length === 1 ? '' : 's') + ' can still catch this score. Dead — but not buried yet.';
+      }
+
+      // Deterministic pick from a pool, stable per player
+      function seededPick(arr, seed) {
+        let h = 2166136261;
+        for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = (h * 16777619) >>> 0; }
+        return arr[h % arr.length];
+      }
+      const POOL_LOSS = [
+        'Backed the wrong horse. __K__ won \u2014 no extra time, no penalties, no mercy. The end.',
+        'Ninety minutes, no second chances. __K__ were simply better, and now there is a fresh hole in the ground.',
+        'Picked a fight with __K__ and lost it inside the ninety. Quick, clean and final.',
+        '__K__ turned up, did the job, and went home. So did this one \u2014 permanently.',
+        'No drama, no comeback, not even a point for the scrapbook. __K__ saw to that.',
+        'Stone dead at full time. __K__ did not need a single minute of extra time to finish the job.',
+        'Gambled on the wrong result and __K__ collected. The graveyard gains a tenant.',
+        '__K__ were the better side and the scoreboard agreed. Curtains.'
+      ];
+      const POOL_PENS = [
+        'Took __K__ all the way to penalties and watched them blink. One point banked, then the long walk to the car park.',
+        'Survived to the shootout, then died from twelve yards. The cruellest way to go against __K__.',
+        'A hundred and twenty minutes of fight, undone by one spot-kick. __K__ send their regards.',
+        'Held __K__ to the bitter end and still lost the lottery from the spot. Heartbreak, with a consolation point.',
+        'Penalties. Of course it was penalties. __K__ win the coin-flip, this one wins a headstone.',
+        'So close to __K__ it hurt \u2014 then the shootout did the rest. One point for bravery, zero for survival.',
+        'Dragged __K__ to penalties and got mugged on the spot. Brave. Doomed. Both.'
+      ];
+      const POOL_EXHAUST = [
+        'Never lost a single knockout \u2014 just ran out of teams to throw at the wall. Death by spreadsheet.',
+        'Outlasted half the field and then outlasted their own pick list. Eliminated by arithmetic, not by football.',
+        'No defeats. No teams left either. Should have saved a favourite for the road.',
+        'Burned through the good teams early and arrived at the end with empty hands. A planning error, not a footballing one.',
+        'Undefeated in the knockouts and still out \u2014 the only exit nobody respects and everybody fears.',
+        'Ran the tank dry. Plenty of survivors with worse records are still standing; this one simply ran out of road.',
+        'Killed by the rules, not the results. Out of eligible teams, out of the game.'
+      ];
+      const POOL_LS_LOSS = [
+        'Threw it on a long shot and the long shot threw it right back. __K__ did the rest \u2014 the odds were the odds for a reason.',
+        'Backed a no-hoper with the heart of a hero and the brain of a gambler. __K__ obliged with the obvious.',
+        'Rolled the dice on a rank outsider. __K__ rolled them straight into the ground. Glorious, stupid, dead.',
+        'The brave pick. The wrong pick. __K__ made sure everyone knew which. Respect on the way out, all the same.',
+        'Long shots are long shots for a reason, and __K__ were the reason. A noble, doomed little gamble.',
+        'Swung for the fences against the odds and against __K__. Struck out spectacularly.',
+        'Picked the romantic underdog. __K__ picked them apart. Beautiful disaster.'
+      ];
+      const POOL_LS_PENS = [
+        'Rolled the dice on a long shot, dragged __K__ to penalties, and still lost the coin-flip. Brave. Dead, but brave.',
+        'An outsider, taken to the shootout against __K__, undone from the spot. The bravest possible way to lose.',
+        'Backed a no-hoper and nearly pulled off the miracle \u2014 then penalties against __K__ ended the fairy tale.',
+        'Long shot, extra time, penalties, heartbreak. Against __K__ this one had no business getting that far. Salute.',
+        'Gambled big, fought to the spot, missed the miracle. __K__ win; the underdog dies a hero.',
+        'The romantic pick took __K__ to penalties. The romance ended exactly where you would expect.',
+        'Outsider to the shootout, then gone. __K__ send a wreath and an apology.'
+      ];
+      function epitaph(f) {
+        let pool;
+        if (f.exhaustion)  pool = POOL_EXHAUST;
+        else if (f.isPens) pool = f.isLongshot ? POOL_LS_PENS : POOL_PENS;
+        else               pool = f.isLongshot ? POOL_LS_LOSS : POOL_LOSS;
+        const line = seededPick(pool, String(f.p.id));
+        return line.split('__K__').join(f.killerName || 'the opposition');
+      }
+
+      // Group same-result deaths (same doomed team in same round) for casualty cards
+      const groups = {};
+      info.forEach(f => {
+        if (f.exhaustion || !f.diedRound) { f._groupKey = 'solo:' + f.p.id; }
+        else { f._groupKey = 'res:' + f.diedRound.id + '|' + f.doomedTeamId; }
+        (groups[f._groupKey] = groups[f._groupKey] || []).push(f);
+      });
+
+      const GROUP_THRESHOLD = 2; // 2+ on the same result → one casualty card
+
+      // Build render blocks in death order; a group renders once at its earliest member
+      const rendered = new Set();
+      let blocks = [];
+      info.forEach(f => {
+        const g = groups[f._groupKey];
+        if (rendered.has(f._groupKey)) return;
+        rendered.add(f._groupKey);
+        if (g.length >= GROUP_THRESHOLD && !f.exhaustion) {
+          blocks.push({ type: 'group', members: g.slice().sort((a, b) => (posOf(a.p) || 999) - (posOf(b.p) || 999)), lead: f });
+        } else {
+          blocks.push({ type: 'solo', f });
+        }
+      });
+
+      // ── Render ──
+      const moneyBadge = '<span class="rip-money-badge">\ud83d\udcb0 In the money</span>';
+      let outHtml = '';
+      let idx = 0;
+
+      blocks.forEach(block => {
+        const elId = 'rip-card-' + idx + '-render';
+        let card = '';
+
+        if (block.type === 'solo') {
+          const f = block.f;
+          const p = f.p;
+          const roundName = f.diedRound ? f.diedRound.name : '\u2014';
+          const pos = posOf(p), money = inMoney(p);
+          const isFirst = firstOutIds.has(p.id);
+          const orderWord = f.exhaustion ? 'Eliminated' : 'Knocked out';
+
+          card += '<div class="rip-header' + (isFirst ? ' rip-first' : '') + '">';
+          card += '<div class="rip-eyebrow">' + (isFirst ? 'First to fall' : 'Eliminated') + ' \u00b7 ' + roundName + '</div>';
+          card += '<div class="rip-name">\ud83e\udea6 ' + p.name + '</div></div>';
+
+          card += '<div class="rip-body">';
+          card += '<div class="rip-epitaph">' + epitaph(f) + '</div>';
+          card += '<table class="rip-stats">';
+          card += '<tr><td class="k">Cause of death</td><td class="v">' + f.cause + '</td></tr>';
+          card += '<tr><td class="k">Fell</td><td class="v">' + roundName + '</td></tr>';
+          card += '<tr><td class="k">Result</td><td class="v">' + (f.resultLine || '\u2014 never beaten') + '</td></tr>';
+          card += '<tr><td class="k">Final score</td><td class="v">' + ptsOf(p) + ' pts (frozen)</td></tr>';
+          card += '</table>';
+
+          if (isFirst) {
+            card += '<div class="rip-pos-line rip-first-line"><span class="lbl">Consolation <span class="rip-money-badge rip-green">\ud83d\udcb7 ' + fmtMoney(firstOutSplit) + ' back</span></span><span class="pos">' + (pos != null ? ripOrdinal(pos) : '\u2014') + '</span></div>';
+            card += '<div class="rip-verdict rip-verdict-green"><b>First out of the whole field</b> — so the ' + fmtMoney(firstOutSplit) + ' first-out prize is yours. The only player who profits from being rubbish.</div>';
+          } else {
+            card += '<div class="rip-pos-line' + (money ? ' money' : '') + '"><span class="lbl">Currently sitting ' + (money ? moneyBadge : '') + '</span><span class="pos">' + (pos != null ? ripOrdinal(pos) : '\u2014') + '</span></div>';
+            const v = verdict(p);
+            if (v) card += '<div class="rip-verdict">' + v + '</div>';
+          }
+          card += '</div>';
+
+          const oWord = f.exhaustion ? 'Eliminated' : 'Knocked out';
+          card += '<div class="rip-footer">\ud83d\udc80 ' + oWord + ' ' + ripOrdinal(f.deathOrder) + ' of ' + totalPlayers + '</div>';
+
+        } else {
+          // group / mass casualty
+          const lead = block.lead;
+          const members = block.members;
+          const roundName = lead.diedRound ? lead.diedRound.name : '\u2014';
+          const teamName = (lead.fatal && lead.fatal.teams && lead.fatal.teams.name) || 'their pick';
+          const n = members.length;
+          const orders = members.map(m => m.deathOrder).sort((a, b) => a - b);
+          const orderRange = orders[0] === orders[orders.length - 1] ? ripOrdinal(orders[0]) : (ripOrdinal(orders[0]) + '\u2013' + ripOrdinal(orders[orders.length - 1]));
+
+          card += '<div class="rip-header rip-mass">';
+          card += '<div class="rip-eyebrow">Mass casualty \u00b7 ' + roundName + '</div>';
+          card += '<div class="rip-name">\ud83e\udea6 ' + teamName + ' took ' + n + ' of you</div></div>';
+
+          card += '<div class="rip-body">';
+          card += '<div class="rip-epitaph">' + (lead.resultLine || teamName) + '. ' + n + ' of you backed them. ' + n + ' of you are in the ground.</div>';
+          card += '<table class="rip-victims"><tr><th>Victim</th><th class="r">Final pts</th><th class="r">Now</th></tr>';
+          members.forEach(m => {
+            const mp = m.p, money = inMoney(mp), pos = posOf(mp);
+            card += '<tr><td class="name">' + mp.name + (money ? ' <span class="v-money">\ud83d\udcb0</span>' : '') + '</td><td class="r">' + ptsOf(mp) + '</td><td class="r">' + (pos != null ? ripOrdinal(pos) : '\u2014') + '</td></tr>';
+          });
+          card += '</table>';
+          const topVictim = members[0];
+          if (topVictim && inMoney(topVictim.p)) {
+            card += '<div class="rip-verdict">' + topVictim.p.name + ' is still ' + ripOrdinal(posOf(topVictim.p)) + ' and in the money — dead, but cashing. The rest are just dead.</div>';
+          }
+          card += '</div>';
+          card += '<div class="rip-footer">\ud83d\udc80 ' + n + ' knocked out \u00b7 ' + orderRange + ' of ' + totalPlayers + '</div>';
+        }
+
+        outHtml += '<div class="rip-card-block">'
+          + '<div id="' + elId + '" class="render-root">' + card + '</div>'
+          + '<div class="rip-btn-row">'
+          + '<button class="btn btn-secondary" onclick="shareRender(\'' + elId + '\')">\ud83d\udce4 Share</button>'
+          + '<button class="btn btn-secondary" onclick="copyRender(\'' + elId + '\')">\ud83d\udccb Copy</button>'
+          + '<button class="btn btn-primary" onclick="downloadRender(\'' + elId + '\',\'RIP\')">\u2b07\ufe0f Download</button>'
+          + '</div></div>';
+        idx++;
+      });
+
+      container.innerHTML = outHtml;
+      setStatus('rip-status', '\ud83e\udea6 ' + fallen.length + ' fallen \u00b7 ' + blocks.length + ' card' + (blocks.length === 1 ? '' : 's') + ' \u00b7 ' + (totalPlayers - fallen.length) + ' still standing.');
     }
 
     // ── NEW: Picks by Player (group) ──────────────────────────
@@ -2180,19 +2370,17 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
       html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
         <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
-          <th style="width:20px;padding:2px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
-          <th style="width:72px;padding:2px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
-          <th style="padding:2px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Picks</th>
+          <th style="width:20px;padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+          <th style="width:72px;padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
+          <th style="padding:5px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Picks</th>
         </tr></thead><tbody>`;
 
       const rankCounts = {};
       sortedPlayers.forEach(q => { const r = rankMap[q.id]; if (r !== undefined) rankCounts[r] = (rankCounts[r]||0)+1; });
 
-      const _ordered = [...sortedPlayers.filter(p => p.is_bot), ...sortedPlayers.filter(p => !p.is_bot)];
-      _ordered.forEach((p, i) => {
-        let posLabel;
-        if (p.is_bot) { posLabel = '–'; }
-        else { const pos = rankMap[p.id] ?? (i + 1); posLabel = (rankCounts[pos]||0) > 1 ? pos + '=' : String(pos); }
+      sortedPlayers.forEach((p, i) => {
+        const pos = rankMap[p.id] ?? (i + 1);
+        const posLabel = (rankCounts[pos]||0) > 1 ? pos + '=' : String(pos);
         const pPicks = playerCurrentPicks[p.id] || [];
         const pick3 = pPicks.find(pk => pk.multiplier === 3);
         const pick2 = pPicks.find(pk => pk.multiplier === 2);
@@ -2210,9 +2398,9 @@
           : '';
 
         html += `<tr style="background:${elimBg};border-bottom:1px solid #edf0f5">
-          <td style="padding:2px 6px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
-          <td style="padding:2px 6px">${nameCell}</td>
-          <td style="padding:2px 6px">${p3html}${p2html}</td>
+          <td style="padding:5px 6px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
+          <td style="padding:5px 6px">${nameCell}</td>
+          <td style="padding:5px 6px">${p3html}${p2html}</td>
         </tr>`;
       });
 
@@ -2233,20 +2421,19 @@
         const cd = teamCounts[b] - teamCounts[a];
         if (cd !== 0) return cd;
         return (parseFloat(oddsMap[a])||999) - (parseFloat(oddsMap[b])||999);
-      }).slice(0, 12);
+      }).slice(0, 10);
 
       const maxCount = Math.max(...Object.values(teamCounts));
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
 
-      // col headers — 3pt first, then 2pt
+      // col headers
       html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px;gap:0">
-        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">#</span>
+        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
         <span style="width:120px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team &amp; opp</span>
         <span style="width:32px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
-        <span style="width:48px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">3pt / 2pt</span>
-        <span style="width:8px"></span>
-        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
+        <span style="width:62px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">2pt / 3pt</span>
+        <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
       </div>`;
 
       sorted.forEach((tid, i) => {
@@ -2257,29 +2444,30 @@
         const hasOdds = !isNaN(odds) && odds > 0;
         const ls = teamIsLongshot[tid] ? ' ⭐' : '';
         const pct = Math.round((count / maxCount) * 100);
+        // colour by dominant pick type: gold = mostly 3pt, blue = mostly 2pt, grey = equal/mixed
+        const barColor = count3 > count2 ? '#b7791f' : count2 > count3 ? '#2b6cb0' : '#718096';
+        const countColor = barColor;
         const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-        // compact pills: gold box = 3pt count, blue box = 2pt count, number only
-        const pill3 = count3 ? `<span style="font-size:10px;font-weight:800;color:#fff;background:#b7791f;padding:1px 5px;border-radius:3px;min-width:14px;text-align:center;display:inline-block">${count3}</span>` : `<span style="font-size:10px;font-weight:800;color:#fff;background:#b7791f;padding:1px 5px;border-radius:3px;min-width:14px;text-align:center;display:inline-block">0</span>`;
-        const pill2 = count2 ? `<span style="font-size:10px;font-weight:800;color:#fff;background:#2b6cb0;padding:1px 5px;border-radius:3px;min-width:14px;text-align:center;display:inline-block">${count2}</span>` : `<span style="font-size:10px;font-weight:800;color:#fff;background:#2b6cb0;padding:1px 5px;border-radius:3px;min-width:14px;text-align:center;display:inline-block">0</span>`;
+        const pill2 = count2 ? `<span style="font-size:9px;font-weight:700;color:#2b6cb0;background:#ebf8ff;border:1px solid #bee3f8;padding:1px 4px;border-radius:3px">${count2}×2pt</span>` : '';
+        const pill3 = count3 ? `<span style="font-size:9px;font-weight:700;color:#b7791f;background:#fffbeb;border:1px solid #f6e05e;padding:1px 4px;border-radius:3px">${count3}×3pt</span>` : '';
 
-        html += `<div style="display:flex;align-items:center;gap:0;padding:4px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
-          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:left">${i+1}</div>
+        html += `<div style="display:flex;align-items:center;gap:0;padding:6px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
+          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
           <div style="width:120px;min-width:0;overflow:hidden">
             <div style="font-size:12px;font-weight:800;color:#1a202c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
             <div style="font-size:10px;color:#718096;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">v ${teamOpponents[tid]||'?'}</div>
           </div>
-          <div style="width:32px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? decToFrac(odds) : '<span style="color:#cbd5e0">—</span>'}</div>
-          <div style="width:48px;display:flex;gap:3px;justify-content:center;align-items:center">${pill3}${pill2}</div>
-          <div style="width:8px"></div>
-          <div style="flex:1;display:flex;align-items:center;gap:5px">
-            <div style="flex:1;height:7px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#4a5568;border-radius:4px"></div></div>
-            <span style="font-size:13px;font-weight:800;color:#4a5568;min-width:16px;text-align:right">${count}</span>
+          <div style="width:32px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? odds.toFixed(1) : '<span style="color:#cbd5e0">—</span>'}</div>
+          <div style="width:62px;display:flex;gap:3px;justify-content:center;flex-wrap:wrap">${pill3}${pill2}</div>
+          <div style="width:46px;display:flex;align-items:center;gap:4px;justify-content:flex-end">
+            <div style="width:28px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div></div>
+            <span style="font-size:11px;font-weight:800;color:${countColor};min-width:10px;text-align:right">${count}</span>
           </div>
         </div>`;
       });
 
       const total = Object.keys(teamCounts).length;
-      if (total > 12) html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:6px 12px;font-size:11px;font-weight:600;color:#4a5568;text-align:center">Top 12 of ${total} teams picked</div>`;
+      if (total > 10) html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:6px 12px;font-size:11px;font-weight:600;color:#4a5568;text-align:center">Top 10 of ${total} teams picked</div>`;
 
       document.getElementById('tp2-render').innerHTML = html;
       document.getElementById('tp2-preview-wrap').style.display = 'block';
@@ -2327,10 +2515,10 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Top Combinations', fullRoundLabel);
 
       html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px">
-        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">#</span>
+        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
         <span style="width:160px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Teams</span>
         <span style="width:48px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
-        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left;padding-left:8px">Picks</span>
+        <span style="width:30px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
       </div>`;
 
       sorted.forEach((key, i) => {
@@ -2342,17 +2530,16 @@
         const oppA = teamOpponents[tidA] ? ` <span style="font-size:9px;font-weight:400;color:#a0aec0">v ${teamOpponents[tidA]}</span>` : '';
         const oppB = teamOpponents[tidB] ? ` <span style="font-size:9px;font-weight:400;color:#a0aec0">v ${teamOpponents[tidB]}</span>` : '';
         const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-        const blocks = Array.from({length: count}, () => `<span style="display:inline-block;width:14px;height:14px;background:#2b6cb0;border-radius:3px"></span>`).join('');
 
         html += `<div style="display:flex;align-items:center;padding:6px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
-          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:left">${i+1}</div>
+          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
           <div style="width:160px;min-width:0;overflow:hidden">
             <div style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[tidA]||''} ${teamNames[tidA]||'?'}${lsA}${oppA}</div>
             <div style="height:4px"></div>
             <div style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[tidB]||''} ${teamNames[tidB]||'?'}${lsB}${oppB}</div>
           </div>
-          <div style="width:48px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${odds > 0 ? decToFrac(odds) : '—'}</div>
-          <div style="flex:1;padding-left:8px;display:flex;gap:3px;align-items:center;flex-wrap:wrap">${blocks}</div>
+          <div style="width:48px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${odds > 0 ? odds.toFixed(1) : '—'}</div>
+          <div style="width:30px;text-align:center"><span style="font-size:11px;font-weight:800;color:#fff;background:#2b6cb0;padding:2px 6px;border-radius:4px">${count}</span></div>
         </div>`;
       });
 

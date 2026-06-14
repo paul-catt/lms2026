@@ -143,21 +143,12 @@
     }
 
     /* 2×2 grid + solo My Page row */
-    .hero-buttons {
+    .hero-row {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: 1fr 1fr;
       gap: 10px;
-      max-width: 320px;
+      max-width: 360px;
       margin: 0 auto 10px;
-    }
-    .hero-buttons-solo {
-      display: flex;
-      justify-content: center;
-      max-width: 320px;
-      margin: 0 auto;
-    }
-    .hero-buttons-solo .hero-btn {
-      width: 100%;
     }
     .hero-btn {
       display: flex;
@@ -187,6 +178,23 @@
       color: var(--text-muted, #6b7280);
       line-height: 1.3;
     }
+    /* Priority pair — taller, gold-tinted, not full-width */
+    .hero-btn-primary {
+      padding: 16px 8px;
+      border-color: rgba(245,200,66,0.30);
+      background: linear-gradient(180deg, rgba(245,200,66,0.05), var(--surface2, #1c1f2e));
+    }
+    .hero-btn-primary .hero-btn-label { font-size: 14px; }
+    /* FAQ — slim full-width strip */
+    .hero-btn-slim {
+      flex-direction: row;
+      gap: 0;
+      max-width: 360px;
+      margin: 0 auto;
+      padding: 10px 8px;
+      opacity: 0.85;
+    }
+    .hero-btn-slim .hero-btn-label { font-size: 12px; font-weight: 600; color: var(--text-muted, #6b7280); }
 
     /* My Page redirect banner */
     .mypage-banner {
@@ -214,36 +222,74 @@
       font-size: 12px;
     }
 
-    .status-strip {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-      margin: 12px 0 0;
+    /* ── Deadline block (state-aware) ───────────────────────── */
+    .dl {
+      text-align: left;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin: 0 auto 18px;
+      max-width: 360px;
       background: var(--surface2);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    .status-row {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 16px;
-      font-size: 13px;
+      flex-direction: column;
+      gap: 12px;
     }
-    .status-label {
-      color: var(--text-muted);
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .status-val {
-      font-weight: 700;
+    .dl-head { display: flex; align-items: flex-start; gap: 11px; }
+    .dl-icon { font-size: 22px; line-height: 1.1; flex-shrink: 0; margin-top: 1px; }
+    .dl-headline {
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 700; font-size: 18px;
+      letter-spacing: 0.02em; line-height: 1.15;
       color: var(--text);
     }
-    .status-val.accent { color: var(--accent); }
-    .status-row--deadline .status-val { text-align: right; line-height: 1.4; }
+    .dl-round { font-size: 12px; color: var(--text-muted); margin-top: 3px; font-weight: 500; line-height: 1.4; }
+    .dl-round b { color: var(--text); font-weight: 600; }
+
+    .dl-clockrow {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+      padding-top: 11px; border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .dl-clocklabel {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+      font-weight: 600; color: var(--text-muted);
+    }
+    .dl-clock {
+      font-family: 'Rajdhani', sans-serif; font-variant-numeric: tabular-nums;
+      font-weight: 700; font-size: 28px; letter-spacing: 0.01em; line-height: 1;
+      color: var(--gold);
+    }
+    .dl-cta {
+      display: block; text-align: center; text-decoration: none; border-radius: 9px;
+      padding: 11px; font-weight: 700; font-size: 14px;
+      font-family: 'Rajdhani', sans-serif; letter-spacing: 0.03em;
+    }
+    .dl-change {
+      font-size: 12px; color: var(--text-muted); text-decoration: underline;
+      text-align: center; display: block;
+    }
+
+    /* states */
+    .dl.urgent  { border-color: rgba(245,165,36,0.45); background: rgba(245,165,36,0.07); }
+    .dl.urgent  .dl-headline, .dl.urgent .dl-clock { color: var(--amber, #f5a524); }
+    .dl.urgent  .dl-cta { background: var(--amber, #f5a524); color: #1a1205; }
+
+    .dl.partial { border-color: rgba(245,165,36,0.40); background: rgba(245,165,36,0.06); }
+    .dl.partial .dl-headline, .dl.partial .dl-clock { color: var(--amber, #f5a524); }
+    .dl.partial .dl-cta { background: var(--amber, #f5a524); color: #1a1205; }
+
+    .dl.critical { border-color: rgba(239,68,68,0.55); background: rgba(239,68,68,0.09); animation: dlpulse 2s ease-in-out infinite; }
+    .dl.critical .dl-headline, .dl.critical .dl-clock { color: var(--red, #ef4444); }
+    .dl.critical .dl-cta { background: var(--red, #ef4444); color: #fff; }
+    @keyframes dlpulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(239,68,68,0); } 50%{ box-shadow: 0 0 18px 0 rgba(239,68,68,0.22); } }
+    @media (prefers-reduced-motion: reduce) { .dl.critical { animation: none; } }
+
+    .dl.done { border-color: rgba(34,197,94,0.40); background: rgba(34,197,94,0.07); }
+    .dl.done .dl-headline { color: var(--green, #22c55e); }
+    .dl.done .dl-clock { color: var(--text); }
+
+    .dl.out { opacity: 0.92; }
+    .dl.out .dl-headline, .dl.out .dl-clock { color: var(--text-muted); }
   </style>
 </head>
 <body>
@@ -279,6 +325,15 @@
       <a href="/admin" tabindex="-1" aria-hidden="true"><img src="/logo.svg" alt="LMS 2026" style="width:288px;margin-bottom:12px"></a>
       <div class="hero-event">Last Man Standing</div>
       <div class="hero-subtitle">World Cup 2026 · 11 June – 19 July</div>
+
+      <!-- State-aware deadline block (front and centre) -->
+      <div id="deadline-block" class="dl">
+        <div class="dl-head">
+          <span class="dl-icon">⏳</span>
+          <div><div class="dl-headline">Checking the next deadline…</div></div>
+        </div>
+      </div>
+
       <div style="font-size:13px; color:var(--text-muted); margin-bottom:20px; line-height:1.6">Pick teams each round. Earn points for wins and draws. Get knocked out if your KO pick loses. Most points wins the pot.</div>
 
       <!-- Flip counter -->
@@ -304,38 +359,29 @@
         <div class="flip-counter-label">players still standing</div>
       </div>
 
-      <div class="hero-buttons">
-        <a href="/leaderboard" class="hero-btn">
+      <div class="hero-row">
+        <a id="hero-my-page" href="/" class="hero-btn hero-btn-primary">
+          <span class="hero-btn-label">👤 My Page</span>
+          <span class="hero-btn-sub">Your picks & progress</span>
+        </a>
+        <a href="/leaderboard" class="hero-btn hero-btn-primary">
           <span class="hero-btn-label">📊 Leaderboard</span>
           <span class="hero-btn-sub">Tables & stats</span>
         </a>
+      </div>
+      <div class="hero-row">
         <a href="/match-centre" class="hero-btn">
           <span class="hero-btn-label">⚽ Match Centre</span>
-          <span class="hero-btn-sub">Results & upcoming fixtures</span>
+          <span class="hero-btn-sub">Results & fixtures</span>
         </a>
         <a href="/bracket" class="hero-btn">
           <span class="hero-btn-label">📅 Fixtures</span>
           <span class="hero-btn-sub">Bracket & all fixtures</span>
         </a>
-        <a href="/rules" class="hero-btn">
-          <span class="hero-btn-label">📋 FAQ</span>
-          <span class="hero-btn-sub">How it all works</span>
-        </a>
       </div>
-      <div style="height:10px"></div>
-      <div class="hero-buttons-solo">
-        <a id="hero-my-page" href="/" class="hero-btn">
-          <span class="hero-btn-label">👤 My Page</span>
-          <span class="hero-btn-sub">Your picks & progress</span>
-        </a>
-      </div>
-    </div>
-
-    <div class="status-strip">
-      <div class="status-row status-row--deadline">
-        <span class="status-label">⏰ Next Deadline</span>
-        <span class="status-val accent" id="status-deadline">—</span>
-      </div>
+      <a href="/rules" class="hero-btn hero-btn-slim">
+        <span class="hero-btn-label">📋 FAQ · How it all works</span>
+      </a>
     </div>
   </main>
 
@@ -345,12 +391,23 @@
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const WINDOW_START_HOUR = 11; // UTC (noon BST)
     const LS_COUNT_KEY = 'lms2026_last_player_count';
+    const LS_TEST_KEY  = 'lms2026_test_date';
+    const LS_SLUG_KEY  = 'lms2026_my_slug';
+
+    // Reminder thresholds (hours before deadline) and red threshold
+    const REMINDER_HOURS = { group: 48, knockout: 24 };
+    const RED_HOURS = 3;
+    const KICKED_OFF = new Set(['IN_PLAY', 'PAUSED', 'FINISHED']);
+
+    function getEffectiveDate() {
+      const o = localStorage.getItem(LS_TEST_KEY);
+      return o ? new Date(o) : new Date();
+    }
 
     // ── My Page link (hero button) ────────────────────────────
     (function() {
-      const slug = localStorage.getItem('lms2026_my_slug');
+      const slug = localStorage.getItem(LS_SLUG_KEY);
       const heroLink = document.getElementById('hero-my-page');
       if (slug) {
         heroLink.href = '/' + slug;
@@ -437,7 +494,6 @@
       const from = (!isNaN(stored) && stored >= target) ? stored : target;
       localStorage.setItem(LS_COUNT_KEY, target);
 
-      // Reveal counter now we have the real value
       document.getElementById('flip-counter').style.visibility = 'visible';
 
       if (from === target) { setAll(target); return; }
@@ -479,65 +535,236 @@
       setTimeout(step, 500);
     }
 
-    // ── Load data ─────────────────────────────────────────────
-    async function loadStatus() {
-      const { count } = await db
-        .from('players')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_eliminated', false);
-
-      const activeCount = count ?? 0;
-      flipTo(activeCount);
-
-      const now = new Date();
-      const { data: nextRound } = await db
-        .from('rounds')
-        .select('name, deadline')
-        .eq('is_complete', false)
-        .neq('name', '3rd Place')
-        .gt('deadline', now.toISOString())
-        .order('sort_order')
-        .limit(1)
-        .single();
-
-      const deadlineEl = document.getElementById('status-deadline');
-      if (nextRound) {
-        nextDeadline = new Date(nextRound.deadline);
-        nextDeadlineRound = nextRound.name;
-        renderDeadline();
-      } else {
-        deadlineEl.textContent = 'No upcoming matches';
-      }
-    }
-
+    // ── Countdown formatting ──────────────────────────────────
     function getTimeLeftStr(deadline) {
-      const diff = deadline - new Date();
+      const diff = deadline - getEffectiveDate();
       if (diff <= 0) return 'Locked';
       const days = Math.floor(diff / 86400000);
       const hours = Math.floor((diff % 86400000) / 3600000);
       const mins  = Math.floor((diff % 3600000)  / 60000);
       const secs  = Math.floor((diff % 60000)    / 1000);
-      if (days > 0) return days + 'd ' + hours + 'h ' + String(mins).padStart(2,'0') + 'm';
+      if (days > 0) return days + 'd ' + String(hours).padStart(2,'0') + 'h ' + String(mins).padStart(2,'0') + 'm';
       return String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
     }
-
-    function renderDeadline() {
-      if (!nextDeadline) return;
-      const deadlineEl = document.getElementById('status-deadline');
-      const dateLabel = nextDeadline.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-      const time      = nextDeadline.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
-      deadlineEl.innerHTML =
-        (nextDeadlineRound ? '<span style="color:var(--text)">' + nextDeadlineRound + '</span><br>' : '')
-        + '<span style="font-size:12px;font-weight:500;color:var(--text-muted)">' + dateLabel + ' · ' + time + ' BST</span>'
-        + '<br><span style="font-variant-numeric:tabular-nums;font-weight:900;font-size:13px;letter-spacing:-0.01em">' + getTimeLeftStr(nextDeadline) + '</span>';
+    function fmtDateTime(d) {
+      const date = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
+      return date + ' · ' + time + ' BST';
     }
 
-    let nextDeadline = null;
-    let nextDeadlineRound = '';
+    // ── Deadline block render ─────────────────────────────────
+    let blockDeadline = null;   // Date the live clock counts to
+    let blockState    = null;   // current state key (to detect boundary changes)
+
+    function renderBlock(view) {
+      const el = document.getElementById('deadline-block');
+      el.className = 'dl' + (view.cls ? ' ' + view.cls : '');
+      let html =
+        '<div class="dl-head">' +
+          '<span class="dl-icon">' + view.icon + '</span>' +
+          '<div>' +
+            '<div class="dl-headline">' + view.headline + '</div>' +
+            (view.sub ? '<div class="dl-round">' + view.sub + '</div>' : '') +
+          '</div>' +
+        '</div>';
+      if (view.showClock) {
+        html +=
+          '<div class="dl-clockrow">' +
+            '<span class="dl-clocklabel">' + view.clockLabel + '</span>' +
+            '<span class="dl-clock" id="dl-clock">' + getTimeLeftStr(view.deadline) + '</span>' +
+          '</div>';
+      }
+      if (view.cta) {
+        html += '<a href="' + view.cta.href + '" class="dl-cta">' + view.cta.label + '</a>';
+      } else if (view.changeHref) {
+        html += '<a href="' + view.changeHref + '" class="dl-change">Change pick</a>';
+      }
+      el.innerHTML = html;
+      blockDeadline = view.showClock ? view.deadline : null;
+      blockState    = view.cls;
+    }
+
+    function roundHasFixtures(matches, roundId) {
+      return matches.some(m => m.round_id === roundId && m.home_team && m.away_team);
+    }
+
+    // ── Load everything ───────────────────────────────────────
+    async function loadStatus() {
+      const now = getEffectiveDate();
+
+      // Player count for the flip counter
+      const { count } = await db
+        .from('players')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_eliminated', false);
+      flipTo(count ?? 0);
+
+      // Rounds + minimal match data
+      const slug = localStorage.getItem(LS_SLUG_KEY);
+      const [roundsRes, matchesRes] = await Promise.all([
+        db.from('rounds').select('id, name, round_type, deadline, sort_order, is_complete').order('sort_order'),
+        db.from('matches').select('round_id, home_team, away_team, home_team_id, away_team_id, api_status')
+      ]);
+      const rounds  = roundsRes.data  || [];
+      const matches = matchesRes.data || [];
+
+      // Next pickable round = earliest upcoming, incomplete, not 3rd place
+      const upcoming = rounds
+        .filter(r => !r.is_complete && r.name !== '3rd Place' && new Date(r.deadline) > now)
+        .sort((a, b) => a.sort_order - b.sort_order);
+      const nextRound = upcoming[0] || null;
+
+      // No upcoming round → nothing to chase
+      if (!nextRound) {
+        renderBlock({ cls: '', icon: '🏁', headline: 'No upcoming deadlines', sub: 'Sit tight — check Match Centre for results.' });
+        return;
+      }
+
+      const deadline    = new Date(nextRound.deadline);
+      const hasFixtures = roundHasFixtures(matches, nextRound.id);
+
+      // Holding: round exists but the bracket isn't filled yet
+      if (!hasFixtures) {
+        renderBlock({
+          cls: '', icon: '◻️',
+          headline: nextRound.name,
+          sub: 'Teams confirmed once the groups wrap up.',
+          showClock: true, clockLabel: 'Next deadline', deadline
+        });
+        return;
+      }
+
+      // ── No slug → generic countdown (moved to the top) ──
+      let player = null;
+      if (slug) {
+        const { data } = await db.from('players').select('id, is_eliminated').eq('slug', slug).limit(1);
+        player = (data && data[0]) || null;
+      }
+      if (!player) {
+        renderBlock({
+          cls: '', icon: '⏰',
+          headline: 'Next deadline',
+          sub: '<b>' + nextRound.name + '</b> · ' + fmtDateTime(deadline),
+          showClock: true, clockLabel: 'Closes in', deadline
+        });
+        return;
+      }
+
+      // ── Eliminated → no nag ──
+      if (player.is_eliminated) {
+        renderBlock({
+          cls: 'out', icon: '💀',
+          headline: "You're out",
+          sub: 'Knocked out, but the carnage continues.',
+          showClock: true, clockLabel: 'Next deadline', deadline
+        });
+        return;
+      }
+
+      // Player's picks (all rounds — small)
+      const { data: picksData } = await db.from('picks')
+        .select('round_id, team_id, multiplier')
+        .eq('player_id', player.id);
+      const picks = picksData || [];
+
+      const required   = nextRound.round_type === 'group' ? 2 : 1;
+      const nextPicks  = picks.filter(p => p.round_id === nextRound.id);
+      const nextCount  = nextPicks.length;
+      const myPageHref = '/' + slug;
+
+      // Already sorted → green, always calm
+      if (nextCount >= required) {
+        renderBlock({
+          cls: 'done', icon: '✅',
+          headline: "You're locked in",
+          sub: 'All picks in for <b>' + nextRound.name + '</b>.',
+          showClock: true, clockLabel: 'Locks in', deadline,
+          changeHref: myPageHref
+        });
+        return;
+      }
+
+      // Is the in-progress prior round's pick(s) done playing for this player?
+      const currentRound = rounds
+        .filter(r => !r.is_complete && r.name !== '3rd Place' && new Date(r.deadline) <= now && roundHasFixtures(matches, r.id))
+        .sort((a, b) => new Date(b.deadline) - new Date(a.deadline))[0] || null;
+
+      let currentPicksPlayed = false;
+      if (currentRound) {
+        const curPicks = picks.filter(p => p.round_id === currentRound.id);
+        if (curPicks.length === 0) {
+          currentPicksPlayed = true; // nothing pending → attention is free
+        } else {
+          currentPicksPlayed = curPicks.every(p => {
+            const m = matches.find(mm => mm.round_id === currentRound.id &&
+              (mm.home_team_id === p.team_id || mm.away_team_id === p.team_id));
+            return m && KICKED_OFF.has(m.api_status);
+          });
+        }
+      }
+
+      const hoursLeft  = (deadline - now) / 3600000;
+      const threshold  = REMINDER_HOURS[nextRound.round_type] ?? 48;
+      const inReminder = currentPicksPlayed || hoursLeft <= threshold;
+
+      // Calm grey — not your concern yet
+      if (!inReminder) {
+        renderBlock({
+          cls: '', icon: '🗓️',
+          headline: nextRound.name,
+          sub: 'Pick by ' + fmtDateTime(deadline) + '.',
+          showClock: true, clockLabel: 'Closes in', deadline
+        });
+        return;
+      }
+
+      // Reminder mode → red / partial / amber
+      if (hoursLeft <= RED_HOURS) {
+        renderBlock({
+          cls: 'critical', icon: '🚨',
+          headline: 'Last chance to pick',
+          sub: '<b>' + nextRound.name + '</b> locks soon — don\u2019t get caught out.',
+          showClock: true, clockLabel: 'Closes in', deadline,
+          cta: { href: myPageHref, label: 'Pick now →' }
+        });
+        return;
+      }
+
+      if (nextRound.round_type === 'group' && nextCount > 0) {
+        const has3 = nextPicks.some(p => Number(p.multiplier) === 3);
+        const inWord  = has3 ? 'Your 3-pointer is in' : 'Your 2-pointer is in';
+        const toGo    = has3 ? '2-pointer still to go' : '3-pointer still to go';
+        renderBlock({
+          cls: 'partial', icon: '◐',
+          headline: 'One pick still to go',
+          sub: '<b>' + nextRound.name + '</b> · ' + inWord + ', ' + toGo + '.',
+          showClock: true, clockLabel: 'Closes in', deadline,
+          cta: { href: myPageHref, label: 'Finish your picks →' }
+        });
+        return;
+      }
+
+      renderBlock({
+        cls: 'urgent', icon: '⚠️',
+        headline: "You haven't picked yet",
+        sub: 'Picks close for <b>' + nextRound.name + '</b>.',
+        showClock: true, clockLabel: 'Closes in', deadline,
+        cta: { href: myPageHref, label: 'Make your pick →' }
+      });
+    }
+
+    // Tick the live clock; re-evaluate state when the deadline passes
+    function tickBlock() {
+      if (!blockDeadline) return;
+      const el = document.getElementById('dl-clock');
+      if (!el) return;
+      if (getEffectiveDate() >= blockDeadline) { loadStatus(); return; }
+      el.textContent = getTimeLeftStr(blockDeadline);
+    }
 
     loadStatus();
     setInterval(loadStatus, 60000);
-    setInterval(renderDeadline, 1000);
+    setInterval(tickBlock, 1000);
   </script>
 </body>
 </html>

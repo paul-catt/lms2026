@@ -27,20 +27,19 @@
     .deadline-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px 24px;
-      margin-bottom: 16px;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
     }
-    .deadline-card.open   { border-color: #f59e0b; background: rgba(245,158,11,0.05); }
-    .deadline-card.locked { border-color: #ef4444; background: rgba(239,68,68,0.05); }
-    .deadline-inner { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
-    .deadline-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); margin-bottom:4px; }
-    .deadline-round-name { font-size:18px; font-weight:800; color:var(--text); }
-    .deadline-date-str { font-size:13px; color:var(--text-muted); margin-top:3px; }
-    .deadline-timer { font-size:36px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; line-height:1; min-width:200px; text-align:right; }
+    .deadline-card.open   { border-color: #f59e0b; background: rgba(245,158,11,0.06); }
+    .deadline-card.urgent { border-color: #ef4444; background: rgba(239,68,68,0.06); }
+    .deadline-inner { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .deadline-text  { display:flex; flex-direction:column; gap:2px; min-width:0; }
+    .deadline-label { font-size:13px; font-weight:700; color:var(--text); line-height:1.2; }
+    .deadline-sub   { font-size:11px; color:var(--text-muted); }
+    .deadline-timer { font-size:22px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-0.02em; line-height:1; white-space:nowrap; }
     .deadline-timer.open   { color:#f59e0b; }
     .deadline-timer.urgent { color:#ef4444; }
-    .deadline-timer.locked { color:var(--text-muted); font-size:18px; font-weight:700; }
 
     /* ── Round colours ─────────────────────────────────── */
     :root {
@@ -209,7 +208,7 @@
     .fixtures-nudge a:hover { text-decoration: underline; }
 
     @media (max-width: 600px) {
-      .deadline-timer { font-size:26px; min-width:0; text-align:left; }
+      .deadline-timer { font-size:20px; }
       .match-home, .match-away { font-size:17px; }
       .match-score-inline { font-size:22px; min-width:44px; }
     }
@@ -240,9 +239,14 @@
     <div id="deadline-card-wrap"></div>
 
     <div class="card" id="today-card">
-      <div class="card-title" id="today-section-title">📅 Today</div>
+      <div class="card-title" id="today-section-title">🌙 Tonight</div>
       <div id="today-loading" class="loading"><div class="spinner"></div>Loading...</div>
       <div id="today-content"></div>
+    </div>
+
+    <div class="card" id="tomorrow-card" style="display:none">
+      <div class="card-title">🌙 Tomorrow Night</div>
+      <div id="tomorrow-content"></div>
     </div>
 
     <div class="card" id="upcoming-card" style="display:none">
@@ -272,10 +276,6 @@
     function getEffectiveDate() {
       const o = localStorage.getItem(LS_KEY);
       return o ? new Date(o) : new Date();
-    }
-    function isLastNight() {
-      const h = getEffectiveDate().getUTCHours();
-      return h >= 6 && h < 11;
     }
     async function syncTestDateFromSupabase() {
       const { data } = await db.from('app_config').select('value').eq('key', 'test_date_override').single();
@@ -442,50 +442,56 @@
 
     async function loadDeadline() {
       if (deadlineInterval) { clearInterval(deadlineInterval); deadlineInterval = null; }
-      const { data: rounds } = await db.from('rounds')
-        .select('id, name, deadline, is_complete, sort_order')
-        .eq('is_complete', false).neq('name', '3rd Place').order('sort_order').limit(1);
-
       const wrap = document.getElementById('deadline-card-wrap');
+      const FORTY_EIGHT_H = 48 * 3600000;
+
+      // Only ever care about the NEXT deadline that is still in the future.
+      // (Passed deadlines are irrelevant — the locked state is shown by the day header.)
+      const { data: rounds } = await db.from('rounds')
+        .select('id, name, deadline')
+        .eq('is_complete', false).neq('name', '3rd Place')
+        .gt('deadline', new Date().toISOString())
+        .order('deadline', { ascending: true }).limit(1);
+
       if (!rounds || rounds.length === 0) { wrap.innerHTML = ''; return; }
 
       const round    = rounds[0];
       const deadline = new Date(round.deadline);
 
+      // Hide entirely until we're within 48h of the deadline.
+      if (deadline.getTime() - Date.now() > FORTY_EIGHT_H) { wrap.innerHTML = ''; return; }
+
       wrap.innerHTML = `
         <div class="deadline-card open" id="dl-card">
           <div class="deadline-inner">
-            <div>
-              <div class="deadline-label">⏰ Picks Deadline</div>
-              <div class="deadline-round-name" id="dl-round">${round.name}</div>
-              <div class="deadline-date-str" id="dl-date">${fmtLongDate(deadline.toISOString())} at ${fmtTime(deadline.toISOString())}</div>
+            <div class="deadline-text">
+              <span class="deadline-label">⏰ ${round.name} — picks lock in</span>
+              <span class="deadline-sub">${fmtShortDate(deadline.toISOString())} · ${fmtTime(deadline.toISOString())}</span>
             </div>
             <div class="deadline-timer open" id="dl-timer">--:--:--</div>
           </div>
         </div>`;
 
       function tick() {
-        const diff  = deadline - new Date();
+        const diff  = deadline.getTime() - Date.now();
         const card  = document.getElementById('dl-card');
         const timer = document.getElementById('dl-timer');
         if (!card || !timer) return;
         if (diff <= 0) {
-          card.className = 'deadline-card locked';
-          document.getElementById('dl-round').textContent = '🔒 ' + round.name + ' — Picks Locked';
-          document.getElementById('dl-date').textContent  = 'Deadline has passed.';
-          timer.className = 'deadline-timer locked';
-          timer.textContent = 'LOCKED';
+          // Deadline passed — banner no longer relevant, remove it.
+          wrap.innerHTML = '';
           if (deadlineInterval) { clearInterval(deadlineInterval); deadlineInterval = null; }
           return;
         }
-        const days  = Math.floor(diff / 86400000);
-        const hours = Math.floor((diff % 86400000) / 3600000);
-        const mins  = Math.floor((diff % 3600000)  / 60000);
-        const secs  = Math.floor((diff % 60000)    / 1000);
-        timer.textContent = days > 0
-          ? days + 'd ' + hours + 'h ' + String(mins).padStart(2,'0') + 'm'
-          : String(hours).padStart(2,'0') + ':' + String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
-        timer.className = 'deadline-timer ' + (diff < 3 * 3600000 ? 'urgent' : 'open');
+        const hours = Math.floor(diff / 3600000);
+        const mins  = Math.floor((diff % 3600000) / 60000);
+        const secs  = Math.floor((diff % 60000)   / 1000);
+        timer.textContent = hours >= 1
+          ? hours + 'h ' + String(mins).padStart(2,'0') + 'm'
+          : String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
+        const urgent = diff < 3 * 3600000;
+        card.className  = 'deadline-card '  + (urgent ? 'urgent' : 'open');
+        timer.className = 'deadline-timer ' + (urgent ? 'urgent' : 'open');
       }
       tick();
       if (deadlineInterval) clearInterval(deadlineInterval);
@@ -675,11 +681,11 @@
     }
 
     // ── Day header ───────────────────────────────────────
-    function dayHeaderHtml(roundName, dayNum, windowStartMs, isToday) {
+    function dayHeaderHtml(roundName, dayNum, windowStartMs, todayLabel) {
       const cls     = dayHeaderClass(roundName);
       const repDate = new Date(windowStartMs + 4 * 60 * 60 * 1000);
       const dateStr = repDate.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }).toUpperCase();
-      const todayBadge = isToday ? ' <span class="day-today-badge">' + (isLastNight() ? 'Last Night' : 'Today') + '</span>' : '';
+      const todayBadge = todayLabel ? ' <span class="day-today-badge">' + todayLabel + '</span>' : '';
       const n2 = roundName.toLowerCase().replace(/\s/g,'');
       const isSingleDay = (n2 === 'final' || n2.includes('3rd') || n2.includes('third')) && !n2.includes('semi');
       const dayPart = isSingleDay ? '' : '<span class="sep">|</span><span>Day ' + dayNum + '</span>';
@@ -705,9 +711,6 @@
         const effectiveNow = getEffectiveDate();
         const { windowStart, windowEnd } = getGameDayWindow(effectiveNow);
 
-        const todayTitle = document.getElementById('today-section-title');
-        if (todayTitle) todayTitle.textContent = isLastNight() ? '🌙 Last Night' : '📅 Today';
-
         const [{ data: players }, { data: picks }] = await Promise.all([
           db.from('players').select('id, name, slug, display_name'),
           db.from('picks').select('player_id, team_id, multiplier, round_id, pick_results(points_earned, longshot_bonus, match_result)')
@@ -725,68 +728,110 @@
         document.getElementById('today-loading').style.display = 'none';
         const todayContent = document.getElementById('today-content');
 
+        // "Tonight" until every match in the window is actually OVER, then "Last Night".
+        // A match is "over" when it's finished in the API, manually completed, OR kicked
+        // off long enough ago that it can't still be in progress. The time buffer means
+        // this never waits on the manual "complete" step (often done next morning) and
+        // self-heals if the poller misses a game.
+        const MATCH_OVER_BUFFER_MS = 2 * 60 * 60 * 1000; // ~full time; api_status covers ET/pens
+        const nowMs = effectiveNow.getTime();
+        const matchIsOver = (m) =>
+          m.api_status === 'FINISHED' ||
+          m.status === 'complete' ||
+          (m.kickoff && nowMs >= new Date(m.kickoff).getTime() + MATCH_OVER_BUFFER_MS);
+        const todayIsOver = !!(todayMatches && todayMatches.length > 0 && todayMatches.every(matchIsOver));
+        const todayLabel  = todayIsOver ? 'Last Night' : 'Tonight';
+        const todayTitle  = document.getElementById('today-section-title');
+        if (todayTitle) todayTitle.textContent = todayIsOver ? '🌙 Last Night' : '🌙 Tonight';
+
         // Today's picks are visible once the round deadline has passed
         const todayRoundDeadline = todayMatches && todayMatches[0]?.rounds?.deadline ? new Date(todayMatches[0].rounds.deadline) : null;
         const todayPicksVisible = todayRoundDeadline ? getEffectiveDate() >= todayRoundDeadline : isWindowClosed(windowEnd.getTime());
 
         if (!todayMatches || todayMatches.length === 0) {
-          todayContent.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:24px">No matches today.</p>';
+          todayContent.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:24px">Nothing on tonight.</p>';
         } else {
           const rName      = todayMatches[0].rounds ? todayMatches[0].rounds.name : '';
           const roundFirst = await getRoundFirstKickoff(todayMatches[0].round_id);
           const dayNum     = roundFirst ? getDayNumber(windowStart.toISOString(), roundFirst) : 1;
-          todayContent.innerHTML = dayHeaderHtml(rName, dayNum, windowStart.getTime(), true) +
+          todayContent.innerHTML = dayHeaderHtml(rName, dayNum, windowStart.getTime(), todayLabel) +
             todayMatches.map(m => matchCardHtml(m, picks, players, true, todayPicksVisible)).join('');
         }
 
-        // ── UPCOMING ───────────────────────────────────────
-        const upcoming2End = new Date(windowEnd.getTime() + 5 * WINDOW_DURATION_MS);
+        // ── TOMORROW NIGHT + UPCOMING ───────────────────────
+        const upcomingRangeEnd = new Date(windowEnd.getTime() + 5 * WINDOW_DURATION_MS);
         const { data: upcomingMatches } = await db.from('matches').select(matchSel)
           .gte('kickoff', windowEnd.toISOString())
-          .lt('kickoff',  upcoming2End.toISOString())
+          .lt('kickoff',  upcomingRangeEnd.toISOString())
           .not('home_team_id', 'is', null)
           .not('away_team_id', 'is', null)
           .neq('status', 'complete')
           .order('kickoff', { ascending: true });
 
+        const tomorrowCardEl  = document.getElementById('tomorrow-card');
+        const tomorrowContent = document.getElementById('tomorrow-content');
         const upcomingCardEl  = document.getElementById('upcoming-card');
         const upcomingContent = document.getElementById('upcoming-content');
         const nudgeEl         = document.getElementById('fixtures-nudge');
 
         if (upcomingMatches && upcomingMatches.length > 0) {
-          // Determine fixtures link target based on first upcoming match's round type
-          const firstRoundName = upcomingMatches[0].rounds ? upcomingMatches[0].rounds.name : '';
-          const isGroupRound   = isGroupRoundName(firstRoundName);
-          const fixturesSection = isGroupRound ? 'group' : 'knockout';
-          const fixturesUrl    = '/bracket?tab=fixtures&section=' + fixturesSection;
+          const firstRoundName  = upcomingMatches[0].rounds ? upcomingMatches[0].rounds.name : '';
+          const fixturesSection = isGroupRoundName(firstRoundName) ? 'group' : 'knockout';
+          const fixturesUrl     = '/bracket?tab=fixtures&section=' + fixturesSection;
 
+          // Bucket upcoming matches by game-day window
           const buckets = {};
           upcomingMatches.forEach(m => {
             const key = toWindowStartMs(m.kickoff);
             if (!buckets[key]) buckets[key] = { wsMs: key, matches: [], roundName: m.rounds ? m.rounds.name : '' };
             buckets[key].matches.push(m);
           });
+          const sorted = Object.values(buckets).sort((a,b) => a.wsMs - b.wsMs);
+
+          // "Tomorrow" = the window immediately after today, but only if it actually has matches.
+          // (On a rest day, there's no Tomorrow Night card — those fixtures fall under Upcoming.)
+          const tomorrowWsMs = windowEnd.getTime();
+          let tomorrowBucket = null;
+          let upcomingBuckets;
+          if (sorted.length && sorted[0].wsMs === tomorrowWsMs) {
+            tomorrowBucket  = sorted[0];
+            upcomingBuckets = sorted.slice(1, 3);   // next 2 days after tomorrow
+          } else {
+            upcomingBuckets = sorted.slice(0, 2);
+          }
+
+          const renderBuckets = [...(tomorrowBucket ? [tomorrowBucket] : []), ...upcomingBuckets];
           const roundFirstCache = {};
-          for (const b of Object.values(buckets)) {
+          for (const b of renderBuckets) {
             const rid = b.matches[0].round_id;
             if (!roundFirstCache[rid]) roundFirstCache[rid] = await getRoundFirstKickoff(rid);
           }
-          let html = '';
-          Object.values(buckets).sort((a,b) => a.wsMs - b.wsMs).slice(0, 2).forEach(b => {
+
+          const renderBucket = (b, label) => {
             const rid    = b.matches[0].round_id;
             const dayNum = roundFirstCache[rid] ? getDayNumber(new Date(b.wsMs).toISOString(), roundFirstCache[rid]) : 1;
-            // Picks visible once the round deadline has passed
             const bucketDeadline = b.matches[0]?.rounds?.deadline ? new Date(b.matches[0].rounds.deadline) : null;
             const bucketPicksVisible = bucketDeadline ? getEffectiveDate() >= bucketDeadline : isWindowClosed(b.wsMs + WINDOW_DURATION_MS);
+            return dayHeaderHtml(b.roundName, dayNum, b.wsMs, label) +
+              b.matches.map(m => upcomingCardHtml(m, picks, players, bucketPicksVisible)).join('');
+          };
 
+          if (tomorrowBucket) {
+            tomorrowContent.innerHTML = renderBucket(tomorrowBucket, 'Tomorrow');
+            tomorrowCardEl.style.display = 'block';
+          } else {
+            tomorrowCardEl.style.display = 'none';
+          }
 
-            html += dayHeaderHtml(b.roundName, dayNum, b.wsMs);
-            html += b.matches.map(m => upcomingCardHtml(m, picks, players, bucketPicksVisible)).join('');
-          });
-          upcomingContent.innerHTML = html;
-          nudgeEl.innerHTML = 'Full fixtures in the <a href="' + fixturesUrl + '">Fixtures tab →</a>';
-          upcomingCardEl.style.display = 'block';
+          if (upcomingBuckets.length > 0) {
+            upcomingContent.innerHTML = upcomingBuckets.map(b => renderBucket(b, null)).join('');
+            nudgeEl.innerHTML = 'Full fixtures in the <a href="' + fixturesUrl + '">Fixtures tab →</a>';
+            upcomingCardEl.style.display = 'block';
+          } else {
+            upcomingCardEl.style.display = 'none';
+          }
         } else {
+          tomorrowCardEl.style.display = 'none';
           upcomingCardEl.style.display = 'none';
         }
 

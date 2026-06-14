@@ -1476,7 +1476,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       const { data } = await db
         .from('matches')
         .select('id, kickoff, round_id, is_third_place, rounds(id, name, round_type), home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
-        .neq('status', 'complete')
+        .or('confirmed.is.null,confirmed.eq.false')
         .not('home_team_id', 'is', null)
         .not('away_team_id', 'is', null)
         .order('kickoff');
@@ -3185,7 +3185,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         if (rem2) quotaInfo = `API quota: ${used2} used · ${rem2} remaining`;
         if (!matchResp.ok) throw new Error('Match API error: ' + matchResp.status);
         const matchData = await matchResp.json();
-        const { data: dbMatches } = await db.from('matches').select('id, kickoff, home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)').not('home_team_id', 'is', null).not('away_team_id', 'is', null);
+        const { data: dbMatches } = await db.from('matches').select('id, kickoff, home_team_id, away_team_id, odds_home, odds_draw, odds_away, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)').not('home_team_id', 'is', null).not('away_team_id', 'is', null);
         let matchedCount = 0, unmatchedCount = 0;
         for (const apiMatch of matchData) {
           const bookmaker = apiMatch.bookmakers?.[0]; if (!bookmaker) continue;
@@ -3196,7 +3196,9 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
           const apiKickoff = new Date(apiMatch.commence_time);
           const dbMatch = (dbMatches||[]).find(m => { const diffHours = Math.abs(apiKickoff - new Date(m.kickoff)) / (1000 * 60 * 60); return diffHours <= 1 && m.home_team && normaliseTeamName(m.home_team.name) === normaliseTeamName(apiMatch.home_team); });
           if (dbMatch && homeOutcome && awayOutcome) {
-            const { error } = await db.from('matches').update({ odds_home: homeOutcome.price, odds_away: awayOutcome.price, odds_draw: drawOutcome ? drawOutcome.price : null }).eq('id', dbMatch.id);
+            const newOdds = { odds_home: homeOutcome.price, odds_away: awayOutcome.price, odds_draw: drawOutcome ? drawOutcome.price : null };
+            let { error } = await db.from('matches').update({ ...newOdds, odds_home_prev: dbMatch.odds_home, odds_draw_prev: dbMatch.odds_draw, odds_away_prev: dbMatch.odds_away }).eq('id', dbMatch.id);
+            if (error) { ({ error } = await db.from('matches').update(newOdds).eq('id', dbMatch.id)); }
             if (!error) matchedCount++;
           } else {
             unmatchedCount++;
@@ -3242,7 +3244,9 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         if (hist.length > 0) { const prev = hist[0], diff = curr - prev; if (Math.abs(diff) > 0.01) moveHtml = diff < 0 ? `<span style="color:var(--green)">▼ ${Math.abs(diff).toFixed(2)}</span>` : `<span style="color:var(--red)">▲ ${diff.toFixed(2)}</span>`; }
         let origDisplay = '—', origStyle = 'color:var(--text-muted)';
         if (original !== null) { const totalDiff = curr - original; const sign = totalDiff < 0 ? '▼ ' : totalDiff > 0.01 ? '▲ ' : ''; const col = totalDiff < -0.01 ? 'var(--green)' : totalDiff > 0.01 ? 'var(--red)' : 'var(--text-muted)'; origStyle = `color:${col};font-weight:600`; origDisplay = `${original.toFixed(2)} <span style="font-size:10px;color:${col}">${sign}${Math.abs(totalDiff).toFixed(2)}</span>`; }
-        html += `<tr><td class="left">${t.flag} <strong>${t.name}</strong>${t.isLongshot ? ' ⭐' : ''}</td><td><strong>${curr.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${t.currentFrac}</span></td>`;
+        let currCol = '';
+        if (hist.length > 0) { const cd = curr - hist[0]; if (cd < -0.01) currCol = 'color:var(--green)'; else if (cd > 0.01) currCol = 'color:var(--red)'; }
+        html += `<tr><td class="left">${t.flag} <strong>${t.name}</strong>${t.isLongshot ? ' ⭐' : ''}</td><td><strong style="${currCol}">${curr.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${t.currentFrac}</span></td>`;
         for (let i = 0; i < maxHistory; i++) { const val = hist[i]; html += val !== undefined ? `<td style="color:var(--text-muted);font-size:12px">${val.toFixed(2)}</td>` : `<td style="color:var(--border);font-size:12px">—</td>`; }
         html += `<td>${moveHtml}</td><td style="${origStyle}">${origDisplay}</td></tr>`;
       });
@@ -3263,21 +3267,32 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       if (!wrap) return;
       wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
       const { data: rounds } = await db.from('rounds').select('id, name, sort_order, round_type').order('sort_order');
-      const { data: matches } = await db.from('matches')
-        .select('id, kickoff, round_id, status, home_score, away_score, odds_home, odds_away, odds_draw, home_team:teams!matches_home_team_id_fkey(name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(name, flag_emoji, is_longshot)')
-        .not('home_team_id', 'is', null)
-        .not('away_team_id', 'is', null)
-        .neq('is_third_place', true)
-        .order('kickoff');
+      const matchCols = 'id, kickoff, round_id, status, home_score, away_score, odds_home, odds_away, odds_draw, home_team:teams!matches_home_team_id_fkey(name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(name, flag_emoji, is_longshot)';
+      let mq = await db.from('matches')
+        .select(matchCols + ', odds_home_prev, odds_draw_prev, odds_away_prev')
+        .not('home_team_id', 'is', null).not('away_team_id', 'is', null).neq('is_third_place', true).order('kickoff');
+      if (mq.error) {
+        mq = await db.from('matches')
+          .select(matchCols)
+          .not('home_team_id', 'is', null).not('away_team_id', 'is', null).neq('is_third_place', true).order('kickoff');
+      }
+      const matches = mq.data;
       if (!matches || matches.length === 0) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No fixtures found.</p>'; return; }
       const byRound = {};
       matches.forEach(m => { if (!byRound[m.round_id]) byRound[m.round_id] = []; byRound[m.round_id].push(m); });
       const sortedRounds = (rounds || []).filter(r => byRound[r.id] && r.name !== '3rd Place').sort((a,b) => a.sort_order - b.sort_order);
       function frac(dec) { return _bookieFraction(dec); }
-      function oddsCell(dec, isWinner) {
+      function oddsCell(dec, prev, isWinner, isDone) {
         const n = parseFloat(dec);
         if (!dec || isNaN(n)) return '<span style="color:var(--border)">—</span>';
-        const valStyle = isWinner ? ' style="color:var(--green)"' : '';
+        let col = '';
+        if (isWinner) { col = 'color:var(--green)'; }
+        else if (!isDone && prev != null && !isNaN(parseFloat(prev))) {
+          const d = n - parseFloat(prev);
+          if (d < -0.01) col = 'color:var(--green)';
+          else if (d > 0.01) col = 'color:var(--red)';
+        }
+        const valStyle = col ? ` style="${col}"` : '';
         return `<strong${valStyle}>${n.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${frac(n)}</span>`;
       }
       let html = '';
@@ -3308,9 +3323,9 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
               <div style="font-weight:600">${m.home_team.flag_emoji} ${m.home_team.name}${homeLs} v ${m.away_team.flag_emoji} ${m.away_team.name}${awayLs}</div>
               <div style="font-size:11px;color:var(--text-muted)">${ko} · ${t}</div>
             </td>
-            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_home, homeWon)}</td>
-            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_draw, isDraw)}</td>
-            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_away, awayWon)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_home, m.odds_home_prev, homeWon, isDone)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_draw, m.odds_draw_prev, isDraw, isDone)}</td>
+            <td style="text-align:center;padding:7px 6px">${oddsCell(m.odds_away, m.odds_away_prev, awayWon, isDone)}</td>
             <td style="text-align:center;padding:7px 6px">${score}</td>
           </tr>`;
         }
@@ -3379,7 +3394,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       const { data: matches } = await db.from('matches')
         .select('id, kickoff, is_third_place, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)')
         .eq('round_id', roundId)
-        .neq('status', 'complete')
+        .or('confirmed.is.null,confirmed.eq.false')
         .not('home_team_id', 'is', null)
         .order('kickoff');
 

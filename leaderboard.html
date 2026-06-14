@@ -151,6 +151,7 @@
     .ls-delta { font-weight:800; color:var(--gold); margin-left:4px; }
     .ls-delta-zero { color:var(--text-muted); font-weight:700; margin-left:4px; }
     .ls-zap { font-size:11px; }
+    .pld-zap { font-size:11px; color:var(--gold); margin-left:2px; }
     .badge-provout { display:inline-block; font-size:11px; font-weight:700; color:var(--red); background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:4px; padding:0 5px; }
     .pts-num { display:inline-block; min-width:24px; text-align:right; font-variant-numeric:tabular-nums; }
     .pts-zap { display:inline-block; width:12px; text-align:left; font-size:11px; vertical-align:top; }
@@ -470,6 +471,22 @@
 
     let _leaderboardData = null;
 
+    // Opponent lookup: team_id|round_id -> opposing team object {name, flag_emoji}
+    // Built from all fixtures with teams assigned (scheduled / live / complete).
+    function buildOppByTeamRound(matchRows) {
+      const map = {};
+      (matchRows || []).forEach(m => {
+        if (m.home_team_id) map[m.home_team_id + '|' + m.round_id] = m.away_team;
+        if (m.away_team_id) map[m.away_team_id + '|' + m.round_id] = m.home_team;
+      });
+      return map;
+    }
+    function oppVsLabel(opp) {
+      if (!opp) return '';
+      const nm = ((opp.flag_emoji ? opp.flag_emoji + ' ' : '') + (opp.name || '')).trim();
+      return nm ? ' vs ' + nm : '';
+    }
+
     function shortName(fullName) {
       if (!fullName) return '?';
       const parts = fullName.trim().split(/\s+/);
@@ -480,7 +497,8 @@
     function renderPicksView() {
       const wrap = document.getElementById('picks-wrap');
       if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the standings first.</p>'; return; }
-      const { sorted, allPicks, rounds, firstMatchData, scores } = _leaderboardData;
+      const { sorted, allPicks, rounds, firstMatchData, scores, todayMatchRows } = _leaderboardData;
+      const oppByTeamRound = buildOppByTeamRound(todayMatchRows);
       const activePlayers = (scores || []).filter(p => !p.is_eliminated);
       const picksCompetitionEnded = (scores || []).every(p => p.is_eliminated) || activePlayers.length === 0;
       const picksNow = getEffectiveDate();
@@ -546,11 +564,12 @@
         const isLongshot = p.teams ? p.teams.is_longshot : false;
         const baseName = p.teams ? p.teams.name : '';
         let toastName;
+        const vsP = oppVsLabel(oppByTeamRound[p.team_id + '|' + p.round_id]);
         if (res && res.match_result) {
           const circle = res.match_result === 'win' ? '🟢' : res.match_result === 'draw' ? '🟡' : '🔴';
-          toastName = flag + ' ' + baseName + (isLongshot ? ' ⭐' : '') + ' ' + circle + ' ' + pts + (pts === 1 ? 'pt' : 'pts');
+          toastName = flag + ' ' + baseName + (isLongshot ? ' ⭐' : '') + vsP + ' ' + circle + ' ' + pts + (pts === 1 ? 'pt' : 'pts');
         } else {
-          toastName = flag + ' ' + baseName + (isLongshot ? ' ⭐' : '');
+          toastName = flag + ' ' + baseName + (isLongshot ? ' ⭐' : '') + vsP;
         }
         pickLookup[p.player_id][key] = { flag, result, teamName: toastName };
       });
@@ -1052,6 +1071,10 @@
         // Provisional points/GD: confirmed total + live delta (display/sort only)
         const effPts = p => (p.total_points || 0) + (liveMode && liveByPlayer[p.player_id] ? liveByPlayer[p.player_id].delta : 0);
         const effGd  = p => (gdMap[p.player_id] || 0) + (liveMode && liveByPlayer[p.player_id] ? liveByPlayer[p.player_id].gdDelta : 0);
+        // Provisional Pld: confirmed rounds_played + count of this player's in-progress / finished-unconfirmed games.
+        // No double-count: a pick is either settled (in rounds_played) or unsettled (in the live layer, line ~990 guard), never both.
+        const livePld = p => (liveMode && liveByPlayer[p.player_id] ? liveByPlayer[p.player_id].lines.length : 0);
+        const effPld = p => (p.rounds_played || 0) + livePld(p);
 
         // Build pens lookup: team_id|round_id -> pens_winner_id
         const pensWinnerByTeamRound = {};
@@ -1133,6 +1156,7 @@
             todayTeamRoundPairs.add(m.away_team_id + '|' + m.round_id);
           }
         });
+        const oppByTeamRound = buildOppByTeamRound(todayMatchRows);
         const playerTodayMap = {};
         (allPicks || []).forEach(pick => {
           if (todayTeamRoundPairs.has(pick.team_id + '|' + pick.round_id) && pick.teams) {
@@ -1143,7 +1167,8 @@
               const _res = pick.pick_results && pick.pick_results[0];
               const _pts = _res ? (_res.points_earned || 0) + (_res.longshot_bonus || 0) : null;
               const _mr  = _res ? _res.match_result : null;
-              playerTodayMap[pick.player_id].picks.push({ flag: pick.teams.flag_emoji, isLongshot: pick.teams.is_longshot, multiplier: pick.multiplier, teamName: pick.teams.name, matchResult: _mr, pointsEarned: _pts });
+              const _opp = oppByTeamRound[pick.team_id + '|' + pick.round_id];
+              playerTodayMap[pick.player_id].picks.push({ flag: pick.teams.flag_emoji, isLongshot: pick.teams.is_longshot, multiplier: pick.multiplier, teamName: pick.teams.name, matchResult: _mr, pointsEarned: _pts, oppFlag: _opp?.flag_emoji || '', oppName: _opp?.name || '' });
             }
           }
         });
@@ -1564,11 +1589,12 @@
           const flagHtml = todayPicks_p.map(pick => {
             const cls = pick.multiplier === 3 ? (pick.isLongshot ? ' flag-3pt-longshot' : ' flag-3pt') : (pick.isLongshot ? ' flag-2pt-longshot' : ' flag-2pt');
             let toastText;
+            const vsText = pick.oppName ? ' vs ' + (pick.oppFlag ? pick.oppFlag + ' ' : '') + pick.oppName : '';
             if (pick.matchResult) {
               const circle = pick.matchResult === 'win' ? '🟢' : pick.matchResult === 'draw' ? '🟡' : '🔴';
-              toastText = pick.flag + ' ' + pick.teamName + (pick.isLongshot ? ' ⭐' : '') + ' ' + circle + ' ' + pick.pointsEarned + (pick.pointsEarned === 1 ? 'pt' : 'pts');
+              toastText = pick.flag + ' ' + pick.teamName + (pick.isLongshot ? ' ⭐' : '') + vsText + ' ' + circle + ' ' + pick.pointsEarned + (pick.pointsEarned === 1 ? 'pt' : 'pts');
             } else {
-              toastText = pick.flag + ' ' + pick.teamName + (pick.isLongshot ? ' ⭐' : '');
+              toastText = pick.flag + ' ' + pick.teamName + (pick.isLongshot ? ' ⭐' : '') + vsText;
             }
             return '<span class="flag-inline' + cls + '" data-team="' + toastText + '">' + pick.flag + '</span>';
           }).join('');
@@ -1624,7 +1650,7 @@
             '<td class="prior">' + arrowHtml + '</td>' +
             '<td class="medal landscape-only">' + medal + '</td>' +
             '<td class="player-name"><a ' + playerLinkAttrs(p.slug) + '>' + (p.display_name || shortName(p.name)) + '</a>' + (competitionEnded ? '' : (p.is_eliminated ? '<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:4px">✕</span>' : (isKnockout && resultInThisRound.has(p.player_id) ? '<span style="color:#10b981;font-size:11px;font-weight:700;margin-left:4px" title="Result in">✔</span>' : ''))) + (competitionEnded ? portraitFinalistBadge(p) : trophyHtml + portraitFinalistBadge(p) + flagHtml) + (competitionEnded && winningsMap[p.player_id] ? '<span style="font-weight:700;color:var(--gold);margin-left:6px">(£' + (winningsMap[p.player_id] % 1 === 0 ? winningsMap[p.player_id] : winningsMap[p.player_id].toFixed(2)) + ')</span>' : '') + '</td>' +
-            '<td style="color:var(--text-muted);text-align:center" class="col-pld' + (isKnockout ? ' hide-portrait-ko' : '') + '">' + (p.rounds_played || 0) + '</td>' +
+            '<td style="color:var(--text-muted);text-align:center" class="col-pld' + (isKnockout ? ' hide-portrait-ko' : '') + '">' + effPld(p) + (livePld(p) > 0 ? '<span class="pld-zap">⚡</span>' : '') + '</td>' +
             (liveMode
               ? '<td class="points tight-col"><span class="pts-num">' + effPts(p) + '</span><span class="pts-zap">' + ((liveByPlayer[p.player_id] && liveByPlayer[p.player_id].delta > 0) ? '⚡' : '') + '</span></td>'
               : '<td class="points tight-col">' + (p.total_points || 0) + '</td>') +
@@ -1662,7 +1688,8 @@
     function renderLongshotView() {
       const wrap = document.getElementById('longshot-wrap');
       if (!_leaderboardData) { wrap.innerHTML = '<p style="color:var(--text-muted)">Load the main leaderboard first.</p>'; return; }
-      const { allPicks, sorted, firstMatchData, rounds } = _leaderboardData;
+      const { allPicks, sorted, firstMatchData, rounds, todayMatchRows } = _leaderboardData;
+      const oppByTeamRound = buildOppByTeamRound(todayMatchRows);
 
       const now = getEffectiveDate();
       const nowMs = now.getTime();
@@ -1689,12 +1716,13 @@
         const res = pick.pick_results && pick.pick_results[0];
         const flag = pick.teams.flag_emoji || '⭐';
         const teamLabel = (() => {
+          const vsL = oppVsLabel(oppByTeamRound[pick.team_id + '|' + pick.round_id]);
           if (res && res.match_result) {
             const circle = res.match_result === 'win' ? '🟢' : res.match_result === 'draw' ? '🟡' : '🔴';
             const lsPts = (res.points_earned || 0) + (res.longshot_bonus || 0);
-            return flag + ' ' + (pick.teams.name || '') + ' ⭐ ' + circle + ' ' + lsPts + (lsPts === 1 ? 'pt' : 'pts');
+            return flag + ' ' + (pick.teams.name || '') + ' ⭐' + vsL + ' ' + circle + ' ' + lsPts + (lsPts === 1 ? 'pt' : 'pts');
           }
-          return flag + ' ' + (pick.teams.name || '') + ' ⭐';
+          return flag + ' ' + (pick.teams.name || '') + ' ⭐' + vsL;
         })();
         if (res && res.longshot_bonus > 0) { s.bonusPoints += res.longshot_bonus; s.longshotWins.push({ flag, teamLabel }); }
         else if (res && res.match_result === 'loss') { s.longshotLosses.push({ flag, teamLabel }); }
