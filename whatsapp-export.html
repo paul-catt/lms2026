@@ -702,7 +702,7 @@
             pick_results(points_earned, match_result, base_points, matches(kickoff)),
             teams(id, name, flag_emoji, is_longshot)
           `),
-          db.from('matches').select('id, round_id, home_team_id, away_team_id, kickoff, home_score, away_score, pens_winner_id, odds_home, odds_away, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji)'),
+          db.from('matches').select('id, round_id, home_team_id, away_team_id, kickoff, home_score, away_score, api_status, confirmed, pens_winner_id, odds_home, odds_away, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji)'),
           db.from('rounds').select('id, name, round_type, sort_order, is_complete, deadline').order('sort_order'),
           db.from('matches').select('round_id, kickoff').order('kickoff'),
           db.from('leaderboard_snapshots').select('player_id, position, round_id, total_points'),
@@ -1008,11 +1008,25 @@
           roundData.footerDay = '';
         } else {
           const _lastKo = _footerMatches.reduce((mx, m) => Math.max(mx, new Date(m.kickoff).getTime()), 0);
-          const _allDone = _footerMatches.every(m => m.api_status === 'FINISHED' || m.status === 'complete');
+          const _allDone = _footerMatches.every(m => m.api_status === 'FINISHED' || m.confirmed === true);
           const _gamesDone = _allDone || nowUtc.getTime() >= _lastKo + 2 * 60 * 60 * 1000;
           roundData.footerState = _gamesDone ? 'played' : 'playing';
           roundData.footerDay = dayNames[todayWindowStart.getUTCDay()];
         }
+
+        // Per-team result for the current round (finished matches only): 'W' / 'L' / 'D'
+        const teamOutcome = {};
+        (matches || []).forEach(m => {
+          if (todayRoundObj && m.round_id !== todayRoundObj.id) return;
+          const hs = m.home_score, as = m.away_score;
+          const finished = (m.api_status === 'FINISHED' || m.confirmed === true) && hs != null && as != null;
+          if (!finished) return;
+          if (hs > as)      { teamOutcome[m.home_team_id] = 'W'; teamOutcome[m.away_team_id] = 'L'; }
+          else if (hs < as) { teamOutcome[m.home_team_id] = 'L'; teamOutcome[m.away_team_id] = 'W'; }
+          else              { teamOutcome[m.home_team_id] = 'D'; teamOutcome[m.away_team_id] = 'D'; }
+        });
+        roundData.teamOutcome = teamOutcome;
+        roundData.hasComboResults = Object.keys(teamOutcome).length > 0;
 
         // Refresh date indicator
         (function() {
@@ -2576,6 +2590,7 @@
         <span style="width:160px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Teams</span>
         <span style="width:48px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
         <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left;padding-left:8px">Picks</span>
+        ${roundData.hasComboResults ? '<span style="width:34px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">W/L</span>' : ''}
       </div>`;
 
       sorted.forEach((key, i) => {
@@ -2589,6 +2604,18 @@
         const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
         const blocks = Array.from({length: count}, () => `<span style="display:inline-block;width:14px;height:14px;background:#2b6cb0;border-radius:3px"></span>`).join('');
 
+        let resultCell = '';
+        if (roundData.hasComboResults) {
+          const oa = roundData.teamOutcome[tidA], ob = roundData.teamOutcome[tidB];
+          let mark = '';
+          if (oa && ob) {
+            mark = (oa === 'W' && ob === 'W')
+              ? '<span style="color:#16a34a;font-size:15px;font-weight:800">✓</span>'
+              : '<span style="color:#dc2626;font-size:15px;font-weight:800">✗</span>';
+          }
+          resultCell = `<div style="width:34px;text-align:center">${mark}</div>`;
+        }
+
         html += `<div style="display:flex;align-items:center;padding:6px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
           <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:left">${i+1}</div>
           <div style="width:160px;min-width:0;overflow:hidden">
@@ -2598,6 +2625,7 @@
           </div>
           <div style="width:48px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${odds > 0 ? decToFrac(odds) : '—'}</div>
           <div style="flex:1;padding-left:8px;display:flex;gap:3px;align-items:center;flex-wrap:wrap">${blocks}</div>
+          ${resultCell}
         </div>`;
       });
 

@@ -3186,7 +3186,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         if (!matchResp.ok) throw new Error('Match API error: ' + matchResp.status);
         const matchData = await matchResp.json();
         const { data: dbMatches } = await db.from('matches').select('id, kickoff, home_team_id, away_team_id, odds_home, odds_draw, odds_away, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)').not('home_team_id', 'is', null).not('away_team_id', 'is', null);
-        let matchedCount = 0, unmatchedCount = 0;
+        let matchedCount = 0, unmatchedCount = 0, matchChangedCount = 0;
         for (const apiMatch of matchData) {
           const bookmaker = apiMatch.bookmakers?.[0]; if (!bookmaker) continue;
           const market = bookmaker.markets?.[0]; if (!market) continue;
@@ -3197,6 +3197,10 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
           const dbMatch = (dbMatches||[]).find(m => { const diffHours = Math.abs(apiKickoff - new Date(m.kickoff)) / (1000 * 60 * 60); return diffHours <= 1 && m.home_team && normaliseTeamName(m.home_team.name) === normaliseTeamName(apiMatch.home_team); });
           if (dbMatch && homeOutcome && awayOutcome) {
             const newOdds = { odds_home: homeOutcome.price, odds_away: awayOutcome.price, odds_draw: drawOutcome ? drawOutcome.price : null };
+            const anyChanged = Math.abs((dbMatch.odds_home || 0) - homeOutcome.price) > 0.01
+              || Math.abs((dbMatch.odds_away || 0) - awayOutcome.price) > 0.01
+              || Math.abs((dbMatch.odds_draw || 0) - (drawOutcome ? drawOutcome.price : 0)) > 0.01;
+            if (anyChanged) matchChangedCount++;
             let { error } = await db.from('matches').update({ ...newOdds, odds_home_prev: dbMatch.odds_home, odds_draw_prev: dbMatch.odds_draw, odds_away_prev: dbMatch.odds_away }).eq('id', dbMatch.id);
             if (error) { ({ error } = await db.from('matches').update(newOdds).eq('id', dbMatch.id)); }
             if (!error) matchedCount++;
@@ -3207,8 +3211,9 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         }
         remainingEl.textContent = quotaInfo;
         msg.style.color = 'var(--green)';
-        if (outcomes.length === 0) msg.textContent = `⚠️ No outright odds returned yet · Match odds: ${matchedCount} matched`;
-        else { const changeStr = changedCount > 0 ? `${changedCount} changed` : 'no changes'; msg.textContent = `✅ Outrights: ${outrightCount} teams (${changeStr}, ${skippedCount} unchanged) · Match odds: ${matchedCount} matched`; }
+        const matchChangeStr = matchChangedCount > 0 ? `${matchChangedCount} changed` : 'no changes';
+        if (outcomes.length === 0) msg.textContent = `⚠️ No outright odds returned yet · Match odds: ${matchedCount} matched (${matchChangeStr})`;
+        else { const changeStr = changedCount > 0 ? `${changedCount} changed` : 'no changes'; msg.textContent = `\u2705 Outrights: ${outrightCount} teams (${changeStr}, ${skippedCount} unchanged) · Match odds: ${matchedCount} matched (${matchChangeStr})`; }
         if (unmatchedCount > 0) msg.textContent += ` · ${unmatchedCount} unmatched`;
         localStorage.setItem('lms2026_odds_last_fetched', new Date().toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}));
         loadOddsTable();
@@ -3222,13 +3227,14 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       if (!wrap) return;
       const { data: allOdds } = await db.from('team_odds').select('team_id, odds_decimal, odds_fractional, fetched_at, teams(flag_emoji, name, is_longshot)').order('fetched_at', { ascending: false });
       if (!allOdds || allOdds.length === 0) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No odds fetched yet.</p>'; return; }
+      const latestFetchedAt = allOdds[0].fetched_at;
       const byTeam = {};
       allOdds.forEach(r => {
-        if (!byTeam[r.team_id]) { byTeam[r.team_id] = { flag: r.teams?.flag_emoji || '', name: r.teams?.name || '?', isLongshot: r.teams?.is_longshot || false, current: parseFloat(r.odds_decimal), currentFrac: r.odds_fractional || decimalToFractional(r.odds_decimal), history: [] }; }
+        if (!byTeam[r.team_id]) { byTeam[r.team_id] = { flag: r.teams?.flag_emoji || '', name: r.teams?.name || '?', isLongshot: r.teams?.is_longshot || false, current: parseFloat(r.odds_decimal), currentFrac: r.odds_fractional || decimalToFractional(r.odds_decimal), history: [], changedInLatest: r.fetched_at === latestFetchedAt }; }
         else { byTeam[r.team_id].history.push(parseFloat(r.odds_decimal)); }
       });
       const sorted = Object.values(byTeam).sort((a,b) => a.current - b.current);
-      const lastChangedTime = allOdds[0].fetched_at;
+      const lastChangedTime = latestFetchedAt;
       const lastChangedStr = lastChangedTime ? new Date(lastChangedTime).toLocaleString('en-GB', {day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
       const lastFetchedStr = localStorage.getItem('lms2026_odds_last_fetched') || '—';
       const distinctFetches = new Set(allOdds.map(r => r.fetched_at)).size;
@@ -3245,7 +3251,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         let origDisplay = '—', origStyle = 'color:var(--text-muted)';
         if (original !== null) { const totalDiff = curr - original; const sign = totalDiff < 0 ? '▼ ' : totalDiff > 0.01 ? '▲ ' : ''; const col = totalDiff < -0.01 ? 'var(--green)' : totalDiff > 0.01 ? 'var(--red)' : 'var(--text-muted)'; origStyle = `color:${col};font-weight:600`; origDisplay = `${original.toFixed(2)} <span style="font-size:10px;color:${col}">${sign}${Math.abs(totalDiff).toFixed(2)}</span>`; }
         let currCol = '';
-        if (hist.length > 0) { const cd = curr - hist[0]; if (cd < -0.01) currCol = 'color:var(--green)'; else if (cd > 0.01) currCol = 'color:var(--red)'; }
+        if (t.changedInLatest && hist.length > 0) { const cd = curr - hist[0]; if (cd < -0.01) currCol = 'color:var(--green)'; else if (cd > 0.01) currCol = 'color:var(--red)'; }
         html += `<tr><td class="left">${t.flag} <strong>${t.name}</strong>${t.isLongshot ? ' ⭐' : ''}</td><td><strong style="${currCol}">${curr.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${t.currentFrac}</span></td>`;
         for (let i = 0; i < maxHistory; i++) { const val = hist[i]; html += val !== undefined ? `<td style="color:var(--text-muted);font-size:12px">${val.toFixed(2)}</td>` : `<td style="color:var(--border);font-size:12px">—</td>`; }
         html += `<td>${moveHtml}</td><td style="${origStyle}">${origDisplay}</td></tr>`;
@@ -3895,16 +3901,23 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
           .select('player_id, multiplier, team_id, teams(name, flag_emoji, is_longshot), players(id, name, is_eliminated)')
           .eq('round_id', roundId),
         db.from('matches')
-          .select('home_team_id, away_team_id, odds_home, odds_away, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)')
+          .select('home_team_id, away_team_id, odds_home, odds_away, home_score, away_score, api_status, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)')
           .eq('round_id', roundId)
       ]);
 
-      const oddsMap = {}, opponentMap = {};
+      const oddsMap = {}, opponentMap = {}, resultMap = {};
       (matches || []).forEach(m => {
         if (m.home_team_id && m.odds_home) oddsMap[m.home_team_id] = m.odds_home;
         if (m.away_team_id && m.odds_away) oddsMap[m.away_team_id] = m.odds_away;
         if (m.home_team_id && m.away_team?.name) opponentMap[m.home_team_id] = m.away_team.name;
         if (m.away_team_id && m.home_team?.name) opponentMap[m.away_team_id] = m.home_team.name;
+        // Result dots: show if in-play or finished
+        const live = m.api_status === 'IN_PLAY' || m.api_status === 'PAUSED' || m.api_status === 'FINISHED';
+        if (live && m.home_score != null && m.away_score != null) {
+          const h = m.home_score, a = m.away_score;
+          resultMap[m.home_team_id] = h > a ? 'W' : h < a ? 'L' : 'D';
+          resultMap[m.away_team_id] = a > h ? 'W' : a < h ? 'L' : 'D';
+        }
       });
 
       const teamInfo = {};
@@ -3934,7 +3947,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         return;
       }
 
-      _combosData = { comboMap, oddsMap, teamInfo, opponentMap };
+      _combosData = { comboMap, oddsMap, teamInfo, opponentMap, resultMap };
       drawCombosTable();
     }
 
@@ -3952,7 +3965,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
     function drawCombosTable() {
       const wrap = document.getElementById('picks-combos-wrap');
       if (!_combosData) return;
-      const { comboMap, oddsMap, teamInfo, opponentMap } = _combosData;
+      const { comboMap, oddsMap, teamInfo, opponentMap, resultMap } = _combosData;
       const oddsLoaded = Object.keys(oddsMap).length > 0;
 
       function comboOddsVal(key) {
@@ -4008,6 +4021,11 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         const oppB = opponentMap[tidB] ? `<span style="font-size:11px; color:var(--text-muted); font-weight:400"> v ${opponentMap[tidB]}</span>` : '';
         const odds = comboOddsVal(key);
         const oddsStr = odds > 0 ? decimalToFractional(odds) : '—';
+        const DOT = { W: '🟢', D: '🟡', L: '🔴' };
+        const EMPTY_DOT = '<span style="font-size:8px; color:var(--border)">●</span>';
+        const dotA = DOT[resultMap[tidA]] || EMPTY_DOT;
+        const dotB = DOT[resultMap[tidB]] || EMPTY_DOT;
+        const dotsHtml = `<span style="font-size:10px; margin-left:4px; white-space:nowrap">${dotA}${dotB}</span>`;
         const chips = players.map(pl => {
           if (!pl) return '';
           const out = pl.is_eliminated;
@@ -4020,7 +4038,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
             <div style="font-size:13px; font-weight:700">${infoA.flag} ${infoA.name}${lsA}${oppA}</div>
             <div style="font-size:13px; font-weight:700; margin-top:3px">${infoB.flag} ${infoB.name}${lsB}${oppB}</div>
           </td>
-          ${oddsLoaded ? `<td style="padding:10px 8px; font-size:13px; font-weight:700; vertical-align:top; white-space:nowrap">${oddsStr}</td>` : ''}
+          ${oddsLoaded ? `<td style="padding:10px 8px; font-size:13px; font-weight:700; vertical-align:top; white-space:nowrap">${oddsStr}${dotsHtml}</td>` : ''}
           <td style="padding:10px 8px; font-size:15px; font-weight:800; color:var(--accent); text-align:center; vertical-align:top">${players.length}</td>
           <td style="padding:10px 8px; vertical-align:top; line-height:1.8">${chips}</td>
         </tr>`;
