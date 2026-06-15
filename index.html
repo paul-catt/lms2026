@@ -247,8 +247,11 @@
     .dl-round b { color: var(--text); font-weight: 600; }
 
     .dl-clockrow {
-      display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
       padding-top: 11px; border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .dl-clockleft {
+      display: flex; flex-direction: column; gap: 2px;
     }
     .dl-clocklabel {
       font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
@@ -266,7 +269,7 @@
     }
     .dl-change {
       font-size: 12px; color: var(--text-muted); text-decoration: underline;
-      text-align: center; display: block;
+      display: inline-block;
     }
 
     /* states */
@@ -335,7 +338,7 @@
           <div><div class="dl-headline">Checking the next deadline…</div></div>
         </div>
         <div class="dl-clockrow" style="visibility:hidden">
-          <span class="dl-clocklabel">Next deadline</span>
+          <div class="dl-clockleft"><span class="dl-clocklabel">Next deadline</span></div>
           <span class="dl-clock">00h 00m 00s</span>
         </div>
       </div>
@@ -572,21 +575,32 @@
           '</div>' +
         '</div>';
       if (view.showClock) {
+        const changeLink = view.changeHref
+          ? '<a href="' + view.changeHref + '" class="dl-change">Change pick</a>'
+          : '';
         html +=
           '<div class="dl-clockrow">' +
-            '<span class="dl-clocklabel">' + view.clockLabel + '</span>' +
+            '<div class="dl-clockleft">' +
+              '<span class="dl-clocklabel">' + view.clockLabel + '</span>' +
+              changeLink +
+            '</div>' +
             '<span class="dl-clock" id="dl-clock">' + getTimeLeftStr(view.deadline) + '</span>' +
           '</div>';
       }
       if (view.cta) {
         html += '<a href="' + view.cta.href + '" class="dl-cta">' + view.cta.label + '</a>';
-      } else if (view.changeHref) {
-        html += '<a href="' + view.changeHref + '" class="dl-change">Change pick</a>';
       }
       el.innerHTML = html;
       blockDeadline = view.showClock ? view.deadline : null;
       blockState    = view.cls;
     }
+
+    const ROUND_SHORT = {
+      'Group Phase 1': 'GP1', 'Group Phase 2': 'GP2', 'Group Phase 3': 'GP3',
+      'Round of 32': 'R32', 'Round of 16': 'R16',
+      'Quarter Finals': 'QF', 'Semi Finals': 'SF', 'Final': 'Final', '3rd Place': '3rd Place'
+    };
+    function shortName(round) { return ROUND_SHORT[round.name] || round.name; }
 
     function roundHasFixtures(matches, roundId) {
       return matches.some(m => m.round_id === roundId && m.home_team_id && m.away_team_id);
@@ -651,7 +665,7 @@
         renderBlock({
           cls: '', icon: '⏰',
           headline: 'Next deadline',
-          sub: '<b>' + nextRound.name + '</b> · ' + fmtDateTime(deadline),
+          sub: '<b>' + shortName(nextRound) + '</b> · ' + fmtDateTime(deadline),
           showClock: true, clockLabel: 'Closes in', deadline
         });
         return;
@@ -691,7 +705,7 @@
           renderBlock({
             cls: 'done', icon: '✅',
             headline: 'Sit tight',
-            sub: 'All group picks in. Waiting for R32 to be confirmed.',
+            sub: 'All group picks done. R32 teams TBC.',
             showClock: true, clockLabel: 'Next deadline', deadline,
             changeHref: myPageHref
           });
@@ -703,7 +717,7 @@
           renderBlock({
             cls: 'done', icon: '✅',
             headline: 'Picks are in',
-            sub: '<b>' + nextRound.name + '</b> done. Make your other group picks whenever you like.',
+            sub: '<b>' + shortName(nextRound) + '</b> done — make other picks when you like.',
             showClock: true, clockLabel: 'Next deadline', deadline,
             changeHref: myPageHref
           });
@@ -716,7 +730,7 @@
             renderBlock({
               cls: 'critical', icon: '🚨',
               headline: 'Last chance to pick',
-              sub: '<b>' + nextRound.name + '</b> locks soon — don\u2019t get caught out.',
+              sub: '<b>' + shortName(nextRound) + '</b> locks soon — don\'t get caught out.',
               showClock: true, clockLabel: 'Closes in', deadline,
               cta: { href: myPageHref, label: 'Pick now \u2192' }
             });
@@ -729,7 +743,7 @@
             renderBlock({
               cls: 'partial', icon: '\u25d0',
               headline: 'One pick still to go',
-              sub: '<b>' + nextRound.name + '</b> \u00b7 ' + inWord + ', ' + toGo + '.',
+              sub: inWord + ' — ' + toGo + '.',
               showClock: true, clockLabel: 'Closes in', deadline,
               cta: { href: myPageHref, label: 'Finish your picks \u2192' }
             });
@@ -738,7 +752,7 @@
           renderBlock({
             cls: 'urgent', icon: '\u26a0\ufe0f',
             headline: "You haven't picked yet",
-            sub: 'Picks close for <b>' + nextRound.name + '</b>.',
+            sub: 'Picks close for <b>' + shortName(nextRound) + '</b>.',
             showClock: true, clockLabel: 'Closes in', deadline,
             cta: { href: myPageHref, label: 'Make your pick \u2192' }
           });
@@ -749,7 +763,7 @@
         renderBlock({
           cls: '', icon: '\ud83d\udcc5',
           headline: 'Picks are open',
-          sub: 'Make your <b>' + nextRound.name + '</b> picks whenever you like.',
+          sub: '<b>' + shortName(nextRound) + '</b> open — pick when you like.',
           showClock: true, clockLabel: 'Closes in', deadline
         });
         return;
@@ -764,7 +778,7 @@
         renderBlock({
           cls: 'done', icon: '\u2705',
           headline: "You're locked in",
-          sub: 'Pick in for <b>' + nextRound.name + '</b>.',
+          sub: 'Pick in for <b>' + shortName(nextRound) + '</b>.',
           showClock: true, clockLabel: 'Locks in', deadline,
           changeHref: myPageHref
         });
@@ -777,7 +791,7 @@
           renderBlock({
             cls: 'critical', icon: '\ud83d\udea8',
             headline: 'Last chance to pick',
-            sub: '<b>' + nextRound.name + '</b> locks soon — don\u2019t get caught out.',
+            sub: '<b>' + shortName(nextRound) + '</b> locks soon — don\'t get caught out.',
             showClock: true, clockLabel: 'Closes in', deadline,
             cta: { href: myPageHref, label: 'Pick now \u2192' }
           });
@@ -786,7 +800,7 @@
         renderBlock({
           cls: 'urgent', icon: '\u26a0\ufe0f',
           headline: "You haven't picked yet",
-          sub: 'Picks close for <b>' + nextRound.name + '</b>.',
+          sub: 'Picks close for <b>' + shortName(nextRound) + '</b>.',
           showClock: true, clockLabel: 'Closes in', deadline,
           cta: { href: myPageHref, label: 'Make your pick \u2192' }
         });
@@ -797,7 +811,7 @@
       renderBlock({
         cls: '', icon: '\ud83d\udcc5',
         headline: 'Make your pick',
-        sub: '<b>' + nextRound.name + '</b> \u00b7 Teams confirmed as earlier games finish.',
+        sub: '<b>' + shortName(nextRound) + '</b> open — more teams confirmed as games finish.',
         showClock: true, clockLabel: 'Closes in', deadline
       });
     }
