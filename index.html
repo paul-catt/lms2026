@@ -27,7 +27,7 @@
 
     .hero {
       text-align: center;
-      padding: 16px 16px 24px;
+      padding: 3px 16px 24px;
     }
     .hero-title {
       font-family: 'Rajdhani', sans-serif;
@@ -49,7 +49,7 @@
     .hero-subtitle {
       color: var(--text-muted);
       font-size: 13px;
-      margin-bottom: 16px;
+      margin-bottom: 10px;
     }
 
     /* ── Flip counter ── */
@@ -322,9 +322,11 @@
     </div>
 
     <div class="hero">
-      <a href="/admin" tabindex="-1" aria-hidden="true"><img src="/logo.svg" alt="LMS 2026" style="width:288px;margin-bottom:12px"></a>
+      <a href="/admin" tabindex="-1" aria-hidden="true"><img src="/logo.svg" alt="LMS 2026" style="width:288px;margin-bottom:6px"></a>
       <div class="hero-event">Last Man Standing</div>
       <div class="hero-subtitle">World Cup 2026 · 11 June – 19 July</div>
+
+      <div style="font-size:13px; color:var(--text-muted); margin-bottom:16px; line-height:1.6">Pick teams each round. Earn points for wins and draws. Get knocked out if your KO pick loses. Most points wins the pot.</div>
 
       <!-- State-aware deadline block (front and centre) -->
       <div id="deadline-block" class="dl">
@@ -332,9 +334,11 @@
           <span class="dl-icon">⏳</span>
           <div><div class="dl-headline">Checking the next deadline…</div></div>
         </div>
+        <div class="dl-clockrow" style="visibility:hidden">
+          <span class="dl-clocklabel">Next deadline</span>
+          <span class="dl-clock">00h 00m 00s</span>
+        </div>
       </div>
-
-      <div style="font-size:13px; color:var(--text-muted); margin-bottom:20px; line-height:1.6">Pick teams each round. Earn points for wins and draws. Get knocked out if your KO pick loses. Most points wins the pot.</div>
 
       <!-- Flip counter -->
       <div class="flip-counter-wrap">
@@ -585,7 +589,7 @@
     }
 
     function roundHasFixtures(matches, roundId) {
-      return matches.some(m => m.round_id === roundId && m.home_team && m.away_team);
+      return matches.some(m => m.round_id === roundId && m.home_team_id && m.away_team_id);
     }
 
     // ── Load everything ───────────────────────────────────────
@@ -603,7 +607,7 @@
       const slug = localStorage.getItem(LS_SLUG_KEY);
       const [roundsRes, matchesRes] = await Promise.all([
         db.from('rounds').select('id, name, round_type, deadline, sort_order, is_complete').order('sort_order'),
-        db.from('matches').select('round_id, home_team, away_team, home_team_id, away_team_id, api_status')
+        db.from('matches').select('round_id, home_team_id, away_team_id, api_status')
       ]);
       const rounds  = roundsRes.data  || [];
       const matches = matchesRes.data || [];
@@ -625,10 +629,13 @@
 
       // Holding: round exists but the bracket isn't filled yet
       if (!hasFixtures) {
+        const holdingSub = nextRound.name === 'Round of 32'
+          ? 'Teams confirmed once the group phase is complete.'
+          : 'Teams confirmed as earlier matches finish.';
         renderBlock({
           cls: '', icon: '◻️',
           headline: nextRound.name,
-          sub: 'Teams confirmed once the groups wrap up.',
+          sub: holdingSub,
           showClock: true, clockLabel: 'Next deadline', deadline
         });
         return;
@@ -667,89 +674,131 @@
         .eq('player_id', player.id);
       const picks = picksData || [];
 
-      const required   = nextRound.round_type === 'group' ? 2 : 1;
-      const nextPicks  = picks.filter(p => p.round_id === nextRound.id);
-      const nextCount  = nextPicks.length;
       const myPageHref = '/' + slug;
+      const hoursLeft  = (deadline - now) / 3600000;
+      const threshold  = REMINDER_HOURS[nextRound.round_type] ?? 48;
+      const isImminent = hoursLeft <= threshold;
 
-      // Already sorted → green, always calm
-      if (nextCount >= required) {
+      // ── Group phase logic ─────────────────────────────────────
+      if (nextRound.round_type === 'group') {
+        const groupRounds   = rounds.filter(r => r.round_type === 'group' && r.sort_order > 0).sort((a,b) => a.sort_order - b.sort_order);
+        const nextPicks     = picks.filter(p => p.round_id === nextRound.id);
+        const nextCount     = nextPicks.length;
+        const allGroupDone  = groupRounds.every(r => picks.filter(p => p.round_id === r.id).length >= 2);
+
+        // All 6 group picks done → sit tight
+        if (allGroupDone) {
+          renderBlock({
+            cls: 'done', icon: '✅',
+            headline: 'Sit tight',
+            sub: 'All group picks in. Waiting for R32 to be confirmed.',
+            showClock: true, clockLabel: 'Next deadline', deadline,
+            changeHref: myPageHref
+          });
+          return;
+        }
+
+        // Current round fully picked but other group rounds still open → calm nudge
+        if (nextCount >= 2) {
+          renderBlock({
+            cls: 'done', icon: '✅',
+            headline: 'Picks are in',
+            sub: '<b>' + nextRound.name + '</b> done. Make your other group picks whenever you like.',
+            showClock: true, clockLabel: 'Next deadline', deadline,
+            changeHref: myPageHref
+          });
+          return;
+        }
+
+        // Current round unpicked — urgency ramp if imminent
+        if (isImminent) {
+          if (hoursLeft <= RED_HOURS) {
+            renderBlock({
+              cls: 'critical', icon: '🚨',
+              headline: 'Last chance to pick',
+              sub: '<b>' + nextRound.name + '</b> locks soon — don\u2019t get caught out.',
+              showClock: true, clockLabel: 'Closes in', deadline,
+              cta: { href: myPageHref, label: 'Pick now \u2192' }
+            });
+            return;
+          }
+          if (nextCount > 0) {
+            const has3   = nextPicks.some(p => Number(p.multiplier) === 3);
+            const inWord = has3 ? 'Your 3-pointer is in' : 'Your 2-pointer is in';
+            const toGo   = has3 ? '2-pointer still to go' : '3-pointer still to go';
+            renderBlock({
+              cls: 'partial', icon: '\u25d0',
+              headline: 'One pick still to go',
+              sub: '<b>' + nextRound.name + '</b> \u00b7 ' + inWord + ', ' + toGo + '.',
+              showClock: true, clockLabel: 'Closes in', deadline,
+              cta: { href: myPageHref, label: 'Finish your picks \u2192' }
+            });
+            return;
+          }
+          renderBlock({
+            cls: 'urgent', icon: '\u26a0\ufe0f',
+            headline: "You haven't picked yet",
+            sub: 'Picks close for <b>' + nextRound.name + '</b>.',
+            showClock: true, clockLabel: 'Closes in', deadline,
+            cta: { href: myPageHref, label: 'Make your pick \u2192' }
+          });
+          return;
+        }
+
+        // Not imminent, current round unpicked — calm open state
         renderBlock({
-          cls: 'done', icon: '✅',
+          cls: '', icon: '\ud83d\udcc5',
+          headline: 'Picks are open',
+          sub: 'Make your <b>' + nextRound.name + '</b> picks whenever you like.',
+          showClock: true, clockLabel: 'Closes in', deadline
+        });
+        return;
+      }
+
+      // ── KO phase logic ────────────────────────────────────────
+      const nextPicks = picks.filter(p => p.round_id === nextRound.id);
+      const nextCount = nextPicks.length;
+
+      // Already picked this KO round → locked in
+      if (nextCount >= 1) {
+        renderBlock({
+          cls: 'done', icon: '\u2705',
           headline: "You're locked in",
-          sub: 'All picks in for <b>' + nextRound.name + '</b>.',
+          sub: 'Pick in for <b>' + nextRound.name + '</b>.',
           showClock: true, clockLabel: 'Locks in', deadline,
           changeHref: myPageHref
         });
         return;
       }
 
-      // Is the in-progress prior round's pick(s) done playing for this player?
-      const currentRound = rounds
-        .filter(r => !r.is_complete && r.name !== '3rd Place' && new Date(r.deadline) <= now && roundHasFixtures(matches, r.id))
-        .sort((a, b) => new Date(b.deadline) - new Date(a.deadline))[0] || null;
-
-      let currentPicksPlayed = false;
-      if (currentRound) {
-        const curPicks = picks.filter(p => p.round_id === currentRound.id);
-        if (curPicks.length === 0) {
-          currentPicksPlayed = true; // nothing pending → attention is free
-        } else {
-          currentPicksPlayed = curPicks.every(p => {
-            const m = matches.find(mm => mm.round_id === currentRound.id &&
-              (mm.home_team_id === p.team_id || mm.away_team_id === p.team_id));
-            return m && KICKED_OFF.has(m.api_status);
+      // Not picked — urgency ramp if imminent, otherwise calm
+      if (isImminent) {
+        if (hoursLeft <= RED_HOURS) {
+          renderBlock({
+            cls: 'critical', icon: '\ud83d\udea8',
+            headline: 'Last chance to pick',
+            sub: '<b>' + nextRound.name + '</b> locks soon — don\u2019t get caught out.',
+            showClock: true, clockLabel: 'Closes in', deadline,
+            cta: { href: myPageHref, label: 'Pick now \u2192' }
           });
+          return;
         }
-      }
-
-      const hoursLeft  = (deadline - now) / 3600000;
-      const threshold  = REMINDER_HOURS[nextRound.round_type] ?? 48;
-      const inReminder = currentPicksPlayed || hoursLeft <= threshold;
-
-      // Calm grey — not your concern yet
-      if (!inReminder) {
         renderBlock({
-          cls: '', icon: '🗓️',
-          headline: nextRound.name,
-          sub: 'Pick by ' + fmtDateTime(deadline) + '.',
-          showClock: true, clockLabel: 'Closes in', deadline
-        });
-        return;
-      }
-
-      // Reminder mode → red / partial / amber
-      if (hoursLeft <= RED_HOURS) {
-        renderBlock({
-          cls: 'critical', icon: '🚨',
-          headline: 'Last chance to pick',
-          sub: '<b>' + nextRound.name + '</b> locks soon — don\u2019t get caught out.',
+          cls: 'urgent', icon: '\u26a0\ufe0f',
+          headline: "You haven't picked yet",
+          sub: 'Picks close for <b>' + nextRound.name + '</b>.',
           showClock: true, clockLabel: 'Closes in', deadline,
-          cta: { href: myPageHref, label: 'Pick now →' }
+          cta: { href: myPageHref, label: 'Make your pick \u2192' }
         });
         return;
       }
 
-      if (nextRound.round_type === 'group' && nextCount > 0) {
-        const has3 = nextPicks.some(p => Number(p.multiplier) === 3);
-        const inWord  = has3 ? 'Your 3-pointer is in' : 'Your 2-pointer is in';
-        const toGo    = has3 ? '2-pointer still to go' : '3-pointer still to go';
-        renderBlock({
-          cls: 'partial', icon: '◐',
-          headline: 'One pick still to go',
-          sub: '<b>' + nextRound.name + '</b> · ' + inWord + ', ' + toGo + '.',
-          showClock: true, clockLabel: 'Closes in', deadline,
-          cta: { href: myPageHref, label: 'Finish your picks →' }
-        });
-        return;
-      }
-
+      // Calm — teams may not all be confirmed yet
       renderBlock({
-        cls: 'urgent', icon: '⚠️',
-        headline: "You haven't picked yet",
-        sub: 'Picks close for <b>' + nextRound.name + '</b>.',
-        showClock: true, clockLabel: 'Closes in', deadline,
-        cta: { href: myPageHref, label: 'Make your pick →' }
+        cls: '', icon: '\ud83d\udcc5',
+        headline: 'Make your pick',
+        sub: '<b>' + nextRound.name + '</b> \u00b7 Teams confirmed as earlier games finish.',
+        showClock: true, clockLabel: 'Closes in', deadline
       });
     }
 

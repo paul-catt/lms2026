@@ -495,6 +495,41 @@
     const { createClient } = supabase;
     const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    const _BOOKIE_FRACTIONS = {
+      '1.05':'1/20','1.07':'1/14','1.08':'1/12','1.09':'1/11','1.10':'1/10',
+      '1.11':'1/9','1.13':'2/15','1.14':'1/7','1.17':'1/6','1.20':'1/5',
+      '1.22':'2/9','1.25':'1/4','1.29':'2/7','1.30':'3/10','1.33':'1/3',
+      '1.36':'4/11','1.40':'2/5','1.44':'4/9','1.50':'1/2','1.53':'8/15',
+      '1.57':'4/7','1.62':'8/13','1.67':'4/6','1.73':'8/11','1.80':'4/5',
+      '1.83':'5/6','1.91':'10/11','2.00':'Evens','2.10':'11/10','2.20':'6/5',
+      '2.25':'5/4','2.38':'11/8','2.50':'6/4','2.63':'13/8','2.75':'7/4',
+      '2.88':'15/8','3.00':'2/1','3.25':'9/4','3.50':'5/2','3.75':'11/4',
+      '4.00':'3/1','4.33':'10/3','4.50':'7/2','5.00':'4/1','5.50':'9/2',
+      '6.00':'5/1','7.00':'6/1','7.50':'13/2','8.00':'7/1','9.00':'8/1',
+      '10.00':'9/1','11.00':'10/1','13.00':'12/1','15.00':'14/1','17.00':'16/1',
+      '19.00':'18/1','21.00':'20/1','26.00':'25/1','34.00':'33/1','41.00':'40/1',
+      '51.00':'50/1','67.00':'66/1','81.00':'80/1','101.00':'100/1',
+      '151.00':'150/1','201.00':'200/1','251.00':'250/1','501.00':'500/1'
+    };
+    function decToFrac(dec) {
+      if (!dec) return '—';
+      const d = parseFloat(dec);
+      if (isNaN(d) || d <= 0) return '—';
+      const key = d.toFixed(2);
+      const exact = _BOOKIE_FRACTIONS[key];
+      if (exact) return exact;
+      const keys = Object.keys(_BOOKIE_FRACTIONS).map(Number);
+      let nearest = keys[0], minDist = Math.abs(d - keys[0]);
+      for (let i = 1; i < keys.length; i++) {
+        const dist = Math.abs(d - keys[i]);
+        if (dist < minDist) { minDist = dist; nearest = keys[i]; }
+      }
+      if (minDist < 0.25) return _BOOKIE_FRACTIONS[nearest.toFixed(2)] || '—';
+      const num = Math.round((d - 1) * 100), den = 100;
+      const g = (function gcd(a,b){return b===0?a:gcd(b,a%b);})(num,den);
+      return (num/g) + '/' + (den/g);
+    }
+
     let roundData = null;
     let oddsMap = {};
 
@@ -815,7 +850,7 @@
         const statsMap = {};
         players.forEach(p => {
           statsMap[p.id] = {
-            id: p.id, name: p.name, display_name: p.display_name, slug: p.slug, isOut: p.is_eliminated,
+            id: p.id, name: p.name, display_name: p.display_name, is_bot: p.is_bot, slug: p.slug, isOut: p.is_eliminated,
             totalPoints: 0, pld: 0, teamsUsed: 0,
             gd: gdMap[p.id] ?? 0,
             furthestRound: furthestRoundMap[p.id] ?? 0,
@@ -893,26 +928,26 @@
           return a.name.localeCompare(b.name);
         });
 
-        // Build rankMap matching leaderboard posMap logic exactly
+        // Build rankMap: number humans only (continuous), bots get null (rendered as a dash)
         const rankMap = {};
-        if (isGroupRound) {
-          sortedPlayers.forEach((p, i) => { rankMap[p.id] = i + 1; });
-        } else {
-          sortedPlayers.forEach((p, i) => {
-            if (i === 0) { rankMap[p.id] = 1; return; }
-            const prev = sortedPlayers[i - 1];
-            const currentSO = currentRoundSortOrder;
-            const pBonus = wonCurrentRound.has(prev.id) ? 1 : 0;
-            const cBonus = wonCurrentRound.has(p.id) ? 1 : 0;
-            const pfr = prev.isOut ? (prev.furthestRound || 0) : Math.max(prev.furthestRound || 0, currentSO) + pBonus;
-            const cfr = p.isOut    ? (p.furthestRound    || 0) : Math.max(p.furthestRound    || 0, currentSO) + cBonus;
-            const isTied = prev.totalPoints === p.totalPoints
-              && pfr === cfr
-              && (prev.gd || 0) === (p.gd || 0)
-              && Math.abs((prev.goalsPredict || 0) - projectedTotal) === Math.abs((p.goalsPredict || 0) - projectedTotal);
-            rankMap[p.id] = isTied ? rankMap[prev.id] : i + 1;
-          });
-        }
+        let _humanRank = 0;
+        let _prevHuman = null;
+        sortedPlayers.forEach((p) => {
+          if (p.is_bot) { rankMap[p.id] = null; return; }
+          _humanRank++;
+          if (isGroupRound || _prevHuman === null) { rankMap[p.id] = _humanRank; _prevHuman = p; return; }
+          const currentSO = currentRoundSortOrder;
+          const pBonus = wonCurrentRound.has(_prevHuman.id) ? 1 : 0;
+          const cBonus = wonCurrentRound.has(p.id) ? 1 : 0;
+          const pfr = _prevHuman.isOut ? (_prevHuman.furthestRound || 0) : Math.max(_prevHuman.furthestRound || 0, currentSO) + pBonus;
+          const cfr = p.isOut          ? (p.furthestRound          || 0) : Math.max(p.furthestRound          || 0, currentSO) + cBonus;
+          const isTied = _prevHuman.totalPoints === p.totalPoints
+            && pfr === cfr
+            && (_prevHuman.gd || 0) === (p.gd || 0)
+            && Math.abs((_prevHuman.goalsPredict || 0) - projectedTotal) === Math.abs((p.goalsPredict || 0) - projectedTotal);
+          rankMap[p.id] = isTied ? rankMap[_prevHuman.id] : _humanRank;
+          _prevHuman = p;
+        });
 
         const roundLabel     = buildRoundLabel(rounds, currentRoundSortOrder);
         const dayLabel       = buildDayLabel(rounds, currentRoundSortOrder, firstMatchData);
@@ -958,6 +993,26 @@
         const matchesOnDay = 'Matches on ' + dayNames[nowForDay.getDay()];
 
         roundData.matchesOnDay = matchesOnDay;
+
+        // Footer banner state: blank if no games in the noon-noon window;
+        // "played" once the night's games are done (all FINISHED, or >2h past last kickoff);
+        // "playing" from noon until the games are done. Day = the night the games are on.
+        const _footerMatches = (matches || []).filter(m => {
+          if (!m.kickoff) return false;
+          if (todayRoundObj && m.round_id !== todayRoundObj.id) return false;
+          const ko = new Date(m.kickoff);
+          return ko >= todayWindowStart && ko < todayWindowEnd;
+        });
+        if (_footerMatches.length === 0) {
+          roundData.footerState = null;
+          roundData.footerDay = '';
+        } else {
+          const _lastKo = _footerMatches.reduce((mx, m) => Math.max(mx, new Date(m.kickoff).getTime()), 0);
+          const _allDone = _footerMatches.every(m => m.api_status === 'FINISHED' || m.status === 'complete');
+          const _gamesDone = _allDone || nowUtc.getTime() >= _lastKo + 2 * 60 * 60 * 1000;
+          roundData.footerState = _gamesDone ? 'played' : 'playing';
+          roundData.footerDay = dayNames[todayWindowStart.getUTCDay()];
+        }
 
         // Refresh date indicator
         (function() {
@@ -1406,7 +1461,7 @@
           html += `<tr>
             <td class="r-pos">${i+1}</td>
             <td class="left"><strong>${teamFlags[tid]||''} ${teamNames[tid]||'?'}${lsTag}</strong> <span style="color:#718096;font-size:10px">v ${teamOpponents[tid]||'?'}</span></td>
-            <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+            <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${decToFrac(odds)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
             <td>${count2 ? `<span class="r-split-2">${count2}</span>` : '<span style="color:#cbd5e0">—</span>'}</td>
             <td>${count3 ? `<span class="r-split-3">${count3}</span>` : '<span style="color:#cbd5e0">—</span>'}</td>
             <td><span class="r-badge ${badgeCls}">${count}</span></td>
@@ -1428,7 +1483,7 @@
           html += `<tr>
             <td class="r-pos">${i+1}</td>
             <td class="left"><strong>${teamFlags[tid]||''} ${teamNames[tid]||'?'}${lsTag}</strong> <span style="color:#718096;font-size:10px">v ${teamOpponents[tid]||'?'}</span></td>
-            <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+            <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${decToFrac(odds)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
             <td><span class="r-badge ${badgeCls}">${count}</span></td>
           </tr>`;
         });
@@ -1496,7 +1551,7 @@
             <div style="font-size:12px;font-weight:700;color:#1a202c">${nameA}</div>
             <div style="font-size:12px;font-weight:700;color:#1a202c;margin-top:2px">${nameB}</div>
           </td>
-          <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
+          <td>${hasOdds ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${decToFrac(odds)}</span>` : '<span style="color:#cbd5e0;font-size:10px">—</span>'}</td>
           <td><span class="r-badge ${badgeCls}">${count}</span></td>
           <td><div class="res-dots">${resultDot(tidA)}${resultDot(tidB)}</div></td>
         </tr>`;
@@ -1683,9 +1738,9 @@
         </tr></thead><tbody>`;
 
       sortedPlayers.forEach((p, i) => {
-        const pos = rankMap[p.id] ?? (i + 1);
-        const isTied = isGroupRound ? false : (rankCounts[pos]||0) > 1;
-        const posLabel = isTied ? pos + '=' : String(pos);
+        const pos = p.is_bot ? null : (rankMap[p.id] ?? (i + 1));
+        const isTied = (!p.is_bot && !isGroupRound) ? (rankCounts[pos]||0) > 1 : false;
+        const posLabel = p.is_bot ? '–' : (isTied ? pos + '=' : String(pos));
 
         const snapPos = snapshotPosMap[p.id];
         // Movement: last completed snapshot position vs current live position
@@ -1726,12 +1781,12 @@
 
       html += `</tbody></table>`;
 
-      if (matchesOnDay) {
-        const dayLabel = matchesOnDay.replace('Matches on', '').trim();
+      if (roundData.footerState) {
+        const dayLabel = roundData.footerDay;
         const hasToday = sortedPlayers.some(p => (p.todayFlags||[]).length > 0);
         if (hasToday) {
-          const msg = isLastNight ? `🟦 Pick played ${dayLabel} night` : `🟦 Pick playing ${dayLabel} night`;
-          html += `<div style="background:#dbeafe;border-top:1px solid #bfdbfe;padding:6px 12px;font-size:12px;font-weight:600;color:#1e40af;text-align:center">${msg}</div>`;
+          const verb = roundData.footerState === 'played' ? 'played' : 'playing';
+          html += `<div style="background:#dbeafe;border-top:1px solid #bfdbfe;padding:6px 12px;font-size:12px;font-weight:600;color:#1e40af;text-align:center">🟦 Pick ${verb} ${dayLabel} night</div>`;
         } else {
           html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:6px 12px;font-size:11px;font-weight:600;color:#4a5568;text-align:center">No picks playing ${dayLabel} night</div>`;
         }
@@ -1863,7 +1918,7 @@
 
         const odds = pick ? parseFloat(oddsMap[pick.team_id]) : NaN;
         const oddsCell = !isNaN(odds) && odds > 0
-          ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${odds.toFixed(1)}</span>`
+          ? `<span style="font-size:11px;font-weight:700;color:#2d3748">${decToFrac(odds)}</span>`
           : `<span style="font-size:10px;color:#cbd5e0">—</span>`;
 
         html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
@@ -1921,7 +1976,7 @@
           <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
           <div style="flex:1;min-width:0;font-size:12px;font-weight:800;color:#1a202c">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
           <div style="width:80px;font-size:10px;color:#718096">v ${opp}</div>
-          <div style="width:36px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? odds.toFixed(1) : '<span style="color:#cbd5e0">—</span>'}</div>
+          <div style="width:36px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? decToFrac(odds) : '<span style="color:#cbd5e0">—</span>'}</div>
           <div style="width:46px;display:flex;align-items:center;gap:4px;justify-content:flex-end">
             <div style="width:28px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div></div>
             <span style="font-size:11px;font-weight:800;color:${countColor};min-width:10px;text-align:right">${count}</span>
@@ -2427,13 +2482,14 @@
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
 
-      // col headers
+      // col headers — 3pt first, then 2pt
       html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px;gap:0">
-        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
+        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">#</span>
         <span style="width:120px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team &amp; opp</span>
         <span style="width:32px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
-        <span style="width:62px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">2pt / 3pt</span>
-        <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
+        <span style="width:48px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">3pt / 2pt</span>
+        <span style="width:8px"></span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
       </div>`;
 
       sorted.forEach((tid, i) => {
@@ -2448,20 +2504,21 @@
         const barColor = count3 > count2 ? '#b7791f' : count2 > count3 ? '#2b6cb0' : '#718096';
         const countColor = barColor;
         const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
-        const pill2 = count2 ? `<span style="font-size:9px;font-weight:700;color:#2b6cb0;background:#ebf8ff;border:1px solid #bee3f8;padding:1px 4px;border-radius:3px">${count2}×2pt</span>` : '';
-        const pill3 = count3 ? `<span style="font-size:9px;font-weight:700;color:#b7791f;background:#fffbeb;border:1px solid #f6e05e;padding:1px 4px;border-radius:3px">${count3}×3pt</span>` : '';
+        const pill3 = count3 ? `<span style="font-size:10px;font-weight:800;color:#fff;background:#b7791f;padding:1px 5px;border-radius:3px;min-width:14px;text-align:center;display:inline-block">${count3}</span>` : `<span style="font-size:10px;font-weight:800;color:#fff;background:#b7791f;padding:1px 5px;border-radius:3px;min-width:14px;text-align:center;display:inline-block">0</span>`;
+        const pill2 = count2 ? `<span style="font-size:10px;font-weight:800;color:#fff;background:#2b6cb0;padding:1px 5px;border-radius:3px;min-width:14px;text-align:center;display:inline-block">${count2}</span>` : `<span style="font-size:10px;font-weight:800;color:#fff;background:#2b6cb0;padding:1px 5px;border-radius:3px;min-width:14px;text-align:center;display:inline-block">0</span>`;
 
-        html += `<div style="display:flex;align-items:center;gap:0;padding:6px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
-          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
+        html += `<div style="display:flex;align-items:center;gap:0;padding:4px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
+          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:left">${i+1}</div>
           <div style="width:120px;min-width:0;overflow:hidden">
             <div style="font-size:12px;font-weight:800;color:#1a202c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
             <div style="font-size:10px;color:#718096;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">v ${teamOpponents[tid]||'?'}</div>
           </div>
-          <div style="width:32px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? odds.toFixed(1) : '<span style="color:#cbd5e0">—</span>'}</div>
-          <div style="width:62px;display:flex;gap:3px;justify-content:center;flex-wrap:wrap">${pill3}${pill2}</div>
-          <div style="width:46px;display:flex;align-items:center;gap:4px;justify-content:flex-end">
-            <div style="width:28px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div></div>
-            <span style="font-size:11px;font-weight:800;color:${countColor};min-width:10px;text-align:right">${count}</span>
+          <div style="width:32px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? decToFrac(odds) : '<span style="color:#cbd5e0">—</span>'}</div>
+          <div style="width:48px;display:flex;gap:3px;justify-content:center;align-items:center">${pill3}${pill2}</div>
+          <div style="width:8px"></div>
+          <div style="flex:1;display:flex;align-items:center;gap:5px">
+            <div style="flex:1;height:7px;background:#e2e8f0;border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:#4a5568;border-radius:4px"></div></div>
+            <span style="font-size:13px;font-weight:800;color:#4a5568;min-width:16px;text-align:right">${count}</span>
           </div>
         </div>`;
       });
@@ -2515,10 +2572,10 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Top Combinations', fullRoundLabel);
 
       html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px">
-        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
+        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">#</span>
         <span style="width:160px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Teams</span>
         <span style="width:48px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
-        <span style="width:30px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left;padding-left:8px">Picks</span>
       </div>`;
 
       sorted.forEach((key, i) => {
@@ -2530,16 +2587,17 @@
         const oppA = teamOpponents[tidA] ? ` <span style="font-size:9px;font-weight:400;color:#a0aec0">v ${teamOpponents[tidA]}</span>` : '';
         const oppB = teamOpponents[tidB] ? ` <span style="font-size:9px;font-weight:400;color:#a0aec0">v ${teamOpponents[tidB]}</span>` : '';
         const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+        const blocks = Array.from({length: count}, () => `<span style="display:inline-block;width:14px;height:14px;background:#2b6cb0;border-radius:3px"></span>`).join('');
 
         html += `<div style="display:flex;align-items:center;padding:6px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
-          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
+          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:left">${i+1}</div>
           <div style="width:160px;min-width:0;overflow:hidden">
             <div style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[tidA]||''} ${teamNames[tidA]||'?'}${lsA}${oppA}</div>
             <div style="height:4px"></div>
             <div style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[tidB]||''} ${teamNames[tidB]||'?'}${lsB}${oppB}</div>
           </div>
-          <div style="width:48px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${odds > 0 ? odds.toFixed(1) : '—'}</div>
-          <div style="width:30px;text-align:center"><span style="font-size:11px;font-weight:800;color:#fff;background:#2b6cb0;padding:2px 6px;border-radius:4px">${count}</span></div>
+          <div style="width:48px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${odds > 0 ? decToFrac(odds) : '—'}</div>
+          <div style="flex:1;padding-left:8px;display:flex;gap:3px;align-items:center;flex-wrap:wrap">${blocks}</div>
         </div>`;
       });
 

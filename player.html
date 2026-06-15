@@ -62,7 +62,7 @@
     .pick-slot-value { font-size:18px; font-weight:800; letter-spacing:-0.01em; }
     .pick-slot-opp { font-size:11px; font-weight:600; color:var(--text-muted); margin-top:3px; }
     .pick-slot.has-result { padding-right:48px; }
-    .pick-slot-result { position:absolute; right:12px; top:50%; transform:translateY(-50%); width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:800; line-height:1; box-shadow:0 0 0 3px var(--surface2); flex-shrink:0; }
+    .pick-slot-result { position:absolute; right:10px; top:10px; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-family:'Rajdhani',sans-serif; font-size:13px; font-weight:800; line-height:1; box-shadow:0 0 0 2px var(--surface2); flex-shrink:0; }
     .longshot-tag { font-size:10px; color:var(--gold); margin-top:5px; }
 
     /* Fixture grid */
@@ -827,22 +827,28 @@
 
         let position = '—';
         let positionIdx = -1;
+        let tieRank = -1;
         if (allScores && allScores.length > 0) {
           positionIdx = allScores.findIndex(s => s.player_id === player.id);
-          if (positionIdx !== -1) position = ordinal(positionIdx + 1);
+          if (positionIdx !== -1) {
+            // Tie-aware rank: number of players strictly above this player + 1.
+            // Keeps POSITION box and the "Joint Xth" sub-label in sync.
+            tieRank = allScores.filter(s => s.total_points > totalPoints).length + 1;
+            position = ordinal(tieRank);
+          }
         }
 
         // Points gap to next place
         let pointsSub = '';
         if (allScores && allScores.length > 0 && positionIdx !== -1) {
-          if (positionIdx === 0) {
+          if (tieRank === 1) {
             const gap = allScores.length > 1 ? totalPoints - allScores[1].total_points : 0;
             const tied = allScores.length > 1 && allScores[1].total_points === totalPoints;
             pointsSub = gap > 0 ? '+' + gap + ' ahead' : (tied ? 'Joint Leader' : 'Leader');
           } else {
             const gap = allScores[positionIdx - 1].total_points - totalPoints;
             const tied = gap === 0;
-            pointsSub = tied ? 'Joint ' + ordinal(positionIdx) : (gap > 0 ? gap + ' to ' + ordinal(positionIdx) : '');
+            pointsSub = tied ? 'Joint ' + ordinal(tieRank) : (gap > 0 ? gap + ' to ' + ordinal(tieRank - 1) : '');
           }
         }
 
@@ -1183,6 +1189,13 @@
         const nextRound = upcoming.length ? upcoming[0] : null;
         if (currentInProgress && nextRound && nextRoundReady(nextRound, currentInProgress)) {
           activeRound = nextRound;
+        }
+        // If currentInProgress is fully picked, skip it — default to upcoming
+        const inProgressPicked = currentInProgress
+          ? (allPicks.filter(p => p.round_id === currentInProgress.id).length >= (currentInProgress.round_type === 'group' ? 2 : 1))
+          : false;
+        if (!activeRound && inProgressPicked) {
+          activeRound = upcoming[0] || currentInProgress;
         }
         activeRound = activeRound || currentInProgress || upcoming[0] || openRounds[0];
         selectRound(activeRound.id);
