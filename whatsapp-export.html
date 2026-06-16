@@ -99,8 +99,10 @@
     .render-root .rip-header { background:linear-gradient(135deg,#16161f 0%,#2a2a3d 55%,#3a3a52 100%); color:#fff; padding:12px 14px 13px; border-bottom:3px solid #6b2737; }
     .render-root .rip-header.rip-first { border-bottom-color:#1f6b3a; }
     .render-root .rip-header.rip-mass { background:linear-gradient(135deg,#2a1216 0%,#4a1e24 55%,#6b2737 100%); border-bottom-color:#8b3a3a; }
+    .render-root .rip-header.rip-spoon { background:linear-gradient(135deg,#1a1200 0%,#2e1f00 55%,#4a3200 100%); border-bottom:3px solid #a07840; color:#fff; }
     .rip-eyebrow { font-size:10px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:#e08a9b; opacity:0.9; }
     .rip-header.rip-first .rip-eyebrow { color:#8fe0a8; }
+    .rip-header.rip-spoon .rip-eyebrow { color:#d4a96a; opacity:1; }
     .rip-name { font-size:20px; font-weight:800; letter-spacing:0.02em; line-height:1.12; margin-top:3px; }
     .rip-body { padding:13px 14px 4px; }
     .rip-epitaph { font-style:italic; font-size:13px; line-height:1.5; color:#3a4452; border-left:3px solid #cbd5e0; padding:2px 0 2px 11px; margin-bottom:13px; }
@@ -762,7 +764,7 @@
 
         // FIX 2: Build snapshot map for the last completed round (for movement arrows)
         const completedRoundsSorted = (rounds || [])
-          .filter(r => r.is_complete)
+          .filter(r => r.is_complete && r.sort_order > 0)
           .sort((a, b) => b.sort_order - a.sort_order);
         const lastCompletedRound = completedRoundsSorted[0] || null;
         const prevCompletedRound = completedRoundsSorted[1] || null;
@@ -1081,10 +1083,16 @@
     // ── Pick Reminder Copy ────────────────────────────────────
     function renderReminderCopy() {
       if (!roundData) return;
-      const { players, playerCurrentPicks, rounds, matches, currentRoundSortOrder, roundLabelText, isGroupRound } = roundData;
+      const { players, picks, playerCurrentPicks, rounds, matches, currentRoundSortOrder } = roundData;
 
-      const currentRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
+      const _now = new Date();
+      const currentRound = (rounds || []).find(r => new Date(r.deadline) > _now && r.name !== '3rd Place')
+        || (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
       const deadline = currentRound ? new Date(currentRound.deadline) : null;
+      const isGroupRound = currentRound?.round_type === 'group';
+      const roundLabelText = currentRound
+        ? (currentRound.round_type === 'group' ? 'Group Stage - Round ' + currentRound.sort_order : currentRound.name)
+        : 'Unknown Round';
 
       // First match of current round
       const currentRoundMatches = (matches || [])
@@ -1092,8 +1100,18 @@
         .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
       const firstMatch = currentRoundMatches[0] || null;
 
-      const unpicked = players.filter(p => !p.is_eliminated && !playerCurrentPicks[p.id]);
-      const picked   = players.filter(p => !p.is_eliminated && playerCurrentPicks[p.id]);
+      // Build pick map for the reminder round (may differ from global currentRoundSortOrder)
+      const reminderPickMap = {};
+      if (currentRound) {
+        (roundData.picks || []).forEach(pk => {
+          if (pk.round_id === currentRound.id) {
+            if (!reminderPickMap[pk.player_id]) reminderPickMap[pk.player_id] = [];
+            reminderPickMap[pk.player_id].push(pk);
+          }
+        });
+      }
+      const unpicked = players.filter(p => !p.is_eliminated && !p.is_bot && !reminderPickMap[p.id]);
+      const picked   = players.filter(p => !p.is_eliminated && !p.is_bot && reminderPickMap[p.id]);
 
       let deadlineStr = '';
       if (deadline) {
@@ -1125,14 +1143,14 @@
       } else {
         const unpickedNames = unpicked.map(p => `• ${p.name}`).join('\n');
         msg = `⏰ *LMS 2026 — ${roundLabelText} Picks*\n\n`;
-        msg += `${picked.length}/${players.filter(p => !p.is_eliminated).length} players have picked\n\n`;
+        msg += `${picked.length}/${players.filter(p => !p.is_eliminated && !p.is_bot).length} players have picked\n\n`;
         if (firstGameStr) msg += `${firstGameStr}\n\n`;
         if (isGroupRound) {
           msg += `Still need to pick (3pt + 2pt):\n${unpickedNames}\n\n`;
         } else {
           msg += `Still need to pick:\n${unpickedNames}\n\n`;
         }
-        msg += `Use your personal link to submit before the deadline locks! 🔒`;
+        msg += `Use your personal link to submit before the deadline locks! 🔒\nOr use this to find yours: https://lms2026.netlify.app`;
       }
 
       document.getElementById('reminder-copy-text').textContent = msg;
@@ -2226,8 +2244,6 @@
       const first = info[0];
       const firstKey = first ? ((first.diedRound ? first.diedRound.sort_order : 0) + '|' + first.kickoff) : null;
       const firstOutIds = new Set(info.filter(f => (((f.diedRound ? f.diedRound.sort_order : 0) + '|' + f.kickoff) === firstKey) && !f.exhaustion).map(f => f.p.id));
-      const firstOutPrize = 10;
-      const firstOutSplit = firstOutIds.size > 0 ? (firstOutPrize / firstOutIds.size) : firstOutPrize;
       const fmtMoney = n => '\u00a3' + (Number.isInteger(n) ? n : n.toFixed(2));
 
       // Helpers for standings
@@ -2341,12 +2357,133 @@
         }
       });
 
-      // ── Render ──
+      // ── Wooden Spoon Card ─────────────────────────────────────────────────
+      // Rendered first (top of page) once R32 is complete
+      const r32Round = (rounds || []).find(r => r.name === 'Round of 32');
+      const r32Complete = r32Round && r32Round.is_complete;
+      let spoonCardHtml = '';
+
+      if (r32Complete && r32Round) {
+        // Identify R32 eliminées: is_eliminated AND had a pick in R32
+        const r32Elim = humans.filter(p => {
+          if (!p.is_eliminated) return false;
+          const pPicks = picksByPlayer[p.id] || [];
+          return pPicks.some(pk => pk.round_id === r32Round.id || (pk.rounds && pk.rounds.id === r32Round.id));
+        });
+
+        if (r32Elim.length > 0) {
+          // Sort worst first: lowest pts → lowest GD → furthest from goals projection
+          const spoonSorted = [...r32Elim].sort((a, b) => {
+            const aPts = statsMap[a.id]?.totalPoints || 0;
+            const bPts = statsMap[b.id]?.totalPoints || 0;
+            if (aPts !== bPts) return aPts - bPts;
+            const aGd = gdMap[a.id] || 0, bGd = gdMap[b.id] || 0;
+            if (aGd !== bGd) return aGd - bGd;
+            if (projectedTotal) {
+              const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
+              const bDiff = Math.abs((b.total_goals_prediction || 0) - projectedTotal);
+              if (aDiff !== bDiff) return bDiff - aDiff;
+            }
+            return 0;
+          });
+
+          const worst = spoonSorted[0];
+          const worstPts = statsMap[worst.id]?.totalPoints || 0;
+          const worstGd  = gdMap[worst.id] || 0;
+          const worstGoalsDiff = projectedTotal ? Math.abs((worst.total_goals_prediction || 0) - projectedTotal) : null;
+          const spoonWinners = spoonSorted.filter(p => {
+            const samePts = (statsMap[p.id]?.totalPoints || 0) === worstPts;
+            const sameGd  = (gdMap[p.id] || 0) === worstGd;
+            const sameGoals = worstGoalsDiff === null || Math.abs((p.total_goals_prediction || 0) - projectedTotal) === worstGoalsDiff;
+            return samePts && sameGd && sameGoals;
+          });
+          const isTied = spoonWinners.length > 1;
+
+          const SPOON_EPITAPHS = [
+            'Across six group games and one knockout match, __N__ managed to find every wrong result going. A gift, of sorts.',
+            'They say you have to be in it to win it. __N__ was in it. Winning it was never really the plan.',
+            'Others came, saw, and conquered. __N__ came, saw, and somehow made it look worse than it was.',
+            'A unique talent: to pick the losing side with such consistency it almost feels deliberate. Almost.',
+            'The Round of 32 is supposed to be the easy bit. __N__ has data on that.',
+            'Not the first out. Not the most dramatic exit. Just quietly, methodically, the worst. A real achievement in its own way.',
+            'Points were available. Goal difference was achievable. __N__ found a way to come up short on both.',
+            'Every tournament needs a bottom. __N__ has generously volunteered.',
+          ];
+
+          const spoonEpitaph = (() => {
+            const names = spoonWinners.map(p => p.name.split(' ')[0]).join(' & ');
+            const line = seededPick(SPOON_EPITAPHS, spoonWinners[0].id);
+            return line.replace('__N__', names);
+          })();
+
+          const spoonNames  = spoonWinners.map(p => p.name).join(' & ');
+          const spoonPts    = worstPts;
+          const spoonGd     = worstGd;
+          const spoonGdStr  = spoonGd > 0 ? '+' + spoonGd : String(spoonGd);
+          const prize       = isTied ? '\u00a35 each' : '\u00a310 back';
+          const spoonElId   = 'rip-spoon-render';
+
+          let sc = '';
+          sc += '<div class="rip-header rip-spoon">';
+          sc += '<div class="rip-eyebrow">\ud83e\udd47 Wooden Spoon \u00b7 Round of 32</div>';
+          sc += '<div class="rip-name">\ud83e\udd44 ' + spoonNames + '</div>';
+          sc += '</div>';
+
+          sc += '<div class="rip-body">';
+          sc += '<div class="rip-epitaph">' + spoonEpitaph + '</div>';
+          sc += '<table class="rip-stats">';
+          sc += '<tr><td class="k">Award</td><td class="v">\ud83e\udd44 Wooden Spoon</td></tr>';
+          sc += '<tr><td class="k">Round</td><td class="v">Round of 32</td></tr>';
+          sc += '<tr><td class="k">Final points</td><td class="v">' + spoonPts + ' pts</td></tr>';
+          sc += '<tr><td class="k">Goal diff</td><td class="v">' + spoonGdStr + '</td></tr>';
+          if (isTied) sc += '<tr><td class="k">Note</td><td class="v">Tied \u2014 split equally</td></tr>';
+          sc += '</table>';
+          sc += '<div class="rip-pos-line rip-first-line"><span class="lbl">\ud83d\udcb7 Prize</span><span class="pos">' + prize + '</span></div>';
+          sc += '<div class="rip-verdict rip-verdict-green"><b>Worst performer in the Round of 32</b> — so the \u00a310 wooden spoon prize goes to ' + (isTied ? 'them both' : spoonWinners[0].name.split(' ')[0]) + '. The only player who profits from being absolutely rubbish.</div>';
+          sc += '</div>';
+          sc += '<div class="rip-footer" style="color:#d4a96a">\ud83e\udd44 ' + (isTied ? spoonWinners.length + ' share the wooden spoon' : 'Congratulations, ' + worst.name.split(' ')[0]) + '</div>';
+
+          spoonCardHtml = '<div class="rip-card-block">'
+            + '<div id="' + spoonElId + '" class="render-root">' + sc + '</div>'
+            + '<div class="rip-btn-row">'
+            + '<button class="btn btn-secondary" onclick="shareRender(\'' + spoonElId + '\')">\ud83d\udce4 Share</button>'
+            + '<button class="btn btn-secondary" onclick="copyRender(\'' + spoonElId + '\')">\ud83d\udccb Copy</button>'
+            + '<button class="btn btn-primary" onclick="downloadRender(\'' + spoonElId + '\',\'WoodenSpoon\')">\u2b07\ufe0f Download</button>'
+            + '</div></div>';
+        }
+      }
+
+      // ── Render — latest first ──
       const moneyBadge = '<span class="rip-money-badge">\ud83d\udcb0 In the money</span>';
       let outHtml = '';
       let idx = 0;
 
-      blocks.forEach(block => {
+      // Reverse so latest eliminations appear at top
+      const blocksDesc = [...blocks].reverse();
+
+      // Find insertion index for spoon card: after all post-R32 blocks, before R32 blocks
+      // i.e. insert just before the first block whose round sort_order <= r32Round.sort_order
+      let spoonInsertIdx = 0;
+      if (r32Complete && spoonCardHtml && r32Round) {
+        spoonInsertIdx = blocksDesc.length; // default: after everything (bottom)
+        for (let i = 0; i < blocksDesc.length; i++) {
+          const b = blocksDesc[i];
+          const bSO = b.type === 'solo'
+            ? (b.f.diedRound ? b.f.diedRound.sort_order : 0)
+            : (b.lead.diedRound ? b.lead.diedRound.sort_order : 0);
+          if (bSO <= r32Round.sort_order) {
+            spoonInsertIdx = i;
+            break;
+          }
+        }
+      }
+
+      blocksDesc.forEach((block, blockIdx) => {
+        // Inject spoon card at the right position
+        if (r32Complete && spoonCardHtml && blockIdx === spoonInsertIdx) {
+          outHtml += spoonCardHtml;
+        }
+
         const elId = 'rip-card-' + idx + '-render';
         let card = '';
 
@@ -2372,8 +2509,8 @@
           card += '</table>';
 
           if (isFirst) {
-            card += '<div class="rip-pos-line rip-first-line"><span class="lbl">Consolation <span class="rip-money-badge rip-green">\ud83d\udcb7 ' + fmtMoney(firstOutSplit) + ' back</span></span><span class="pos">' + (pos != null ? ripOrdinal(pos) : '\u2014') + '</span></div>';
-            card += '<div class="rip-verdict rip-verdict-green"><b>First out of the whole field</b> — so the ' + fmtMoney(firstOutSplit) + ' first-out prize is yours. The only player who profits from being rubbish.</div>';
+            card += '<div class="rip-pos-line rip-first-line"><span class="lbl">🪦 First Out</span><span class="pos">' + (pos != null ? ripOrdinal(pos) : '\u2014') + '</span></div>';
+            card += '<div class="rip-verdict rip-verdict-green"><b>First out of the whole field.</b> A dubious honour — but at least you\'re memorable.</div>';
           } else {
             card += '<div class="rip-pos-line' + (money ? ' money' : '') + '"><span class="lbl">Currently sitting ' + (money ? moneyBadge : '') + '</span><span class="pos">' + (pos != null ? ripOrdinal(pos) : '\u2014') + '</span></div>';
             const v = verdict(p);
@@ -2424,8 +2561,14 @@
         idx++;
       });
 
+      // If spoon card goes at the very bottom (no post-R32 blocks)
+      if (r32Complete && spoonCardHtml && spoonInsertIdx >= blocksDesc.length) {
+        outHtml += spoonCardHtml;
+      }
+
       container.innerHTML = outHtml;
-      setStatus('rip-status', '\ud83e\udea6 ' + fallen.length + ' fallen \u00b7 ' + blocks.length + ' card' + (blocks.length === 1 ? '' : 's') + ' \u00b7 ' + (totalPlayers - fallen.length) + ' still standing.');
+      const spoonCount = spoonCardHtml ? 1 : 0;
+      setStatus('rip-status', '\ud83e\udea6 ' + fallen.length + ' fallen \u00b7 ' + (blocks.length + spoonCount) + ' card' + (blocks.length + spoonCount === 1 ? '' : 's') + ' \u00b7 ' + (totalPlayers - fallen.length) + ' still standing.');
     }
 
     // ── NEW: Picks by Player (group) ──────────────────────────

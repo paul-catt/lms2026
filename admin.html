@@ -1475,7 +1475,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
     async function loadMatchesForResult() {
       const { data } = await db
         .from('matches')
-        .select('id, kickoff, round_id, is_third_place, rounds(id, name, round_type), home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
+        .select('id, kickoff, round_id, is_third_place, score_home, score_away, rounds(id, name, round_type), home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
         .or('confirmed.is.null,confirmed.eq.false')
         .not('home_team_id', 'is', null)
         .not('away_team_id', 'is', null)
@@ -1841,11 +1841,11 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
     function onMatchSelected() {
       document.getElementById('pens-checkbox').checked = false;
       document.getElementById('pens-winner-row').style.display = 'none';
-      document.getElementById('result-home-score').value = '';
-      document.getElementById('result-away-score').value = '';
-      updatePensRow(); updatePreview();
       const matchId = document.getElementById('result-match-select').value;
       const match = matchId ? matchCache[matchId] : null;
+      document.getElementById('result-home-score').value = (match && match.score_home != null) ? match.score_home : '';
+      document.getElementById('result-away-score').value = (match && match.score_away != null) ? match.score_away : '';
+      updatePensRow(); updatePreview();
       document.getElementById('third-place-notice').style.display = (match && match.is_third_place) ? 'block' : 'none';
       const homeLbl = document.getElementById('home-score-label');
       const awayLbl = document.getElementById('away-score-label');

@@ -245,7 +245,7 @@
     </div>
 
     <div class="card" id="tomorrow-card" style="display:none">
-      <div class="card-title">🌙 Tomorrow Night</div>
+      <div class="card-title" id="tomorrow-section-title">🌙 Tomorrow Night</div>
       <div id="tomorrow-content"></div>
     </div>
 
@@ -817,7 +817,9 @@
           };
 
           if (tomorrowBucket) {
-            tomorrowContent.innerHTML = renderBucket(tomorrowBucket, 'Tomorrow');
+            const tomorrowTitle = document.getElementById('tomorrow-section-title');
+            if (tomorrowTitle) tomorrowTitle.textContent = todayIsOver ? '🌙 Tonight' : '🌙 Tomorrow Night';
+            tomorrowContent.innerHTML = renderBucket(tomorrowBucket, todayIsOver ? 'Tonight' : 'Tomorrow');
             tomorrowCardEl.style.display = 'block';
           } else {
             tomorrowCardEl.style.display = 'none';

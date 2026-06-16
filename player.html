@@ -872,19 +872,14 @@
 
         let winningsMap = {};
         if (competitionEnded && allScores && allScores.length > 0) {
-          // Fetch all players' picks for first-out detection
-          const { data: allPlayersPicksRaw } = await db.from('picks')
-            .select('player_id, team_id, round_id, pick_results(match_result)');
-          const allPlayersPicks = allPlayersPicksRaw || [];
-
           const totalPlayers = allScores.length;
           const pot = totalPlayers * 10;
           let splits;
           if (totalPlayers >= 30)      splits = [0.45, 0.25, 0.15, 0.10, 0.05];
           else if (totalPlayers >= 21) splits = [0.50, 0.25, 0.15, 0.10];
           else                         splits = [0.60, 0.25, 0.15];
-          const FIRST_OUT_PRIZE = 10;
-          const remainingPot = pot - FIRST_OUT_PRIZE;
+          const WOODEN_SPOON_PRIZE = 10;
+          const remainingPot = pot - WOODEN_SPOON_PRIZE;
 
           // Build posMap (tie detection)
           const posMap = {};
@@ -899,68 +894,21 @@
             }
           });
 
-          // First-out detection
-          const roundMap3 = {};
-          (allRounds || []).forEach(r => { roundMap3[r.id] = r; });
-          const kickoffByTeamRound3 = {};
-          (allMatches || []).forEach(m => {
-            if (!m.kickoff) return;
-            if (m.home_team_id) kickoffByTeamRound3[m.home_team_id + '|' + m.round_id] = m.kickoff;
-            if (m.away_team_id) kickoffByTeamRound3[m.away_team_id + '|' + m.round_id] = m.kickoff;
-          });
-          const matchByTeam3 = {};
-          (allMatches || []).forEach(m => {
-            if (m.home_team_id) matchByTeam3[m.home_team_id + '|' + m.round_id] = m;
-            if (m.away_team_id) matchByTeam3[m.away_team_id + '|' + m.round_id] = m;
-          });
-          const picksByPlayer3 = {};
-          allPlayersPicks.forEach(pk => {
-            if (!picksByPlayer3[pk.player_id]) picksByPlayer3[pk.player_id] = [];
-            picksByPlayer3[pk.player_id].push(pk);
-          });
-          const eliminated3 = (allScores || []).filter(p => p.is_eliminated);
-          const koRoundNames3 = new Set(['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final']);
-          const koRoundIds3 = new Set((allRounds || []).filter(r => koRoundNames3.has(r.name)).map(r => r.id));
-          function getElimInfo3(p) {
-            const playerPicks = picksByPlayer3[p.player_id] || [];
-            const losingPick = [...playerPicks].reverse().find(pk => {
-              const res = pk.pick_results && pk.pick_results[0];
-              return res && res.match_result === 'loss' && koRoundIds3.has(pk.round_id);
-            });
-            if (losingPick) {
-              const match = matchByTeam3[losingPick.team_id + '|' + losingPick.round_id] || null;
-              return { match, noPicks: false, elimRoundId: null, lastPickKickoff: null };
+          // Wooden spoon: worst performer in R32
+          const r32Round = (allRounds || []).find(r => r.name === 'Round of 32');
+          if (r32Round) {
+            const r32Elim = (allScores || []).filter(p => p.is_eliminated && p.eliminated_in_round_id === r32Round.id);
+            if (r32Elim.length > 0) {
+              const spoonSorted = [...r32Elim].sort((a, b) => {
+                if ((a.total_points||0) !== (b.total_points||0)) return (a.total_points||0) - (b.total_points||0);
+                return 0;
+              });
+              const worst = spoonSorted[0];
+              const spoonPlayers = spoonSorted.filter(p => (p.total_points||0) === (worst.total_points||0));
+              const spoonShare = Math.round((WOODEN_SPOON_PRIZE / spoonPlayers.length) * 100) / 100;
+              spoonPlayers.forEach(p => { winningsMap[p.player_id] = (winningsMap[p.player_id] || 0) + spoonShare; });
             }
-            const elimRoundId = p.eliminated_in_round_id ||
-              (playerPicks.length > 0
-                ? [...playerPicks].sort((a, b) => (roundMap3[b.round_id]?.sort_order||0) - (roundMap3[a.round_id]?.sort_order||0))[0].round_id
-                : null);
-            const lastPick = playerPicks.length > 0
-              ? [...playerPicks].sort((a, b) => (roundMap3[b.round_id]?.sort_order||0) - (roundMap3[a.round_id]?.sort_order||0))[0]
-              : null;
-            const lastPickKickoff = lastPick ? kickoffByTeamRound3[lastPick.team_id + '|' + lastPick.round_id] || null : null;
-            return { match: null, noPicks: true, elimRoundId, lastPickKickoff };
           }
-          const elimWithInfo3 = eliminated3.map(p => ({ player: p, info: getElimInfo3(p) }));
-          elimWithInfo3.sort((a, b) => {
-            const aSO = a.info.match ? (roundMap3[a.info.match.round_id]?.sort_order||0) : a.info.elimRoundId ? (roundMap3[a.info.elimRoundId]?.sort_order||0) : 0;
-            const bSO = b.info.match ? (roundMap3[b.info.match.round_id]?.sort_order||0) : b.info.elimRoundId ? (roundMap3[b.info.elimRoundId]?.sort_order||0) : 0;
-            if (aSO !== bSO) return aSO - bSO;
-            const aK = a.info.match?.kickoff ? new Date(a.info.match.kickoff).getTime() : a.info.lastPickKickoff ? new Date(a.info.lastPickKickoff).getTime() : 0;
-            const bK = b.info.match?.kickoff ? new Date(b.info.match.kickoff).getTime() : b.info.lastPickKickoff ? new Date(b.info.lastPickKickoff).getTime() : 0;
-            return aK - bK;
-          });
-          const firstSO3 = elimWithInfo3.length > 0 ? (elimWithInfo3[0].info.match ? (roundMap3[elimWithInfo3[0].info.match.round_id]?.sort_order||0) : elimWithInfo3[0].info.elimRoundId ? (roundMap3[elimWithInfo3[0].info.elimRoundId]?.sort_order||0) : 0) : null;
-          const firstK3  = elimWithInfo3.length > 0 ? (elimWithInfo3[0].info.match?.kickoff ? new Date(elimWithInfo3[0].info.match.kickoff).getTime() : elimWithInfo3[0].info.lastPickKickoff ? new Date(elimWithInfo3[0].info.lastPickKickoff).getTime() : 0) : null;
-          const firstOutPlayers3 = firstSO3 !== null
-            ? elimWithInfo3.filter(e => {
-                const so = e.info.match ? (roundMap3[e.info.match.round_id]?.sort_order||0) : e.info.elimRoundId ? (roundMap3[e.info.elimRoundId]?.sort_order||0) : 0;
-                const k  = e.info.match?.kickoff ? new Date(e.info.match.kickoff).getTime() : e.info.lastPickKickoff ? new Date(e.info.lastPickKickoff).getTime() : 0;
-                return so === firstSO3 && k === firstK3;
-              }).map(e => e.player)
-            : [];
-          const firstOutShare3 = firstOutPlayers3.length > 0 ? Math.round((FIRST_OUT_PRIZE / firstOutPlayers3.length) * 100) / 100 : 0;
-          firstOutPlayers3.forEach(p => { winningsMap[p.player_id] = (winningsMap[p.player_id] || 0) + firstOutShare3; });
 
           // Prize places
           const prizeGroups3 = {};
@@ -1069,7 +1017,7 @@
           warn.textContent = teamsLeftMessage(teamsLeft);
         }
 
-        renderTodayStrip(positionIdx);
+        renderTodayStrip(positionIdx, tieRank);
         renderHistory();
 
         if (player.is_eliminated) {
@@ -1964,7 +1912,7 @@
       return map[name] || name;
     }
 
-    function renderTodayStrip(positionIdx) {
+    function renderTodayStrip(positionIdx, tieRank) {
       const stripEl = document.getElementById('today-strip');
       if (!stripEl) return;
 
@@ -2026,7 +1974,7 @@
       // ── Rank delta vs last session ────────────────────────────────────────
       const LS_RANK_KEY = 'lms2026_last_rank_' + (player ? player.id : '');
       const lastRank    = parseInt(localStorage.getItem(LS_RANK_KEY) || '0', 10);
-      const currentRank = positionIdx + 1;
+      const currentRank = (tieRank > 0) ? tieRank : positionIdx + 1;
       const delta       = lastRank > 0 ? lastRank - currentRank : 0; // positive = moved up
       localStorage.setItem(LS_RANK_KEY, currentRank);
 
