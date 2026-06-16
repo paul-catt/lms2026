@@ -4921,6 +4921,19 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       const simPts = Object.assign({}, basePoints);
       const simGd  = Object.assign({}, baseGd);
 
+      // Build flag map from match data
+      const teamFlagMap = {};
+      const teamNameMap = {};
+      for (const m of _simMatchData) {
+        teamFlagMap[m.home_team_id] = m.home_team.flag_emoji || '';
+        teamFlagMap[m.away_team_id] = m.away_team.flag_emoji || '';
+        teamNameMap[m.home_team_id] = m.home_team.name || '';
+        teamNameMap[m.away_team_id] = m.away_team.name || '';
+      }
+
+      // Track per-player pick outcomes: { pts, flag, outcome: 'win'|'draw'|'loss' }
+      const playerPickOutcomes = {}; // player_id -> array of outcome objects
+
       for (const [matchId, sc] of Object.entries(simScores)) {
         const { home: homeTeamId, away: awayTeamId } = matchTeams[matchId];
         const { home: hGoals, away: aGoals } = sc;
@@ -4932,12 +4945,15 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
           const oppGoals = isHome ? aGoals : hGoals;
           const isLong   = longshotMap[pick.team_id] || false;
           let pts;
-          if (myGoals > oppGoals)       pts = pick.multiplier + (isLong ? 1 : 0);
-          else if (myGoals === oppGoals) pts = 1;
-          else                           pts = 0;
+          let outcome;
+          if (myGoals > oppGoals)       { pts = pick.multiplier + (isLong ? 1 : 0); outcome = 'win'; }
+          else if (myGoals === oppGoals) { pts = 1; outcome = 'draw'; }
+          else                           { pts = 0; outcome = 'loss'; }
           simPts[pick.player_id] = (simPts[pick.player_id] || 0) + pts;
           const myGd = isHome ? (hGoals - aGoals) : (aGoals - hGoals);
           simGd[pick.player_id] = (simGd[pick.player_id] || 0) + myGd;
+          if (!playerPickOutcomes[pick.player_id]) playerPickOutcomes[pick.player_id] = [];
+          playerPickOutcomes[pick.player_id].push({ pts, outcome, flag: teamFlagMap[pick.team_id] || '' });
         }
       }
 
@@ -4996,21 +5012,31 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         const delta    = prevPos - pos;
         const pts      = simPts[p.id]  || 0;
         const gd       = simGd[p.id]   || 0;
-        const newPts   = pts - (basePoints[p.id] || 0);
+        const outcomes = playerPickOutcomes[p.id] || [];
         let deltaHtml;
         if (delta > 0)      deltaHtml = '<span style="color:var(--green);font-weight:700">&#x25B2;' + delta + '</span>';
         else if (delta < 0) deltaHtml = '<span style="color:var(--red);font-weight:700">&#x25BC;' + Math.abs(delta) + '</span>';
         else                deltaHtml = '<span style="color:var(--text-muted)">&#x2014;</span>';
         const gdStr    = gd > 0 ? '+' + gd : String(gd);
-        const ptsGain  = newPts > 0 ? ' <span style="color:var(--green);font-size:11px">(+' + newPts + ')</span>' : '';
+
+        // Per-pick outcome badges: flag + coloured points
+        const pickBadges = outcomes.map(o => {
+          let colour, label;
+          if (o.outcome === 'win')       { colour = 'var(--green)';      label = '+' + o.pts; }
+          else if (o.outcome === 'draw') { colour = 'var(--gold,#f59e0b)'; label = '+1'; }
+          else                           { colour = 'var(--red)';         label = '0'; }
+          return o.flag + '<span style="color:' + colour + ';font-weight:700;font-size:11px;margin-left:1px">' + label + '</span>';
+        }).join(' ');
+
         const nameStr  = p.display_name || shortName(p.name);
         const elimStyle = p.is_eliminated ? 'opacity:0.45;' : '';
         const elimTag  = p.is_eliminated ? ' <span style="font-size:10px;color:var(--red)">OUT</span>' : '';
+        const flagsHtml = pickBadges ? ' <span style="font-size:13px;margin-left:4px">' + pickBadges + '</span>' : '';
         html += '<tr style="border-bottom:1px solid var(--border);' + elimStyle + '">' +
           '<td style="text-align:center; padding:7px 8px; font-weight:700; color:var(--text-muted)">' + pos + '</td>' +
           '<td style="text-align:center; padding:7px 4px">' + deltaHtml + '</td>' +
-          '<td style="padding:7px 8px; font-weight:600">' + nameStr + elimTag + '</td>' +
-          '<td style="text-align:center; padding:7px 8px; font-weight:700">' + pts + ptsGain + '</td>' +
+          '<td style="padding:7px 8px; font-weight:600">' + nameStr + flagsHtml + elimTag + '</td>' +
+          '<td style="text-align:center; padding:7px 8px; font-weight:700">' + pts + '</td>' +
           '<td style="text-align:center; padding:7px 8px; color:var(--text-muted)">' + gdStr + '</td>' +
           '</tr>';
       });
