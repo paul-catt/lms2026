@@ -210,6 +210,7 @@
       <div class="tab" data-tab="picks">👁 Picks</div>
       <div class="tab" data-tab="oracle">🔮 Oracle</div>
       <div class="tab" data-tab="livescores">📡 Live Scores</div>
+      <div class="tab" data-tab="sim">🔬 Sim</div>
       <div class="tab" data-tab="odds">📈 Odds</div>
       <a href="/whatsapp-export" class="tab" style="text-decoration:none; background:var(--surface2); color:var(--text-muted)">📱 WhatsApp</a>
     </div>
@@ -755,7 +756,34 @@
 
     <!-- PRIZES TAB -->
 
+    <!-- SIM TAB -->
+    <div class="tab-content" id="tab-sim">
+      <div class="card">
+        <div class="card-title">🔬 What-If Simulator</div>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px">
+          Enter hypothetical scores for pending matches to see how the leaderboard would look. Leave a match blank to exclude it. No data is saved.
+        </p>
+        <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:14px">
+          <div class="form-group" style="margin:0; min-width:200px">
+            <label>Round</label>
+            <select id="sim-round-select"><option value="">Select round...</option></select>
+          </div>
+          <button class="btn btn-secondary" id="btn-load-sim-matches">Load Matches</button>
+        </div>
+        <div id="sim-matches-wrap"></div>
+        <div id="sim-run-wrap" style="display:none; margin-top:14px; gap:10px; flex-wrap:wrap">
+          <button class="btn btn-primary" id="btn-run-sim">🔬 Run Simulation</button>
+          <button class="btn btn-secondary" id="btn-clear-sim">✕ Clear</button>
+        </div>
+        <div id="sim-msg" style="margin-top:8px; font-size:12px"></div>
+      </div>
 
+      <div class="card" id="sim-results-card" style="display:none; margin-top:16px">
+        <div class="card-title">📊 Simulated Leaderboard</div>
+        <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px" id="sim-results-subtitle"></p>
+        <div id="sim-results-wrap"></div>
+      </div>
+    </div>
 
   </main>
 
@@ -941,6 +969,7 @@
       if (name === 'picks') loadPicksAudit();
       if (name === 'oracle') initOracleTab();
       if (name === 'results') { loadSnapshotStatus(); runExhaustionCheck(); }
+      if (name === 'sim') initSimTab();
     }
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -1475,7 +1504,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
     async function loadMatchesForResult() {
       const { data } = await db
         .from('matches')
-        .select('id, kickoff, round_id, is_third_place, score_home, score_away, rounds(id, name, round_type), home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
+        .select('id, kickoff, round_id, is_third_place, home_score, away_score, rounds(id, name, round_type), home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
         .or('confirmed.is.null,confirmed.eq.false')
         .not('home_team_id', 'is', null)
         .not('away_team_id', 'is', null)
@@ -1843,8 +1872,8 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       document.getElementById('pens-winner-row').style.display = 'none';
       const matchId = document.getElementById('result-match-select').value;
       const match = matchId ? matchCache[matchId] : null;
-      document.getElementById('result-home-score').value = (match && match.score_home != null) ? match.score_home : '';
-      document.getElementById('result-away-score').value = (match && match.score_away != null) ? match.score_away : '';
+      document.getElementById('result-home-score').value = (match && match.home_score != null) ? match.home_score : '';
+      document.getElementById('result-away-score').value = (match && match.away_score != null) ? match.away_score : '';
       updatePensRow(); updatePreview();
       document.getElementById('third-place-notice').style.display = (match && match.is_third_place) ? 'block' : 'none';
       const homeLbl = document.getElementById('home-score-label');
@@ -4742,6 +4771,254 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
 
       // Refresh preview to reflect new state
       await oraclePreview();
+    }
+
+
+    // ── What-If Simulator ─────────────────────────────────────
+
+    let _simMatchData = [];
+    let _simRoundId   = null;
+
+    async function initSimTab() {
+      const { data: rounds } = await db.from('rounds')
+        .select('id, name, round_type, sort_order')
+        .order('sort_order');
+      const sel = document.getElementById('sim-round-select');
+      if (!rounds) return;
+      sel.innerHTML = '<option value="">Select round...</option>' +
+        rounds
+          .filter(r => r.id !== GP0_ROUND_ID && r.name !== '3rd Place')
+          .map(r => `<option value="${r.id}" data-type="${r.round_type}">${r.name}</option>`)
+          .join('');
+      document.getElementById('btn-load-sim-matches').addEventListener('click', loadSimMatches);
+      document.getElementById('btn-run-sim').addEventListener('click', runSim);
+      document.getElementById('btn-clear-sim').addEventListener('click', () => {
+        document.querySelectorAll('#sim-matches-wrap input[type="number"]').forEach(i => { i.value = ''; });
+        document.getElementById('sim-results-card').style.display = 'none';
+        document.getElementById('sim-msg').textContent = '';
+      });
+    }
+
+    async function loadSimMatches() {
+      const sel     = document.getElementById('sim-round-select');
+      const roundId = sel.value;
+      const wrap    = document.getElementById('sim-matches-wrap');
+      const runWrap = document.getElementById('sim-run-wrap');
+      const msg     = document.getElementById('sim-msg');
+      const card    = document.getElementById('sim-results-card');
+      msg.textContent = '';
+      card.style.display = 'none';
+      runWrap.style.display = 'none';
+      wrap.innerHTML = '';
+
+      if (!roundId) { msg.style.color = 'var(--red)'; msg.textContent = 'Select a round first.'; return; }
+      wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      const { data: matches } = await db.from('matches')
+        .select('id, kickoff, round_id, home_team_id, away_team_id, home_score, away_score, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot), rounds(round_type)')
+        .eq('round_id', roundId)
+        .or('confirmed.is.null,confirmed.eq.false')
+        .not('home_team_id', 'is', null)
+        .not('away_team_id', 'is', null)
+        .order('kickoff');
+
+      if (!matches || matches.length === 0) {
+        wrap.innerHTML = '<p style="color:var(--text-muted); font-size:13px">No pending matches in this round.</p>';
+        return;
+      }
+
+      _simMatchData = matches;
+      _simRoundId   = roundId;
+
+      let html = '<div class="table-wrap"><table style="font-size:13px; width:100%; table-layout:fixed"><thead><tr><th class=\"left\" style=\"width:auto\">Match</th><th style=\"width:58px; text-align:center\">H</th><th style=\"width:58px; text-align:center\">A</th></tr></thead><tbody>';
+
+      matches.forEach(m => {
+        const ko   = new Date(m.kickoff).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+        const date = new Date(m.kickoff).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+        const hPre = m.home_score != null ? m.home_score : '';
+        const aPre = m.away_score != null ? m.away_score : '';
+        html += '<tr>' +
+          '<td class="left" style="font-size:12px; padding:6px 4px">' +
+            '<strong>' + m.home_team.flag_emoji + ' ' + m.home_team.name + ' vs ' + m.away_team.flag_emoji + ' ' + m.away_team.name + '</strong>' +
+            '<div style="color:var(--text-muted); font-size:11px">' + date + ' · ' + ko + '</div>' +
+          '</td>' +
+          '<td style="text-align:center; padding:4px 2px">' +
+            '<input type="number" min="0" id="sim-h-' + m.id + '" value="' + hPre + '" placeholder="—" ' +
+            'style="width:50px;text-align:center;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 2px;font-size:16px" />' +
+          '</td>' +
+          '<td style="text-align:center; padding:4px 2px">' +
+            '<input type="number" min="0" id="sim-a-' + m.id + '" value="' + aPre + '" placeholder="—" ' +
+            'style="width:50px;text-align:center;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 2px;font-size:16px" />' +
+          '</td>' +
+          '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+      wrap.innerHTML = html;
+      runWrap.style.display = 'flex';
+    }
+
+    async function runSim() {
+      const msg     = document.getElementById('sim-msg');
+      const card    = document.getElementById('sim-results-card');
+      const wrap    = document.getElementById('sim-results-wrap');
+      const sub     = document.getElementById('sim-results-subtitle');
+      msg.style.color = 'var(--text-muted)'; msg.textContent = 'Running…';
+      card.style.display = 'none';
+
+      // 1. Collect hypothetical scores
+      const simScores = {};
+      let simCount = 0;
+      for (const m of _simMatchData) {
+        const h = document.getElementById('sim-h-' + m.id)?.value;
+        const a = document.getElementById('sim-a-' + m.id)?.value;
+        if (h !== '' && a !== '' && !isNaN(parseInt(h)) && !isNaN(parseInt(a))) {
+          simScores[m.id] = { home: parseInt(h), away: parseInt(a) };
+          simCount++;
+        }
+      }
+      if (simCount === 0) { msg.style.color = 'var(--red)'; msg.textContent = 'Enter at least one score.'; return; }
+
+      // 2. Load current standings + picks
+      const [
+        { data: scores },
+        { data: gdData },
+        { data: furthestData },
+        { data: players },
+        { data: picks }
+      ] = await Promise.all([
+        db.from('player_scores').select('player_id, total_points'),
+        db.from('player_gd').select('player_id, gd'),
+        db.from('player_furthest_round').select('player_id, furthest_round'),
+        db.from('players').select('id, name, display_name, is_bot, is_eliminated, total_goals_prediction'),
+        db.from('picks').select('player_id, team_id, multiplier, round_id').eq('round_id', _simRoundId)
+      ]);
+
+      const botIds = new Set((players || []).filter(p => p.is_bot).map(p => p.id));
+      const basePoints  = {};
+      const baseGd      = {};
+      const furthestMap = {};
+      (scores       || []).forEach(s => { basePoints[s.player_id]  = s.total_points || 0; });
+      (gdData       || []).forEach(s => { baseGd[s.player_id]      = s.gd || 0; });
+
+      // Only use furthest_round tiebreaker in KO rounds — in group stage everyone is equal
+      const simRoundType = _simMatchData[0]?.rounds?.round_type || 'group';
+      const isKOSim = simRoundType === 'knockout';
+      if (isKOSim) {
+        (furthestData || []).forEach(s => { furthestMap[s.player_id] = s.furthest_round || 0; });
+      }
+
+      // Longshot map from match data
+      const longshotMap = {};
+      const matchTeams  = {};
+      for (const m of _simMatchData) {
+        longshotMap[m.home_team_id] = m.home_team.is_longshot;
+        longshotMap[m.away_team_id] = m.away_team.is_longshot;
+        matchTeams[m.id] = { home: m.home_team_id, away: m.away_team_id };
+      }
+
+      // 3. Apply sim scores in memory
+      const simPts = Object.assign({}, basePoints);
+      const simGd  = Object.assign({}, baseGd);
+
+      for (const [matchId, sc] of Object.entries(simScores)) {
+        const { home: homeTeamId, away: awayTeamId } = matchTeams[matchId];
+        const { home: hGoals, away: aGoals } = sc;
+        const matchPicks = (picks || []).filter(p => p.team_id === homeTeamId || p.team_id === awayTeamId);
+
+        for (const pick of matchPicks) {
+          const isHome   = pick.team_id === homeTeamId;
+          const myGoals  = isHome ? hGoals : aGoals;
+          const oppGoals = isHome ? aGoals : hGoals;
+          const isLong   = longshotMap[pick.team_id] || false;
+          let pts;
+          if (myGoals > oppGoals)       pts = pick.multiplier + (isLong ? 1 : 0);
+          else if (myGoals === oppGoals) pts = 1;
+          else                           pts = 0;
+          simPts[pick.player_id] = (simPts[pick.player_id] || 0) + pts;
+          const myGd = isHome ? (hGoals - aGoals) : (aGoals - hGoals);
+          simGd[pick.player_id] = (simGd[pick.player_id] || 0) + myGd;
+        }
+      }
+
+      // 4. Sort — Points → Furthest round → GD → Goals prediction → Alpha
+      const realPlayers = (players || []).filter(p => !botIds.has(p.id));
+
+      // projectedTotal needed for goals prediction tiebreaker
+      const { data: completedMatches } = await db.from('matches').select('home_score, away_score').eq('status', 'complete');
+      let projectedTotal = null;
+      if (completedMatches && completedMatches.length > 0) {
+        const goals = completedMatches.reduce((s, m) => s + (m.home_score || 0) + (m.away_score || 0), 0);
+        projectedTotal = (goals / completedMatches.length) * 104;
+      }
+      function sortPlayers(ptsMap, gdMap) {
+        return [...realPlayers].sort((a, b) => {
+          const pa = ptsMap[a.id] || 0, pb = ptsMap[b.id] || 0;
+          if (pb !== pa) return pb - pa;
+          const fa = furthestMap[a.id] || 0, fb = furthestMap[b.id] || 0;
+          if (fb !== fa) return fb - fa;
+          const gdDiff = (gdMap[b.id] || 0) - (gdMap[a.id] || 0);
+          if (gdDiff !== 0) return gdDiff;
+          if (projectedTotal !== null) {
+            const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
+            const bDiff = Math.abs((b.total_goals_prediction || 0) - projectedTotal);
+            if (aDiff !== bDiff) return aDiff - bDiff;
+          }
+          return (a.display_name || shortName(a.name)).localeCompare(b.display_name || shortName(b.name));
+        });
+      }
+
+      const currentSorted = sortPlayers(basePoints, baseGd);
+      const currentPos = {};
+      currentSorted.forEach((p, i) => { currentPos[p.id] = i + 1; });
+      const simSorted = sortPlayers(simPts, simGd);
+
+      // 5. Render
+      const matchNames = Object.keys(simScores).map(id => {
+        const m  = _simMatchData.find(x => x.id === id);
+        const sc = simScores[id];
+        return m.home_team.flag_emoji + m.home_team.name + ' ' + sc.home + '\u2013' + sc.away + ' ' + m.away_team.flag_emoji + m.away_team.name;
+      });
+      sub.textContent = 'If: ' + matchNames.join(' · ');
+
+      let html = '<div class="table-wrap"><table style="width:100%; font-size:13px; border-collapse:collapse">' +
+        '<thead><tr style="border-bottom:2px solid var(--border)">' +
+        '<th style="text-align:center; padding:6px 8px; color:var(--text-muted); font-size:11px; width:36px">#</th>' +
+        '<th style="text-align:center; padding:6px 4px; color:var(--text-muted); font-size:11px; width:40px">&#x394;</th>' +
+        '<th style="text-align:left; padding:6px 8px; color:var(--text-muted); font-size:11px">Player</th>' +
+        '<th style="text-align:center; padding:6px 8px; color:var(--text-muted); font-size:11px; width:44px">Pts</th>' +
+        '<th style="text-align:center; padding:6px 8px; color:var(--text-muted); font-size:11px; width:44px">GD</th>' +
+        '</tr></thead><tbody>';
+
+      simSorted.forEach((p, i) => {
+        const pos      = i + 1;
+        const prevPos  = currentPos[p.id] || pos;
+        const delta    = prevPos - pos;
+        const pts      = simPts[p.id]  || 0;
+        const gd       = simGd[p.id]   || 0;
+        const newPts   = pts - (basePoints[p.id] || 0);
+        let deltaHtml;
+        if (delta > 0)      deltaHtml = '<span style="color:var(--green);font-weight:700">&#x25B2;' + delta + '</span>';
+        else if (delta < 0) deltaHtml = '<span style="color:var(--red);font-weight:700">&#x25BC;' + Math.abs(delta) + '</span>';
+        else                deltaHtml = '<span style="color:var(--text-muted)">&#x2014;</span>';
+        const gdStr    = gd > 0 ? '+' + gd : String(gd);
+        const ptsGain  = newPts > 0 ? ' <span style="color:var(--green);font-size:11px">(+' + newPts + ')</span>' : '';
+        const nameStr  = p.display_name || shortName(p.name);
+        const elimStyle = p.is_eliminated ? 'opacity:0.45;' : '';
+        const elimTag  = p.is_eliminated ? ' <span style="font-size:10px;color:var(--red)">OUT</span>' : '';
+        html += '<tr style="border-bottom:1px solid var(--border);' + elimStyle + '">' +
+          '<td style="text-align:center; padding:7px 8px; font-weight:700; color:var(--text-muted)">' + pos + '</td>' +
+          '<td style="text-align:center; padding:7px 4px">' + deltaHtml + '</td>' +
+          '<td style="padding:7px 8px; font-weight:600">' + nameStr + elimTag + '</td>' +
+          '<td style="text-align:center; padding:7px 8px; font-weight:700">' + pts + ptsGain + '</td>' +
+          '<td style="text-align:center; padding:7px 8px; color:var(--text-muted)">' + gdStr + '</td>' +
+          '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+      wrap.innerHTML = html;
+      card.style.display = 'block';
+      msg.textContent = '';
     }
 
   </script>
