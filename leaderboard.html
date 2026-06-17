@@ -205,6 +205,7 @@
         <div class="lb-tab knockout-only" id="tab-matrix" data-view="matrix" onclick="switchView('matrix')">🔢 Matrix</div>
         <div class="lb-tab knockout-only" id="tab-fallen" data-view="fallen" onclick="switchView('fallen')">💀 Fallen</div>
         <div class="lb-tab knockout-only" id="tab-spoon" data-view="spoon" onclick="switchView('spoon')">🥄 Spoon</div>
+        <div class="lb-tab" data-view="whatif" onclick="switchView('whatif')">🔬 What-If</div>
       </div>
 
       <div id="loading" class="loading"><div class="spinner"></div>Loading standings...</div>
@@ -379,6 +380,28 @@
         </div>
       </div>
 
+      <!-- WHAT-IF TAB -->
+      <div class="lb-view" id="view-whatif">
+        <div style="border:2px dashed #8b5cf6; border-radius:14px; padding:16px; background:rgba(139,92,246,0.07)">
+          <div style="font-family:'Rajdhani',sans-serif; font-size:18px; font-weight:700; letter-spacing:0.05em; color:#8b5cf6; margin-bottom:6px">🔬 WHAT-IF SIMULATOR</div>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:14px">
+            Enter hypothetical scores for this round's pending matches and see how the table would shake out. Leave a match blank to exclude it. Nothing here is real — no scores are saved.
+          </p>
+          <div id="whatif-matches-wrap"></div>
+          <div id="whatif-run-wrap" style="display:none; margin-top:14px; gap:10px; flex-wrap:wrap">
+            <button class="btn btn-primary" id="btn-run-whatif">🔬 Run Simulation</button>
+            <button class="btn btn-secondary" id="btn-clear-whatif">✕ Clear</button>
+          </div>
+          <div id="whatif-msg" style="margin-top:8px; font-size:12px"></div>
+        </div>
+
+        <div id="whatif-results-card" style="display:none; margin-top:16px; border:2px dashed #8b5cf6; border-radius:14px; padding:16px; background:rgba(139,92,246,0.07)">
+          <div style="font-family:'Rajdhani',sans-serif; font-size:16px; font-weight:700; letter-spacing:0.05em; color:#8b5cf6; margin-bottom:4px">⚠️ SIMULATED LEADERBOARD — NOT REAL</div>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px" id="whatif-results-subtitle"></p>
+          <div id="whatif-results-wrap"></div>
+        </div>
+      </div>
+
     </div>
   </main>
 
@@ -475,9 +498,12 @@
       if (name === 'fallen') renderFallenView();
       if (name === 'prizes' && _leaderboardData) renderPrizesView();
       if (name === 'spoon'  && _leaderboardData) renderSpoonView();
+      if (name === 'whatif') initWhatIfTab();
     }
 
     let _leaderboardData = null;
+    let _whatifMatchData = [];
+    let _whatifRoundId   = null;
 
     // Opponent lookup: team_id|round_id -> opposing team object {name, flag_emoji}
     // Built from all fixtures with teams assigned (scheduled / live / complete).
@@ -1687,7 +1713,7 @@
             '<td class="pos">' + pos + (tied ? '=' : '') + '</td>' +
             '<td class="prior">' + arrowHtml + '</td>' +
             '<td class="medal landscape-only">' + medal + '</td>' +
-            '<td class="player-name"><a ' + playerLinkAttrs(p.slug) + '>' + (p.display_name || shortName(p.name)) + '</a>' + (competitionEnded ? '' : (p.is_eliminated ? '<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:4px">✕</span>' : (isKnockout && resultInThisRound.has(p.player_id) ? '<span style="color:#10b981;font-size:11px;font-weight:700;margin-left:4px" title="Result in">✔</span>' : ''))) + (competitionEnded ? portraitFinalistBadge(p) : trophyHtml + portraitFinalistBadge(p) + flagHtml) + (competitionEnded && winningsMap[p.player_id] ? '<span style="font-weight:700;color:var(--gold);margin-left:6px">(£' + (winningsMap[p.player_id] % 1 === 0 ? winningsMap[p.player_id] : winningsMap[p.player_id].toFixed(2)) + ')</span>' : '') + '</td>' +
+            '<td class="player-name"><a ' + playerLinkAttrs(p.slug) + '><span class="portrait-only">' + (p.display_name || shortName(p.name)) + '</span><span class="landscape-only">' + (p.name || '?') + '</span></a>' + (competitionEnded ? '' : (p.is_eliminated ? '<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:4px">✕</span>' : (isKnockout && resultInThisRound.has(p.player_id) ? '<span style="color:#10b981;font-size:11px;font-weight:700;margin-left:4px" title="Result in">✔</span>' : ''))) + (competitionEnded ? portraitFinalistBadge(p) : trophyHtml + portraitFinalistBadge(p) + flagHtml) + (competitionEnded && winningsMap[p.player_id] ? '<span style="font-weight:700;color:var(--gold);margin-left:6px">(£' + (winningsMap[p.player_id] % 1 === 0 ? winningsMap[p.player_id] : winningsMap[p.player_id].toFixed(2)) + ')</span>' : '') + '</td>' +
             '<td style="color:var(--text-muted);text-align:center" class="col-pld' + (isKnockout ? ' hide-portrait-ko' : '') + '">' + effPld(p) + '</td>' +
             (liveMode
               ? '<td class="points tight-col"><span class="pts-num">' + effPts(p) + '</span><span class="pts-zap">' + ((liveByPlayer[p.player_id] && liveByPlayer[p.player_id].delta > 0) ? '⚡' : '') + '</span></td>'
@@ -1710,7 +1736,7 @@
         const finalBanner = document.getElementById('final-table-banner');
         if (finalBanner) finalBanner.style.display = competitionEnded ? '' : 'none';
 
-        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, woodenSpoonPlayers, competitionEnded, allTeams, posMap };
+        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, woodenSpoonPlayers, competitionEnded, allTeams, posMap, currentRound };
         if (document.getElementById('view-picks').classList.contains('active'))  renderPicksView();
         if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
         if (document.getElementById('view-fallen').classList.contains('active')) renderFallenView();
@@ -2453,6 +2479,241 @@
       });
 
       wrap.innerHTML = `<div>${html}</div>`;
+    }
+
+    // ── What-If Simulator ─────────────────────────────────────
+
+    async function initWhatIfTab() {
+      const wrap    = document.getElementById('whatif-matches-wrap');
+      const runWrap = document.getElementById('whatif-run-wrap');
+      const msg     = document.getElementById('whatif-msg');
+      document.getElementById('whatif-results-card').style.display = 'none';
+
+      if (!_leaderboardData || !_leaderboardData.currentRound) {
+        wrap.innerHTML = '<p style="color:var(--text-muted)">Load the main leaderboard first.</p>';
+        return;
+      }
+
+      const roundId = _leaderboardData.currentRound.id;
+
+      // Already loaded for this round — keep whatever the player's entered, don't refetch.
+      if (_whatifRoundId === roundId && _whatifMatchData.length) {
+        runWrap.style.display = 'flex';
+        return;
+      }
+
+      wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+      runWrap.style.display = 'none';
+      msg.textContent = '';
+      _whatifRoundId = roundId;
+
+      const { data: matches } = await db.from('matches')
+        .select('id, kickoff, round_id, home_team_id, away_team_id, is_third_place, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
+        .eq('round_id', roundId)
+        .or('confirmed.is.null,confirmed.eq.false')
+        .not('home_team_id', 'is', null)
+        .not('away_team_id', 'is', null)
+        .order('kickoff');
+
+      const pending = (matches || []).filter(m => !m.is_third_place);
+      _whatifMatchData = pending;
+
+      if (pending.length === 0) {
+        wrap.innerHTML = '<p style="color:var(--text-muted); font-size:13px">No pending matches in the current round right now.</p>';
+        return;
+      }
+
+      let html = '<div class="table-wrap"><table style="font-size:13px; width:100%; table-layout:fixed"><thead><tr><th class="left" style="width:auto">Match</th><th style="width:58px; text-align:center">H</th><th style="width:58px; text-align:center">A</th></tr></thead><tbody>';
+
+      pending.forEach(m => {
+        const ko   = new Date(m.kickoff).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+        const date = new Date(m.kickoff).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+        html += '<tr>' +
+          '<td class="left" style="font-size:12px; padding:6px 4px">' +
+            '<strong>' + m.home_team.flag_emoji + ' ' + m.home_team.name + ' vs ' + m.away_team.flag_emoji + ' ' + m.away_team.name + '</strong>' +
+            '<div style="color:var(--text-muted); font-size:11px">' + date + ' · ' + ko + '</div>' +
+          '</td>' +
+          '<td style="text-align:center; padding:4px 2px">' +
+            '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="whatif-score-input" id="whatif-h-' + m.id + '" placeholder="—" ' +
+            'onfocus="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')" ' +
+            'style="width:50px;text-align:center;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 2px;font-size:18px" />' +
+          '</td>' +
+          '<td style="text-align:center; padding:4px 2px">' +
+            '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="whatif-score-input" id="whatif-a-' + m.id + '" placeholder="—" ' +
+            'onfocus="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')" ' +
+            'style="width:50px;text-align:center;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 2px;font-size:18px" />' +
+          '</td>' +
+          '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+      wrap.innerHTML = html;
+      runWrap.style.display = 'flex';
+
+      document.getElementById('btn-run-whatif').onclick = runWhatIf;
+      document.getElementById('btn-clear-whatif').onclick = () => {
+        document.querySelectorAll('#whatif-matches-wrap .whatif-score-input').forEach(i => { i.value = ''; });
+        document.getElementById('whatif-results-card').style.display = 'none';
+        msg.textContent = '';
+      };
+    }
+
+    async function runWhatIf() {
+      const msg  = document.getElementById('whatif-msg');
+      const card = document.getElementById('whatif-results-card');
+      const wrap = document.getElementById('whatif-results-wrap');
+      const sub  = document.getElementById('whatif-results-subtitle');
+      msg.style.color = 'var(--text-muted)'; msg.textContent = 'Running…';
+      card.style.display = 'none';
+
+      if (!_leaderboardData) { msg.style.color = 'var(--red)'; msg.textContent = 'Standings not loaded — try again in a moment.'; return; }
+
+      // 1. Collect hypothetical scores
+      const simScores = {};
+      let simCount = 0;
+      for (const m of _whatifMatchData) {
+        const h = document.getElementById('whatif-h-' + m.id)?.value;
+        const a = document.getElementById('whatif-a-' + m.id)?.value;
+        if (h !== '' && a !== '' && !isNaN(parseInt(h)) && !isNaN(parseInt(a))) {
+          simScores[m.id] = { home: parseInt(h), away: parseInt(a) };
+          simCount++;
+        }
+      }
+      if (simCount === 0) { msg.style.color = 'var(--red)'; msg.textContent = 'Enter at least one score.'; return; }
+
+      const currentRound   = _leaderboardData.currentRound;
+      const isKOSim         = currentRound.round_type === 'knockout';
+      const realPlayers     = _leaderboardData.scores; // already human-only
+      const projectedTotal  = _leaderboardData.projectedTotal;
+      const basePoints      = {};
+      const baseGd          = {};
+      realPlayers.forEach(p => {
+        basePoints[p.player_id] = p.total_points || 0;
+        baseGd[p.player_id]     = _leaderboardData.gdMap[p.player_id] || 0;
+      });
+      // Furthest-round tiebreaker only matters in knockout — group stage everyone's equal.
+      const furthestMap = isKOSim ? _leaderboardData.furthestMap : {};
+
+      const roundPicks = (_leaderboardData.allPicks || []).filter(p => p.round_id === currentRound.id);
+
+      const longshotMap = {};
+      const matchTeams  = {};
+      const teamFlagMap = {};
+      for (const m of _whatifMatchData) {
+        longshotMap[m.home_team_id] = m.home_team.is_longshot;
+        longshotMap[m.away_team_id] = m.away_team.is_longshot;
+        matchTeams[m.id] = { home: m.home_team_id, away: m.away_team_id };
+        teamFlagMap[m.home_team_id] = m.home_team.flag_emoji || '';
+        teamFlagMap[m.away_team_id] = m.away_team.flag_emoji || '';
+      }
+
+      // 2. Apply sim scores in memory
+      const simPts = Object.assign({}, basePoints);
+      const simGd  = Object.assign({}, baseGd);
+      const playerPickOutcomes = {}; // player_id -> array of { pts, outcome, flag }
+
+      for (const [matchId, sc] of Object.entries(simScores)) {
+        const { home: homeTeamId, away: awayTeamId } = matchTeams[matchId];
+        const { home: hGoals, away: aGoals } = sc;
+        const matchPicks = roundPicks.filter(p => p.team_id === homeTeamId || p.team_id === awayTeamId);
+
+        for (const pick of matchPicks) {
+          const isHome   = pick.team_id === homeTeamId;
+          const myGoals  = isHome ? hGoals : aGoals;
+          const oppGoals = isHome ? aGoals : hGoals;
+          const isLong   = longshotMap[pick.team_id] || false;
+          let pts, outcome;
+          if (myGoals > oppGoals)        { pts = pick.multiplier + (isLong ? 1 : 0); outcome = 'win'; }
+          else if (myGoals === oppGoals) { pts = 1; outcome = 'draw'; }
+          else                            { pts = 0; outcome = 'loss'; }
+          simPts[pick.player_id] = (simPts[pick.player_id] || 0) + pts;
+          const myGd = isHome ? (hGoals - aGoals) : (aGoals - hGoals);
+          simGd[pick.player_id] = (simGd[pick.player_id] || 0) + myGd;
+          if (!playerPickOutcomes[pick.player_id]) playerPickOutcomes[pick.player_id] = [];
+          playerPickOutcomes[pick.player_id].push({ pts, outcome, flag: teamFlagMap[pick.team_id] || '' });
+        }
+      }
+
+      // 3. Sort — Points → Furthest round (KO only) → GD → Goals prediction → Alpha
+      function sortPlayers(ptsMap, gdMap) {
+        return [...realPlayers].sort((a, b) => {
+          const pa = ptsMap[a.player_id] || 0, pb = ptsMap[b.player_id] || 0;
+          if (pb !== pa) return pb - pa;
+          if (isKOSim) {
+            const fa = furthestMap[a.player_id] || 0, fb = furthestMap[b.player_id] || 0;
+            if (fb !== fa) return fb - fa;
+          }
+          const gdDiff = (gdMap[b.player_id] || 0) - (gdMap[a.player_id] || 0);
+          if (gdDiff !== 0) return gdDiff;
+          if (projectedTotal != null) {
+            const aDiff = Math.abs((a.total_goals_prediction || 0) - projectedTotal);
+            const bDiff = Math.abs((b.total_goals_prediction || 0) - projectedTotal);
+            if (aDiff !== bDiff) return aDiff - bDiff;
+          }
+          return (a.display_name || shortName(a.name)).localeCompare(b.display_name || shortName(b.name));
+        });
+      }
+
+      const currentSorted = sortPlayers(basePoints, baseGd);
+      const currentPos = {};
+      currentSorted.forEach((p, i) => { currentPos[p.player_id] = i + 1; });
+      const simSorted = sortPlayers(simPts, simGd);
+
+      // 4. Render
+      const matchNames = Object.keys(simScores).map(id => {
+        const m  = _whatifMatchData.find(x => x.id === id);
+        const sc = simScores[id];
+        return m.home_team.flag_emoji + m.home_team.name + ' ' + sc.home + '–' + sc.away + ' ' + m.away_team.flag_emoji + m.away_team.name;
+      });
+      sub.textContent = 'If: ' + matchNames.join(' · ');
+
+      let html = '<div class="table-wrap"><table style="width:100%; font-size:13px; border-collapse:collapse">' +
+        '<thead><tr style="border-bottom:2px solid var(--border)">' +
+        '<th style="text-align:center; padding:6px 8px; color:var(--text-muted); font-size:11px; width:36px">#</th>' +
+        '<th style="text-align:center; padding:6px 4px; color:var(--text-muted); font-size:11px; width:40px">Δ</th>' +
+        '<th style="text-align:left; padding:6px 8px; color:var(--text-muted); font-size:11px">Player</th>' +
+        '<th style="text-align:center; padding:6px 8px; color:var(--text-muted); font-size:11px; width:44px">Pts</th>' +
+        '<th style="text-align:center; padding:6px 8px; color:var(--text-muted); font-size:11px; width:44px">GD</th>' +
+        '</tr></thead><tbody>';
+
+      simSorted.forEach((p, i) => {
+        const pos      = i + 1;
+        const prevPos  = currentPos[p.player_id] || pos;
+        const delta    = prevPos - pos;
+        const pts      = simPts[p.player_id] || 0;
+        const gd       = simGd[p.player_id]  || 0;
+        const outcomes = playerPickOutcomes[p.player_id] || [];
+        let deltaHtml;
+        if (delta > 0)      deltaHtml = '<span style="color:var(--green);font-weight:700">▲' + delta + '</span>';
+        else if (delta < 0) deltaHtml = '<span style="color:var(--red);font-weight:700">▼' + Math.abs(delta) + '</span>';
+        else                deltaHtml = '<span style="color:var(--text-muted)">—</span>';
+        const gdStr = gd > 0 ? '+' + gd : String(gd);
+
+        const pickBadges = outcomes.map(o => {
+          let colour, label;
+          if (o.outcome === 'win')       { colour = 'var(--green)'; label = '+' + o.pts; }
+          else if (o.outcome === 'draw') { colour = 'var(--gold)';  label = '+1'; }
+          else                            { colour = 'var(--red)';   label = '0'; }
+          return o.flag + '<span style="color:' + colour + ';font-weight:700;font-size:11px;margin-left:1px">' + label + '</span>';
+        }).join(' ');
+
+        const nameStr   = p.display_name || shortName(p.name);
+        const elimStyle = p.is_eliminated ? 'opacity:0.45;' : '';
+        const elimTag   = p.is_eliminated ? ' <span style="font-size:10px;color:var(--red)">OUT</span>' : '';
+        const flagsHtml = pickBadges ? ' <span style="font-size:13px;margin-left:4px">' + pickBadges + '</span>' : '';
+        html += '<tr style="border-bottom:1px solid var(--border);' + elimStyle + '">' +
+          '<td style="text-align:center; padding:7px 8px; font-weight:700; color:var(--text-muted)">' + pos + '</td>' +
+          '<td style="text-align:center; padding:7px 4px">' + deltaHtml + '</td>' +
+          '<td style="padding:7px 8px; font-weight:600">' + nameStr + flagsHtml + elimTag + '</td>' +
+          '<td style="text-align:center; padding:7px 8px; font-weight:700">' + pts + '</td>' +
+          '<td style="text-align:center; padding:7px 8px; color:var(--text-muted)">' + gdStr + '</td>' +
+          '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+      wrap.innerHTML = html;
+      card.style.display = 'block';
+      msg.textContent = '';
     }
 
     (async () => {
