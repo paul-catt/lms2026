@@ -717,7 +717,7 @@
       <div class="card">
         <div class="card-title">🔮 Lock Oracle Picks</div>
         <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
-          Run before the round deadline. Preview scores the full available pool — top 10 shown. Lock inserts the top 2 (3pt + 2pt) into the database. Picks from different matches are guaranteed by the algorithm.
+          Run before the round deadline. Preview scores the full available pool — top 15 shown for group rounds, top 10 for knockout. Lock inserts the top 2 (3pt + 2pt) into the database, 3pt going to whichever of the two has shorter odds. Picks from different matches are guaranteed by the algorithm.
         </p>
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap">
           <select id="oracle-round-select" style="min-width:200px">
@@ -3692,7 +3692,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       const [{ data: players }, { data: rounds }, { data: picks }] = await Promise.all([
         db.from('players').select('id, name, is_eliminated').order('name'),
         db.from('rounds').select('id, name, sort_order, round_type').order('sort_order'),
-        db.from('picks').select('id, player_id, round_id, team_id, multiplier, is_assigned, oracle_pick, created_at, teams(name, flag_emoji)')
+        db.from('picks').select('id, player_id, round_id, team_id, multiplier, is_assigned, oracle_pick, created_at, teams(name, flag_emoji, is_longshot)')
       ]);
 
       if (!players || !rounds || !picks) {
@@ -3768,12 +3768,13 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
             let cellHtml = sorted.map(p => {
               const flag = p.teams?.flag_emoji || '🏳';
               const name = p.teams?.name || '?';
+              const ls = p.teams?.is_longshot ? '<span class="longshot-star">⭐</span>' : '';
               const multColor = p.multiplier === 3 ? 'var(--gold)' : 'var(--text-muted)';
               const multLabel = isGroup ? `<span style="color:${multColor}; font-weight:700">${p.multiplier}pt</span> ` : '';
               const auto = p.is_assigned ? ` (auto)` : '';
               const ts = p.created_at ? new Date(p.created_at).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : null;
               const tsHtml = ts ? `<div style="color:var(--text-muted); font-size:10px; margin-top:2px">${ts}${auto}</div>` : (auto ? `<div style="color:var(--text-muted); font-size:10px; margin-top:2px">${auto.trim()}</div>` : '');
-              return `<div style="line-height:1.4; white-space:nowrap">${multLabel}${flag} ${name}${p.oracle_pick ? ' 🔮' : ''}${tsHtml}</div>`;
+              return `<div style="line-height:1.4; white-space:nowrap">${multLabel}${flag} ${name}${ls}${p.oracle_pick ? ' 🔮' : ''}${tsHtml}</div>`;
             }).join('<div style="border-top:1px solid var(--border); margin:3px 0"></div>');
 
             html += `<td style="padding:6px 8px; border:1px solid var(--border); background:var(--surface); vertical-align:middle; white-space:nowrap">${cellHtml}</td>`;
@@ -3850,6 +3851,20 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
     let _combosData = null;
     let _comboSort = { col: 'count', dir: -1 };
 
+    // Latest round (by sort_order) whose start date has passed — i.e. the round in progress.
+    function getCurrentRoundId(rounds, roundType) {
+      const now = getEffectiveDate();
+      let current = null;
+      [...rounds]
+        .filter(r => (!roundType || r.round_type === roundType) && ROUND_START_DATES[r.name])
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .forEach(r => {
+          const deadline = new Date(ROUND_START_DATES[r.name] + 'T11:00:00Z');
+          if (now >= deadline) current = r.id;
+        });
+      return current;
+    }
+
     async function loadCombosSubtab() {
       const sel  = document.getElementById('combos-round-select');
       const wrap = document.getElementById('picks-combos-wrap');
@@ -3878,6 +3893,11 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
           .slice().reverse()
           .map(r => `<option value="${r.id}">${r.name}</option>`)
           .join('');
+
+        const currentId = getCurrentRoundId(rounds || [], 'group');
+        if (currentId && eligible.some(r => r.id === currentId)) {
+          sel.value = currentId;
+        }
 
         sel.addEventListener('change', () => renderCombosTable());
       }
@@ -4098,7 +4118,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       const [{ data: players }, { data: picks }] = await Promise.all([
         db.from('players').select('id, name, is_eliminated').order('name'),
         db.from('picks')
-          .select('player_id, multiplier, is_assigned, oracle_pick, teams(name, flag_emoji)')
+          .select('player_id, multiplier, is_assigned, oracle_pick, teams(name, flag_emoji, is_longshot)')
           .eq('round_id', roundId)
       ]);
 
@@ -4172,9 +4192,10 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       }
       const flag = pick.teams?.flag_emoji || '🏳';
       const name = pick.teams?.name || '?';
+      const ls = pick.teams?.is_longshot ? '<span class="longshot-star">⭐</span>' : '';
       const auto = pick.is_assigned ? ' <span style="font-size:10px; color:var(--text-muted)">(auto)</span>' : '';
       const oracle = pick.oracle_pick ? ' 🔮' : '';
-      return '<td style="padding:8px 10px; font-size:13px">' + flag + ' ' + name + oracle + auto + '</td>';
+      return '<td style="padding:8px 10px; font-size:13px">' + flag + ' ' + name + ls + oracle + auto + '</td>';
     }
 
     // ── LIVE SCORES ───────────────────────────────────────────
@@ -4517,7 +4538,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         .select('id, name, round_type, sort_order, deadline')
         .order('sort_order');
       if (!rounds) return;
-      const eligible = rounds.filter(r => !r.name.toLowerCase().includes('3rd'));
+      const eligible = rounds.filter(r => !r.name.toLowerCase().includes('3rd') && r.sort_order !== 0);
       eligible.forEach(r => {
         const opt = document.createElement('option');
         opt.value = r.id;
@@ -4619,6 +4640,9 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         return;
       }
 
+      const mode         = getRoundMode(round);
+      const previewLimit = mode === 'group' ? 15 : 10;
+
       // Deterministic top-2: sort by stars desc → H2H odds asc (lower = better) → outright odds asc → name asc
       const sorted = [...fullPool].sort((a, b) => {
         if (b.stars !== a.stars) return b.stars - a.stars;
@@ -4633,21 +4657,30 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
 
       // Top 2 must be from different matches
       // Same match = A's opponent is B, or B's opponent is A
-      let pick3entry = null, pick2entry = null;
+      let candidateA = null, candidateB = null;
       for (const entry of sorted) {
-        if (!pick3entry) { pick3entry = entry; continue; }
-        const sameMatch = pick3entry.opponent && entry.opponent &&
-          (pick3entry.opponent.id === entry.team.id || entry.opponent.id === pick3entry.team.id);
-        if (!sameMatch) { pick2entry = entry; break; }
+        if (!candidateA) { candidateA = entry; continue; }
+        const sameMatch = candidateA.opponent && entry.opponent &&
+          (candidateA.opponent.id === entry.team.id || entry.opponent.id === candidateA.team.id);
+        if (!sameMatch) { candidateB = entry; break; }
       }
-      if (!pick2entry) {
+      if (!candidateB) {
         // Fallback: just take top 2 regardless
-        pick3entry = sorted[0] || null;
-        pick2entry = sorted[1] || null;
+        candidateA = sorted[0] || null;
+        candidateB = sorted[1] || null;
       }
 
-      // Render preview — top 10
-      const top10 = sorted.slice(0, 10);
+      // Which two teams get picked stays rank-driven (above). Which of those two
+      // gets the 3pt label is odds-driven: shorter (lower) H2H odds = 3pt.
+      let pick3entry = candidateA, pick2entry = candidateB;
+      if (candidateA && candidateB) {
+        const aH2h = candidateA.myH2h || 999;
+        const bH2h = candidateB.myH2h || 999;
+        if (bH2h < aH2h) { pick3entry = candidateB; pick2entry = candidateA; }
+      }
+
+      // Render preview — top 15 (group) / top 10 (KO)
+      const top10 = sorted.slice(0, previewLimit);
       let html = `<table style="width:100%; border-collapse:collapse; font-size:13px">
         <thead><tr style="border-bottom:1px solid var(--border)">
           <th style="text-align:left; padding:6px 8px; color:var(--text-muted); font-weight:600">Rank</th>
@@ -4683,8 +4716,8 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       });
 
       html += '</tbody></table>';
-      if (fullPool.length > 10) {
-        html += `<p style="font-size:12px; color:var(--text-muted); margin-top:8px">… and ${fullPool.length - 10} more candidates</p>`;
+      if (fullPool.length > previewLimit) {
+        html += `<p style="font-size:12px; color:var(--text-muted); margin-top:8px">… and ${fullPool.length - previewLimit} more candidates</p>`;
       }
 
       document.getElementById('oracle-preview-list').innerHTML = html;
