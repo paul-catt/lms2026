@@ -29,7 +29,7 @@
     .player-name { font-weight:600; }
     .player-name a { color:var(--text); text-decoration:none; }
     .player-name a:hover { color:var(--gold); }
-    .points { font-size:16px; font-weight:700; color:var(--gold); }
+    .points { font-size:16px; font-weight:700; color:var(--gold); white-space:nowrap; }
     .out-row { opacity:0.45; }
     .playing-row { background:rgba(139,92,246,0.12) !important; }
     .playing-row:hover { background:rgba(139,92,246,0.18) !important; }
@@ -151,7 +151,6 @@
     .ls-delta { font-weight:800; color:var(--gold); margin-left:4px; }
     .ls-delta-zero { color:var(--text-muted); font-weight:700; margin-left:4px; }
     .ls-zap { font-size:11px; }
-    .pld-zap { font-size:11px; color:var(--gold); margin-left:2px; }
     .badge-provout { display:inline-block; font-size:11px; font-weight:700; color:var(--red); background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35); border-radius:4px; padding:0 5px; }
     .pts-num { display:inline-block; min-width:24px; text-align:right; font-variant-numeric:tabular-nums; }
     .pts-zap { display:inline-block; width:12px; text-align:left; font-size:11px; vertical-align:top; }
@@ -1689,7 +1688,7 @@
             '<td class="prior">' + arrowHtml + '</td>' +
             '<td class="medal landscape-only">' + medal + '</td>' +
             '<td class="player-name"><a ' + playerLinkAttrs(p.slug) + '>' + (p.display_name || shortName(p.name)) + '</a>' + (competitionEnded ? '' : (p.is_eliminated ? '<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:4px">✕</span>' : (isKnockout && resultInThisRound.has(p.player_id) ? '<span style="color:#10b981;font-size:11px;font-weight:700;margin-left:4px" title="Result in">✔</span>' : ''))) + (competitionEnded ? portraitFinalistBadge(p) : trophyHtml + portraitFinalistBadge(p) + flagHtml) + (competitionEnded && winningsMap[p.player_id] ? '<span style="font-weight:700;color:var(--gold);margin-left:6px">(£' + (winningsMap[p.player_id] % 1 === 0 ? winningsMap[p.player_id] : winningsMap[p.player_id].toFixed(2)) + ')</span>' : '') + '</td>' +
-            '<td style="color:var(--text-muted);text-align:center" class="col-pld' + (isKnockout ? ' hide-portrait-ko' : '') + '">' + effPld(p) + (livePld(p) > 0 ? '<span class="pld-zap">⚡</span>' : '') + '</td>' +
+            '<td style="color:var(--text-muted);text-align:center" class="col-pld' + (isKnockout ? ' hide-portrait-ko' : '') + '">' + effPld(p) + '</td>' +
             (liveMode
               ? '<td class="points tight-col"><span class="pts-num">' + effPts(p) + '</span><span class="pts-zap">' + ((liveByPlayer[p.player_id] && liveByPlayer[p.player_id].delta > 0) ? '⚡' : '') + '</span></td>'
               : '<td class="points tight-col">' + (p.total_points || 0) + '</td>') +
