@@ -1223,7 +1223,7 @@
         snapshotTop3.forEach((p, i) => {
           const medal = ['🥇','🥈','🥉'][i];
           const pts = p.snapshotPts !== undefined ? p.snapshotPts : p.totalPoints;
-          msg += `${medal} ${p.display_name || shortName(p.name)} — ${pts}pts\n`;
+          msg += `${medal} ${p.name} — ${pts}pts\n`;
         });
       } else {
         sortedPlayers.slice(0, 3).forEach((p, i) => {
@@ -1255,7 +1255,7 @@
             const player = sortedPlayers.find(q => q.id === p.player_id);
             const flag = p.teams?.flag_emoji || '';
             const team = p.teams?.name || '?';
-            return player ? `${player.name} ${flag} ${team}` : '';
+            return player ? `${player.display_name || shortName(player.name)} ${flag} ${team}` : '';
           }).filter(Boolean);
 
           msg += `\n⭐ ${longshotPicks.length} player${longshotPicks.length !== 1 ? 's' : ''} went for a longshot — `;
@@ -2730,7 +2730,7 @@
 
       html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px">
         <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">#</span>
-        <span style="width:160px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Teams</span>
+        <span style="width:195px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Teams</span>
         <span style="width:48px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
         <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left;padding-left:8px">Picks</span>
         ${roundData.hasComboResults ? '<span style="width:34px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">W/L</span>' : ''}
@@ -2761,7 +2761,7 @@
 
         html += `<div style="display:flex;align-items:center;padding:6px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
           <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:left">${i+1}</div>
-          <div style="width:160px;min-width:0;overflow:hidden">
+          <div style="width:195px;min-width:0;overflow:hidden">
             <div style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[tidA]||''} ${teamNames[tidA]||'?'}${lsA}${oppA}</div>
             <div style="height:4px"></div>
             <div style="font-size:11px;font-weight:800;color:#1a202c">${teamFlags[tidB]||''} ${teamNames[tidB]||'?'}${lsB}${oppB}</div>

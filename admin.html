@@ -221,6 +221,7 @@
       </button>
       <div id="setup-tabs" style="display:none; margin-top:8px">
         <div class="tab-bar" style="margin-bottom:0">
+          <div class="tab" data-tab="standings">📊 Tables</div>
           <div class="tab" data-tab="matches">🏆 R32</div>
           <div class="tab" data-tab="teams">🏳️ Teams</div>
           <div class="tab" data-tab="pool">🎱 Pool</div>
@@ -520,6 +521,23 @@
         </p>
         <button class="btn btn-primary" id="btn-elim-group-teams">👀 Preview & Eliminate</button>
         <div id="elim-group-msg" style="margin-top:8px; font-size:12px"></div>
+      </div>
+    </div>
+
+    <!-- STANDINGS TAB -->
+    <div class="tab-content" id="tab-standings">
+      <div class="card">
+        <div class="card-title">📊 Group Tables &amp; Third-Place Race</div>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:4px">
+          Real confirmed results are used automatically. For matches still to be played, enter an expected score to project a current-best-guess final table — it's silently replaced the moment the real result is saved via the Results tab. This is read-only: real R32 team assignment still happens manually in the R32 Input tab above.
+        </p>
+        <div id="standings-summary" style="margin-top:10px; font-size:13px"></div>
+      </div>
+      <div id="standings-groups-wrap" style="margin-top:16px"><div class="loading"><div class="spinner"></div></div></div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">🥉 Best Third-Placed Teams</div>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">Ranked across all 12 groups — top 8 advance to the Round of 32, bottom 4 are eliminated.</p>
+        <div id="standings-thirdplace-wrap"><div class="loading"><div class="spinner"></div></div></div>
       </div>
     </div>
 
@@ -925,7 +943,7 @@
     }
 
     function switchTab(name) {
-      const setupTabs = ['matches', 'teams', 'pool', 'bracket', 'goals', 'odds', 'testdate'];
+      const setupTabs = ['standings', 'matches', 'teams', 'pool', 'bracket', 'goals', 'odds', 'testdate'];
       if (setupTabs.includes(name)) toggleSetup(true);
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -936,6 +954,7 @@
       if (name === 'teams' && !_teamsLoaded) { _teamsLoaded = true; loadTeamsLongshot(); }
       if (name === 'pool') loadPoolTab();
       if (name === 'bracket') loadBracketVersions();
+      if (name === 'standings') loadStandingsTab();
       if (name === 'matches') loadR32Matches();
       if (name === 'picks') loadPicksAudit();
       if (name === 'oracle') initOracleTab();
@@ -4776,6 +4795,275 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       await oraclePreview();
     }
 
+    // ===== GROUP STANDINGS & THIRD-PLACE CALCULATOR =====
+    const GROUP_TEAMS_STANDINGS = {
+      'A': ['Mexico', 'South Africa', 'South Korea', 'Czech Rep'],
+      'B': ['Canada', 'Bosnia/Herzeg', 'Qatar', 'Switzerland'],
+      'C': ['Brazil', 'Morocco', 'Haiti', 'Scotland'],
+      'D': ['USA', 'Paraguay', 'Australia', 'Turkey'],
+      'E': ['Germany', 'Curaçao', 'Ivory Coast', 'Ecuador'],
+      'F': ['Netherlands', 'Japan', 'Sweden', 'Tunisia'],
+      'G': ['Belgium', 'Egypt', 'Iran', 'New Zealand'],
+      'H': ['Spain', 'Cape Verde', 'Saudi Arabia', 'Uruguay'],
+      'I': ['France', 'Senegal', 'Iraq', 'Norway'],
+      'J': ['Argentina', 'Algeria', 'Austria', 'Jordan'],
+      'K': ['Portugal', 'DR Congo', 'Uzbekistan', 'Colombia'],
+      'L': ['England', 'Croatia', 'Ghana', 'Panama'],
+    };
+
+    function _statSig(s) { return s.pts + '|' + s.gd + '|' + s.gf; }
+
+    function _buildTeamStats(ids, matchList) {
+      const stats = {};
+      ids.forEach(id => { stats[id] = { pld: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0, projected: false }; });
+      matchList.forEach(m => {
+        if (!ids.includes(m.homeId) || !ids.includes(m.awayId)) return;
+        const h = stats[m.homeId], a = stats[m.awayId];
+        if (!h || !a) return;
+        h.pld++; a.pld++;
+        h.gf += m.homeGoals; h.ga += m.awayGoals;
+        a.gf += m.awayGoals; a.ga += m.homeGoals;
+        if (m.isProjected) { h.projected = true; a.projected = true; }
+        if (m.homeGoals > m.awayGoals) { h.w++; a.l++; h.pts += 3; }
+        else if (m.homeGoals < m.awayGoals) { a.w++; h.l++; a.pts += 3; }
+        else { h.d++; a.d++; h.pts += 1; a.pts += 1; }
+      });
+      Object.values(stats).forEach(s => { s.gd = s.gf - s.ga; });
+      return stats;
+    }
+
+    // FIFA tiebreak cascade: head-to-head (pts/gd/gf among tied teams) -> full-group gd/gf -> manual flag
+    function _resolveTie(ids, matchList, fullStats) {
+      if (ids.length <= 1) return ids.map(id => ({ id, flag: false }));
+      const subMatches = matchList.filter(m => ids.includes(m.homeId) && ids.includes(m.awayId));
+      const subStats = _buildTeamStats(ids, subMatches);
+      const sorted = [...ids].sort((a, b) => {
+        const sa = subStats[a], sb = subStats[b];
+        if (sb.pts !== sa.pts) return sb.pts - sa.pts;
+        if (sb.gd !== sa.gd) return sb.gd - sa.gd;
+        if (sb.gf !== sa.gf) return sb.gf - sa.gf;
+        return 0;
+      });
+      const result = [];
+      let i = 0;
+      while (i < sorted.length) {
+        let j = i + 1;
+        while (j < sorted.length && _statSig(subStats[sorted[i]]) === _statSig(subStats[sorted[j]])) j++;
+        const clump = sorted.slice(i, j);
+        if (clump.length === 1) {
+          result.push({ id: clump[0], flag: false });
+        } else {
+          const sorted2 = [...clump].sort((a, b) => {
+            const fa = fullStats[a], fb = fullStats[b];
+            if (fb.gd !== fa.gd) return fb.gd - fa.gd;
+            if (fb.gf !== fa.gf) return fb.gf - fa.gf;
+            return 0;
+          });
+          let k = 0;
+          while (k < sorted2.length) {
+            let l = k + 1;
+            while (l < sorted2.length && fullStats[sorted2[k]].gd === fullStats[sorted2[l]].gd && fullStats[sorted2[k]].gf === fullStats[sorted2[l]].gf) l++;
+            const clump2 = sorted2.slice(k, l);
+            clump2.forEach(id => result.push({ id, flag: clump2.length > 1 }));
+            k = l;
+          }
+        }
+        i = j;
+      }
+      return result;
+    }
+
+    function _sortGroupTeams(ids, matchList) {
+      const fullStats = _buildTeamStats(ids, matchList);
+      const byPts = [...ids].sort((a, b) => fullStats[b].pts - fullStats[a].pts);
+      const order = [];
+      let i = 0;
+      while (i < byPts.length) {
+        let j = i + 1;
+        while (j < byPts.length && fullStats[byPts[j]].pts === fullStats[byPts[i]].pts) j++;
+        const cluster = byPts.slice(i, j);
+        const resolved = _resolveTie(cluster, matchList, fullStats);
+        resolved.forEach(r => order.push(r));
+        i = j;
+      }
+      return order.map(r => ({ id: r.id, stats: fullStats[r.id], manualTie: r.flag }));
+    }
+
+    async function loadStandingsTab() {
+      const groupsWrap = document.getElementById('standings-groups-wrap');
+      const thirdWrap  = document.getElementById('standings-thirdplace-wrap');
+      const summaryEl  = document.getElementById('standings-summary');
+
+      const [{ data: teams }, { data: rounds }, { data: matches }] = await Promise.all([
+        db.from('teams').select('id, name, flag_emoji'),
+        db.from('rounds').select('id, round_type, phase_number'),
+        db.from('matches').select('id, round_id, home_team_id, away_team_id, home_score, away_score, expected_home_score, expected_away_score, confirmed, is_third_place')
+      ]);
+
+      if (!teams || !rounds || !matches) {
+        groupsWrap.innerHTML = '<p style="color:var(--red)">Error loading data.</p>';
+        return;
+      }
+
+      const groupRoundIds = new Set(rounds.filter(r => r.round_type === 'group' && r.phase_number != null).map(r => r.id));
+      const teamById = {};
+      teams.forEach(t => { teamById[t.id] = t; });
+      const nameToId = {};
+      teams.forEach(t => { nameToId[t.name] = t.id; });
+
+      const groupMatches = matches
+        .filter(m => groupRoundIds.has(m.round_id) && !m.is_third_place)
+        .map(m => {
+          const isReal = m.confirmed === true && m.home_score != null && m.away_score != null;
+          const isProjected = !isReal && m.expected_home_score != null && m.expected_away_score != null;
+          return {
+            id: m.id,
+            homeId: m.home_team_id,
+            awayId: m.away_team_id,
+            homeGoals: isReal ? m.home_score : (isProjected ? m.expected_home_score : null),
+            awayGoals: isReal ? m.away_score : (isProjected ? m.expected_away_score : null),
+            isReal, isProjected,
+            played: isReal || isProjected,
+            expected_home_score: m.expected_home_score,
+            expected_away_score: m.expected_away_score,
+          };
+        });
+
+      const playedMatches    = groupMatches.filter(m => m.played);
+      const unplayedMatches  = groupMatches.filter(m => !m.played);
+      const totalProjected   = playedMatches.filter(m => m.isProjected).length;
+      const totalConfirmed   = playedMatches.length - totalProjected;
+
+      summaryEl.innerHTML = `<strong>${totalConfirmed}</strong>/${groupMatches.length} confirmed &nbsp;·&nbsp; <strong style="color:var(--gold)">${totalProjected}</strong> projected &nbsp;·&nbsp; <strong style="color:${unplayedMatches.length ? 'var(--text-muted)' : 'var(--green)'}">${unplayedMatches.length}</strong> not yet entered`;
+
+      const thirdPlacePool = [];
+      let groupsHtml = '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px;">';
+
+      Object.entries(GROUP_TEAMS_STANDINGS).forEach(([letter, teamNames]) => {
+        const ids = teamNames.map(n => nameToId[n]).filter(Boolean);
+        const idToName = {};
+        ids.forEach(id => { idToName[id] = teamById[id]?.name || '?'; });
+        const groupMatchList = groupMatches.filter(m => ids.includes(m.homeId) && ids.includes(m.awayId));
+        const ranked = _sortGroupTeams(ids, groupMatchList.filter(m => m.played));
+
+        if (ranked[2]) {
+          thirdPlacePool.push({
+            groupLetter: letter, teamId: ranked[2].id,
+            name: teamById[ranked[2].id]?.name || '?',
+            stats: ranked[2].stats, manualTie: ranked[2].manualTie,
+          });
+        }
+
+        groupsHtml += `<div style="background:var(--surface2); border:1px solid var(--border); border-radius:10px; overflow:hidden;">
+          <div style="background:var(--surface); padding:7px 12px; border-bottom:1px solid var(--border); font-family:'Rajdhani',sans-serif; font-weight:700; color:var(--accent); letter-spacing:0.06em;">GROUP ${letter}</div>
+          <table style="width:100%; border-collapse:collapse; font-size:12px;">
+            <thead><tr style="color:var(--text-muted); text-transform:uppercase; font-size:10px;">
+              <th style="text-align:left; padding:5px 8px">Team</th>
+              <th style="padding:5px 4px">P</th>
+              <th style="padding:5px 4px">Pts</th>
+              <th style="padding:5px 4px">GD</th>
+              <th style="padding:5px 4px">GF</th>
+            </tr></thead><tbody>`;
+
+        ranked.forEach((r, idx) => {
+          const bg = idx < 2 ? 'rgba(16,185,129,0.12)' : idx === 2 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.08)';
+          const projTag = r.stats.projected ? ' <span style="font-size:9px; color:var(--gold); font-style:italic">proj</span>' : '';
+          const tieTag  = r.manualTie ? ' <span style="font-size:9px; color:var(--red)" title="Tied on points/GD/goals — needs manual tiebreak (fair play or world ranking, not tracked here)">⚠</span>' : '';
+          groupsHtml += `<tr style="background:${bg}; border-top:1px solid var(--border);">
+            <td style="padding:5px 8px; font-weight:600">${teamById[r.id]?.flag_emoji || ''} ${teamById[r.id]?.name || '?'}${projTag}${tieTag}</td>
+            <td style="text-align:center">${r.stats.pld}</td>
+            <td style="text-align:center; font-weight:700">${r.stats.pts}</td>
+            <td style="text-align:center">${r.stats.gd > 0 ? '+' : ''}${r.stats.gd}</td>
+            <td style="text-align:center">${r.stats.gf}</td>
+          </tr>`;
+        });
+        groupsHtml += '</tbody></table>';
+
+        const editable = groupMatchList.filter(m => !m.isReal);
+        if (editable.length) {
+          groupsHtml += `<div style="padding:10px 12px; border-top:1px solid var(--border); font-size:12px;">`;
+          editable.forEach(m => {
+            groupsHtml += `<div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;" data-exp-row="${m.id}">
+              <span style="flex:1; color:var(--text-muted)">${idToName[m.homeId]}</span>
+              <input type="number" min="0" style="width:42px; padding:3px; text-align:center" class="exp-home-input" data-match-id="${m.id}" value="${m.expected_home_score ?? ''}">
+              <span>–</span>
+              <input type="number" min="0" style="width:42px; padding:3px; text-align:center" class="exp-away-input" data-match-id="${m.id}" value="${m.expected_away_score ?? ''}">
+              <span style="flex:1; color:var(--text-muted); text-align:right">${idToName[m.awayId]}</span>
+              <span class="exp-save-indicator" style="width:14px; font-size:11px;"></span>
+            </div>`;
+          });
+          groupsHtml += '</div>';
+        }
+
+        groupsHtml += '</div>';
+      });
+      groupsHtml += '</div>';
+      groupsWrap.innerHTML = groupsHtml;
+
+      groupsWrap.querySelectorAll('.exp-home-input, .exp-away-input').forEach(input => {
+        input.addEventListener('change', function() {
+          const matchId = this.dataset.matchId;
+          const row = this.closest('[data-exp-row]');
+          const home = row.querySelector('.exp-home-input').value;
+          const away = row.querySelector('.exp-away-input').value;
+          saveExpectedScore(matchId, home, away, row.querySelector('.exp-save-indicator'));
+        });
+      });
+
+      // Third-place pool: no head-to-head possible (different groups) — pts -> gd -> gf -> manual flag
+      const ranked3 = [...thirdPlacePool].sort((a, b) => {
+        if (b.stats.pts !== a.stats.pts) return b.stats.pts - a.stats.pts;
+        if (b.stats.gd !== a.stats.gd) return b.stats.gd - a.stats.gd;
+        if (b.stats.gf !== a.stats.gf) return b.stats.gf - a.stats.gf;
+        return a.groupLetter.localeCompare(b.groupLetter);
+      });
+      for (let i = 0; i < ranked3.length; i++) {
+        let j = i;
+        while (j + 1 < ranked3.length &&
+               ranked3[j+1].stats.pts === ranked3[i].stats.pts &&
+               ranked3[j+1].stats.gd === ranked3[i].stats.gd &&
+               ranked3[j+1].stats.gf === ranked3[i].stats.gf) j++;
+        if (j > i) for (let k = i; k <= j; k++) ranked3[k].manualTie = true;
+        i = j;
+      }
+
+      let thirdHtml = `<table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead><tr style="color:var(--text-muted); text-transform:uppercase; font-size:11px; border-bottom:1px solid var(--border);">
+          <th style="text-align:left; padding:6px 8px">#</th>
+          <th style="text-align:left; padding:6px 8px">Team</th>
+          <th style="padding:6px 8px">Pts</th>
+          <th style="padding:6px 8px">GD</th>
+          <th style="padding:6px 8px">G</th>
+        </tr></thead><tbody>`;
+      ranked3.forEach((r, idx) => {
+        const bg      = idx < 8 ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.1)';
+        const tieTag  = r.manualTie ? ' <span style="font-size:9px; color:var(--red)" title="Tied — needs manual tiebreak (fair play or world ranking, not tracked here)">⚠</span>' : '';
+        const projTag = r.stats.projected ? ' <span style="font-size:9px; color:var(--gold); font-style:italic">proj</span>' : '';
+        thirdHtml += `<tr style="background:${bg}; border-top:1px solid var(--border);">
+          <td style="padding:6px 8px; font-weight:700">${idx + 1}</td>
+          <td style="padding:6px 8px; font-weight:600">${teamById[r.teamId]?.flag_emoji || ''} ${r.name} <span style="color:var(--text-muted); font-size:11px">(Grp ${r.groupLetter})</span>${projTag}${tieTag}</td>
+          <td style="text-align:center; font-weight:700">${r.stats.pts}</td>
+          <td style="text-align:center">${r.stats.gd > 0 ? '+' : ''}${r.stats.gd}</td>
+          <td style="text-align:center">${r.stats.gf}</td>
+        </tr>`;
+      });
+      thirdHtml += '</tbody></table>';
+      thirdWrap.innerHTML = thirdHtml;
+    }
+
+    async function saveExpectedScore(matchId, homeVal, awayVal, indicatorEl) {
+      if (indicatorEl) { indicatorEl.textContent = '⏳'; indicatorEl.style.color = 'var(--text-muted)'; indicatorEl.title = ''; }
+      const home = homeVal === '' ? null : parseInt(homeVal, 10);
+      const away = awayVal === '' ? null : parseInt(awayVal, 10);
+      const { error } = await db.from('matches').update({ expected_home_score: home, expected_away_score: away }).eq('id', matchId);
+      if (error) {
+        if (indicatorEl) { indicatorEl.textContent = '❌'; indicatorEl.style.color = 'var(--red)'; indicatorEl.title = error.message; }
+        console.error('Failed to save expected score for', matchId, ':', error.message);
+        return;
+      }
+      if (indicatorEl) { indicatorEl.textContent = '✅'; indicatorEl.style.color = 'var(--green)'; }
+      await loadStandingsTab();
+    }
 
   </script>
 </body>
