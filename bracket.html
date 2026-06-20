@@ -1270,6 +1270,7 @@
     // ── Shared standings engine & Groups tab ─────────────────────────────────
     let _groupsLoaded  = false;
     let _standingsCache = null;
+    let _liveRefreshInterval = null;
 
     const GROUP_TEAMS = {
       'A': ['Mexico', 'South Africa', 'South Korea', 'Czech Rep'],
@@ -1428,7 +1429,7 @@
       const [{ data: teams }, { data: rounds }, { data: matches }, { data: cfgRows }] = await Promise.all([
         db.from('teams').select('id, name, flag_emoji, is_longshot'),
         db.from('rounds').select('id, round_type, phase_number'),
-        db.from('matches').select('id, round_id, home_team_id, away_team_id, home_score, away_score, expected_home_score, expected_away_score, confirmed, is_third_place, kickoff'),
+        db.from('matches').select('id, round_id, home_team_id, away_team_id, home_score, away_score, expected_home_score, expected_away_score, confirmed, is_third_place, kickoff, api_status'),
         db.from('app_config').select('value').eq('key', 'tiebreak_overrides'),
       ]);
       if (!teams || !rounds || !matches) return null;
@@ -1444,11 +1445,13 @@
         .map(m=>{
           const isReal      = m.confirmed===true&&m.home_score!=null&&m.away_score!=null;
           const isProjected = !isReal&&m.expected_home_score!=null&&m.expected_away_score!=null;
+          const isLive      = m.api_status==='IN_PLAY' &&m.home_score!=null&&!isReal;
+          const isHT        = m.api_status==='PAUSED'  &&m.home_score!=null&&!isReal;
           return {
             id:m.id, homeId:m.home_team_id, awayId:m.away_team_id,
-            homeGoals: isReal?m.home_score:isProjected?m.expected_home_score:null,
-            awayGoals: isReal?m.away_score:isProjected?m.expected_away_score:null,
-            isReal, isProjected, played:isReal||isProjected,
+            homeGoals: isReal ? m.home_score : (isLive||isHT) ? m.home_score : isProjected ? m.expected_home_score : null,
+            awayGoals: isReal ? m.away_score : (isLive||isHT) ? m.away_score : isProjected ? m.expected_away_score : null,
+            isReal, isProjected, isLive, isHT, played:isReal||isLive||isHT||isProjected,
             kickoff:m.kickoff, home_score:m.home_score, away_score:m.away_score,
             expected_home_score:m.expected_home_score, expected_away_score:m.expected_away_score,
           };
@@ -1492,7 +1495,8 @@
         groupRankings, thirdRanked, top8GroupSet,
         comboMapping, comboInv, teamById, nameToId, groupMatches, tiebreakOverrides,
         totalConfirmed: groupMatches.filter(m=>m.isReal).length,
-        totalProjected: groupMatches.filter(m=>m.isProjected).length,
+        totalLive:      groupMatches.filter(m=>m.isLive||m.isHT).length,
+        totalProjected: groupMatches.filter(m=>m.isProjected&&!m.isLive&&!m.isHT).length,
         totalUnplayed:  groupMatches.filter(m=>!m.played).length,
         totalMatches:   groupMatches.length,
       };
@@ -1541,9 +1545,12 @@
       const s = await computeGroupStandings();
       if (!s) { groupsWrap.innerHTML='<p style="color:var(--red)">Error loading data.</p>'; return; }
       const {groupRankings,thirdRanked,top8GroupSet,comboMapping,comboInv,teamById,groupMatches,
-             totalConfirmed,totalProjected,totalUnplayed,totalMatches} = s;
+             totalConfirmed,totalLive,totalProjected,totalUnplayed,totalMatches} = s;
 
-      summaryEl.innerHTML=`<strong>${totalConfirmed}</strong>/${totalMatches} confirmed &nbsp;·&nbsp; <strong style="color:var(--gold)">${totalProjected}</strong> projected &nbsp;·&nbsp; <strong style="color:${totalUnplayed?'var(--text-muted)':'var(--green)'}">${totalUnplayed}</strong> not yet entered`;
+      summaryEl.innerHTML=`<strong>${totalConfirmed}</strong>/${totalMatches} confirmed`
+        + (totalLive ? ` &nbsp;·&nbsp; <strong style="color:#ef4444">🔴 ${totalLive} live</strong>` : '')
+        + ` &nbsp;·&nbsp; <strong style="color:var(--gold)">${totalProjected}</strong> projected`
+        + ` &nbsp;·&nbsp; <strong style="color:${totalUnplayed?'var(--text-muted)':'var(--green)'}">${totalUnplayed}</strong> not yet entered`;
 
       let groupsHtml='<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(270px,1fr)); gap:14px;">';
       Object.entries(GROUP_TEAMS).forEach(([letter,teamNames])=>{
@@ -1598,8 +1605,12 @@
             dayStr  = d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
             timeStr = d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
           }
-          const scoreHtml = m.isReal && m.home_score != null
+          const scoreHtml = m.isReal
             ? `<span style="font-size:12px;font-weight:800;color:var(--green);flex-shrink:0;min-width:34px;text-align:center">${m.home_score}–${m.away_score}</span>`
+            : m.isLive
+            ? `<div style="flex-shrink:0;min-width:38px;text-align:center;line-height:1.2"><div style="font-size:12px;font-weight:800;color:#ef4444">${m.home_score}–${m.away_score}</div><div style="font-size:8px;color:#ef4444;font-weight:700;letter-spacing:0.05em">LIVE</div></div>`
+            : m.isHT
+            ? `<div style="flex-shrink:0;min-width:38px;text-align:center;line-height:1.2"><div style="font-size:12px;font-weight:800;color:var(--gold)">${m.home_score}–${m.away_score}</div><div style="font-size:8px;color:var(--gold);font-weight:700">HT</div></div>`
             : m.isProjected
             ? `<span style="font-size:12px;font-weight:700;color:var(--gold);font-style:italic;flex-shrink:0;min-width:34px;text-align:center">${m.homeGoals}–${m.awayGoals}</span>`
             : `<span style="font-size:11px;color:var(--text-muted);flex-shrink:0;min-width:34px;text-align:center">vs</span>`;
@@ -1648,7 +1659,22 @@
       });
       thirdHtml+='</tbody></table>';
       if(thirdWrap) thirdWrap.innerHTML=thirdHtml;
+
+      // Auto-refresh when live matches are in progress
+      if (_liveRefreshInterval) { clearInterval(_liveRefreshInterval); _liveRefreshInterval = null; }
+      if (groupMatches.some(m => m.isLive || m.isHT)) {
+        _liveRefreshInterval = setInterval(() => { _standingsCache = null; loadGroupsTab(); }, 60000);
+      }
     }
 
+    // Pause live refresh when browser tab is hidden; resume immediately on return
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (_liveRefreshInterval) { clearInterval(_liveRefreshInterval); _liveRefreshInterval = null; }
+      } else if (document.getElementById('panel-groups')?.classList.contains('active')) {
+        _standingsCache = null;
+        loadGroupsTab();
+      }
+    });
 
   </script>
