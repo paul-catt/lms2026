@@ -190,7 +190,8 @@
       <div class="page-tab-panel" id="panel-groups">
         <div class="card">
           <div class="card-title">📊 Group Tables</div>
-          <p style="color:var(--text-muted); font-size:13px; margin-bottom:8px">Projected from confirmed results plus Paul's predicted scores.</p>
+          <p style="color:var(--text-muted); font-size:13px; margin-bottom:4px">Projected from confirmed results plus Paul's predicted scores.</p>
+          <p style="color:var(--text-muted); font-size:11px; margin-bottom:8px">⚠ = tied on pts/GD/goals — tiebreaker is fair play or world ranking (not tracked, needs manual call)</p>
           <div id="groups-summary" style="font-size:13px"></div>
         </div>
         <div id="groups-wrap" style="margin-top:16px"><div class="loading"><div class="spinner"></div></div></div>
@@ -1340,7 +1341,16 @@
       Object.values(stats).forEach(s => { s.gd = s.gf - s.ga; });
       return stats;
     }
-    function _resolveTie(ids, matchList, fullStats) {
+    // Returns -1 if idA ranks above idB, +1 if idB above idA, 0 if no override
+    function findOverride(idA, idB, overrides) {
+      if (!overrides || !overrides.length) return 0;
+      for (const o of overrides) {
+        if (o.higher === idA && o.lower === idB) return -1;
+        if (o.higher === idB && o.lower === idA) return 1;
+      }
+      return 0;
+    }
+    function _resolveTie(ids, matchList, fullStats, overrides) {
       if (ids.length <= 1) return ids.map(id => ({id, flag:false}));
       const sub = matchList.filter(m => ids.includes(m.homeId) && ids.includes(m.awayId));
       const ss  = _buildTeamStats(ids, sub);
@@ -1361,12 +1371,14 @@
           const s2 = [...clump].sort((a,b) => {
             if (fullStats[b].gd !== fullStats[a].gd) return fullStats[b].gd - fullStats[a].gd;
             if (fullStats[b].gf !== fullStats[a].gf) return fullStats[b].gf - fullStats[a].gf;
-            return 0;
+            return findOverride(a, b, overrides);
           });
           let k = 0;
           while (k < s2.length) {
             let l = k+1;
-            while (l < s2.length && fullStats[s2[k]].gd === fullStats[s2[l]].gd && fullStats[s2[k]].gf === fullStats[s2[l]].gf) l++;
+            while (l < s2.length &&
+                   fullStats[s2[k]].gd === fullStats[s2[l]].gd &&
+                   fullStats[s2[k]].gf === fullStats[s2[l]].gf) l++;
             s2.slice(k,l).forEach(id => result.push({id, flag:(l-k)>1}));
             k = l;
           }
@@ -1375,7 +1387,7 @@
       }
       return result;
     }
-    function _sortGroupTeams(ids, matchList) {
+    function _sortGroupTeams(ids, matchList, overrides) {
       const fs = _buildTeamStats(ids, matchList);
       const byPts = [...ids].sort((a,b) => fs[b].pts - fs[a].pts);
       const order = [];
@@ -1383,7 +1395,7 @@
       while (i < byPts.length) {
         let j = i+1;
         while (j < byPts.length && fs[byPts[j]].pts === fs[byPts[i]].pts) j++;
-        _resolveTie(byPts.slice(i,j), matchList, fs).forEach(r => order.push(r));
+        _resolveTie(byPts.slice(i,j), matchList, fs, overrides).forEach(r => order.push(r));
         i = j;
       }
       return order.map(r => ({id:r.id, stats:fs[r.id], manualTie:r.flag}));
@@ -1413,12 +1425,15 @@
     async function computeGroupStandings() {
       if (_standingsCache) return _standingsCache;
 
-      const [{ data: teams }, { data: rounds }, { data: matches }] = await Promise.all([
+      const [{ data: teams }, { data: rounds }, { data: matches }, { data: cfgRows }] = await Promise.all([
         db.from('teams').select('id, name, flag_emoji, is_longshot'),
         db.from('rounds').select('id, round_type, phase_number'),
-        db.from('matches').select('id, round_id, home_team_id, away_team_id, home_score, away_score, expected_home_score, expected_away_score, confirmed, is_third_place, kickoff')
+        db.from('matches').select('id, round_id, home_team_id, away_team_id, home_score, away_score, expected_home_score, expected_away_score, confirmed, is_third_place, kickoff'),
+        db.from('app_config').select('value').eq('key', 'tiebreak_overrides'),
       ]);
       if (!teams || !rounds || !matches) return null;
+      let tiebreakOverrides = [];
+      try { if (cfgRows?.[0]?.value) tiebreakOverrides = JSON.parse(cfgRows[0].value) || []; } catch(e) {}
 
       const groupRoundIds = new Set(rounds.filter(r=>r.round_type==='group'&&r.phase_number!=null).map(r=>r.id));
       const teamById={}; teams.forEach(t=>{ teamById[t.id]=t; });
@@ -1435,6 +1450,7 @@
             awayGoals: isReal?m.away_score:isProjected?m.expected_away_score:null,
             isReal, isProjected, played:isReal||isProjected,
             kickoff:m.kickoff, home_score:m.home_score, away_score:m.away_score,
+            expected_home_score:m.expected_home_score, expected_away_score:m.expected_away_score,
           };
         });
 
@@ -1442,7 +1458,7 @@
       Object.entries(GROUP_TEAMS).forEach(([letter,teamNames])=>{
         const ids=teamNames.map(n=>nameToId[n]).filter(Boolean);
         const gm=groupMatches.filter(m=>ids.includes(m.homeId)&&ids.includes(m.awayId));
-        groupRankings[letter]=_sortGroupTeams(ids, gm.filter(m=>m.played));
+        groupRankings[letter]=_sortGroupTeams(ids, gm.filter(m=>m.played), tiebreakOverrides);
       });
 
       const thirdPool = Object.entries(groupRankings)
@@ -1452,6 +1468,8 @@
         if(b.stats.pts!==a.stats.pts) return b.stats.pts-a.stats.pts;
         if(b.stats.gd!==a.stats.gd)   return b.stats.gd-a.stats.gd;
         if(b.stats.gf!==a.stats.gf)   return b.stats.gf-a.stats.gf;
+        const ovr = findOverride(a.teamId, b.teamId, tiebreakOverrides);
+        if (ovr !== 0) return ovr;
         return a.groupLetter.localeCompare(b.groupLetter);
       });
       for (let i=0; i<thirdRanked.length;) {
@@ -1472,7 +1490,7 @@
 
       _standingsCache = {
         groupRankings, thirdRanked, top8GroupSet,
-        comboMapping, comboInv, teamById, nameToId, groupMatches,
+        comboMapping, comboInv, teamById, nameToId, groupMatches, tiebreakOverrides,
         totalConfirmed: groupMatches.filter(m=>m.isReal).length,
         totalProjected: groupMatches.filter(m=>m.isProjected).length,
         totalUnplayed:  groupMatches.filter(m=>!m.played).length,
@@ -1603,12 +1621,12 @@
           <th style="text-align:left;padding:6px 8px">Team</th>
           <th style="text-align:center;padding:6px 6px;font-weight:800;color:var(--text)">Pts</th>
           <th style="text-align:center;padding:6px 6px">GD</th>
+          <th style="text-align:center;padding:6px 6px">G</th>
           <th style="text-align:left;padding:6px 8px">R32</th>
         </tr></thead><tbody>`;
       thirdRanked.forEach((r,idx)=>{
         const qualifies=idx<8;
         const bg=qualifies?'rgba(16,185,129,0.12)':'rgba(239,68,68,0.1)';
-        const qualSym=qualifies?'<span style="color:var(--green);font-weight:700">✓</span> ':'<span style="color:var(--red);font-weight:700">✗</span> ';
         const tieTag=r.manualTie?' <span style="font-size:9px;color:var(--red)" title="Tied — manual tiebreak needed">⚠</span>':'';
         const team=teamById[r.teamId];
         const lsStar=team?.is_longshot?' ⭐':'';
@@ -1621,9 +1639,10 @@
         }
         thirdHtml+=`<tr style="background:${bg};border-top:1px solid var(--border);">
           <td style="padding:6px 8px;font-weight:700;color:var(--text-muted)">${idx+1}</td>
-          <td style="padding:6px 8px;font-weight:600">${qualSym}${team?.flag_emoji||''} ${team?.name||'?'}${lsStar}${tieTag}</td>
+          <td style="padding:6px 8px;font-weight:600">${team?.flag_emoji||''} ${team?.name||'?'}${lsStar}${tieTag}</td>
           <td style="text-align:center;font-weight:800;font-size:14px;padding:6px 6px">${r.stats.pts}</td>
           <td style="text-align:center;padding:6px 6px">${gdStr}</td>
+          <td style="text-align:center;padding:6px 6px">${r.stats.gf}</td>
           <td style="padding:6px 8px;font-size:11px;color:var(--text-muted)">${nextHtml}</td>
         </tr>`;
       });

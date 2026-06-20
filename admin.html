@@ -538,6 +538,21 @@
         <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">Ranked across all 12 groups — top 8 advance to the Round of 32, bottom 4 are eliminated.</p>
         <div id="standings-thirdplace-wrap"><div class="loading"><div class="spinner"></div></div></div>
       </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">⚠ Tiebreak Overrides</div>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">
+          When teams are tied on points, GD, and goals scored, set the preferred ranking here. Applies everywhere — group standings and third-place table.
+        </p>
+        <div id="tiebreak-list"><div class="loading"><div class="spinner"></div></div></div>
+        <div style="margin-top:14px; display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+          <input list="tb-team-datalist" id="tb-higher" placeholder="Higher-ranked team…" style="flex:1; min-width:140px">
+          <span style="color:var(--text-muted); font-size:13px; white-space:nowrap">ranks above</span>
+          <input list="tb-team-datalist" id="tb-lower" placeholder="Lower-ranked team…" style="flex:1; min-width:140px">
+          <datalist id="tb-team-datalist"></datalist>
+          <button class="btn btn-primary" onclick="addTiebreakOverride()">Add</button>
+          <span id="tb-save-msg" style="font-size:12px"></span>
+        </div>
+      </div>
     </div>
 
     <!-- TEAMS TAB -->
@@ -4726,9 +4741,15 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
           const home = teamById[m.home_team_id];
           const away = teamById[m.away_team_id];
           if (m.confirmed === true && m.home_score != null) {
-            html += `<div style="display:flex; align-items:center; gap:6px; margin-bottom:6px; opacity:0.5;">
+            const pred = m.expected_home_score != null && m.expected_away_score != null
+              ? `<div style="font-size:10px;color:var(--gold);font-style:italic">${m.expected_home_score}–${m.expected_away_score}</div>`
+              : '';
+            const scoreCell = pred
+              ? `<div style="text-align:center;line-height:1.4;flex-shrink:0"><div style="font-size:13px;font-weight:700">${m.home_score}–${m.away_score}</div>${pred}</div>`
+              : `<span style="font-size:13px;font-weight:700;flex-shrink:0">${m.home_score}–${m.away_score}</span>`;
+            html += `<div style="display:flex; align-items:center; gap:6px; margin-bottom:6px; opacity:0.65;">
               <span style="flex:1; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${home?.flag_emoji||''} ${home?.name||'?'}</span>
-              <span style="font-size:13px; font-weight:700">${m.home_score}–${m.away_score}</span>
+              ${scoreCell}
               <span style="flex:1; font-size:11px; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${away?.flag_emoji||''} ${away?.name||'?'}</span>
               <span style="width:14px; font-size:10px; color:var(--green)">✓</span>
             </div>`;
@@ -4758,6 +4779,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
           saveExpectedScore(matchId, home, away, row.querySelector('.exp-save-indicator'));
         });
       });
+      await loadTiebreakOverrides();
     }
 
     async function saveExpectedScore(matchId, homeVal, awayVal, indicatorEl) {
@@ -4772,6 +4794,114 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       }
       if (indicatorEl) { indicatorEl.textContent = '✅'; indicatorEl.style.color = 'var(--green)'; }
       await loadStandingsTab();
+    }
+
+    // ── Tiebreak Override Management ─────────────────────────────────────────
+    async function loadTiebreakOverrides() {
+      const list     = document.getElementById('tiebreak-list');
+      const datalist = document.getElementById('tb-team-datalist');
+      if (!list) return;
+
+      const [{ data: teams }, { data: cfgRows }] = await Promise.all([
+        db.from('teams').select('id, name, flag_emoji').order('name'),
+        db.from('app_config').select('value').eq('key', 'tiebreak_overrides'),
+      ]);
+
+      // Populate autocomplete datalist
+      if (teams && datalist) {
+        datalist.innerHTML = teams.map(t =>
+          `<option value="${(t.flag_emoji||'')+' '+t.name}">`
+        ).join('');
+      }
+
+      let overrides = [];
+      try { if (cfgRows?.[0]?.value) overrides = JSON.parse(cfgRows[0].value) || []; } catch(e) {}
+
+      if (!overrides.length) {
+        list.innerHTML = '<p style="color:var(--text-muted); font-size:13px">No overrides set.</p>';
+        return;
+      }
+
+      const teamById = {};
+      if (teams) teams.forEach(t => { teamById[t.id] = t; });
+
+      list.innerHTML = overrides.map((o, i) => {
+        const ht = teamById[o.higher], lt = teamById[o.lower];
+        const hLabel = ht ? `${ht.flag_emoji||''} ${ht.name}` : o.higher;
+        const lLabel = lt ? `${lt.flag_emoji||''} ${lt.name}` : o.lower;
+        return `<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; padding:8px 12px; background:var(--surface); border-radius:6px; border:1px solid var(--border);">
+          <span style="flex:1; font-size:13px; font-weight:600">${hLabel}</span>
+          <span style="font-size:11px; color:var(--text-muted)">ranks above</span>
+          <span style="flex:1; font-size:13px; font-weight:600">${lLabel}</span>
+          <button class="btn btn-danger" style="padding:3px 10px; font-size:11px" onclick="removeTiebreakOverride(${i})">Remove</button>
+        </div>`;
+      }).join('');
+    }
+
+    async function _saveTiebreakOverrides(overrides) {
+      const { error } = await db.from('app_config')
+        .update({ value: JSON.stringify(overrides) })
+        .eq('key', 'tiebreak_overrides');
+      return error;
+    }
+
+    async function addTiebreakOverride() {
+      const msgEl = document.getElementById('tb-save-msg');
+      const hVal  = document.getElementById('tb-higher').value.trim();
+      const lVal  = document.getElementById('tb-lower').value.trim();
+
+      if (!hVal || !lVal) {
+        if (msgEl) { msgEl.textContent = 'Enter both teams.'; msgEl.style.color = 'var(--red)'; }
+        return;
+      }
+
+      const { data: teams } = await db.from('teams').select('id, name, flag_emoji');
+      const findTeam = v => teams?.find(t =>
+        `${t.flag_emoji||''} ${t.name}`.trim().toLowerCase() === v.toLowerCase() ||
+        t.name.toLowerCase() === v.toLowerCase() ||
+        v.toLowerCase().endsWith(t.name.toLowerCase())
+      );
+
+      const ht = findTeam(hVal), lt = findTeam(lVal);
+      if (!ht || !lt) {
+        if (msgEl) { msgEl.textContent = 'Team not found — check spelling.'; msgEl.style.color = 'var(--red)'; }
+        return;
+      }
+      if (ht.id === lt.id) {
+        if (msgEl) { msgEl.textContent = 'Same team selected twice.'; msgEl.style.color = 'var(--red)'; }
+        return;
+      }
+
+      const { data: cfgRows } = await db.from('app_config').select('value').eq('key', 'tiebreak_overrides');
+      let overrides = [];
+      try { if (cfgRows?.[0]?.value) overrides = JSON.parse(cfgRows[0].value) || []; } catch(e) {}
+
+      // Remove any existing entry for this pair (either direction), then add new
+      overrides = overrides.filter(o =>
+        !((o.higher === ht.id && o.lower === lt.id) || (o.higher === lt.id && o.lower === ht.id))
+      );
+      overrides.push({ higher: ht.id, lower: lt.id });
+
+      const error = await _saveTiebreakOverrides(overrides);
+      if (error) {
+        if (msgEl) { msgEl.textContent = '❌ ' + error.message; msgEl.style.color = 'var(--red)'; }
+        return;
+      }
+
+      if (msgEl) { msgEl.textContent = '✅ Saved'; msgEl.style.color = 'var(--green)'; }
+      document.getElementById('tb-higher').value = '';
+      document.getElementById('tb-lower').value = '';
+      setTimeout(() => { if (msgEl) msgEl.textContent = ''; }, 2000);
+      await loadTiebreakOverrides();
+    }
+
+    async function removeTiebreakOverride(index) {
+      const { data: cfgRows } = await db.from('app_config').select('value').eq('key', 'tiebreak_overrides');
+      let overrides = [];
+      try { if (cfgRows?.[0]?.value) overrides = JSON.parse(cfgRows[0].value) || []; } catch(e) {}
+      overrides.splice(index, 1);
+      await _saveTiebreakOverrides(overrides);
+      await loadTiebreakOverrides();
     }
 
   </script>
