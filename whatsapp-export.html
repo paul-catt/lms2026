@@ -163,8 +163,9 @@
 
     <!-- Round Settings -->
     <div class="card" style="margin-bottom:24px">
-      <div style="display:flex; align-items:center; gap:16px">
+      <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap">
         <button class="btn btn-primary" id="btn-load-all">🔄 Load Round Data</button>
+        <select id="round-select" style="display:none;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-weight:600;cursor:pointer"></select>
         <span id="current-date-indicator" style="font-size:11px;color:var(--text-muted)"></span>
       </div>
       <div class="status-msg" id="load-status"></div>
@@ -534,6 +535,9 @@
 
     let roundData = null;
     let oddsMap = {};
+    let _rawPlayers = null, _rawPicks = null, _rawMatches = null, _rawRounds = null,
+        _rawFirstMatchData = null, _rawSnapshots = null, _rawGdData = null,
+        _rawFurthestRoundData = null, _rawPlayerScores = null, _rawAllTeams = null;
 
     async function syncTestDateFromSupabase() {
       const { data } = await db.from('app_config').select('value').eq('key', 'test_date_override').single();
@@ -553,6 +557,10 @@
     }
 
     document.getElementById('btn-load-all').addEventListener('click', loadAll);
+    document.getElementById('round-select').addEventListener('change', function() {
+      if (!_rawRounds) return;
+      processRound(parseInt(this.value));
+    });
     document.getElementById('btn-dl-pn').addEventListener('click', () => downloadRender('pn-render', 'Picks'));
     document.getElementById('btn-dl-tp').addEventListener('click', () => downloadRender('tp-render', 'TeamsPicked'));
     document.getElementById('btn-dl-cb').addEventListener('click', () => downloadRender('cb-render', 'Combinations'));
@@ -718,358 +726,431 @@
         if (pkErr) throw pkErr;
         if (mErr) throw mErr;
 
-        const opponentLookup = {};
-        (matches || []).forEach(m => {
-          opponentLookup[m.round_id + '|' + m.home_team_id] = m.away_team ? m.away_team.name : '?';
-          opponentLookup[m.round_id + '|' + m.away_team_id] = m.home_team ? m.home_team.name : '?';
-        });
+        // Store raw data for re-use when round selector changes
+        _rawPlayers = players; _rawPicks = picks; _rawMatches = matches;
+        _rawRounds = rounds; _rawFirstMatchData = firstMatchData;
+        _rawSnapshots = snapshots; _rawGdData = gdData;
+        _rawFurthestRoundData = furthestRoundData; _rawPlayerScores = playerScores;
+        _rawAllTeams = allTeams;
 
-        // Use earliest incomplete round as current (excluding 3rd Place); fall back to last completed round
+        // Auto-detect current round
         const earliestIncomplete = (rounds || []).find(r => !r.is_complete && r.name !== '3rd Place');
         const lastCompleted = (rounds || [])
           .filter(r => r.is_complete && r.name !== '3rd Place')
           .sort((a, b) => b.sort_order - a.sort_order)[0];
-        let currentRoundSortOrder = earliestIncomplete
+        const autoSortOrder = earliestIncomplete
           ? earliestIncomplete.sort_order
           : (lastCompleted ? lastCompleted.sort_order : 0);
 
-        const currentPicks = picks.filter(p => p.rounds && p.rounds.sort_order === currentRoundSortOrder);
-        const completedPicksAll = picks.filter(p => p.pick_results && p.pick_results.length > 0);
-
-        const teamCounts = {}, teamCounts2 = {}, teamCounts3 = {};
-        const teamNames = {}, teamFlags = {}, teamOpponents = {}, teamIsLongshot = {};
-
-        currentPicks.forEach(pick => {
-          const tid = pick.team_id;
-          teamCounts[tid] = (teamCounts[tid] || 0) + 1;
-          if (pick.multiplier === 2) teamCounts2[tid] = (teamCounts2[tid] || 0) + 1;
-          if (pick.multiplier === 3) teamCounts3[tid] = (teamCounts3[tid] || 0) + 1;
-          if (pick.teams) {
-            teamNames[tid] = pick.teams.name;
-            teamFlags[tid] = pick.teams.flag_emoji || '';
-            teamIsLongshot[tid] = pick.teams.is_longshot;
-          }
-          if (!teamOpponents[tid]) {
-            teamOpponents[tid] = opponentLookup[pick.round_id + '|' + tid] || '?';
-          }
-        });
-
-        const isGroupRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder)?.round_type === 'group';
-
-        const playerCurrentPicks = {};
-        currentPicks.forEach(pick => {
-          if (!playerCurrentPicks[pick.player_id]) playerCurrentPicks[pick.player_id] = [];
-          playerCurrentPicks[pick.player_id].push(pick);
-        });
-
-        // FIX 2: Build snapshot map for the last completed round (for movement arrows)
-        const completedRoundsSorted = (rounds || [])
-          .filter(r => r.is_complete && r.sort_order > 0)
-          .sort((a, b) => b.sort_order - a.sort_order);
-        const lastCompletedRound = completedRoundsSorted[0] || null;
-        const prevCompletedRound = completedRoundsSorted[1] || null;
-
-        // snapshotPosMap: position at END of last completed round (used for movement)
-        const snapshotPosMap = {};
-        if (lastCompletedRound && snapshots) {
-          snapshots
-            .filter(s => s.round_id === lastCompletedRound.id)
-            .forEach(s => { snapshotPosMap[s.player_id] = s.position; });
-        }
-
-        // prevSnapshotPosMap: position at end of round before that (for summary movers)
-        const prevSnapshotPosMap = {};
-        if (prevCompletedRound && snapshots) {
-          snapshots
-            .filter(s => s.round_id === prevCompletedRound.id)
-            .forEach(s => { prevSnapshotPosMap[s.player_id] = s.position; });
-        }
-
-        // FIX 4: Build eliminated_in_round_id lookup from teams
-        // We need which round each player was eliminated in. Players table has eliminated_at
-        // but not which round. Use the snapshots: a player missing from snapshot of a round
-        // they were present in before = eliminated that round. Instead, fetch players with
-        // eliminated_at and cross-reference rounds by date — simpler: fetch teams elimination
-        // round via players' picks to find their last round, then mark eliminated players.
-        // Actually the simplest correct approach: eliminated THIS round = is_eliminated AND
-        // their last pick was in lastCompletedRound.
-        const eliminatedThisRound = [];
-        if (lastCompletedRound) {
-          picks.forEach(pick => {
-            if (pick.rounds?.id !== lastCompletedRound.id) return;
-            const player = (players || []).find(p => p.id === pick.player_id);
-            if (player?.is_eliminated && !eliminatedThisRound.find(e => e.id === player.id)) {
-              eliminatedThisRound.push(player);
-            }
+        // Populate round selector
+        const roundSelect = document.getElementById('round-select');
+        roundSelect.innerHTML = '';
+        (rounds || [])
+          .filter(r => r.sort_order > 0 && r.name !== '3rd Place')
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.sort_order;
+            opt.textContent = r.name + (r.is_complete ? ' ✓' : '');
+            roundSelect.appendChild(opt);
           });
-        }
+        roundSelect.value = autoSortOrder;
+        roundSelect.style.display = 'inline-block';
 
-        // Furthest round per player
-        const furthestRoundMap = {};
-        (furthestRoundData || []).forEach(r => { furthestRoundMap[r.player_id] = r.furthest_round || 0; });
-
-        // Projected tournament total goals (completed matches scaled to 104)
-        const completedMatches = matches.filter(m => m.home_score !== null && m.away_score !== null);
-        const goalsScored = completedMatches.reduce((sum, m) => sum + (m.home_score || 0) + (m.away_score || 0), 0);
-        const projectedTotal = completedMatches.length > 0
-          ? Math.round((goalsScored / completedMatches.length) * 104)
-          : 0;
-
-        // GD per player
-        const gdMap = {};
-        (gdData || []).forEach(r => { gdMap[r.player_id] = r.gd || 0; });
-
-        // "Playing today" — noon-noon UTC window (respects test date override)
-        const testDateStr = localStorage.getItem('lms2026_test_date');
-        const nowUtc = testDateStr ? new Date(testDateStr) : new Date();
-        const todayWindowStart = new Date(Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(), 11, 0, 0));
-        if (nowUtc.getUTCHours() < 11) todayWindowStart.setUTCDate(todayWindowStart.getUTCDate() - 1);
-        const todayWindowEnd = new Date(todayWindowStart.getTime() + 24 * 60 * 60 * 1000);
-
-        // Match IDs kicking off in today's window, mapped to team IDs
-        const todayRoundObj = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
-        const todayMatchTeams = new Set();
-        (matches || []).forEach(m => {
-          if (!m.kickoff) return;
-          if (todayRoundObj && m.round_id !== todayRoundObj.id) return;
-          const ko = new Date(m.kickoff);
-          if (ko >= todayWindowStart && ko < todayWindowEnd) {
-            todayMatchTeams.add(m.home_team_id);
-            todayMatchTeams.add(m.away_team_id);
-          }
-        });
-
-        // Per player: which of their current picks are playing today
-        const playerTodayFlags = {}; // player_id -> array of flag_emoji
-        currentPicks.forEach(pick => {
-          if (!todayMatchTeams.has(pick.team_id)) return;
-          if (!playerTodayFlags[pick.player_id]) playerTodayFlags[pick.player_id] = [];
-          const flag = pick.teams?.flag_emoji || '🏳️';
-          if (!playerTodayFlags[pick.player_id].includes(flag))
-            playerTodayFlags[pick.player_id].push(flag);
-        });
-
-        const statsMap = {};
-        players.forEach(p => {
-          statsMap[p.id] = {
-            id: p.id, name: p.name, display_name: p.display_name, is_bot: p.is_bot, slug: p.slug, isOut: p.is_eliminated,
-            totalPoints: 0, pld: 0, teamsUsed: 0,
-            gd: gdMap[p.id] ?? 0,
-            furthestRound: furthestRoundMap[p.id] ?? 0,
-            goalsPredict: p.total_goals_prediction || 0,
-            todayFlags: playerTodayFlags[p.id] || [],
-            formEntries: []
-          };
-        });
-
-        // Build per-player stats needed for the image (points, pld, form, teamsUsed)
-        completedPicksAll.forEach(pick => {
-          const s = statsMap[pick.player_id];
-          if (!s) return;
-          const res = pick.pick_results[0];
-          s.totalPoints += res.points_earned || 0;
-          s.pld++;
-          const kickoff = res.matches?.kickoff || '9999';
-          s.formEntries.push({
-            kickoff,
-            result: res.match_result === 'win' ? 'W' : res.match_result === 'draw' ? 'D' : 'L'
-          });
-        });
-
-        Object.values(statsMap).forEach(s => {
-          s.formEntries.sort((a, b) => a.kickoff.localeCompare(b.kickoff));
-          s.form = s.formEntries.map(e => e.result);
-        });
-
-        picks.forEach(pick => { const s = statsMap[pick.player_id]; if (s) s.teamsUsed++; });
-
-        // Authoritative points from player_scores view (same source as leaderboard)
-        const scoresMap = {};
-        (playerScores || []).forEach(s => { scoresMap[s.player_id] = s.total_points; });
-        Object.values(statsMap).forEach(s => {
-          if (scoresMap[s.id] !== undefined) s.totalPoints = scoresMap[s.id];
-        });
-
-        // Build wonCurrentRound: alive players who won their KO pick this round
-        // AND still have eligible pool teams — mirrors leaderboard sort bonus exactly.
-        const wonCurrentRound = new Set();
-        const currentRoundObj2 = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
-        if (currentRoundObj2 && !isGroupRound) {
-          const alivePoolTeamIds = new Set((allTeams || []).filter(t => !t.is_eliminated).map(t => t.id));
-          const usedByPlayer = {};
-          picks.forEach(pick => {
-            if (!usedByPlayer[pick.player_id]) usedByPlayer[pick.player_id] = new Set();
-            usedByPlayer[pick.player_id].add(pick.team_id);
-          });
-          picks.forEach(pick => {
-            if (pick.round_id !== currentRoundObj2.id) return;
-            const res = pick.pick_results && pick.pick_results[0];
-            if (res && res.match_result === 'win') {
-              const used = usedByPlayer[pick.player_id] || new Set();
-              const hasTeamsLeft = [...alivePoolTeamIds].some(tid => !used.has(tid));
-              if (hasTeamsLeft) wonCurrentRound.add(pick.player_id);
-            }
-          });
-        }
-
-        // Sort exactly matching leaderboard.html
-        const sortedPlayers = Object.values(statsMap).sort((a, b) => {
-          if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
-          if (!isGroupRound) {
-            const currentSO = currentRoundSortOrder;
-            const aBonus = wonCurrentRound.has(a.id) ? 1 : 0;
-            const bBonus = wonCurrentRound.has(b.id) ? 1 : 0;
-            const afr = a.isOut ? (a.furthestRound || 0) : Math.max(a.furthestRound || 0, currentSO) + aBonus;
-            const bfr = b.isOut ? (b.furthestRound || 0) : Math.max(b.furthestRound || 0, currentSO) + bBonus;
-            if (bfr !== afr) return bfr - afr;
-          }
-          if (b.gd !== a.gd) return b.gd - a.gd;
-          const aDiff = Math.abs((a.goalsPredict || 0) - projectedTotal);
-          const bDiff = Math.abs((b.goalsPredict || 0) - projectedTotal);
-          if (aDiff !== bDiff) return aDiff - bDiff;
-          return a.name.localeCompare(b.name);
-        });
-
-        // Build rankMap: number humans only (continuous), bots get null (rendered as a dash)
-        const rankMap = {};
-        let _humanRank = 0;
-        let _prevHuman = null;
-        sortedPlayers.forEach((p) => {
-          if (p.is_bot) { rankMap[p.id] = null; return; }
-          _humanRank++;
-          if (isGroupRound || _prevHuman === null) { rankMap[p.id] = _humanRank; _prevHuman = p; return; }
-          const currentSO = currentRoundSortOrder;
-          const pBonus = wonCurrentRound.has(_prevHuman.id) ? 1 : 0;
-          const cBonus = wonCurrentRound.has(p.id) ? 1 : 0;
-          const pfr = _prevHuman.isOut ? (_prevHuman.furthestRound || 0) : Math.max(_prevHuman.furthestRound || 0, currentSO) + pBonus;
-          const cfr = p.isOut          ? (p.furthestRound          || 0) : Math.max(p.furthestRound          || 0, currentSO) + cBonus;
-          const isTied = _prevHuman.totalPoints === p.totalPoints
-            && pfr === cfr
-            && (_prevHuman.gd || 0) === (p.gd || 0)
-            && Math.abs((_prevHuman.goalsPredict || 0) - projectedTotal) === Math.abs((p.goalsPredict || 0) - projectedTotal);
-          rankMap[p.id] = isTied ? rankMap[_prevHuman.id] : _humanRank;
-          _prevHuman = p;
-        });
-
-        const roundLabel     = buildRoundLabel(rounds, currentRoundSortOrder);
-        const dayLabel       = buildDayLabel(rounds, currentRoundSortOrder, firstMatchData);
-        const fullRoundLabel = roundLabel + dayLabel;
-        // Plain-text equivalents for WA copy (no middle-dot character)
-        const roundLabelText     = buildRoundLabelText(rounds, currentRoundSortOrder);
-        const dayLabelText       = buildDayLabelText(rounds, currentRoundSortOrder, firstMatchData);
-        const fullRoundLabelText = roundLabelText + dayLabelText;
-
-        Object.keys(teamCounts).forEach(tid => { if (!oddsMap[tid]) oddsMap[tid] = ''; });
-
-        const currentRoundObj = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
-        let missingOddsCount = 0;
-
-        if (currentRoundObj) {
-          (matches || []).forEach(m => {
-            if (m.round_id !== currentRoundObj.id) return;
-            if (m.odds_home && teamCounts[m.home_team_id] && !oddsMap[m.home_team_id]) oddsMap[m.home_team_id] = m.odds_home;
-            if (m.odds_away && teamCounts[m.away_team_id] && !oddsMap[m.away_team_id]) oddsMap[m.away_team_id] = m.odds_away;
-          });
-          Object.keys(teamCounts).forEach(tid => { if (!oddsMap[tid]) missingOddsCount++; });
-        }
-
-        roundData = {
-          players, picks, completedPicksAll, currentPicks,
-          playerCurrentPicks, statsMap, sortedPlayers, rankMap,
-          teamCounts, teamCounts2, teamCounts3,
-          teamNames, teamFlags, teamOpponents, teamIsLongshot,
-          currentRoundSortOrder, isGroupRound,
-          roundLabel, dayLabel, fullRoundLabel,
-          rounds, matches, snapshots: snapshots || [],
-          snapshotPosMap, prevSnapshotPosMap,
-          lastCompletedRound, prevCompletedRound,
-          eliminatedThisRound, playerTodayFlags, gdMap,
-          todayWindowStart, todayWindowEnd, projectedTotal,
-          roundLabelText, fullRoundLabelText
-        };
-
-        // Compute day label and store in roundData
-        const testDateStr2 = localStorage.getItem('lms2026_test_date');
-        const nowForDay = testDateStr2 ? new Date(testDateStr2) : new Date();
-        const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-        const matchesOnDay = 'Matches on ' + dayNames[nowForDay.getDay()];
-
-        roundData.matchesOnDay = matchesOnDay;
-
-        // Footer banner state: blank if no games in the noon-noon window;
-        // "played" once the night's games are done (all FINISHED, or >2h past last kickoff);
-        // "playing" from noon until the games are done. Day = the night the games are on.
-        const _footerMatches = (matches || []).filter(m => {
-          if (!m.kickoff) return false;
-          if (todayRoundObj && m.round_id !== todayRoundObj.id) return false;
-          const ko = new Date(m.kickoff);
-          return ko >= todayWindowStart && ko < todayWindowEnd;
-        });
-        if (_footerMatches.length === 0) {
-          roundData.footerState = null;
-          roundData.footerDay = '';
-        } else {
-          const _lastKo = _footerMatches.reduce((mx, m) => Math.max(mx, new Date(m.kickoff).getTime()), 0);
-          const _allDone = _footerMatches.every(m => m.api_status === 'FINISHED' || m.confirmed === true);
-          const _gamesDone = _allDone || nowUtc.getTime() >= _lastKo + 2 * 60 * 60 * 1000;
-          roundData.footerState = _gamesDone ? 'played' : 'playing';
-          roundData.footerDay = dayNames[todayWindowStart.getUTCDay()];
-        }
-
-        // Per-team result for the current round (finished matches only): 'W' / 'L' / 'D'
-        const teamOutcome = {};
-        (matches || []).forEach(m => {
-          if (todayRoundObj && m.round_id !== todayRoundObj.id) return;
-          const hs = m.home_score, as = m.away_score;
-          const finished = (m.api_status === 'FINISHED' || m.confirmed === true) && hs != null && as != null;
-          if (!finished) return;
-          if (hs > as)      { teamOutcome[m.home_team_id] = 'W'; teamOutcome[m.away_team_id] = 'L'; }
-          else if (hs < as) { teamOutcome[m.home_team_id] = 'L'; teamOutcome[m.away_team_id] = 'W'; }
-          else              { teamOutcome[m.home_team_id] = 'D'; teamOutcome[m.away_team_id] = 'D'; }
-        });
-        roundData.teamOutcome = teamOutcome;
-        roundData.hasComboResults = Object.keys(teamOutcome).length > 0;
-
-        // Refresh date indicator
-        (function() {
-          const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-          const day = dayNames[nowForDay.getDay()];
-          const indicator = document.getElementById('current-date-indicator');
-          if (indicator) {
-            const label = testDateStr2 ? '🧪 Test date:' : '📅 Today:';
-            indicator.textContent = `${label} ${day} ${nowForDay.getDate()} ${months[nowForDay.getMonth()]} ${nowForDay.getFullYear()}`;
-            indicator.style.color = testDateStr2 ? '#f6ad55' : 'var(--text-muted)';
-          }
-        })();
-
-        renderPicksByName();
-        renderTeamsPicked();
-        renderCombinations();
-        renderLeaderboard();
-        renderPicksByNameNew();
-        renderTeamsPickedNew();
-        renderCombinationsNew();
-        renderLeaderboardNew();
-        renderKOPicksByPlayer();
-        renderKOTeamsPicked();
-        renderKOLeaderboard();
-        renderReminderCopy();
-        renderRoundSummary();
-        renderRIP();
-        runLeaderboardVerify();
-
-        let statusMsg = `✅ Loaded — ${currentPicks.length} picks in current round · ${completedPicksAll.length} results recorded.`;
-        if (missingOddsCount > 0) {
-          statusMsg += ` <span style="color:var(--gold)">⚠️ ${missingOddsCount} team(s) missing match odds — <a href="/admin" style="color:var(--accent)">Admin → Odds tab</a> to fetch.</span>`;
-        } else if (Object.keys(teamCounts).length > 0) {
-          statusMsg += ` <span style="color:var(--green)">✓ Match odds loaded from DB.</span>`;
-        }
-        setStatus('load-status', statusMsg);
+        processRound(autoSortOrder);
 
       } catch(err) {
         console.error(err);
         setStatus('load-status', '❌ Error: ' + err.message);
       }
+    }
+
+    function processRound(targetSortOrder) {
+      if (!_rawRounds) return;
+      const players = _rawPlayers, picks = _rawPicks, matches = _rawMatches,
+            rounds = _rawRounds, firstMatchData = _rawFirstMatchData,
+            snapshots = _rawSnapshots, gdData = _rawGdData,
+            furthestRoundData = _rawFurthestRoundData, playerScores = _rawPlayerScores,
+            allTeams = _rawAllTeams;
+
+      const currentRoundSortOrder = targetSortOrder;
+
+      // Sync dropdown
+      const roundSelect = document.getElementById('round-select');
+      if (roundSelect) roundSelect.value = targetSortOrder;
+
+      const opponentLookup = {};
+      (matches || []).forEach(m => {
+        opponentLookup[m.round_id + '|' + m.home_team_id] = m.away_team ? m.away_team.name : '?';
+        opponentLookup[m.round_id + '|' + m.away_team_id] = m.home_team ? m.home_team.name : '?';
+      });
+
+      // Completed rounds up to and including target (for snapshot-relative lookups)
+      const completedBeforeOrAtTarget = (rounds || [])
+        .filter(r => r.is_complete && r.sort_order > 0 && r.sort_order <= targetSortOrder && r.name !== '3rd Place')
+        .sort((a, b) => b.sort_order - a.sort_order);
+      const lastCompletedRound = completedBeforeOrAtTarget[0] || null;
+      const prevCompletedRound = completedBeforeOrAtTarget[1] || null;
+      const twoRoundsBack     = completedBeforeOrAtTarget[2] || null;
+
+      const currentPicks = picks.filter(p => p.rounds && p.rounds.sort_order === currentRoundSortOrder);
+      const completedPicksAll = picks.filter(p => p.pick_results && p.pick_results.length > 0);
+
+      const teamCounts = {}, teamCounts2 = {}, teamCounts3 = {};
+      const teamNames = {}, teamFlags = {}, teamOpponents = {}, teamIsLongshot = {};
+
+      currentPicks.forEach(pick => {
+        const tid = pick.team_id;
+        teamCounts[tid] = (teamCounts[tid] || 0) + 1;
+        if (pick.multiplier === 2) teamCounts2[tid] = (teamCounts2[tid] || 0) + 1;
+        if (pick.multiplier === 3) teamCounts3[tid] = (teamCounts3[tid] || 0) + 1;
+        if (pick.teams) {
+          teamNames[tid] = pick.teams.name;
+          teamFlags[tid] = pick.teams.flag_emoji || '';
+          teamIsLongshot[tid] = pick.teams.is_longshot;
+        }
+        if (!teamOpponents[tid]) {
+          teamOpponents[tid] = opponentLookup[pick.round_id + '|' + tid] || '?';
+        }
+      });
+
+      const isGroupRound = (rounds || []).find(r => r.sort_order === currentRoundSortOrder)?.round_type === 'group';
+
+      const playerCurrentPicks = {};
+      currentPicks.forEach(pick => {
+        if (!playerCurrentPicks[pick.player_id]) playerCurrentPicks[pick.player_id] = [];
+        playerCurrentPicks[pick.player_id].push(pick);
+      });
+
+      // Snapshot data for lastCompletedRound — determines whether we use snapshot or live mode
+      const snapshotForTarget = lastCompletedRound
+        ? (snapshots || []).filter(s => s.round_id === lastCompletedRound.id)
+        : [];
+      const useSnapshots = snapshotForTarget.length > 0;
+
+      // eliminatedThisRound: players eliminated in lastCompletedRound
+      const eliminatedThisRound = [];
+      if (lastCompletedRound) {
+        picks.forEach(pick => {
+          if (pick.rounds?.id !== lastCompletedRound.id) return;
+          const player = (players || []).find(p => p.id === pick.player_id);
+          if (player?.is_eliminated && !eliminatedThisRound.find(e => e.id === player.id)) {
+            eliminatedThisRound.push(player);
+          }
+        });
+      }
+
+      // Furthest round per player
+      const furthestRoundMap = {};
+      (furthestRoundData || []).forEach(r => { furthestRoundMap[r.player_id] = r.furthest_round || 0; });
+
+      // Projected tournament total goals (completed matches scaled to 104)
+      const completedMatches = matches.filter(m => m.home_score !== null && m.away_score !== null);
+      const goalsScored = completedMatches.reduce((sum, m) => sum + (m.home_score || 0) + (m.away_score || 0), 0);
+      const projectedTotal = completedMatches.length > 0
+        ? Math.round((goalsScored / completedMatches.length) * 104)
+        : 0;
+
+      // GD per player
+      const gdMap = {};
+      (gdData || []).forEach(r => { gdMap[r.player_id] = r.gd || 0; });
+
+      // "Playing today" — noon-noon UTC window (respects test date override)
+      const testDateStr = localStorage.getItem('lms2026_test_date');
+      const nowUtc = testDateStr ? new Date(testDateStr) : new Date();
+      const todayWindowStart = new Date(Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(), 11, 0, 0));
+      if (nowUtc.getUTCHours() < 11) todayWindowStart.setUTCDate(todayWindowStart.getUTCDate() - 1);
+      const todayWindowEnd = new Date(todayWindowStart.getTime() + 24 * 60 * 60 * 1000);
+
+      const todayRoundObj = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
+      const todayMatchTeams = new Set();
+      (matches || []).forEach(m => {
+        if (!m.kickoff) return;
+        if (todayRoundObj && m.round_id !== todayRoundObj.id) return;
+        const ko = new Date(m.kickoff);
+        if (ko >= todayWindowStart && ko < todayWindowEnd) {
+          todayMatchTeams.add(m.home_team_id);
+          todayMatchTeams.add(m.away_team_id);
+        }
+      });
+
+      const playerTodayFlags = {};
+      currentPicks.forEach(pick => {
+        if (!todayMatchTeams.has(pick.team_id)) return;
+        if (!playerTodayFlags[pick.player_id]) playerTodayFlags[pick.player_id] = [];
+        const flag = pick.teams?.flag_emoji || '🏳️';
+        if (!playerTodayFlags[pick.player_id].includes(flag))
+          playerTodayFlags[pick.player_id].push(flag);
+      });
+
+      const statsMap = {};
+      players.forEach(p => {
+        statsMap[p.id] = {
+          id: p.id, name: p.name, display_name: p.display_name, is_bot: p.is_bot, slug: p.slug, isOut: p.is_eliminated,
+          totalPoints: 0, pld: 0, teamsUsed: 0,
+          gd: gdMap[p.id] ?? 0,
+          furthestRound: furthestRoundMap[p.id] ?? 0,
+          goalsPredict: p.total_goals_prediction || 0,
+          todayFlags: playerTodayFlags[p.id] || [],
+          formEntries: []
+        };
+      });
+
+      // In snapshot mode, restrict per-player stats to picks from rounds up to the target
+      // so PLD, form etc. reflect the historical round, not the current cumulative total.
+      const picksForStats = useSnapshots
+        ? completedPicksAll.filter(p => p.rounds && p.rounds.sort_order <= targetSortOrder)
+        : completedPicksAll;
+      const picksForTeamsUsed = useSnapshots
+        ? picks.filter(p => p.rounds && p.rounds.sort_order <= targetSortOrder)
+        : picks;
+
+      // Build per-player stats needed for the image (points, pld, form, teamsUsed)
+      picksForStats.forEach(pick => {
+        const s = statsMap[pick.player_id];
+        if (!s) return;
+        const res = pick.pick_results[0];
+        s.totalPoints += res.points_earned || 0;
+        s.pld++;
+        const kickoff = res.matches?.kickoff || '9999';
+        s.formEntries.push({
+          kickoff,
+          result: res.match_result === 'win' ? 'W' : res.match_result === 'draw' ? 'D' : 'L'
+        });
+      });
+
+      Object.values(statsMap).forEach(s => {
+        s.formEntries.sort((a, b) => a.kickoff.localeCompare(b.kickoff));
+        s.form = s.formEntries.map(e => e.result);
+      });
+
+      picksForTeamsUsed.forEach(pick => { const s = statsMap[pick.player_id]; if (s) s.teamsUsed++; });
+
+      // Authoritative points from player_scores view (same source as leaderboard)
+      const scoresMap = {};
+      (playerScores || []).forEach(s => { scoresMap[s.player_id] = s.total_points; });
+      Object.values(statsMap).forEach(s => {
+        if (scoresMap[s.id] !== undefined) s.totalPoints = scoresMap[s.id];
+      });
+
+      // wonCurrentRound: alive players who won their KO pick this round AND still have eligible pool teams
+      const wonCurrentRound = new Set();
+      const currentRoundObj2 = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
+      if (currentRoundObj2 && !isGroupRound) {
+        const alivePoolTeamIds = new Set((allTeams || []).filter(t => !t.is_eliminated).map(t => t.id));
+        const usedByPlayer = {};
+        picks.forEach(pick => {
+          if (!usedByPlayer[pick.player_id]) usedByPlayer[pick.player_id] = new Set();
+          usedByPlayer[pick.player_id].add(pick.team_id);
+        });
+        picks.forEach(pick => {
+          if (pick.round_id !== currentRoundObj2.id) return;
+          const res = pick.pick_results && pick.pick_results[0];
+          if (res && res.match_result === 'win') {
+            const used = usedByPlayer[pick.player_id] || new Set();
+            const hasTeamsLeft = [...alivePoolTeamIds].some(tid => !used.has(tid));
+            if (hasTeamsLeft) wonCurrentRound.add(pick.player_id);
+          }
+        });
+      }
+
+      // ── Snapshot-aware points & Prior-arrow source ────────────
+      // In snapshot mode: override totalPoints from snapshot (or pick_results sum for bots).
+      // Sort itself is always live-logic (points → GD → goals → alpha) so displayed rank
+      // numbers match the GD column the user can see. Snapshot positions are NOT used for
+      // ordering — they're only used as the "Prior" baseline in the PRIOR arrow column.
+      let sortedPlayers, rankMap, snapshotPosMap = {}, prevSnapshotPosMap = {};
+
+      if (useSnapshots) {
+        const snapPointsMap = {};
+        snapshotForTarget.forEach(s => {
+          if (s.total_points != null) snapPointsMap[s.player_id] = s.total_points;
+        });
+
+        // Override totalPoints: snapshot value for humans; pick_results sum for bots
+        Object.values(statsMap).forEach(s => {
+          if (snapPointsMap[s.id] !== undefined) {
+            s.totalPoints = snapPointsMap[s.id];
+          } else {
+            let pts = 0;
+            completedPicksAll.forEach(pick => {
+              if (pick.player_id === s.id && pick.rounds && pick.rounds.sort_order <= targetSortOrder)
+                pts += pick.pick_results[0]?.points_earned || 0;
+            });
+            s.totalPoints = pts;
+          }
+        });
+
+        // Prior arrows: movement INTO the viewed round (from round before it)
+        if (prevCompletedRound) {
+          (snapshots || []).filter(s => s.round_id === prevCompletedRound.id)
+            .forEach(s => { snapshotPosMap[s.player_id] = s.position; });
+        }
+        if (twoRoundsBack) {
+          (snapshots || []).filter(s => s.round_id === twoRoundsBack.id)
+            .forEach(s => { prevSnapshotPosMap[s.player_id] = s.position; });
+        }
+
+      } else {
+        // Prior arrows: movement from lastCompletedRound to current live position
+        if (lastCompletedRound) {
+          (snapshots || []).filter(s => s.round_id === lastCompletedRound.id)
+            .forEach(s => { snapshotPosMap[s.player_id] = s.position; });
+        }
+        if (prevCompletedRound) {
+          (snapshots || []).filter(s => s.round_id === prevCompletedRound.id)
+            .forEach(s => { prevSnapshotPosMap[s.player_id] = s.position; });
+        }
+      }
+
+      // ── Sort: identical logic for snapshot and live mode ──────
+      sortedPlayers = Object.values(statsMap).sort((a, b) => {
+        if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+        if (!isGroupRound) {
+          const aBonus = wonCurrentRound.has(a.id) ? 1 : 0;
+          const bBonus = wonCurrentRound.has(b.id) ? 1 : 0;
+          const afr = a.isOut ? (a.furthestRound || 0) : Math.max(a.furthestRound || 0, currentRoundSortOrder) + aBonus;
+          const bfr = b.isOut ? (b.furthestRound || 0) : Math.max(b.furthestRound || 0, currentRoundSortOrder) + bBonus;
+          if (bfr !== afr) return bfr - afr;
+        }
+        if (b.gd !== a.gd) return b.gd - a.gd;
+        const aDiff = Math.abs((a.goalsPredict || 0) - projectedTotal);
+        const bDiff = Math.abs((b.goalsPredict || 0) - projectedTotal);
+        if (aDiff !== bDiff) return aDiff - bDiff;
+        return a.name.localeCompare(b.name);
+      });
+
+      // Build rankMap: sequential for humans, null for bots
+      rankMap = {};
+      let _humanRank = 0, _prevHuman = null;
+      sortedPlayers.forEach((p) => {
+        if (p.is_bot) { rankMap[p.id] = null; return; }
+        _humanRank++;
+        if (isGroupRound || _prevHuman === null) { rankMap[p.id] = _humanRank; _prevHuman = p; return; }
+        const pBonus = wonCurrentRound.has(_prevHuman.id) ? 1 : 0;
+        const cBonus = wonCurrentRound.has(p.id) ? 1 : 0;
+        const pfr = _prevHuman.isOut ? (_prevHuman.furthestRound || 0) : Math.max(_prevHuman.furthestRound || 0, currentRoundSortOrder) + pBonus;
+        const cfr = p.isOut          ? (p.furthestRound          || 0) : Math.max(p.furthestRound          || 0, currentRoundSortOrder) + cBonus;
+        const isTied = _prevHuman.totalPoints === p.totalPoints
+          && pfr === cfr
+          && (_prevHuman.gd || 0) === (p.gd || 0)
+          && Math.abs((_prevHuman.goalsPredict || 0) - projectedTotal) === Math.abs((p.goalsPredict || 0) - projectedTotal);
+        rankMap[p.id] = isTied ? rankMap[_prevHuman.id] : _humanRank;
+        _prevHuman = p;
+      });
+
+      const roundLabel     = buildRoundLabel(rounds, currentRoundSortOrder);
+      const dayLabel       = buildDayLabel(rounds, currentRoundSortOrder, firstMatchData);
+      const fullRoundLabel = roundLabel + dayLabel;
+      const roundLabelText     = buildRoundLabelText(rounds, currentRoundSortOrder);
+      const dayLabelText       = buildDayLabelText(rounds, currentRoundSortOrder, firstMatchData);
+      const fullRoundLabelText = roundLabelText + dayLabelText;
+
+      // Rebuild oddsMap for the selected round
+      oddsMap = {};
+      Object.keys(teamCounts).forEach(tid => { oddsMap[tid] = ''; });
+      const currentRoundObj = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
+      let missingOddsCount = 0;
+      if (currentRoundObj) {
+        (matches || []).forEach(m => {
+          if (m.round_id !== currentRoundObj.id) return;
+          if (m.odds_home && teamCounts[m.home_team_id] && !oddsMap[m.home_team_id]) oddsMap[m.home_team_id] = m.odds_home;
+          if (m.odds_away && teamCounts[m.away_team_id] && !oddsMap[m.away_team_id]) oddsMap[m.away_team_id] = m.odds_away;
+        });
+        Object.keys(teamCounts).forEach(tid => { if (!oddsMap[tid]) missingOddsCount++; });
+      }
+
+      roundData = {
+        players, picks, completedPicksAll, currentPicks,
+        playerCurrentPicks, statsMap, sortedPlayers, rankMap,
+        teamCounts, teamCounts2, teamCounts3,
+        teamNames, teamFlags, teamOpponents, teamIsLongshot,
+        currentRoundSortOrder, isGroupRound,
+        roundLabel, dayLabel, fullRoundLabel,
+        rounds, matches, snapshots: snapshots || [],
+        snapshotPosMap, prevSnapshotPosMap,
+        lastCompletedRound, prevCompletedRound,
+        eliminatedThisRound, playerTodayFlags, gdMap,
+        todayWindowStart, todayWindowEnd, projectedTotal,
+        roundLabelText, fullRoundLabelText,
+        useSnapshots
+      };
+
+      // Compute day label and store in roundData
+      const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      const nowForDay = nowUtc;
+      const matchesOnDay = 'Matches on ' + dayNames[nowForDay.getDay()];
+      roundData.matchesOnDay = matchesOnDay;
+
+      // Footer banner state
+      const _footerMatches = (matches || []).filter(m => {
+        if (!m.kickoff) return false;
+        if (todayRoundObj && m.round_id !== todayRoundObj.id) return false;
+        const ko = new Date(m.kickoff);
+        return ko >= todayWindowStart && ko < todayWindowEnd;
+      });
+      if (_footerMatches.length === 0) {
+        roundData.footerState = null;
+        roundData.footerDay = '';
+      } else {
+        const _lastKo = _footerMatches.reduce((mx, m) => Math.max(mx, new Date(m.kickoff).getTime()), 0);
+        const _allDone = _footerMatches.every(m => m.api_status === 'FINISHED' || m.confirmed === true);
+        const _gamesDone = _allDone || nowUtc.getTime() >= _lastKo + 2 * 60 * 60 * 1000;
+        roundData.footerState = _gamesDone ? 'played' : 'playing';
+        roundData.footerDay = dayNames[todayWindowStart.getUTCDay()];
+      }
+
+      // Per-team result for the current round
+      const teamOutcome = {};
+      (matches || []).forEach(m => {
+        if (todayRoundObj && m.round_id !== todayRoundObj.id) return;
+        const hs = m.home_score, as = m.away_score;
+        const finished = (m.api_status === 'FINISHED' || m.confirmed === true) && hs != null && as != null;
+        if (!finished) return;
+        if (hs > as)      { teamOutcome[m.home_team_id] = 'W'; teamOutcome[m.away_team_id] = 'L'; }
+        else if (hs < as) { teamOutcome[m.home_team_id] = 'L'; teamOutcome[m.away_team_id] = 'W'; }
+        else              { teamOutcome[m.home_team_id] = 'D'; teamOutcome[m.away_team_id] = 'D'; }
+      });
+      roundData.teamOutcome = teamOutcome;
+      roundData.hasComboResults = Object.keys(teamOutcome).length > 0;
+
+      // Refresh date indicator
+      (function() {
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const day = dayNames[nowForDay.getDay()];
+        const indicator = document.getElementById('current-date-indicator');
+        if (indicator) {
+          const label = testDateStr ? '🧪 Test date:' : '📅 Today:';
+          indicator.textContent = `${label} ${day} ${nowForDay.getDate()} ${months[nowForDay.getMonth()]} ${nowForDay.getFullYear()}`;
+          indicator.style.color = testDateStr ? '#f6ad55' : 'var(--text-muted)';
+        }
+      })();
+
+      renderPicksByName();
+      renderTeamsPicked();
+      renderCombinations();
+      renderLeaderboard();
+      renderPicksByNameNew();
+      renderTeamsPickedNew();
+      renderCombinationsNew();
+      renderLeaderboardNew();
+      renderKOPicksByPlayer();
+      renderKOTeamsPicked();
+      renderKOLeaderboard();
+      renderReminderCopy();
+      renderRoundSummary();
+      renderRIP();
+      runLeaderboardVerify();
+
+      const selectedRoundName = (rounds || []).find(r => r.sort_order === currentRoundSortOrder)?.name || 'selected round';
+      let statusMsg = `✅ ${currentPicks.length} picks in ${selectedRoundName} · ${completedPicksAll.length} results recorded.`;
+      if (useSnapshots) statusMsg += ` <span style="color:var(--text-muted)">📸 Leaderboard from ${lastCompletedRound.name} snapshot.</span>`;
+      if (missingOddsCount > 0) {
+        statusMsg += ` <span style="color:var(--gold)">⚠️ ${missingOddsCount} team(s) missing match odds — <a href="/admin" style="color:var(--accent)">Admin → Odds tab</a> to fetch.</span>`;
+      } else if (Object.keys(teamCounts).length > 0) {
+        statusMsg += ` <span style="color:var(--green)">✓ Match odds loaded.</span>`;
+      }
+      setStatus('load-status', statusMsg);
     }
 
     // ── Helpers ───────────────────────────────────────────────
@@ -1834,7 +1915,7 @@
         // ── Leaderboard Cross-Check ───────────────────────────────
     function runLeaderboardVerify() {
       if (!roundData) return;
-      const { sortedPlayers, snapshots, lastCompletedRound } = roundData;
+      const { sortedPlayers, snapshots, lastCompletedRound, useSnapshots } = roundData;
 
       const card = document.getElementById('verify-card');
       const out  = document.getElementById('verify-result');
@@ -1842,6 +1923,11 @@
 
       if (!lastCompletedRound) {
         out.innerHTML = '<div style="color:var(--text-muted);font-size:13px">No completed rounds — nothing to verify yet.</div>';
+        return;
+      }
+
+      if (useSnapshots) {
+        out.innerHTML = '<div style="font-size:13px;color:var(--text-muted)">📸 Viewing historical snapshot — cross-check not applicable.</div>';
         return;
       }
 

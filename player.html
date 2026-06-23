@@ -713,7 +713,7 @@
           { data: picks },
           { data: rounds },
           { data: teams },
-          { data: allScores },
+          { data: allScoresRaw },
           { data: matches },
           { data: goalsData },
           { data: gdData },
@@ -726,7 +726,7 @@
             .order('created_at', { ascending: true }),
           db.from('rounds').select('*').order('sort_order'),
           db.from('teams').select('id, name, flag_emoji, is_longshot, is_eliminated, band, odds_rank').order('odds_rank'),
-          db.from('player_scores').select('player_id, total_points, name, is_eliminated, total_goals_prediction, eliminated_in_round_id').order('total_points', { ascending: false }),
+          db.from('player_scores').select('player_id, total_points, name, is_bot, is_eliminated, total_goals_prediction, eliminated_in_round_id').order('total_points', { ascending: false }),
           db.from('matches').select('id, round_id, kickoff, home_team_id, away_team_id, api_status, elapsed_minutes, home_score, away_score, confirmed, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot, is_eliminated, band)').order('kickoff'),
           db.from('matches').select('id, home_team_id, away_team_id, home_score, away_score').not('home_score', 'is', null).not('away_score', 'is', null),
           db.from('player_gd').select('player_id, gd'),
@@ -739,6 +739,9 @@
         allTeams   = teams   || [];
         allMatches = matches || [];
         eliminatedIds = new Set((teams || []).filter(t => t.is_eliminated).map(t => t.id));
+
+        // Strip bots (Oracle) from all player-count / position / prize logic
+        const allScores = (allScoresRaw || []).filter(s => !s.is_bot);
 
         // Build score lookup keyed by match id
         matchScoreMap = {};

@@ -3251,6 +3251,8 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       if (name === 'match') loadMatchOddsTable();
     }
 
+    let _moMatches = null, _moRounds = null, _moSortCol = 'kickoff', _moSortDir = 1, _moFilter = null;
+
     async function loadMatchOddsTable() {
       const wrap = document.getElementById('match-odds-wrap');
       if (!wrap) return;
@@ -3265,36 +3267,85 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
           .select(matchCols)
           .not('home_team_id', 'is', null).not('away_team_id', 'is', null).neq('is_third_place', true).order('kickoff');
       }
-      const matches = mq.data;
-      if (!matches || matches.length === 0) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No fixtures found.</p>'; return; }
+      _moMatches = mq.data;
+      _moRounds  = rounds;
+      if (!_moMatches || _moMatches.length === 0) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No fixtures found.</p>'; return; }
+      renderMatchOddsTable();
+    }
+
+    function moSetFilter(f) {
+      _moFilter = (_moFilter === f) ? null : f;
+      renderMatchOddsTable();
+    }
+
+    function moSetSort(col) {
+      if (_moSortCol === col) { _moSortDir *= -1; } else { _moSortCol = col; _moSortDir = 1; }
+      renderMatchOddsTable();
+    }
+
+    function renderMatchOddsTable() {
+      const wrap = document.getElementById('match-odds-wrap');
+      if (!wrap || !_moMatches) return;
       const byRound = {};
-      matches.forEach(m => { if (!byRound[m.round_id]) byRound[m.round_id] = []; byRound[m.round_id].push(m); });
-      const sortedRounds = (rounds || []).filter(r => byRound[r.id] && r.name !== '3rd Place').sort((a,b) => a.sort_order - b.sort_order);
-      function frac(dec) { return _bookieFraction(dec); }
+      _moMatches.forEach(m => { if (!byRound[m.round_id]) byRound[m.round_id] = []; byRound[m.round_id].push(m); });
+      function roundCat(name) {
+        if (name === 'Group Phase 1') return 'GP1';
+        if (name === 'Group Phase 2') return 'GP2';
+        if (name === 'Group Phase 3') return 'GP3';
+        return 'KO';
+      }
+      let visRounds = (_moRounds || []).filter(r => byRound[r.id] && r.name !== '3rd Place').sort((a,b) => a.sort_order - b.sort_order);
+      if (_moFilter) visRounds = visRounds.filter(r => roundCat(r.name) === _moFilter);
+      function sortMatches(arr) {
+        return [...arr].sort((a,b) => {
+          let av, bv;
+          if (_moSortCol === 'kickoff') { av = new Date(a.kickoff); bv = new Date(b.kickoff); }
+          else if (_moSortCol === 'home') { av = parseFloat(a.odds_home)||999; bv = parseFloat(b.odds_home)||999; }
+          else if (_moSortCol === 'draw') { av = parseFloat(a.odds_draw)||999; bv = parseFloat(b.odds_draw)||999; }
+          else { av = parseFloat(a.odds_away)||999; bv = parseFloat(b.odds_away)||999; }
+          return _moSortDir * (av < bv ? -1 : av > bv ? 1 : 0);
+        });
+      }
       function oddsCell(dec, prev, isWinner, isDone) {
         const n = parseFloat(dec);
         if (!dec || isNaN(n)) return '<span style="color:var(--border)">—</span>';
         let col = '';
-        if (isWinner) { col = 'color:var(--green)'; }
+        if (isWinner) col = 'color:var(--green)';
         else if (!isDone && prev != null && !isNaN(parseFloat(prev))) {
           const d = n - parseFloat(prev);
           if (d < -0.01) col = 'color:var(--green)';
           else if (d > 0.01) col = 'color:var(--red)';
         }
-        const valStyle = col ? ` style="${col}"` : '';
-        return `<strong${valStyle}>${n.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${frac(n)}</span>`;
+        const vs = col ? ` style="${col}"` : '';
+        return `<strong${vs}>${n.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${_bookieFraction(n)}</span>`;
       }
-      let html = '';
-      for (const r of sortedRounds) {
-        const rMatches = byRound[r.id] || [];
+      function pill(f, label) {
+        const on = _moFilter === f;
+        return `<button onclick="moSetFilter('${f}')" style="padding:3px 11px;font-size:11px;font-weight:700;border-radius:20px;border:1px solid ${on?'var(--accent)':'var(--border)'};background:${on?'var(--accent)':'transparent'};color:${on?'#000':'var(--text-muted)'};cursor:pointer;letter-spacing:0.03em">${label}</button>`;
+      }
+      function arr(col) {
+        if (_moSortCol !== col) return ' <span style="color:var(--border);font-size:9px">⇅</span>';
+        return _moSortDir === 1 ? ' <span style="font-size:9px">▲</span>' : ' <span style="font-size:9px">▼</span>';
+      }
+      let html = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text-muted)">Filter:</span>
+        ${pill('GP1','GP1')}${pill('GP2','GP2')}${pill('GP3','GP3')}${pill('KO','KO')}
+      </div>`;
+      if (visRounds.length === 0) {
+        html += '<p style="color:var(--text-muted);font-size:13px">No fixtures for this filter.</p>';
+        wrap.innerHTML = html; return;
+      }
+      const thC = 'text-align:center;width:80px;cursor:pointer;user-select:none;white-space:nowrap';
+      for (const r of visRounds) {
+        const rMatches = sortMatches(byRound[r.id] || []);
         html += `<div style="margin-bottom:24px">
           <div style="font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">${r.name}</div>
           <div class="table-wrap"><table style="width:100%;font-size:13px">
             <thead><tr>
-              <th class="left">Match</th>
-              <th style="text-align:center;width:80px">Home</th>
-              <th style="text-align:center;width:80px">Draw</th>
-              <th style="text-align:center;width:80px">Away</th>
+              <th class="left" style="cursor:pointer;user-select:none" onclick="moSetSort('kickoff')">Match${arr('kickoff')}</th>
+              <th style="${thC}" onclick="moSetSort('home')">Home${arr('home')}</th>
+              <th style="${thC}" onclick="moSetSort('draw')">Draw${arr('draw')}</th>
+              <th style="${thC}" onclick="moSetSort('away')">Away${arr('away')}</th>
               <th style="text-align:center;width:70px">Result</th>
             </tr></thead><tbody>`;
         for (const m of rMatches) {
