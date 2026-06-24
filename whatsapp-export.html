@@ -282,20 +282,8 @@
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Adjust so header lands in WhatsApp's crop. Tune by eye.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px">
         <div>
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Picks by Name <span id="pad-pn-val" style="color:var(--gold)">0px</span></label>
-          <input type="range" id="pad-pn" min="0" max="600" step="10" value="0" style="width:100%">
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Teams Picked <span id="pad-tp-val" style="color:var(--gold)">0px</span></label>
-          <input type="range" id="pad-tp" min="0" max="600" step="10" value="0" style="width:100%">
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Combinations <span id="pad-cb-val" style="color:var(--gold)">0px</span></label>
-          <input type="range" id="pad-cb" min="0" max="600" step="10" value="0" style="width:100%">
-        </div>
-        <div>
-          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Leaderboard <span id="pad-lb-val" style="color:var(--gold)">0px</span></label>
-          <input type="range" id="pad-lb" min="0" max="600" step="10" value="0" style="width:100%">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Best Picks <span id="pad-bp-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-bp" min="0" max="600" step="10" value="0" style="width:100%">
         </div>
       </div>
     </div>
@@ -340,68 +328,20 @@
       <div class="status-msg" id="summary-status">Click "Load Round Data" to generate.</div>
     </div>
 
-    <!-- 1. Picks by Name -->
+    <!-- 5. Best Picks -->
     <div class="card section-block">
       <div class="section-header">
-        <div class="card-title" style="margin-bottom:0">📋 Picks by Name</div>
+        <div class="card-title" style="margin-bottom:0">🏆 Best Combos</div>
         <div class="btn-group-export">
-          <button class="btn btn-secondary" id="btn-sh-pn" style="display:none">📤 Share</button>
-          <button class="btn btn-secondary" id="btn-cp-pn" style="display:none">📋 Copy</button>
-          <button class="btn btn-primary" id="btn-dl-pn" style="display:none">⬇️ Download</button>
+          <button class="btn btn-secondary" id="btn-sh-bp" style="display:none">📤 Share</button>
+          <button class="btn btn-secondary" id="btn-cp-bp" style="display:none">📋 Copy</button>
+          <button class="btn btn-primary" id="btn-dl-bp" style="display:none">⬇️ Download</button>
         </div>
       </div>
-      <div class="preview-wrap" id="pn-preview-wrap" style="display:none">
-        <div id="pn-render" class="render-root"></div>
+      <div class="preview-wrap" id="bp-preview-wrap" style="display:none">
+        <div id="bp-render" class="render-root"></div>
       </div>
-      <div class="status-msg" id="pn-status">Click "Load Round Data" to generate.</div>
-    </div>
-
-    <!-- 2. Teams Picked -->
-    <div class="card section-block">
-      <div class="section-header">
-        <div class="card-title" style="margin-bottom:0">🏳️ Teams Picked</div>
-        <div class="btn-group-export">
-          <button class="btn btn-secondary" id="btn-sh-tp" style="display:none">📤 Share</button>
-          <button class="btn btn-secondary" id="btn-cp-tp" style="display:none">📋 Copy</button>
-          <button class="btn btn-primary" id="btn-dl-tp" style="display:none">⬇️ Download</button>
-        </div>
-      </div>
-      <div class="preview-wrap" id="tp-preview-wrap" style="display:none">
-        <div id="tp-render" class="render-root"></div>
-      </div>
-      <div class="status-msg" id="tp-status">Click "Load Round Data" to generate.</div>
-    </div>
-
-    <!-- 3. Combinations -->
-    <div class="card section-block">
-      <div class="section-header">
-        <div class="card-title" style="margin-bottom:0">🔢 Combinations</div>
-        <div class="btn-group-export">
-          <button class="btn btn-secondary" id="btn-sh-cb" style="display:none">📤 Share</button>
-          <button class="btn btn-secondary" id="btn-cp-cb" style="display:none">📋 Copy</button>
-          <button class="btn btn-primary" id="btn-dl-cb" style="display:none">⬇️ Download</button>
-        </div>
-      </div>
-      <div class="preview-wrap" id="cb-preview-wrap" style="display:none">
-        <div id="cb-render" class="render-root"></div>
-      </div>
-      <div class="status-msg" id="cb-status">Combinations appear after teams are loaded.</div>
-    </div>
-
-    <!-- 4. Leaderboard -->
-    <div class="card section-block">
-      <div class="section-header">
-        <div class="card-title" style="margin-bottom:0">📊 Leaderboard Image</div>
-        <div class="btn-group-export">
-          <button class="btn btn-secondary" id="btn-sh-lb" style="display:none">📤 Share</button>
-          <button class="btn btn-secondary" id="btn-cp-lb" style="display:none">📋 Copy</button>
-          <button class="btn btn-primary" id="btn-dl-lb" style="display:none">⬇️ Download</button>
-        </div>
-      </div>
-      <div class="preview-wrap" id="lb-preview-wrap" style="display:none">
-        <div id="lb-render" class="render-root"></div>
-      </div>
-      <div class="status-msg" id="lb-status">Click "Load Round Data" to generate.</div>
+      <div class="status-msg" id="bp-status">Click "Load Round Data" to generate.</div>
     </div>
 
     </div><!-- /tab-old -->
@@ -561,10 +501,6 @@
       if (!_rawRounds) return;
       processRound(parseInt(this.value));
     });
-    document.getElementById('btn-dl-pn').addEventListener('click', () => downloadRender('pn-render', 'Picks'));
-    document.getElementById('btn-dl-tp').addEventListener('click', () => downloadRender('tp-render', 'TeamsPicked'));
-    document.getElementById('btn-dl-cb').addEventListener('click', () => downloadRender('cb-render', 'Combinations'));
-    document.getElementById('btn-dl-lb').addEventListener('click', () => downloadRender('lb-render', 'Leaderboard'));
     document.getElementById('btn-dl-pn2').addEventListener('click', () => downloadRender('pn2-render', 'PicksByPlayer'));
     document.getElementById('btn-dl-tp2').addEventListener('click', () => downloadRender('tp2-render', 'TeamsPicked'));
     document.getElementById('btn-dl-cb2').addEventListener('click', () => downloadRender('cb2-render', 'Combinations'));
@@ -572,10 +508,7 @@
     document.getElementById('btn-dl-ko-pn').addEventListener('click', () => downloadRender('ko-pn-render', 'KO_Picks'));
     document.getElementById('btn-dl-ko-tp').addEventListener('click', () => downloadRender('ko-tp-render', 'KO_Teams'));
     document.getElementById('btn-dl-ko-lb').addEventListener('click', () => downloadRender('ko-lb-render', 'KO_Leaderboard'));
-    document.getElementById('btn-cp-pn').addEventListener('click', () => copyRender('pn-render'));
-    document.getElementById('btn-cp-tp').addEventListener('click', () => copyRender('tp-render'));
-    document.getElementById('btn-cp-cb').addEventListener('click', () => copyRender('cb-render'));
-    document.getElementById('btn-cp-lb').addEventListener('click', () => copyRender('lb-render'));
+    document.getElementById('btn-dl-bp').addEventListener('click', () => downloadRender('bp-render', 'BestPicks'));
     document.getElementById('btn-cp-pn2').addEventListener('click', () => copyRender('pn2-render'));
     document.getElementById('btn-cp-tp2').addEventListener('click', () => copyRender('tp2-render'));
     document.getElementById('btn-cp-cb2').addEventListener('click', () => copyRender('cb2-render'));
@@ -583,10 +516,7 @@
     document.getElementById('btn-cp-ko-pn').addEventListener('click', () => copyRender('ko-pn-render'));
     document.getElementById('btn-cp-ko-tp').addEventListener('click', () => copyRender('ko-tp-render'));
     document.getElementById('btn-cp-ko-lb').addEventListener('click', () => copyRender('ko-lb-render'));
-    document.getElementById('btn-sh-pn').addEventListener('click', () => shareRender('pn-render'));
-    document.getElementById('btn-sh-tp').addEventListener('click', () => shareRender('tp-render'));
-    document.getElementById('btn-sh-cb').addEventListener('click', () => shareRender('cb-render'));
-    document.getElementById('btn-sh-lb').addEventListener('click', () => shareRender('lb-render'));
+    document.getElementById('btn-cp-bp').addEventListener('click', () => copyRender('bp-render'));
     document.getElementById('btn-sh-pn2').addEventListener('click', () => shareRender('pn2-render'));
     document.getElementById('btn-sh-tp2').addEventListener('click', () => shareRender('tp2-render'));
     document.getElementById('btn-sh-cb2').addEventListener('click', () => shareRender('cb2-render'));
@@ -594,6 +524,7 @@
     document.getElementById('btn-sh-ko-pn').addEventListener('click', () => shareRender('ko-pn-render'));
     document.getElementById('btn-sh-ko-tp').addEventListener('click', () => shareRender('ko-tp-render'));
     document.getElementById('btn-sh-ko-lb').addEventListener('click', () => shareRender('ko-lb-render'));
+    document.getElementById('btn-sh-bp').addEventListener('click', () => shareRender('bp-render'));
     document.getElementById('btn-copy-reminder').addEventListener('click', () => {
       const text = document.getElementById('reminder-copy-text').textContent;
       navigator.clipboard.writeText(text).then(() => {
@@ -612,11 +543,11 @@
     });
 
     // ── WA Top Padding sliders ─────────────────────────────────
-    const PAD_KEYS = { pn: 'lms2026_wa_pad_pn', tp: 'lms2026_wa_pad_tp', cb: 'lms2026_wa_pad_cb', lb: 'lms2026_wa_pad_lb', pn2: 'lms2026_wa_pad_pn2', tp2: 'lms2026_wa_pad_tp2', cb2: 'lms2026_wa_pad_cb2', lb2: 'lms2026_wa_pad_lb2', 'ko-pn': 'lms2026_wa_pad_ko_pn', 'ko-tp': 'lms2026_wa_pad_ko_tp', 'ko-lb': 'lms2026_wa_pad_ko_lb' };
+    const PAD_KEYS = { bp: 'lms2026_wa_pad_bp', pn2: 'lms2026_wa_pad_pn2', tp2: 'lms2026_wa_pad_tp2', cb2: 'lms2026_wa_pad_cb2', lb2: 'lms2026_wa_pad_lb2', 'ko-pn': 'lms2026_wa_pad_ko_pn', 'ko-tp': 'lms2026_wa_pad_ko_tp', 'ko-lb': 'lms2026_wa_pad_ko_lb' };
     function getPad(key) { return parseInt(localStorage.getItem(PAD_KEYS[key]) || '0', 10); }
     function setPad(key, v) { localStorage.setItem(PAD_KEYS[key], v); }
 
-    ['pn','tp','cb','lb','pn2','tp2','cb2','lb2','ko-pn','ko-tp','ko-lb'].forEach(key => {
+    ['bp','pn2','tp2','cb2','lb2','ko-pn','ko-tp','ko-lb'].forEach(key => {
       const slider = document.getElementById('pad-' + key);
       const label  = document.getElementById('pad-' + key + '-val');
       const saved  = getPad(key);
@@ -926,12 +857,11 @@
 
       picksForTeamsUsed.forEach(pick => { const s = statsMap[pick.player_id]; if (s) s.teamsUsed++; });
 
-      // Authoritative points from player_scores view (same source as leaderboard)
+      // scoresMap built here but only applied in live mode (see else branch below).
+      // In snapshot mode, totalPoints comes purely from picksForStats (filtered to
+      // target round), so historical PTS is correct without any live-view override.
       const scoresMap = {};
       (playerScores || []).forEach(s => { scoresMap[s.player_id] = s.total_points; });
-      Object.values(statsMap).forEach(s => {
-        if (scoresMap[s.id] !== undefined) s.totalPoints = scoresMap[s.id];
-      });
 
       // wonCurrentRound: alive players who won their KO pick this round AND still have eligible pool teams
       const wonCurrentRound = new Set();
@@ -954,52 +884,48 @@
         });
       }
 
-      // ── Snapshot-aware points & Prior-arrow source ────────────
-      // In snapshot mode: override totalPoints from snapshot (or pick_results sum for bots).
-      // Sort itself is always live-logic (points → GD → goals → alpha) so displayed rank
-      // numbers match the GD column the user can see. Snapshot positions are NOT used for
-      // ordering — they're only used as the "Prior" baseline in the PRIOR arrow column.
+      // ── Points source & Prior-arrow baseline ──────────────────
+      // Helper: build a player_id→position map from snapshot entries.
+      // If all positions are null (known DB bug), compute approximate ranks
+      // from total_points so movers/arrows still work.
+      function buildPosMap(entries) {
+        const posMap = {};
+        if (!entries || !entries.length) return posMap;
+        const hasPos = entries.some(s => s.position != null);
+        if (hasPos) {
+          entries.forEach(s => { if (s.position != null) posMap[s.player_id] = s.position; });
+        } else {
+          [...entries]
+            .filter(s => s.total_points != null)
+            .sort((a, b) => (b.total_points || 0) - (a.total_points || 0))
+            .forEach((s, i) => { posMap[s.player_id] = i + 1; });
+        }
+        return posMap;
+      }
+
       let sortedPlayers, rankMap, snapshotPosMap = {}, prevSnapshotPosMap = {};
 
       if (useSnapshots) {
-        const snapPointsMap = {};
-        snapshotForTarget.forEach(s => {
-          if (s.total_points != null) snapPointsMap[s.player_id] = s.total_points;
-        });
-
-        // Override totalPoints: snapshot value for humans; pick_results sum for bots
-        Object.values(statsMap).forEach(s => {
-          if (snapPointsMap[s.id] !== undefined) {
-            s.totalPoints = snapPointsMap[s.id];
-          } else {
-            let pts = 0;
-            completedPicksAll.forEach(pick => {
-              if (pick.player_id === s.id && pick.rounds && pick.rounds.sort_order <= targetSortOrder)
-                pts += pick.pick_results[0]?.points_earned || 0;
-            });
-            s.totalPoints = pts;
-          }
-        });
-
-        // Prior arrows: movement INTO the viewed round (from round before it)
+        // Snapshot mode: totalPoints already correct from picksForStats — no override.
+        // Prior arrows: movement INTO the viewed round (from round before it).
         if (prevCompletedRound) {
-          (snapshots || []).filter(s => s.round_id === prevCompletedRound.id)
-            .forEach(s => { snapshotPosMap[s.player_id] = s.position; });
+          snapshotPosMap = buildPosMap((snapshots || []).filter(s => s.round_id === prevCompletedRound.id));
         }
         if (twoRoundsBack) {
-          (snapshots || []).filter(s => s.round_id === twoRoundsBack.id)
-            .forEach(s => { prevSnapshotPosMap[s.player_id] = s.position; });
+          prevSnapshotPosMap = buildPosMap((snapshots || []).filter(s => s.round_id === twoRoundsBack.id));
         }
 
       } else {
-        // Prior arrows: movement from lastCompletedRound to current live position
+        // Live mode: apply authoritative player_scores total.
+        Object.values(statsMap).forEach(s => {
+          if (scoresMap[s.id] !== undefined) s.totalPoints = scoresMap[s.id];
+        });
+        // Prior arrows: movement from lastCompletedRound to current live position.
         if (lastCompletedRound) {
-          (snapshots || []).filter(s => s.round_id === lastCompletedRound.id)
-            .forEach(s => { snapshotPosMap[s.player_id] = s.position; });
+          snapshotPosMap = buildPosMap((snapshots || []).filter(s => s.round_id === lastCompletedRound.id));
         }
         if (prevCompletedRound) {
-          (snapshots || []).filter(s => s.round_id === prevCompletedRound.id)
-            .forEach(s => { prevSnapshotPosMap[s.player_id] = s.position; });
+          prevSnapshotPosMap = buildPosMap((snapshots || []).filter(s => s.round_id === prevCompletedRound.id));
         }
       }
 
@@ -1046,6 +972,26 @@
       const dayLabelText       = buildDayLabelText(rounds, currentRoundSortOrder, firstMatchData);
       const fullRoundLabelText = roundLabelText + dayLabelText;
 
+      // moversBaseline: positions at end of prevCompletedRound — always the round BEFORE
+      // lastCompletedRound, regardless of snapshot/live mode. Used by renderRoundSummary
+      // to compute who moved up/down this round.
+      // Falls back to summing pick_results when no snapshot exists for that round.
+      let moversBaseline = {};
+      if (prevCompletedRound) {
+        moversBaseline = buildPosMap((snapshots || []).filter(s => s.round_id === prevCompletedRound.id));
+        if (Object.keys(moversBaseline).length === 0) {
+          const prevPts = {};
+          completedPicksAll.forEach(pick => {
+            if (!pick.rounds || pick.rounds.sort_order > prevCompletedRound.sort_order) return;
+            if (!prevPts[pick.player_id]) prevPts[pick.player_id] = 0;
+            prevPts[pick.player_id] += pick.pick_results[0]?.points_earned || 0;
+          });
+          Object.entries(prevPts)
+            .sort(([, a], [, b]) => b - a)
+            .forEach(([pid], i) => { moversBaseline[pid] = i + 1; });
+        }
+      }
+
       // Rebuild oddsMap for the selected round
       oddsMap = {};
       Object.keys(teamCounts).forEach(tid => { oddsMap[tid] = ''; });
@@ -1073,7 +1019,7 @@
         eliminatedThisRound, playerTodayFlags, gdMap,
         todayWindowStart, todayWindowEnd, projectedTotal,
         roundLabelText, fullRoundLabelText,
-        useSnapshots
+        useSnapshots, moversBaseline
       };
 
       // Compute day label and store in roundData
@@ -1126,10 +1072,6 @@
         }
       })();
 
-      renderPicksByName();
-      renderTeamsPicked();
-      renderCombinations();
-      renderLeaderboard();
       renderPicksByNameNew();
       renderTeamsPickedNew();
       renderCombinationsNew();
@@ -1140,6 +1082,7 @@
       renderReminderCopy();
       renderRoundSummary();
       renderRIP();
+      renderBestPicks();
       runLeaderboardVerify();
 
       const selectedRoundName = (rounds || []).find(r => r.sort_order === currentRoundSortOrder)?.name || 'selected round';
@@ -1247,9 +1190,9 @@
     function renderRoundSummary() {
       if (!roundData) return;
       const {
-        sortedPlayers, rounds, snapshots,
+        sortedPlayers, rounds, snapshots, rankMap,
         lastCompletedRound, prevCompletedRound,
-        snapshotPosMap, prevSnapshotPosMap,
+        snapshotPosMap, prevSnapshotPosMap, moversBaseline,
         eliminatedThisRound, completedPicksAll, teamNames, teamFlags
       } = roundData;
 
@@ -1263,16 +1206,19 @@
       // Picks from last completed round
       const roundPicks = completedPicksAll.filter(p => p.round_id === lastCompletedRound.id);
 
-      // Current positions from last completed round snapshot
+      // Current positions from rankMap (computed, always correct even when snapshot positions are null)
       const currentPosMap = {};
-      (snapshots || [])
-        .filter(s => s.round_id === lastCompletedRound.id)
-        .forEach(s => { currentPosMap[s.player_id] = s.position; });
+      sortedPlayers.forEach(p => {
+        if (!p.is_bot && rankMap[p.id] != null) currentPosMap[p.id] = rankMap[p.id];
+      });
 
-      // Top 3
+      // Top 3 — sort by snapshot position if available, else by total_points
       const snapshotTop3 = (snapshots || [])
         .filter(s => s.round_id === lastCompletedRound.id)
-        .sort((a, b) => a.position - b.position)
+        .sort((a, b) => {
+          if (a.position != null && b.position != null) return a.position - b.position;
+          return (b.total_points || 0) - (a.total_points || 0);
+        })
         .slice(0, 3)
         .map(s => {
           const player = sortedPlayers.find(p => p.id === s.player_id);
@@ -1280,12 +1226,12 @@
         })
         .filter(Boolean);
 
-      // Movers
+      // Movers: compare current rank against where they were at end of previous round
       const movers = Object.keys(currentPosMap)
-        .filter(pid => prevSnapshotPosMap[pid] !== undefined)
+        .filter(pid => moversBaseline[pid] !== undefined)
         .map(pid => {
           const player = sortedPlayers.find(p => p.id === pid);
-          const move = prevSnapshotPosMap[pid] - currentPosMap[pid];
+          const move = moversBaseline[pid] - currentPosMap[pid];
           return player ? { ...player, move } : null;
         })
         .filter(Boolean)
@@ -1910,6 +1856,186 @@
       document.getElementById('btn-dl-lb2').style.display = 'inline-block'; document.getElementById('btn-cp-lb2').style.display = 'inline-block'; document.getElementById('btn-sh-lb2').style.display = 'inline-block';
       const noSnapshot = !roundData.lastCompletedRound;
       setStatus('lb2-status', noSnapshot ? '⚠️ No completed rounds yet — order is points desc (no snapshot).' : '');
+    }
+
+        // ── Best Picks ────────────────────────────────────────────
+    function renderBestPicks() {
+      if (!roundData) return;
+      const { currentPicks, playerCurrentPicks, players, isGroupRound, fullRoundLabel,
+              teamNames, teamFlags, teamIsLongshot, matches, rounds,
+              currentRoundSortOrder, teamOutcome } = roundData;
+
+      const noRes = 'No results entered yet for this round.';
+      const withResults = currentPicks.filter(p => p.pick_results && p.pick_results.length > 0);
+
+      if (withResults.length === 0) {
+        setStatus('bp-status', noRes);
+        const el = document.getElementById('bp-preview-wrap'); if (el) el.style.display = 'none';
+        ['btn-dl-bp','btn-cp-bp','btn-sh-bp'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+        return;
+      }
+
+      // Match GD per team (team perspective: +ve = winning margin)
+      const matchGDMap = {};
+      const currentRoundObj = (rounds || []).find(r => r.sort_order === currentRoundSortOrder);
+      if (currentRoundObj) {
+        (matches || []).forEach(m => {
+          if (m.round_id !== currentRoundObj.id) return;
+          if (m.home_score != null && m.away_score != null) {
+            matchGDMap[m.home_team_id] = m.home_score - m.away_score;
+            matchGDMap[m.away_team_id] = m.away_score - m.home_score;
+          }
+        });
+      }
+
+      const outcomeMap = teamOutcome || {};
+
+      function outcomeDot(tid) {
+        const r = outcomeMap[tid];
+        const col = r === 'W' ? '#38a169' : r === 'D' ? '#d69e2e' : r === 'L' ? '#e53e3e' : '#cbd5e0';
+        return `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};vertical-align:middle;margin-right:4px;flex-shrink:0"></span>`;
+      }
+
+      let html = makeHeader('LMS WORLD CUP 2026', isGroupRound ? 'Best Combinations' : 'Best Picks', fullRoundLabel);
+
+      if (isGroupRound) {
+        // All unique teams picked in this round
+        const allPickedTids = [...new Set(currentPicks.map(p => p.team_id))];
+
+        // Score per team: longshot win=4, regular win=3, draw=1, loss/pending=0
+        function teamScore(tid) {
+          const out = outcomeMap[tid];
+          if (out === 'W') return teamIsLongshot[tid] ? 4 : 3;
+          if (out === 'D') return 1;
+          return 0;
+        }
+
+        // Player → set of team IDs they picked this round
+        const playerPickedTeams = {};
+        currentPicks.forEach(pick => {
+          if (!playerPickedTeams[pick.player_id]) playerPickedTeams[pick.player_id] = new Set();
+          playerPickedTeams[pick.player_id].add(pick.team_id);
+        });
+
+        // Generate all pairs of picked teams
+        const pairs = [];
+        for (let i = 0; i < allPickedTids.length; i++) {
+          for (let j = i + 1; j < allPickedTids.length; j++) {
+            const tidA = allPickedTids[i], tidB = allPickedTids[j];
+            // Pickers = players who picked BOTH teams this round
+            const pickers = [];
+            Object.entries(playerPickedTeams).forEach(([playerId, tids]) => {
+              if (tids.has(tidA) && tids.has(tidB)) {
+                const player = players.find(pl => pl.id === playerId);
+                if (player && !player.is_bot) pickers.push(player.display_name || shortName(player.name));
+              }
+            });
+            pairs.push({
+              tidA, tidB,
+              nameA: teamNames[tidA] || '?', nameB: teamNames[tidB] || '?',
+              flagA: teamFlags[tidA] || '', flagB: teamFlags[tidB] || '',
+              lsA: !!(teamIsLongshot[tidA]), lsB: !!(teamIsLongshot[tidB]),
+              combinedScore: teamScore(tidA) + teamScore(tidB),
+              combinedGD: (matchGDMap[tidA] || 0) + (matchGDMap[tidB] || 0),
+              pickers
+            });
+          }
+        }
+
+        // Sort: combined score desc → combined GD desc
+        pairs.sort((a, b) => {
+          if (b.combinedScore !== a.combinedScore) return b.combinedScore - a.combinedScore;
+          return b.combinedGD - a.combinedGD;
+        });
+
+        const topPairs = pairs.slice(0, 15);
+        if (!topPairs.length) { setStatus('bp-status', 'No picks yet.'); return; }
+
+        html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
+          <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
+            <th style="width:20px;padding:4px 2px 4px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+            <th style="padding:4px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Combination</th>
+            <th style="width:32px;padding:4px 8px 4px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">GD</th>
+          </tr></thead><tbody>`;
+
+        topPairs.forEach((c, i) => {
+          const gdStr = c.combinedGD > 0 ? '+' + c.combinedGD : String(c.combinedGD);
+          const gdColor = c.combinedGD > 0 ? '#276749' : c.combinedGD < 0 ? '#c53030' : '#718096';
+          const hasPickers = c.pickers.length > 0;
+          const rowBg = hasPickers ? (i % 2 === 0 ? '#f0f7ff' : '#e8f2ff') : (i % 2 === 0 ? '#ffffff' : '#f8fafc');
+          const pickerInline = hasPickers
+            ? `<span style="font-size:10px;font-weight:700;color:#2b6cb0;margin-left:6px;white-space:nowrap">✓ ${c.pickers.join(', ')}</span>`
+            : `<span style="font-size:10px;color:#cbd5e0;font-style:italic;margin-left:6px;white-space:nowrap">no picks</span>`;
+          html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
+            <td style="padding:5px 2px 5px 8px;font-size:11px;font-weight:800;color:#718096;text-align:center;vertical-align:middle">${i + 1}</td>
+            <td style="padding:5px 6px;vertical-align:middle">
+              <div style="display:flex;align-items:center;flex-wrap:wrap;font-size:12px;font-weight:800;color:#1a202c;line-height:1.5">
+                ${outcomeDot(c.tidA)}${c.flagA} ${c.nameA}${c.lsA ? ' ⭐' : ''}<span style="color:#a0aec0;font-weight:400;margin:0 5px">&</span>${outcomeDot(c.tidB)}${c.flagB} ${c.nameB}${c.lsB ? ' ⭐' : ''}${pickerInline}
+              </div>
+            </td>
+            <td style="padding:5px 8px 5px 4px;text-align:center;vertical-align:middle;font-size:12px;font-weight:800;color:${gdColor}">${gdStr}</td>
+          </tr>`;
+        });
+
+        html += `</tbody></table>`;
+        html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:5px 12px;font-size:10px;color:#718096;text-align:center">Top 15 of ${pairs.length} pairs · score (longshot win=4) · GD</div>`;
+
+      } else {
+        // KO: individual teams sorted by result then GD
+        const teams = {};
+        withResults.forEach(pick => {
+          const tid = pick.team_id;
+          if (!teams[tid]) {
+            teams[tid] = {
+              tid, name: teamNames[tid] || pick.teams?.name || '?',
+              flag: teamFlags[tid] || pick.teams?.flag_emoji || '',
+              ls: !!(teamIsLongshot[tid]),
+              outcome: outcomeMap[tid],
+              gd: matchGDMap[tid] || 0, pickers: []
+            };
+          }
+          const player = players.find(pl => pl.id === pick.player_id);
+          if (player && !player.is_bot) {
+            const nm = player.display_name || shortName(player.name);
+            if (!teams[tid].pickers.includes(nm)) teams[tid].pickers.push(nm);
+          }
+        });
+        const rank = r => r === 'W' ? 2 : r === 'D' ? 1 : 0;
+        const sorted = Object.values(teams).sort((a, b) => {
+          const rd = rank(b.outcome) - rank(a.outcome);
+          return rd !== 0 ? rd : b.gd - a.gd;
+        });
+
+        html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
+          <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
+            <th style="width:20px;padding:4px 2px 4px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+            <th style="padding:4px 6px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Pick</th>
+            <th style="width:32px;padding:4px 8px 4px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">GD</th>
+          </tr></thead><tbody>`;
+
+        sorted.forEach((t, i) => {
+          const gdStr = t.gd > 0 ? '+' + t.gd : String(t.gd);
+          const gdColor = t.gd > 0 ? '#276749' : t.gd < 0 ? '#c53030' : '#718096';
+          const rowBg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+          const pickerStr = t.pickers.length ? t.pickers.join(', ') : '<span style="color:#a0aec0;font-style:italic">—</span>';
+          html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
+            <td style="padding:5px 2px 5px 8px;font-size:11px;font-weight:800;color:#718096;text-align:center;vertical-align:top">${i + 1}</td>
+            <td style="padding:5px 6px">
+              <div style="display:flex;align-items:center;font-size:12px;font-weight:800;color:#1a202c">${outcomeDot(t.tid)}${t.flag} ${t.name}${t.ls ? ' ⭐' : ''}</div>
+              <div style="font-size:10px;color:#718096;margin-top:2px;line-height:1.3">${pickerStr}</div>
+            </td>
+            <td style="padding:5px 8px 5px 4px;text-align:center;vertical-align:top;font-size:12px;font-weight:800;color:${gdColor}">${gdStr}</td>
+          </tr>`;
+        });
+
+        html += `</tbody></table>`;
+        html += `<div style="background:#f0f4f8;border-top:1px solid #d1dbe8;padding:5px 12px;font-size:10px;color:#718096;text-align:center">Ranked by result · match GD</div>`;
+      }
+
+      const bpEl = document.getElementById('bp-render'); if (bpEl) bpEl.innerHTML = html;
+      const bpWrap = document.getElementById('bp-preview-wrap'); if (bpWrap) bpWrap.style.display = 'block';
+      ['btn-dl-bp','btn-cp-bp','btn-sh-bp'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'inline-block'; });
+      setStatus('bp-status', '');
     }
 
         // ── Leaderboard Cross-Check ───────────────────────────────
