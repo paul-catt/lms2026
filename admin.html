@@ -663,9 +663,10 @@
     <div class="tab-content" id="tab-picks">
       <!-- Sub-tab bar -->
       <div style="display:flex; gap:6px; margin-bottom:16px; align-items:center; flex-wrap:wrap">
-        <button class="btn btn-primary" id="picks-subtab-audit" onclick="switchPicksSubtab(&apos;audit&apos;)">📊 Audit Matrix</button>
-        <button class="btn btn-secondary" id="picks-subtab-round" onclick="switchPicksSubtab(&apos;round&apos;)">📋 Round Summary</button>
-        <button class="btn btn-secondary" id="picks-subtab-combos" onclick="switchPicksSubtab(&apos;combos&apos;)">🎲 Combos</button>
+        <button class="btn btn-primary" id="picks-subtab-audit" onclick="switchPicksSubtab('audit')">📊 Audit</button>
+        <button class="btn btn-secondary" id="picks-subtab-round" onclick="switchPicksSubtab('round')">📋 Summary</button>
+        <button class="btn btn-secondary" id="picks-subtab-combos" onclick="switchPicksSubtab('combos')">🎲 Combos</button>
+        <button class="btn btn-secondary" id="picks-subtab-freq" onclick="switchPicksSubtab('freq')">📌 Picks</button>
         <label style="display:flex; align-items:center; gap:6px; margin-left:auto; cursor:pointer; font-size:12px; font-weight:600; color:var(--text-muted)">
           <span>Still in only</span>
           <span id="picks-stillin-toggle" onclick="togglePicksStillIn()" style="display:inline-flex; width:36px; height:20px; border-radius:10px; background:var(--surface); border:1px solid var(--border); cursor:pointer; transition:background 0.2s; position:relative; flex-shrink:0">
@@ -709,6 +710,23 @@
             </select>
           </div>
           <div id="picks-combos-wrap"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+      <!-- Picks frequency -->
+      <div id="picks-sub-freq" style="display:none">
+        <div class="card">
+          <div class="card-title">📌 Picks Frequency</div>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap">
+            <select id="freq-round-select" style="min-width:180px">
+              <option value="">Loading rounds...</option>
+            </select>
+            <div style="display:flex; gap:6px; margin-left:auto">
+              <button id="freq-sort-count" class="btn btn-primary" style="font-size:11px; padding:3px 10px" onclick="setFreqSort('count')">Sort: Count</button>
+              <button id="freq-sort-name" class="btn btn-secondary" style="font-size:11px; padding:3px 10px" onclick="setFreqSort('name')">Sort: Name</button>
+              <button id="freq-sort-odds" class="btn btn-secondary" style="font-size:11px; padding:3px 10px" onclick="setFreqSort('odds')">Sort: Odds</button>
+            </div>
+          </div>
+          <div id="picks-freq-wrap"><div class="loading"><div class="spinner"></div></div></div>
         </div>
       </div>
     </div>
@@ -3786,6 +3804,8 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       el.querySelector('span').style.transform = on ? 'translateX(16px)' : 'translateX(0)';
       el.querySelector('span').style.background = on ? 'var(--bg)' : 'var(--text-muted)';
       applyPicksStillInFilter();
+      // Re-render freq if it's been loaded
+      if (_freqData) renderPicksFrequency();
     }
 
     function applyPicksStillInFilter() {
@@ -3811,17 +3831,23 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       document.getElementById('picks-sub-audit').style.display  = name === 'audit'  ? 'block' : 'none';
       document.getElementById('picks-sub-round').style.display  = name === 'round'  ? 'block' : 'none';
       document.getElementById('picks-sub-combos').style.display = name === 'combos' ? 'block' : 'none';
+      document.getElementById('picks-sub-freq').style.display   = name === 'freq'   ? 'block' : 'none';
       document.getElementById('picks-subtab-audit').className  = name === 'audit'  ? 'btn btn-primary' : 'btn btn-secondary';
       document.getElementById('picks-subtab-round').className  = name === 'round'  ? 'btn btn-primary' : 'btn btn-secondary';
       document.getElementById('picks-subtab-combos').className = name === 'combos' ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('picks-subtab-freq').className   = name === 'freq'   ? 'btn btn-primary' : 'btn btn-secondary';
       if (name === 'round')  loadRoundSummary();
       if (name === 'combos') loadCombosSubtab();
+      if (name === 'freq')   loadPicksFrequency();
     }
 
     let _roundSummaryLoaded = false;
     let _combosLoaded = false;
     let _combosData = null;
     let _comboSort = { col: 'count', dir: -1 };
+    let _freqLoaded = false;
+    let _freqSort = 'count'; // 'count' | 'name'
+    let _freqData = null;
 
     // Latest round (by sort_order) whose start date has passed — i.e. the round in progress.
     function getCurrentRoundId(rounds, roundType) {
@@ -4168,6 +4194,158 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       const auto = pick.is_assigned ? ' <span style="font-size:10px; color:var(--text-muted)">(auto)</span>' : '';
       const oracle = pick.oracle_pick ? ' 🔮' : '';
       return '<td style="padding:8px 10px; font-size:13px">' + flag + ' ' + name + ls + oracle + auto + '</td>';
+    }
+
+    // ── PICKS FREQUENCY ───────────────────────────────────────
+    async function loadPicksFrequency() {
+      const sel  = document.getElementById('freq-round-select');
+      const wrap = document.getElementById('picks-freq-wrap');
+
+      if (!_freqLoaded) {
+        _freqLoaded = true;
+        const { data: rounds } = await db.from('rounds')
+          .select('id, name, sort_order, round_type')
+          .order('sort_order');
+
+        const { data: pickedRounds } = await db.from('picks').select('round_id');
+        const pickedRoundIds = new Set((pickedRounds || []).map(p => p.round_id));
+
+        const eligible = (rounds || []).filter(r =>
+          pickedRoundIds.has(r.id) && !r.name.toLowerCase().includes('3rd') && r.id !== GP0_ROUND_ID
+        );
+
+        if (eligible.length === 0) {
+          sel.innerHTML = '<option value="">No rounds with picks yet</option>';
+          wrap.innerHTML = '';
+          return;
+        }
+
+        sel.innerHTML = eligible
+          .slice().reverse()
+          .map(r => '<option value="' + r.id + '" data-type="' + r.round_type + '">' + r.name + '</option>')
+          .join('');
+
+        sel.addEventListener('change', () => renderPicksFrequency());
+      }
+
+      await renderPicksFrequency();
+    }
+
+    async function renderPicksFrequency() {
+      const sel   = document.getElementById('freq-round-select');
+      const wrap  = document.getElementById('picks-freq-wrap');
+      const roundId = sel.value;
+      if (!roundId) return;
+
+      wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      const [{ data: picks }, { data: players }, { data: matches }] = await Promise.all([
+        db.from('picks')
+          .select('player_id, multiplier, teams(id, name, flag_emoji, is_longshot)')
+          .eq('round_id', roundId),
+        db.from('players').select('id, is_eliminated'),
+        db.from('matches')
+          .select('home_team_id, away_team_id, odds_home, odds_away')
+          .eq('round_id', roundId)
+      ]);
+
+      // Map team_id → their match odds for this round
+      const oddsMap = {};
+      (matches || []).forEach(m => {
+        if (m.home_team_id && m.odds_home) oddsMap[m.home_team_id] = { dec: parseFloat(m.odds_home), frac: decimalToFractional(m.odds_home) };
+        if (m.away_team_id && m.odds_away) oddsMap[m.away_team_id] = { dec: parseFloat(m.odds_away), frac: decimalToFractional(m.odds_away) };
+      });
+
+      const stillIn = !!window._picksStillIn;
+      const eliminatedIds = new Set((players || []).filter(p => p.is_eliminated).map(p => p.id));
+
+      // Count per team
+      const teamMap = {};
+      (picks || []).forEach(p => {
+        if (stillIn && eliminatedIds.has(p.player_id)) return;
+        const t = p.teams;
+        if (!t) return;
+        if (!teamMap[t.id]) teamMap[t.id] = { name: t.name, flag: t.flag_emoji || '🏳', ls: !!t.is_longshot, total: 0, pt3: 0, pt2: 0, odds: oddsMap[t.id] || null };
+        teamMap[t.id].total++;
+        if (p.multiplier === 3) teamMap[t.id].pt3++;
+        if (p.multiplier === 2) teamMap[t.id].pt2++;
+      });
+
+      _freqData = Object.values(teamMap);
+
+      if (_freqData.length === 0) {
+        wrap.innerHTML = '<p style="color:var(--text-muted); font-size:13px">No picks found for this round.</p>';
+        return;
+      }
+
+      // Sort
+      const sorted = [..._freqData].sort((a, b) => {
+        if (_freqSort === 'name')  return a.name.localeCompare(b.name);
+        if (_freqSort === 'odds') {
+          const ao = a.odds?.dec ?? 9999, bo = b.odds?.dec ?? 9999;
+          return ao - bo || a.name.localeCompare(b.name);
+        }
+        return b.total - a.total || a.name.localeCompare(b.name);
+      });
+
+      const hasMultipliers = sorted.some(r => r.pt3 > 0 || r.pt2 > 0);
+      const hasOdds = sorted.some(r => r.odds !== null);
+
+      let html = '<table style="width:100%; border-collapse:collapse">';
+      html += '<thead><tr>';
+      html += '<th style="text-align:left; padding:8px 10px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--border); white-space:nowrap">Team</th>';
+      if (hasMultipliers) {
+        html += '<th style="text-align:center; padding:8px 10px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--border); white-space:nowrap">3pt</th>';
+        html += '<th style="text-align:center; padding:8px 10px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--border); white-space:nowrap">2pt</th>';
+      }
+      html += '<th style="text-align:center; padding:8px 10px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--border); white-space:nowrap">Total</th>';
+      if (hasOdds) {
+        html += '<th style="text-align:right; padding:8px 10px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--border); white-space:nowrap">Match Odds</th>';
+      }
+      html += '</tr></thead><tbody>';
+
+      const maxTotal = Math.max(..._freqData.map(r => r.total), 1);
+      sorted.forEach(row => {
+        const ls = row.ls ? '<span class="longshot-star">⭐</span>' : '';
+        const barWidth = Math.round((row.total / maxTotal) * 100);
+        html += '<tr>';
+        html += '<td style="padding:8px 10px; font-size:13px; font-weight:600">' + row.flag + ' ' + row.name + ls + '</td>';
+        if (hasMultipliers) {
+          html += '<td style="text-align:center; padding:8px 10px; font-size:13px; color:var(--text-muted)">' + (row.pt3 || '—') + '</td>';
+          html += '<td style="text-align:center; padding:8px 10px; font-size:13px; color:var(--text-muted)">' + (row.pt2 || '—') + '</td>';
+        }
+        html += '<td style="padding:8px 10px; min-width:120px">';
+        html += '<div style="display:flex; align-items:center; gap:8px">';
+        html += '<div style="flex:1; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden"><div style="width:' + barWidth + '%; height:100%; background:var(--accent); border-radius:3px"></div></div>';
+        html += '<span style="font-size:14px; font-weight:700; min-width:20px; text-align:right">' + row.total + '</span>';
+        html += '</div></td>';
+        if (hasOdds) {
+          if (row.odds) {
+            html += '<td style="text-align:right; padding:8px 10px; font-size:13px; white-space:nowrap">'
+              + '<span style="font-weight:700">' + row.odds.frac + '</span>'
+              + '<span style="color:var(--text-muted); font-size:11px; margin-left:4px">(' + row.odds.dec.toFixed(2) + ')</span>'
+              + '</td>';
+          } else {
+            html += '<td style="text-align:right; padding:8px 10px; font-size:13px; color:var(--text-muted)">—</td>';
+          }
+        }
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      wrap.innerHTML = html;
+    }
+
+    function setFreqSort(mode) {
+      _freqSort = mode;
+      ['count','name','odds'].forEach(m => {
+        const btn = document.getElementById('freq-sort-' + m);
+        if (!btn) return;
+        btn.className = mode === m ? 'btn btn-primary' : 'btn btn-secondary';
+        btn.style.fontSize = '11px';
+        btn.style.padding = '3px 10px';
+      });
+      renderPicksFrequency();
     }
 
     // ── LIVE SCORES ───────────────────────────────────────────
