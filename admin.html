@@ -553,6 +553,23 @@
           <span id="tb-save-msg" style="font-size:12px"></span>
         </div>
       </div>
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">🔒 Group Position Locks</div>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">
+          Manually mark a team as <strong style="color:var(--green)">SAFE</strong> (guaranteed top-2 advance) or <strong style="color:var(--red)">OUT</strong> (eliminated) when the algorithm can't confirm it — e.g. tied on max points but GD or H2H settles it. Shows as a badge in the bracket Groups tab.
+        </p>
+        <div id="position-locks-list"><div class="loading"><div class="spinner"></div></div></div>
+        <div style="margin-top:14px; display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+          <input list="pl-team-datalist" id="pl-team" placeholder="Team…" style="flex:1; min-width:140px">
+          <datalist id="pl-team-datalist"></datalist>
+          <select id="pl-status" style="padding:8px; border-radius:6px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:13px; cursor:pointer">
+            <option value="advance">SAFE — guaranteed advance</option>
+            <option value="out">OUT — can't advance</option>
+          </select>
+          <button class="btn btn-primary" onclick="addPositionLock()">Add</button>
+          <span id="pl-save-msg" style="font-size:12px"></span>
+        </div>
+      </div>
     </div>
 
     <!-- TEAMS TAB -->
@@ -4831,6 +4848,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         });
       });
       await loadTiebreakOverrides();
+      await loadPositionLocks();
     }
 
     async function saveExpectedScore(matchId, homeVal, awayVal, indicatorEl) {
@@ -4953,6 +4971,106 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       overrides.splice(index, 1);
       await _saveTiebreakOverrides(overrides);
       await loadTiebreakOverrides();
+    }
+
+    // ── Group Position Lock Management ─────────────────────────────────────────
+    async function loadPositionLocks() {
+      const list     = document.getElementById('position-locks-list');
+      const datalist = document.getElementById('pl-team-datalist');
+      if (!list) return;
+
+      const [{ data: teams }, { data: cfgRows }] = await Promise.all([
+        db.from('teams').select('id, name, flag_emoji').order('name'),
+        db.from('app_config').select('value').eq('key', 'group_position_locks'),
+      ]);
+
+      if (teams && datalist) {
+        datalist.innerHTML = teams.map(t =>
+          `<option value="${(t.flag_emoji||'')+' '+t.name}">`
+        ).join('');
+      }
+
+      let locks = [];
+      try { if (cfgRows?.[0]?.value) locks = JSON.parse(cfgRows[0].value) || []; } catch(e) {}
+
+      if (!locks.length) {
+        list.innerHTML = '<p style="color:var(--text-muted); font-size:13px">No manual locks set.</p>';
+        return;
+      }
+
+      const teamById = {};
+      if (teams) teams.forEach(t => { teamById[t.id] = t; });
+
+      list.innerHTML = locks.map((lk, i) => {
+        const t = teamById[lk.teamId];
+        const label = t ? `${t.flag_emoji||''} ${t.name}` : lk.teamId;
+        const badge = lk.status === 'advance'
+          ? '<span style="font-size:11px;background:rgba(16,185,129,0.2);color:var(--green);padding:1px 6px;border-radius:4px;font-weight:700">SAFE</span>'
+          : '<span style="font-size:11px;background:rgba(239,68,68,0.2);color:var(--red);padding:1px 6px;border-radius:4px;font-weight:700">OUT</span>';
+        return `<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; padding:8px 12px; background:var(--surface); border-radius:6px; border:1px solid var(--border);">
+          <span style="flex:1; font-size:13px; font-weight:600">${label}</span>
+          ${badge}
+          <button class="btn btn-danger" style="padding:3px 10px; font-size:11px" onclick="removePositionLock(${i})">Remove</button>
+        </div>`;
+      }).join('');
+    }
+
+    async function _savePositionLocks(locks) {
+      const { error } = await db.from('app_config')
+        .update({ value: JSON.stringify(locks) })
+        .eq('key', 'group_position_locks');
+      return error;
+    }
+
+    async function addPositionLock() {
+      const msgEl  = document.getElementById('pl-save-msg');
+      const tVal   = document.getElementById('pl-team').value.trim();
+      const status = document.getElementById('pl-status').value;
+
+      if (!tVal) {
+        if (msgEl) { msgEl.textContent = 'Enter a team.'; msgEl.style.color = 'var(--red)'; }
+        return;
+      }
+
+      const { data: teams } = await db.from('teams').select('id, name, flag_emoji');
+      const findTeam = v => teams?.find(t =>
+        `${t.flag_emoji||''} ${t.name}`.trim().toLowerCase() === v.toLowerCase() ||
+        t.name.toLowerCase() === v.toLowerCase() ||
+        v.toLowerCase().endsWith(t.name.toLowerCase())
+      );
+
+      const team = findTeam(tVal);
+      if (!team) {
+        if (msgEl) { msgEl.textContent = 'Team not found — check spelling.'; msgEl.style.color = 'var(--red)'; }
+        return;
+      }
+
+      const { data: cfgRows } = await db.from('app_config').select('value').eq('key', 'group_position_locks');
+      let locks = [];
+      try { if (cfgRows?.[0]?.value) locks = JSON.parse(cfgRows[0].value) || []; } catch(e) {}
+
+      locks = locks.filter(lk => lk.teamId !== team.id);
+      locks.push({ teamId: team.id, status });
+
+      const error = await _savePositionLocks(locks);
+      if (error) {
+        if (msgEl) { msgEl.textContent = '❌ ' + error.message; msgEl.style.color = 'var(--red)'; }
+        return;
+      }
+
+      if (msgEl) { msgEl.textContent = '✅ Saved'; msgEl.style.color = 'var(--green)'; }
+      document.getElementById('pl-team').value = '';
+      setTimeout(() => { if (msgEl) msgEl.textContent = ''; }, 2000);
+      await loadPositionLocks();
+    }
+
+    async function removePositionLock(index) {
+      const { data: cfgRows } = await db.from('app_config').select('value').eq('key', 'group_position_locks');
+      let locks = [];
+      try { if (cfgRows?.[0]?.value) locks = JSON.parse(cfgRows[0].value) || []; } catch(e) {}
+      locks.splice(index, 1);
+      await _savePositionLocks(locks);
+      await loadPositionLocks();
     }
 
   </script>

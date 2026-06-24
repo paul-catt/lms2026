@@ -1477,15 +1477,18 @@
     async function computeGroupStandings() {
       if (_standingsCache) return _standingsCache;
 
-      const [{ data: teams }, { data: rounds }, { data: matches }, { data: cfgRows }] = await Promise.all([
+      const [{ data: teams }, { data: rounds }, { data: matches }, { data: cfgRows }, { data: lockCfgRows }] = await Promise.all([
         db.from('teams').select('id, name, flag_emoji, is_longshot'),
         db.from('rounds').select('id, round_type, phase_number'),
         db.from('matches').select('id, round_id, home_team_id, away_team_id, home_score, away_score, expected_home_score, expected_away_score, confirmed, is_third_place, kickoff, api_status'),
         db.from('app_config').select('value').eq('key', 'tiebreak_overrides'),
+        db.from('app_config').select('value').eq('key', 'group_position_locks'),
       ]);
       if (!teams || !rounds || !matches) return null;
       let tiebreakOverrides = [];
       try { if (cfgRows?.[0]?.value) tiebreakOverrides = JSON.parse(cfgRows[0].value) || []; } catch(e) {}
+      let positionLocks = [];
+      try { if (lockCfgRows?.[0]?.value) positionLocks = JSON.parse(lockCfgRows[0].value) || []; } catch(e) {}
 
       const groupRoundIds = new Set(rounds.filter(r=>r.round_type==='group'&&r.phase_number!=null).map(r=>r.id));
       const teamById={}; teams.forEach(t=>{ teamById[t.id]=t; });
@@ -1544,7 +1547,7 @@
 
       _standingsCache = {
         groupRankings, thirdRanked, top8GroupSet,
-        comboMapping, comboInv, teamById, nameToId, groupMatches, tiebreakOverrides,
+        comboMapping, comboInv, teamById, nameToId, groupMatches, tiebreakOverrides, positionLocks,
         totalConfirmed: groupMatches.filter(m=>m.isReal).length,
         totalLive:      groupMatches.filter(m=>m.isLive||m.isHT).length,
         totalProjected: groupMatches.filter(m=>m.isProjected&&!m.isLive&&!m.isHT).length,
@@ -1586,6 +1589,66 @@
       return result;
     }
 
+    // Returns per-team lock data based on REAL confirmed games only (not projected).
+    // lockedAdvance: can't drop out of top 2 even with worst remaining results.
+    // lockedOut: can't reach 3rd even with best remaining results (by points alone).
+    // allPlayed: all 3 real group games confirmed.
+    function computeTeamLocks(ranked, groupMatches, ids) {
+      const realMatches = groupMatches.filter(m =>
+        ids.includes(m.homeId) && ids.includes(m.awayId) && m.isReal
+      );
+      const rs = {};
+      ids.forEach(id => { rs[id] = {pld:0, pts:0, gf:0, ga:0, gd:0}; });
+      realMatches.forEach(m => {
+        const h = rs[m.homeId], a = rs[m.awayId];
+        if (!h || !a) return;
+        h.pld++; a.pld++;
+        h.gf += m.home_score; h.ga += m.away_score;
+        a.gf += m.away_score; a.ga += m.home_score;
+        if (m.home_score > m.away_score)      { h.pts += 3; }
+        else if (m.home_score < m.away_score) { a.pts += 3; }
+        else                                   { h.pts++; a.pts++; }
+      });
+      ids.forEach(id => { const s = rs[id]; s.gd = s.gf - s.ga; });
+
+      // Re-rank by real stats only for lock calculation
+      const realRanked = [...ids].sort((a, b) => {
+        const sa = rs[a], sb = rs[b];
+        if (sb.pts !== sa.pts) return sb.pts - sa.pts;
+        if (sb.gd  !== sa.gd)  return sb.gd  - sa.gd;
+        if (sb.gf  !== sa.gf)  return sb.gf  - sa.gf;
+        return 0;
+      });
+
+      const TOTAL = 3;
+      const result = {};
+      realRanked.forEach((id, ri) => {
+        const s   = rs[id];
+        const rem = TOTAL - s.pld;
+        const allPlayed = s.pld === TOTAL;
+        let lockedAdvance = false, lockedOut = false;
+        if (allPlayed) {
+          lockedAdvance = ri < 2;
+          lockedOut     = ri === 3;
+        } else if (s.pld > 0) {
+          if (ri <= 1) {
+            // locked advance: 3rd-place's best-case can't reach our current pts
+            const bid = realRanked[2];
+            if (bid !== undefined) {
+              const bMax = rs[bid].pts + (TOTAL - rs[bid].pld) * 3;
+              if (bMax < s.pts) lockedAdvance = true;
+            }
+          } else if (ri === 3) {
+            // locked out: our best-case can't reach 3rd-place's current pts
+            const aid = realRanked[2];
+            if (aid !== undefined && (s.pts + rem * 3) < rs[aid].pts) lockedOut = true;
+          }
+        }
+        result[id] = { allPlayed, lockedAdvance, lockedOut };
+      });
+      return result;
+    }
+
     async function loadGroupsTab() {
       _groupsLoaded = true;
       const groupsWrap=document.getElementById('groups-wrap');
@@ -1596,7 +1659,19 @@
       const s = await computeGroupStandings();
       if (!s) { groupsWrap.innerHTML='<p style="color:var(--red)">Error loading data.</p>'; return; }
       const {groupRankings,thirdRanked,top8GroupSet,comboMapping,comboInv,teamById,groupMatches,
-             totalConfirmed,totalLive,totalProjected,totalUnplayed,totalMatches} = s;
+             totalConfirmed,totalLive,totalProjected,totalUnplayed,totalMatches,positionLocks} = s;
+
+      // Pre-compute all group locks then apply manual overrides before any rendering
+      const allGroupLocks = {};
+      Object.entries(GROUP_TEAMS).forEach(([letter,teamNames])=>{
+        const ids=teamNames.map(n=>(s.nameToId||{})[n]).filter(Boolean);
+        Object.assign(allGroupLocks, computeTeamLocks(groupRankings[letter], groupMatches, ids));
+      });
+      (positionLocks||[]).forEach(lk=>{
+        if (!allGroupLocks[lk.teamId]) allGroupLocks[lk.teamId]={allPlayed:false,lockedAdvance:false,lockedOut:false};
+        if (lk.status==='advance') { allGroupLocks[lk.teamId].lockedAdvance=true; allGroupLocks[lk.teamId].lockedOut=false; }
+        else if (lk.status==='out') { allGroupLocks[lk.teamId].lockedOut=true; allGroupLocks[lk.teamId].lockedAdvance=false; }
+      });
 
       summaryEl.innerHTML=`<strong>${totalConfirmed}</strong>/${totalMatches} confirmed`
         + (totalLive ? ` &nbsp;·&nbsp; <strong style="color:#ef4444">🔴 ${totalLive} live</strong>` : '')
@@ -1627,6 +1702,15 @@
           if(idx===2) qualTag=top8GroupSet.has(letter)
             ?' <span style="color:var(--green);font-size:10px;font-weight:700">✓</span>'
             :' <span style="color:var(--red);font-size:10px;font-weight:700">✗</span>';
+          const lock = allGroupLocks[r.id] || {};
+          const allPlayedTag = lock.allPlayed ? '<span style="font-size:9px;color:var(--green);opacity:0.75"> ✓</span>' : '';
+          const lockTag = lock.lockedAdvance
+            ? (lock.allPlayed
+              ? ' <span style="font-size:9px;background:rgba(16,185,129,0.25);color:var(--green);padding:1px 4px;border-radius:3px" title="Advanced to Round of 32">THRU</span>'
+              : ' <span style="font-size:9px;background:rgba(16,185,129,0.2);color:var(--green);padding:1px 4px;border-radius:3px" title="Guaranteed to advance regardless of remaining results">SAFE</span>')
+            : lock.lockedOut
+            ? ' <span style="font-size:9px;background:rgba(239,68,68,0.2);color:var(--red);padding:1px 4px;border-radius:3px" title="Cannot advance regardless of remaining results">OUT</span>'
+            : '';
           let nextHtml;
           if(idx===3){ nextHtml='<span style="color:var(--text-muted)">—</span>'; }
           else if(idx===2&&!top8GroupSet.has(letter)){ nextHtml='<span style="color:var(--red)">✗ Out</span>'; }
@@ -1636,8 +1720,8 @@
           }
           const gdStr=r.stats.gd>0?`+${r.stats.gd}`:`${r.stats.gd}`;
           groupsHtml+=`<tr style="background:${bg};border-top:1px solid var(--border);">
-            <td style="padding:5px 8px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${team?.flag_emoji||''} ${team?.name||'?'}${lsStar}${tieTag}${qualTag}</td>
-            <td style="text-align:center;padding:5px 2px">${r.stats.pld}</td>
+            <td style="padding:5px 8px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${team?.flag_emoji||''} ${team?.name||'?'}${lsStar}${tieTag}${qualTag}${lockTag}</td>
+            <td style="text-align:center;padding:5px 2px">${r.stats.pld}${allPlayedTag}</td>
             <td style="text-align:center;padding:5px 2px;font-weight:800;font-size:14px">${r.stats.pts}</td>
             <td style="text-align:center;padding:5px 2px">${gdStr}</td>
             <td style="padding:5px 6px;font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nextHtml}</td>
@@ -1693,6 +1777,8 @@
         const team=teamById[r.teamId];
         const lsStar=team?.is_longshot?' ⭐':'';
         const gdStr=r.stats.gd>0?`+${r.stats.gd}`:`${r.stats.gd}`;
+        const tLock=allGroupLocks[r.teamId]||{};
+        const tDoneTag=tLock.allPlayed?'<span style="font-size:9px;color:var(--green);opacity:0.75;margin-left:3px">✓</span>':'';
         let nextHtml='<span style="color:var(--text-muted)">—</span>';
         if(qualifies){
           const wg=comboInv[r.groupLetter];
@@ -1701,7 +1787,7 @@
         }
         thirdHtml+=`<tr style="background:${bg};border-top:1px solid var(--border);">
           <td style="padding:6px 8px;font-weight:700;color:var(--text-muted)">${idx+1}</td>
-          <td style="padding:6px 8px;font-weight:600">${team?.flag_emoji||''} ${team?.name||'?'}${lsStar}${tieTag}</td>
+          <td style="padding:6px 8px;font-weight:600">${team?.flag_emoji||''} ${team?.name||'?'}${lsStar}${tieTag}${tDoneTag}</td>
           <td style="text-align:center;font-weight:800;font-size:14px;padding:6px 6px">${r.stats.pts}</td>
           <td style="text-align:center;padding:6px 6px">${gdStr}</td>
           <td style="text-align:center;padding:6px 6px">${r.stats.gf}</td>
