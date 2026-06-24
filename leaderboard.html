@@ -1202,7 +1202,7 @@
               const _pts = _res ? (_res.points_earned || 0) + (_res.longshot_bonus || 0) : null;
               const _mr  = _res ? _res.match_result : null;
               const _opp = oppByTeamRound[pick.team_id + '|' + pick.round_id];
-              playerTodayMap[pick.player_id].picks.push({ flag: pick.teams.flag_emoji, isLongshot: pick.teams.is_longshot, multiplier: pick.multiplier, teamName: pick.teams.name, matchResult: _mr, pointsEarned: _pts, oppFlag: _opp?.flag_emoji || '', oppName: _opp?.name || '' });
+              playerTodayMap[pick.player_id].picks.push({ flag: pick.teams.flag_emoji, isLongshot: pick.teams.is_longshot, multiplier: pick.multiplier, teamName: pick.teams.name, matchResult: _mr, pointsEarned: _pts, oppFlag: _opp?.flag_emoji || '', oppName: _opp?.name || '', roundId: pick.round_id });
             }
           }
         });
@@ -1632,8 +1632,10 @@
           const form  = formMap[p.player_id] || { group: [], ko: [] };
           const todayData      = playerTodayMap[p.player_id];
           const isPlayingToday = !!todayData;
-          const todayDeadlinePassed = currentRound?.deadline ? now >= new Date(currentRound.deadline) : false;
-          const todayPicks_p   = (todayData && todayDeadlinePassed) ? todayData.picks : [];
+          const todayPicks_p = todayData ? todayData.picks.filter(pick => {
+            const rnd = (rounds || []).find(r => r.id === pick.roundId);
+            return rnd?.deadline ? now >= new Date(rnd.deadline) : false;
+          }) : [];
 
           let arrowHtml = '<span class="arrow-eq">—</span>';
           const currentPos = currentPosMap[p.player_id];
