@@ -1631,11 +1631,11 @@
           const gd    = liveMode ? effGd(p) : (gdMap[p.player_id] || 0);
           const form  = formMap[p.player_id] || { group: [], ko: [] };
           const todayData      = playerTodayMap[p.player_id];
-          const isPlayingToday = !!todayData;
           const todayPicks_p = todayData ? todayData.picks.filter(pick => {
             const rnd = (rounds || []).find(r => r.id === pick.roundId);
             return rnd?.deadline ? now >= new Date(rnd.deadline) : false;
           }) : [];
+          const isPlayingToday = todayPicks_p.length > 0;
 
           let arrowHtml = '<span class="arrow-eq">—</span>';
           const currentPos = currentPosMap[p.player_id];
