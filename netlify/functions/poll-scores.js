@@ -157,6 +157,7 @@ exports.handler = async function(event, context) {
     if (awayGoals === null || awayGoals === undefined) continue;
 
     const key = [apiHome, apiAway].sort().join('|');
+    console.log('API fixture:', JSON.stringify(apiHome), 'vs', JSON.stringify(apiAway), '| key:', key, '| dbMatch:', !!dbByTeams[key]);
     const dbMatch = dbByTeams[key];
     if (!dbMatch) { console.warn('No DB match for:', apiHome, 'vs', apiAway); continue; }
     if (dbMatch.confirmed) continue;
