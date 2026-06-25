@@ -142,12 +142,13 @@ exports.handler = async function(event, context) {
   let updated = 0;
   for (const f of fixtures) {
     const fdStatus = f.status || '';
-    const isLive     = fdStatus === 'IN_PLAY' || fdStatus === 'PAUSED';
-    const isFinished = fdStatus === 'FINISHED';
-    if (!isLive && !isFinished) continue;
-
     const apiHome = normalise(f.homeTeam?.name || '');
     const apiAway = normalise(f.awayTeam?.name || '');
+    console.log('DBG:', JSON.stringify(apiHome), 'vs', JSON.stringify(apiAway), '| status:', fdStatus);
+
+    const isLive     = fdStatus === 'IN_PLAY' || fdStatus === 'PAUSED' || fdStatus === 'LIVE';
+    const isFinished = fdStatus === 'FINISHED';
+    if (!isLive && !isFinished) continue;
 
     // Score: fullTime carries the running score while live and the final
     // (incl. ET) when finished. For pens it's the level after-120 score.
