@@ -24,6 +24,8 @@ const TEAM_MAP = {
   'Czechia':             'Czech Rep',
   'Congo DR':            'DR Congo',
   'Cape Verde Islands':  'Cape Verde',
+  "Côte d'Ivoire":       'Ivory Coast',
+  'Cura\u00e7ao':        'Cura\u00e7ao',
 };
 
 function normalise(name) {
