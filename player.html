@@ -2319,6 +2319,7 @@
       <span class="oracle-context-pill" id="oracle-ctx-round"></span>
       <span class="oracle-context-pill" id="oracle-ctx-teams"></span>
     </div>
+    <div id="oracle-coverage-note" style="display:none; font-size:12px; color:var(--text-muted); text-align:center; padding:4px 16px 8px; line-height:1.4"></div>
     <div class="oracle-sheet-body">
       <span class="oracle-eye">🔮</span>
       <div class="oracle-title">THE ORACLE</div>
@@ -2850,15 +2851,74 @@
 
           const fullPool = buildOraclePool(available, _oracleRound, roundMatches || [], _oracleOddsMap);
 
-          // Fix exactly 5 teams (weighted selection, no repeats)
+          // ── Coverage throttle ─────────────────────────────────────────────
+          // Scale pick count to how much of the bracket is actually confirmed.
+          // roundMatches only contains shells with home_team_id set (same query filter).
+          const _covCfg = {
+            'Round of 32':   { expected: 16, maxPicks: 4, minCov: 0.40 },
+            'Round of 16':   { expected: 8,  maxPicks: 3, minCov: 0.40 },
+            'Quarter Finals':{ expected: 4,  maxPicks: 2, minCov: 0.50 },
+            'Quarter-Final': { expected: 4,  maxPicks: 2, minCov: 0.50 },
+            'Semi Finals':   { expected: 2,  maxPicks: 1, minCov: 0.50 },
+            'Semi-Final':    { expected: 2,  maxPicks: 1, minCov: 0.50 },
+            'Final':         { expected: 1,  maxPicks: 1, minCov: 1.00 },
+          }[_oracleRound.name];
+
+          let oracleAdvice = { count: null, explanation: null };
+          if (_covCfg) {
+            const sched    = (roundMatches || []).length;
+            const coverage = sched / _covCfg.expected;
+            const pct      = Math.round(coverage * 100);
+            if (coverage < _covCfg.minCov) {
+              oracleAdvice = {
+                count: 0,
+                explanation: `Only ${sched} of ${_covCfg.expected} ${_oracleRound.name} fixtures confirmed (${pct}%) — not enough to make confident picks yet. Check back as more games are scheduled.`,
+              };
+            } else if (coverage < 0.60) {
+              oracleAdvice = {
+                count: Math.min(1, _covCfg.maxPicks),
+                explanation: `${pct}% of ${_oracleRound.name} fixtures confirmed — just the top pick for now.`,
+              };
+            } else if (coverage < 0.80) {
+              const c = Math.min(2, _covCfg.maxPicks);
+              oracleAdvice = {
+                count: c,
+                explanation: c < _covCfg.maxPicks ? `${pct}% of ${_oracleRound.name} fixtures confirmed — ${c} picks available for now.` : null,
+              };
+            } else {
+              oracleAdvice = { count: _covCfg.maxPicks, explanation: null };
+            }
+          }
+
+          if (oracleAdvice.count === 0) {
+            thinkEl.style.display = 'none';
+            const noRoundEl = document.getElementById('oracle-no-round');
+            noRoundEl.innerHTML = `😶 ${oracleAdvice.explanation}`;
+            noRoundEl.style.display = 'block';
+            return;
+          }
+
+          // Show coverage note below context pills if picks are limited
+          const _covNoteEl = document.getElementById('oracle-coverage-note');
+          if (_covNoteEl) {
+            if (oracleAdvice.explanation) {
+              _covNoteEl.textContent = oracleAdvice.explanation;
+              _covNoteEl.style.display = 'block';
+            } else {
+              _covNoteEl.style.display = 'none';
+            }
+          }
+
+          // Fix a pool of picks (weighted selection, no repeats)
           function getOracleCap(round) {
             if (!round) return 5;
             if (round.round_type === 'group') return 5;
             const name = round.name;
-            if (name === 'Round of 32') return 4;
-            if (name === 'Round of 16') return 3;
-            if (name === 'Quarter Finals' || name === 'Quarter-Final') return 2;
-            return 1;
+            const base = name === 'Round of 32'   ? 4
+                       : name === 'Round of 16'   ? 3
+                       : (name === 'Quarter Finals' || name === 'Quarter-Final') ? 2
+                       : 1;
+            return oracleAdvice.count !== null ? Math.min(oracleAdvice.count, base) : base;
           }
           const CAP = Math.min(getOracleCap(_oracleRound), fullPool.length);
           const fixed = [];
@@ -3065,6 +3125,9 @@
 
       document.getElementById('oracle-backdrop').classList.add('open');
       document.getElementById('oracle-sheet').classList.add('open');
+
+      const _cn = document.getElementById('oracle-coverage-note');
+      if (_cn) _cn.style.display = 'none';
       document.body.classList.add('sheet-open');
 
       // Auto-fire immediately
