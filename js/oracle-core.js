@@ -1,11 +1,74 @@
 // ── oracle-core.js ────────────────────────────────────────────────────────────
 // Shared oracle algorithm — loaded by player.html and admin.html
-// Functions: getRoundMode, getEliteIds, buildOraclePool
+// Functions: getRoundMode, getEliteIds, buildOraclePool, getOraclePickAdvice
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ORACLE_KO_ROUNDS    = ['Round of 32','Round of 16','Quarter Finals','Quarter-Final','Semi Finals','Semi-Final','Final'];
 const ORACLE_LATE_ROUNDS  = ['Quarter Finals','Quarter-Final','Semi Finals','Semi-Final','Final'];
 const ORACLE_FINAL_ROUNDS = ['Semi Finals','Semi-Final','Final'];
+
+// Per-round fixture coverage config.
+// expected:    total matches in a complete round
+// maxPicks:    Oracle's ceiling when fully scheduled
+// minCoverage: fraction of expected matches that must be confirmed before any pick
+const ORACLE_ROUND_CONFIG = {
+  'Round of 32':   { expected: 16, maxPicks: 2, minCoverage: 0.40 },
+  'Round of 16':   { expected: 8,  maxPicks: 1, minCoverage: 0.40 },
+  'Quarter Finals':{ expected: 4,  maxPicks: 1, minCoverage: 0.50 },
+  'Quarter-Final': { expected: 4,  maxPicks: 1, minCoverage: 0.50 },
+  'Semi Finals':   { expected: 2,  maxPicks: 1, minCoverage: 0.50 },
+  'Semi-Final':    { expected: 2,  maxPicks: 1, minCoverage: 0.50 },
+  'Final':         { expected: 1,  maxPicks: 1, minCoverage: 1.00 },
+};
+
+// ── getOraclePickAdvice ───────────────────────────────────────────────────────
+// Returns how many picks Oracle should make given fixture coverage.
+// Call BEFORE buildOraclePool; if count === 0 skip the pool entirely.
+//
+// round   — { id, name, round_type }
+// matches — fixtures array for this round (same as passed to buildOraclePool)
+//
+// Returns: { count, coverage, explanation }
+//   count       — recommended picks (null = group stage, no throttle applied)
+//   coverage    — fraction of expected matches scheduled (null for group)
+//   explanation — human-readable reason, or null if no throttle in effect
+function getOraclePickAdvice(round, matches) {
+  const cfg = ORACLE_ROUND_CONFIG[round && round.name];
+  if (!cfg) return { count: null, coverage: null, explanation: null }; // group stage
+
+  const scheduled = (matches || []).length;
+  const coverage  = scheduled / cfg.expected;
+  const pct       = Math.round(coverage * 100);
+
+  if (coverage < cfg.minCoverage) {
+    return {
+      count: 0,
+      coverage,
+      explanation: `Only ${scheduled} of ${cfg.expected} ${round.name} fixtures confirmed (${pct}%) — not enough to make confident picks yet. Check back as more games are scheduled.`,
+    };
+  }
+
+  if (coverage < 0.60) {
+    return {
+      count: Math.min(1, cfg.maxPicks),
+      coverage,
+      explanation: `${pct}% of ${round.name} fixtures confirmed — picking just the top-rated option for now.`,
+    };
+  }
+
+  if (coverage < 0.80) {
+    const count = Math.min(2, cfg.maxPicks);
+    return {
+      count,
+      coverage,
+      explanation: count < 2 ? null
+        : `${pct}% of ${round.name} fixtures confirmed — picking top 2. More options may appear as remaining fixtures are scheduled.`,
+    };
+  }
+
+  // ≥80% — full pick quota
+  return { count: cfg.maxPicks, coverage, explanation: null };
+}
 
 function getRoundMode(round) {
   if (!round) return 'group';

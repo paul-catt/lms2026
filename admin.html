@@ -4784,6 +4784,16 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
 
       const fullPool = buildOraclePool(available, round, roundMatches || [], outrightOddsMap, allTeams || []);
 
+      // Coverage throttle — don't pick when too few fixtures are scheduled
+      const advice = getOraclePickAdvice(round, roundMatches || []);
+      if (advice.count === 0) {
+        msgEl.style.color = 'var(--text-muted)';
+        msgEl.textContent = `🔮 ${advice.explanation}`;
+        document.getElementById('btn-oracle-lock').disabled = true;
+        wrapEl.style.display = 'none';
+        return;
+      }
+
       if (fullPool.length === 0) {
         msgEl.style.color = 'var(--red)';
         msgEl.textContent = 'Pool is empty — no scoreable candidates found.';
@@ -4818,6 +4828,11 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         // Fallback: just take top 2 regardless
         candidateA = sorted[0] || null;
         candidateB = sorted[1] || null;
+      }
+
+      // Apply coverage throttle — cap to 1 pick if advice says so
+      if (advice.count !== null && advice.count <= 1) {
+        candidateB = null;
       }
 
       // Which two teams get picked stays rank-driven (above). Which of those two
@@ -4874,9 +4889,15 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
 
       // Summary above lock button
       const p3name = pick3entry ? (pick3entry.team.flag_emoji || '') + ' ' + pick3entry.team.name : '—';
-      const p2name = pick2entry ? (pick2entry.team.flag_emoji || '') + ' ' + pick2entry.team.name : '—';
+      const p2name = pick2entry ? (pick2entry.team.flag_emoji || '') + ' ' + pick2entry.team.name : null;
       msgEl.style.color = 'var(--text)';
-      msgEl.innerHTML = `Will lock: <strong>${p3name}</strong> (3pt) + <strong>${p2name}</strong> (2pt)`;
+      const adviceNote = advice.explanation
+        ? `<div style="color:var(--text-muted); font-size:12px; margin-bottom:6px">🔮 ${advice.explanation}</div>`
+        : '';
+      const lockLine = p2name
+        ? `Will lock: <strong>${p3name}</strong> (3pt) + <strong>${p2name}</strong> (2pt)`
+        : `Will lock: <strong>${p3name}</strong> (3pt only — limited fixtures)`;
+      msgEl.innerHTML = adviceNote + lockLine;
 
       wrapEl.style.display = 'block';
       _oraclePreviewData = { round, oraclePlayerId: oraclePlayer.id, pick3entry, pick2entry };
@@ -4894,9 +4915,9 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
 
       const { round, oraclePlayerId, pick3entry, pick2entry } = _oraclePreviewData;
 
-      if (!pick3entry || !pick2entry) {
+      if (!pick3entry) {
         lockMsg.style.color = 'var(--red)';
-        lockMsg.textContent = 'Not enough candidates to pick 2 teams.';
+        lockMsg.textContent = 'No valid candidate to pick.';
         return;
       }
 
@@ -4906,8 +4927,10 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
 
       const inserts = [
         { player_id: oraclePlayerId, round_id: round.id, team_id: pick3entry.team.id, multiplier: 3, oracle_pick: false, is_assigned: false },
-        { player_id: oraclePlayerId, round_id: round.id, team_id: pick2entry.team.id, multiplier: 2, oracle_pick: false, is_assigned: false },
       ];
+      if (pick2entry) {
+        inserts.push({ player_id: oraclePlayerId, round_id: round.id, team_id: pick2entry.team.id, multiplier: 2, oracle_pick: false, is_assigned: false });
+      }
 
       const { error } = await db.from('picks').insert(inserts);
 
@@ -4918,8 +4941,11 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         return;
       }
 
+      const successMsg = pick2entry
+        ? `✅ Locked — ${pick3entry.team.name} (3pt) + ${pick2entry.team.name} (2pt). Push notifications fired.`
+        : `✅ Locked — ${pick3entry.team.name} (3pt only — limited fixtures). Push notifications fired.`;
       lockMsg.style.color = '#10b981';
-      lockMsg.textContent = `✅ Locked — ${pick3entry.team.name} (3pt) + ${pick2entry.team.name} (2pt). Push notifications fired.`;
+      lockMsg.textContent = successMsg;
       lockBtn.disabled = true;
 
       // Refresh preview to reflect new state

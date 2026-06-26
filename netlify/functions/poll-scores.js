@@ -7,6 +7,7 @@
 //   home_score / away_score  — current or final score (after ET if applicable;
 //                              for pens, the level after-120 score)
 //   status                   — 'live' while in play, 'complete' when finished
+//                              (football-data.org may return IN_PLAY or LIVE for in-progress matches)
 //   api_status               — IN_PLAY | PAUSED | FINISHED | FINISHED_ET |
 //                              FINISHED_PENS_HOME | FINISHED_PENS_AWAY | FINISHED_PENS
 //   elapsed_minutes          — match minute if the API provides it, else null
@@ -144,8 +145,6 @@ exports.handler = async function(event, context) {
     const fdStatus = f.status || '';
     const apiHome = normalise(f.homeTeam?.name || '');
     const apiAway = normalise(f.awayTeam?.name || '');
-    console.log('DBG:', JSON.stringify(apiHome), 'vs', JSON.stringify(apiAway), '| status:', fdStatus);
-
     const isLive     = fdStatus === 'IN_PLAY' || fdStatus === 'PAUSED' || fdStatus === 'LIVE';
     const isFinished = fdStatus === 'FINISHED';
     if (!isLive && !isFinished) continue;
@@ -158,7 +157,6 @@ exports.handler = async function(event, context) {
     if (awayGoals === null || awayGoals === undefined) continue;
 
     const key = [apiHome, apiAway].sort().join('|');
-    console.log('API fixture:', JSON.stringify(apiHome), 'vs', JSON.stringify(apiAway), '| key:', key, '| dbMatch:', !!dbByTeams[key]);
     const dbMatch = dbByTeams[key];
     if (!dbMatch) { console.warn('No DB match for:', apiHome, 'vs', apiAway); continue; }
     if (dbMatch.confirmed) continue;
