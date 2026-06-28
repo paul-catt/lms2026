@@ -848,8 +848,8 @@
             const gap = allScores.length > 1 ? totalPoints - allScores[1].total_points : 0;
             const tied = allScores.length > 1 && allScores[1].total_points === totalPoints;
             pointsSub = gap > 0 ? '+' + gap + ' ahead' : (tied ? 'Joint Leader' : 'Leader');
-          } else {
-            const gap = allScores[positionIdx - 1].total_points - totalPoints;
+          } else if (positionIdx > 0) {
+            const gap = (allScores[positionIdx - 1].total_points || 0) - totalPoints;
             const tied = gap === 0;
             pointsSub = tied ? 'Joint ' + ordinal(tieRank) : (gap > 0 ? gap + ' to ' + ordinal(tieRank - 1) : '');
           }
@@ -1154,6 +1154,7 @@
       } catch(err) {
         console.error(err);
         document.getElementById('loading').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'none';
         document.getElementById('not-found').style.display = 'block';
       }
     }
