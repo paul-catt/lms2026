@@ -837,21 +837,18 @@
             // Tie-aware rank: number of players strictly above this player + 1.
             // Keeps POSITION box and the "Joint Xth" sub-label in sync.
             tieRank = allScores.filter(s => s.total_points > totalPoints).length + 1;
-            position = ordinal(tieRank);
+            position = ordinal(positionIdx + 1);
           }
         }
 
-        // Points gap to next place
         let pointsSub = '';
         if (allScores && allScores.length > 0 && positionIdx !== -1) {
-          if (tieRank === 1) {
-            const gap = allScores.length > 1 ? totalPoints - allScores[1].total_points : 0;
-            const tied = allScores.length > 1 && allScores[1].total_points === totalPoints;
-            pointsSub = gap > 0 ? '+' + gap + ' ahead' : (tied ? 'Joint Leader' : 'Leader');
+          if (positionIdx === 0) {
+            const gap = allScores.length > 1 ? totalPoints - (allScores[1].total_points || 0) : 0;
+            pointsSub = gap > 0 ? '+' + gap + ' ahead' : 'Leader';
           } else if (positionIdx > 0) {
             const gap = (allScores[positionIdx - 1].total_points || 0) - totalPoints;
-            const tied = gap === 0;
-            pointsSub = tied ? 'Joint ' + ordinal(tieRank) : (gap > 0 ? gap + ' to ' + ordinal(tieRank - 1) : '');
+            pointsSub = gap === 0 ? 'Level on pts' : gap + ' to ' + ordinal(positionIdx);
           }
         }
 
@@ -1980,7 +1977,7 @@
       // ── Rank delta vs last session ────────────────────────────────────────
       const LS_RANK_KEY = 'lms2026_last_rank_' + (player ? player.id : '');
       const lastRank    = parseInt(localStorage.getItem(LS_RANK_KEY) || '0', 10);
-      const currentRank = (tieRank > 0) ? tieRank : positionIdx + 1;
+      const currentRank = positionIdx + 1;
       const delta       = lastRank > 0 ? lastRank - currentRank : 0; // positive = moved up
       localStorage.setItem(LS_RANK_KEY, currentRank);
 
