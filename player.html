@@ -762,7 +762,7 @@
         let totalPoints = 0;
         allPicks.forEach(p => {
           const res = p.pick_results && p.pick_results.length > 0 ? p.pick_results[0] : null;
-          if (res) totalPoints += res.points_earned || 0;
+          if (res) totalPoints += (res.points_earned || 0) + (res.longshot_bonus || 0);
         });
 
         const gdMap = {};
