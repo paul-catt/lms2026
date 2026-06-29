@@ -736,7 +736,7 @@
       <div class="card">
         <div class="card-title">🔮 Lock Oracle Picks</div>
         <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
-          Run before the round deadline. Preview scores the full available pool — top 15 shown for group rounds, top 10 for knockout. Lock inserts the top 2 (3pt + 2pt) into the database, 3pt going to whichever of the two has shorter odds. Picks from different matches are guaranteed by the algorithm.
+          Run before the round deadline. Preview scores the full available pool — top 15 shown for group rounds, top 10 for knockout. For group rounds, lock inserts the top 2 (3pt + 2pt), 3pt going to whichever has shorter odds, from different matches. For KO rounds, lock inserts 1 pick.
         </p>
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap">
           <select id="oracle-round-select" style="min-width:200px">
@@ -4805,25 +4805,32 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         return a.team.name.localeCompare(b.team.name);
       });
 
-      // Top 2 must be from different matches
+      const isKORound = roundType === 'knockout';
+
+      // Top 2 must be from different matches (group only)
       // Same match = A's opponent is B, or B's opponent is A
       let candidateA = null, candidateB = null;
-      for (const entry of sorted) {
-        if (!candidateA) { candidateA = entry; continue; }
-        const sameMatch = candidateA.opponent && entry.opponent &&
-          (candidateA.opponent.id === entry.team.id || entry.opponent.id === candidateA.team.id);
-        if (!sameMatch) { candidateB = entry; break; }
-      }
-      if (!candidateB) {
-        // Fallback: just take top 2 regardless
+      if (isKORound) {
+        // KO: 1 pick only
         candidateA = sorted[0] || null;
-        candidateB = sorted[1] || null;
+      } else {
+        for (const entry of sorted) {
+          if (!candidateA) { candidateA = entry; continue; }
+          const sameMatch = candidateA.opponent && entry.opponent &&
+            (candidateA.opponent.id === entry.team.id || entry.opponent.id === candidateA.team.id);
+          if (!sameMatch) { candidateB = entry; break; }
+        }
+        if (!candidateB) {
+          // Fallback: just take top 2 regardless
+          candidateA = sorted[0] || null;
+          candidateB = sorted[1] || null;
+        }
       }
 
       // Which two teams get picked stays rank-driven (above). Which of those two
       // gets the 3pt label is odds-driven: shorter (lower) H2H odds = 3pt.
-      let pick3entry = candidateA, pick2entry = candidateB;
-      if (candidateA && candidateB) {
+      let pick3entry = candidateA, pick2entry = isKORound ? null : candidateB;
+      if (!isKORound && candidateA && candidateB) {
         const aH2h = candidateA.myH2h || 999;
         const bH2h = candidateB.myH2h || 999;
         if (bH2h < aH2h) { pick3entry = candidateB; pick2entry = candidateA; }
@@ -4876,10 +4883,12 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       const p3name = pick3entry ? (pick3entry.team.flag_emoji || '') + ' ' + pick3entry.team.name : '—';
       const p2name = pick2entry ? (pick2entry.team.flag_emoji || '') + ' ' + pick2entry.team.name : '—';
       msgEl.style.color = 'var(--text)';
-      msgEl.innerHTML = `Will lock: <strong>${p3name}</strong> (3pt) + <strong>${p2name}</strong> (2pt)`;
+      msgEl.innerHTML = isKORound
+        ? `Will lock: <strong>${p3name}</strong>`
+        : `Will lock: <strong>${p3name}</strong> (3pt) + <strong>${p2name}</strong> (2pt)`;
 
       wrapEl.style.display = 'block';
-      _oraclePreviewData = { round, oraclePlayerId: oraclePlayer.id, pick3entry, pick2entry };
+      _oraclePreviewData = { round, oraclePlayerId: oraclePlayer.id, pick3entry, pick2entry, isKORound };
     }
 
     async function oracleLock() {
@@ -4892,11 +4901,11 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         return;
       }
 
-      const { round, oraclePlayerId, pick3entry, pick2entry } = _oraclePreviewData;
+      const { round, oraclePlayerId, pick3entry, pick2entry, isKORound } = _oraclePreviewData;
 
-      if (!pick3entry || !pick2entry) {
+      if (!pick3entry || (!isKORound && !pick2entry)) {
         lockMsg.style.color = 'var(--red)';
-        lockMsg.textContent = 'Not enough candidates to pick 2 teams.';
+        lockMsg.textContent = 'Not enough candidates to lock.';
         return;
       }
 
@@ -4904,10 +4913,12 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       lockMsg.style.color = 'var(--text-muted)';
       lockMsg.textContent = 'Saving…';
 
-      const inserts = [
-        { player_id: oraclePlayerId, round_id: round.id, team_id: pick3entry.team.id, multiplier: 3, oracle_pick: false, is_assigned: false },
-        { player_id: oraclePlayerId, round_id: round.id, team_id: pick2entry.team.id, multiplier: 2, oracle_pick: false, is_assigned: false },
-      ];
+      const inserts = isKORound
+        ? [{ player_id: oraclePlayerId, round_id: round.id, team_id: pick3entry.team.id, multiplier: 2, oracle_pick: false, is_assigned: false }]
+        : [
+            { player_id: oraclePlayerId, round_id: round.id, team_id: pick3entry.team.id, multiplier: 3, oracle_pick: false, is_assigned: false },
+            { player_id: oraclePlayerId, round_id: round.id, team_id: pick2entry.team.id, multiplier: 2, oracle_pick: false, is_assigned: false },
+          ];
 
       const { error } = await db.from('picks').insert(inserts);
 
@@ -4919,7 +4930,9 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       }
 
       lockMsg.style.color = '#10b981';
-      lockMsg.textContent = `✅ Locked — ${pick3entry.team.name} (3pt) + ${pick2entry.team.name} (2pt). Push notifications fired.`;
+      lockMsg.textContent = isKORound
+        ? `✅ Locked — ${pick3entry.team.name}. Push notifications fired.`
+        : `✅ Locked — ${pick3entry.team.name} (3pt) + ${pick2entry.team.name} (2pt). Push notifications fired.`;
       lockBtn.disabled = true;
 
       // Refresh preview to reflect new state

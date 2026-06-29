@@ -2847,6 +2847,13 @@
             filteredPool = filteredPool.slice(0, _preCheckAdvice.count);
           }
 
+          // If coverage has improved and we can now show more picks, bust cache to rebuild
+          if (_preCheckAdvice.count !== null && filteredPool.length < _preCheckAdvice.count) {
+            localStorage.removeItem(getPoolKey(_oracleRound.id));
+            localStorage.removeItem(getShownKey(_oracleRound.id));
+            filteredPool = [];
+          }
+
           if (filteredPool.length > 0) {
             _oraclePool       = filteredPool;
             _oracleDataReady  = true;

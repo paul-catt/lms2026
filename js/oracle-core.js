@@ -12,7 +12,7 @@ const ORACLE_FINAL_ROUNDS = ['Semi Finals','Semi-Final','Final'];
 // maxPicks:    Oracle's ceiling when fully scheduled
 // minCoverage: fraction of expected matches that must be confirmed before any pick
 const ORACLE_ROUND_CONFIG = {
-  'Round of 32':   { expected: 16, maxPicks: 2, minCoverage: 0.40 },
+  'Round of 32':   { expected: 16, maxPicks: 1, minCoverage: 0.40 },
   'Round of 16':   { expected: 8,  maxPicks: 1, minCoverage: 0.40 },
   'Quarter Finals':{ expected: 4,  maxPicks: 1, minCoverage: 0.50 },
   'Quarter-Final': { expected: 4,  maxPicks: 1, minCoverage: 0.50 },
