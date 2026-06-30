@@ -521,6 +521,134 @@
       return nm ? ' vs ' + nm : '';
     }
 
+    // Single source of truth for "elimination order" ranking — used by both
+    // the Fallen tab (display) and the prize calc (Last Man Standing / First
+    // Out money). Do not duplicate this logic elsewhere; call this instead.
+    function computeFallenRanking(sorted, rounds, allPicks, completedMatches) {
+      const eliminated = (sorted || []).filter(p => p.is_eliminated);
+      const alive      = (sorted || []).filter(p => !p.is_eliminated);
+
+      const kickoffByTeamRound = {};
+      (completedMatches || []).forEach(m => {
+        if (!m.kickoff) return;
+        if (m.home_team_id) kickoffByTeamRound[m.home_team_id + '|' + m.round_id] = m.kickoff;
+        if (m.away_team_id) kickoffByTeamRound[m.away_team_id + '|' + m.round_id] = m.kickoff;
+      });
+
+      const roundMap = {};
+      (rounds || []).forEach(r => { roundMap[r.id] = r; });
+
+      const matchByTeam = {};
+      (completedMatches || []).forEach(m => {
+        if (m.home_team_id) matchByTeam[m.home_team_id + '|' + m.round_id] = m;
+        if (m.away_team_id) matchByTeam[m.away_team_id + '|' + m.round_id] = m;
+      });
+
+      const picksByPlayer = {};
+      (allPicks || []).forEach(p => {
+        if (!picksByPlayer[p.player_id]) picksByPlayer[p.player_id] = [];
+        picksByPlayer[p.player_id].push(p);
+      });
+
+      function getEliminationInfo(player) {
+        const playerPicks = picksByPlayer[player.player_id] || [];
+        const koRoundNames = new Set(['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final']);
+        const koRoundIds = new Set((rounds || []).filter(r => koRoundNames.has(r.name)).map(r => r.id));
+        const losingPick = [...playerPicks].reverse().find(p => {
+          const res = p.pick_results && p.pick_results[0];
+          return res && res.match_result === 'loss' && koRoundIds.has(p.round_id);
+        });
+        if (losingPick) {
+          const match = matchByTeam[losingPick.team_id + '|' + losingPick.round_id] || null;
+          return { pick: losingPick, match, noPicks: false };
+        }
+        const elimRoundId = player.eliminated_in_round_id ||
+          (playerPicks.length > 0
+            ? [...playerPicks].sort((a, b) =>
+                (roundMap[b.round_id]?.sort_order || 0) - (roundMap[a.round_id]?.sort_order || 0)
+              )[0].round_id
+            : null);
+        const lastPick = playerPicks.length > 0
+          ? [...playerPicks].sort((a, b) =>
+              (roundMap[b.round_id]?.sort_order || 0) - (roundMap[a.round_id]?.sort_order || 0)
+            )[0]
+          : null;
+        const lastPickKickoff = lastPick
+          ? kickoffByTeamRound[lastPick.team_id + '|' + lastPick.round_id] || null
+          : null;
+        return { pick: null, match: null, noPicks: true, elimRoundId, lastPickKickoff };
+      }
+
+      const fallenWithInfo = eliminated.map(p => ({
+        player: p,
+        info: getEliminationInfo(p)
+      }));
+
+      // Sort ascending: first eliminated = rank 1. Finalists (noPicks + Final win) sort highest (last).
+      function isFinalistEntry(entry) {
+        if (!entry.info.noPicks) return false;
+        const finalRound = (rounds || []).find(r => r.name === 'Final');
+        if (!finalRound || !finalRound.is_complete) return false;
+        const playerPicks = picksByPlayer[entry.player.player_id] || [];
+        const finalPick = playerPicks.find(p => p.round_id === finalRound.id);
+        const finalRes = finalPick && finalPick.pick_results && finalPick.pick_results[0];
+        return finalPick && finalPick.teams && finalRes && finalRes.match_result === 'win';
+      }
+
+      fallenWithInfo.sort((a, b) => {
+        const aIsFinalist = isFinalistEntry(a);
+        const bIsFinalist = isFinalistEntry(b);
+        if (aIsFinalist && !bIsFinalist) return 1;
+        if (bIsFinalist && !aIsFinalist) return -1;
+
+        const aRoundSO = a.info.match
+          ? (roundMap[a.info.match.round_id]?.sort_order || 0)
+          : a.info.elimRoundId ? (roundMap[a.info.elimRoundId]?.sort_order || 0) : 0;
+        const bRoundSO = b.info.match
+          ? (roundMap[b.info.match.round_id]?.sort_order || 0)
+          : b.info.elimRoundId ? (roundMap[b.info.elimRoundId]?.sort_order || 0) : 0;
+        if (aRoundSO !== bRoundSO) return aRoundSO - bRoundSO;
+
+        const aKickoff = a.info.match?.kickoff
+          ? new Date(a.info.match.kickoff).getTime()
+          : a.info.lastPickKickoff ? new Date(a.info.lastPickKickoff).getTime() : 0;
+        const bKickoff = b.info.match?.kickoff
+          ? new Date(b.info.match.kickoff).getTime()
+          : b.info.lastPickKickoff ? new Date(b.info.lastPickKickoff).getTime() : 0;
+        if (aKickoff !== bKickoff) return aKickoff - bKickoff;
+        const aNoPick = a.info.noPicks ? 1 : 0;
+        const bNoPick = b.info.noPicks ? 1 : 0;
+        if (aNoPick !== bNoPick) return aNoPick - bNoPick;
+        return (b.player.name || '').localeCompare(a.player.name || '');
+      });
+
+      const sortKeys = fallenWithInfo.map(({ info }) => {
+        if (info.match?.kickoff) return info.match.kickoff;
+        if (info.lastPickKickoff) return info.lastPickKickoff;
+        if (info.elimRoundId) return 'round:' + info.elimRoundId;
+        return null;
+      });
+
+      const ranks = [];
+      let currentRank = 1;
+      for (let i = 0; i < fallenWithInfo.length; i++) {
+        if (i > 0 && sortKeys[i] !== sortKeys[i - 1]) currentRank = i + 1;
+        ranks.push(currentRank);
+      }
+
+      const compFinished = alive.length <= 1;
+      const maxRank = ranks.length > 0 ? Math.max(...ranks) : null;
+      // Always the current leader (provisional until compFinished — callers label it accordingly)
+      const lastManStandingPlayers = maxRank !== null
+        ? fallenWithInfo.filter((_, i) => ranks[i] === maxRank).map(e => e.player)
+        : [];
+      const firstOutPlayers = fallenWithInfo.length > 0
+        ? fallenWithInfo.filter((_, i) => ranks[i] === 1).map(e => e.player)
+        : [];
+
+      return { eliminated, alive, compFinished, fallenWithInfo, ranks, roundMap, kickoffByTeamRound, matchByTeam, picksByPlayer, lastManStandingPlayers, firstOutPlayers };
+    }
+
     function shortName(fullName) {
       if (!fullName) return '?';
       const parts = fullName.trim().split(/\s+/);
@@ -1483,6 +1611,8 @@
         const winningsMap = {}; // player_id -> £ amount
         let firstOutPlayers = [];
         let woodenSpoonPlayers = []; // R32 worst performers — get the £10
+        let lastManStandingPlayers = []; // last player(s) eliminated — get the £10
+        let throughPlayers = []; // already won their pick in the current live round
         {
           const totalPlayers = (scores || []).length;
           const pot = totalPlayers * 10;
@@ -1494,68 +1624,12 @@
           else                         splits = [0.60, 0.25, 0.15];
 
           const WOODEN_SPOON_PRIZE = 10;
-          const remainingPot = pot - WOODEN_SPOON_PRIZE;
+          const LAST_MAN_STANDING_PRIZE = 10;
+          const remainingPot = pot - WOODEN_SPOON_PRIZE - LAST_MAN_STANDING_PRIZE;
 
-          // ── Determine first-out player(s) — fun stat only, no prize ─────
-          const eliminated = (scores || []).filter(p => p.is_eliminated);
-          const kickoffByTeamRound2 = {};
-          (completedMatches || []).forEach(m => {
-            if (!m.kickoff) return;
-            if (m.home_team_id) kickoffByTeamRound2[m.home_team_id + '|' + m.round_id] = m.kickoff;
-            if (m.away_team_id) kickoffByTeamRound2[m.away_team_id + '|' + m.round_id] = m.kickoff;
-          });
-          const roundMap2 = {};
-          (rounds || []).forEach(r => { roundMap2[r.id] = r; });
-          const matchByTeam2 = {};
-          (completedMatches || []).forEach(m => {
-            if (m.home_team_id) matchByTeam2[m.home_team_id + '|' + m.round_id] = m;
-            if (m.away_team_id) matchByTeam2[m.away_team_id + '|' + m.round_id] = m;
-          });
-          const picksByPlayer2 = {};
-          (allPicks || []).forEach(pk => {
-            if (!picksByPlayer2[pk.player_id]) picksByPlayer2[pk.player_id] = [];
-            picksByPlayer2[pk.player_id].push(pk);
-          });
-          function getElimInfo(player) {
-            const playerPicks = picksByPlayer2[player.player_id] || [];
-            const koRoundNames = new Set(['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final']);
-            const koRoundIds = new Set((rounds || []).filter(r => koRoundNames.has(r.name)).map(r => r.id));
-            const losingPick = [...playerPicks].reverse().find(p => {
-              const res = p.pick_results && p.pick_results[0];
-              return res && res.match_result === 'loss' && koRoundIds.has(p.round_id);
-            });
-            if (losingPick) {
-              const match = matchByTeam2[losingPick.team_id + '|' + losingPick.round_id] || null;
-              return { match, noPicks: false, elimRoundId: null, lastPickKickoff: null };
-            }
-            const elimRoundId = player.eliminated_in_round_id ||
-              (playerPicks.length > 0
-                ? [...playerPicks].sort((a, b) => (roundMap2[b.round_id]?.sort_order||0) - (roundMap2[a.round_id]?.sort_order||0))[0].round_id
-                : null);
-            const lastPick = playerPicks.length > 0
-              ? [...playerPicks].sort((a, b) => (roundMap2[b.round_id]?.sort_order||0) - (roundMap2[a.round_id]?.sort_order||0))[0]
-              : null;
-            const lastPickKickoff = lastPick ? kickoffByTeamRound2[lastPick.team_id + '|' + lastPick.round_id] || null : null;
-            return { match: null, noPicks: true, elimRoundId, lastPickKickoff };
-          }
-          const elimWithInfo = eliminated.map(p => ({ player: p, info: getElimInfo(p) }));
-          elimWithInfo.sort((a, b) => {
-            const aSO = a.info.match ? (roundMap2[a.info.match.round_id]?.sort_order||0) : a.info.elimRoundId ? (roundMap2[a.info.elimRoundId]?.sort_order||0) : 0;
-            const bSO = b.info.match ? (roundMap2[b.info.match.round_id]?.sort_order||0) : b.info.elimRoundId ? (roundMap2[b.info.elimRoundId]?.sort_order||0) : 0;
-            if (aSO !== bSO) return aSO - bSO;
-            const aK = a.info.match?.kickoff ? new Date(a.info.match.kickoff).getTime() : a.info.lastPickKickoff ? new Date(a.info.lastPickKickoff).getTime() : 0;
-            const bK = b.info.match?.kickoff ? new Date(b.info.match.kickoff).getTime() : b.info.lastPickKickoff ? new Date(b.info.lastPickKickoff).getTime() : 0;
-            return aK - bK;
-          });
-          const firstSO = elimWithInfo.length > 0 ? (elimWithInfo[0].info.match ? (roundMap2[elimWithInfo[0].info.match.round_id]?.sort_order||0) : elimWithInfo[0].info.elimRoundId ? (roundMap2[elimWithInfo[0].info.elimRoundId]?.sort_order||0) : 0) : null;
-          const firstK  = elimWithInfo.length > 0 ? (elimWithInfo[0].info.match?.kickoff ? new Date(elimWithInfo[0].info.match.kickoff).getTime() : elimWithInfo[0].info.lastPickKickoff ? new Date(elimWithInfo[0].info.lastPickKickoff).getTime() : 0) : null;
-          firstOutPlayers = firstSO !== null
-            ? elimWithInfo.filter(e => {
-                const so = e.info.match ? (roundMap2[e.info.match.round_id]?.sort_order||0) : e.info.elimRoundId ? (roundMap2[e.info.elimRoundId]?.sort_order||0) : 0;
-                const k  = e.info.match?.kickoff ? new Date(e.info.match.kickoff).getTime() : e.info.lastPickKickoff ? new Date(e.info.lastPickKickoff).getTime() : 0;
-                return so === firstSO && k === firstK;
-              }).map(e => e.player)
-            : [];
+          // ── Elimination ranking — single source of truth, shared with Fallen tab ──
+          const fallenRanking = computeFallenRanking(sorted, rounds, allPicks, completedMatches);
+          firstOutPlayers = fallenRanking.firstOutPlayers;
           // No prize for first out — fun stat only
 
           // ── Determine wooden spoon player(s) — worst in R32, get £10 ────
@@ -1589,6 +1663,17 @@
               woodenSpoonPlayers.forEach(p => { winningsMap[p.player_id] = (winningsMap[p.player_id] || 0) + spoonShare; });
             }
           }
+
+          // ── Determine Last Man Standing — eliminated last, get the £10 ──
+          // Confirmed only once compFinished (alive.length <= 1, i.e. only the champion remains).
+          lastManStandingPlayers = fallenRanking.lastManStandingPlayers;
+          if (lastManStandingPlayers.length > 0) {
+            const lmsShare = Math.round((LAST_MAN_STANDING_PRIZE / lastManStandingPlayers.length) * 100) / 100;
+            lastManStandingPlayers.forEach(p => { winningsMap[p.player_id] = (winningsMap[p.player_id] || 0) + lmsShare; });
+          }
+
+          // ── Contenders still able to win Last Man Standing — anyone not yet eliminated ──
+          throughPlayers = sorted.filter(p => !p.is_eliminated);
 
           // ── Distribute prize places from sorted (finish order) ──────────
           // Use posMap (same tie detection as main leaderboard)
@@ -1738,7 +1823,7 @@
         const finalBanner = document.getElementById('final-table-banner');
         if (finalBanner) finalBanner.style.display = competitionEnded ? '' : 'none';
 
-        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, woodenSpoonPlayers, competitionEnded, allTeams, posMap, currentRound };
+        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, woodenSpoonPlayers, lastManStandingPlayers, throughPlayers, competitionEnded, allTeams, posMap, currentRound };
         if (document.getElementById('view-picks').classList.contains('active'))  renderPicksView();
         if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
         if (document.getElementById('view-fallen').classList.contains('active')) renderFallenView();
@@ -1931,17 +2016,19 @@
       if (!data) return;
       const wrap = document.getElementById('lb-prizes-wrap');
       if (!wrap) return;
-      const { scores, gdMap, furthestMap, competitionEnded, winningsMap: wm, firstOutPlayers, woodenSpoonPlayers, sorted, posMap, rounds } = data;
+      const { scores, gdMap, furthestMap, competitionEnded, winningsMap: wm, firstOutPlayers, woodenSpoonPlayers, lastManStandingPlayers, throughPlayers, sorted, posMap, rounds, currentRound } = data;
       const totalPlayers = (scores || []).length;
       const pot = totalPlayers * 10;
       const WOODEN_SPOON_PRIZE = 10;
-      const remaining = pot - WOODEN_SPOON_PRIZE;
+      const LAST_MAN_STANDING_PRIZE = 10;
+      const remaining = pot - WOODEN_SPOON_PRIZE - LAST_MAN_STANDING_PRIZE;
       let splits;
       if (totalPlayers >= 30)      splits = [{pct:45},{pct:25},{pct:15},{pct:10},{pct:5}];
       else if (totalPlayers >= 21) splits = [{pct:50},{pct:25},{pct:15},{pct:10}];
       else                          splits = [{pct:60},{pct:25},{pct:15}];
       const firstOutIds = new Set((firstOutPlayers||[]).map(p => p.player_id));
       const spoonIds    = new Set((woodenSpoonPlayers||[]).map(p => p.player_id));
+      const lmsIds      = new Set((lastManStandingPlayers||[]).map(p => p.player_id));
       const r32 = (rounds || []).find(r => r.name === 'Round of 32');
       const r32Complete = r32 && r32.is_complete;
       const statusNote = competitionEnded
@@ -1953,6 +2040,7 @@
       html += '<span><strong style="color:var(--gold)">' + totalPlayers + '</strong> players</span>';
       html += '<span>Pot: <strong style="color:var(--gold)">&#xa3;' + pot + '</strong></span>';
       html += '<span style="color:var(--text-muted)">Wooden Spoon: <strong>&#xa3;' + WOODEN_SPOON_PRIZE + '</strong></span>';
+      html += '<span style="color:var(--text-muted)">Last Man Standing: <strong>&#xa3;' + LAST_MAN_STANDING_PRIZE + '</strong></span>';
       html += '</div>' + statusNote;
 
       // Wooden Spoon section
@@ -1972,15 +2060,36 @@
       }
       html += '</div>';
 
-      // First Out — fun stat, no prize
-      html += '<div style="margin-bottom:16px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px">';
-      html += '<div style="font-size:14px;font-weight:700;color:var(--text-muted);margin-bottom:6px">&#x1FAB6; First Out &#x2014; fun stat</div>';
-      if (!(firstOutPlayers||[]).length) {
-        html += '<div style="font-size:13px;color:var(--text-muted)">No eliminations yet.</div>';
+      // Last Man Standing section — contenders while live, winner once confirmed
+      const lmsShare = (lastManStandingPlayers||[]).length > 0 ? Math.round((LAST_MAN_STANDING_PRIZE / lastManStandingPlayers.length) * 100) / 100 : 0;
+      html += '<div style="margin-bottom:16px;padding:10px 14px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);border-radius:10px">';
+      html += '<div style="font-size:14px;font-weight:700;color:#8b5cf6;margin-bottom:6px">';
+      html += '&#x1F3C6; Last Man Standing &#x2014; &#xa3;' + LAST_MAN_STANDING_PRIZE + ((competitionEnded && (lastManStandingPlayers||[]).length > 1) ? ' split' : '') + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">' + (competitionEnded ? '✅ Confirmed.' : '⏳ Provisional — goes to whoever is eliminated last.') + '</div>';
+
+      if (competitionEnded) {
+        if (!(lastManStandingPlayers||[]).length) {
+          html += '<div style="font-size:13px;color:var(--text-muted)">No eliminations recorded.</div>';
+        } else {
+          lastManStandingPlayers.forEach(p => {
+            html += '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(139,92,246,0.15)">';
+            html += '<span style="font-size:13px">' + p.name + '</span>';
+            html += '<span style="font-weight:700;color:#8b5cf6">&#xa3;' + lmsShare + '</span></div>';
+          });
+        }
       } else {
-        firstOutPlayers.forEach(p => {
-          html += '<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-muted)">' + p.name + '</div>';
-        });
+        html += '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Still in the running (' + (throughPlayers||[]).length + ')</div>';
+        if (!(throughPlayers||[]).length) {
+          html += '<div style="font-size:13px;color:var(--text-muted)">No players remaining.</div>';
+        } else if (throughPlayers.length > 3) {
+          const names = throughPlayers.map(p => shortName(p.display_name || p.name));
+          const joined = names.length > 1 ? names.slice(0, -1).join(', ') + ' &amp; ' + names[names.length - 1] : names[0];
+          html += '<div style="font-size:13px;color:var(--text-muted);line-height:1.6">' + joined + '</div>';
+        } else {
+          throughPlayers.forEach(p => {
+            html += '<div style="padding:4px 0;border-bottom:1px solid rgba(139,92,246,0.1);font-size:13px;color:var(--text-muted)">' + p.name + '</div>';
+          });
+        }
       }
       html += '</div>';
 
@@ -2012,6 +2121,7 @@
           html += '<td style="padding:9px 4px">' + p.name
             + (firstOutIds.has(p.player_id) ? ' <span style="font-size:10px;color:var(--text-muted)" title="First Out">&#x1FAB6;</span>' : '')
             + (spoonIds.has(p.player_id)    ? ' <span style="font-size:10px" title="Wooden Spoon">&#x1F944;</span>' : '')
+            + (lmsIds.has(p.player_id)      ? ' <span style="font-size:10px" title="Last Man Standing">&#x1F3C6;</span>' : '')
             + '</td>';
           html += '<td style="padding:9px 4px;text-align:right;color:var(--text-muted)">' + (p.total_points||0) + '</td>';
           html += gi===0 ? '<td style="padding:9px 4px;text-align:right;color:var(--text-muted);font-size:12px">' + pctDisplay + '</td>' : '<td></td>';
@@ -2102,7 +2212,7 @@
         return 0;
       });
 
-      // Assign ranks (rank 1 = worst, displayed at top)
+      // Assign ranks (rank 1 = worst, displayed at bottom)
       const ranks = [];
       let currentRank = 1;
       for (let i = 0; i < spoonSorted.length; i++) {
@@ -2117,15 +2227,14 @@
         ranks.push(currentRank);
       }
 
-      // Worst tier = lowest rank number (rank 1, since spoonSorted is ascending/worst-first)
-      const worstRank    = ranks[0];
+      const worstRank    = ranks[spoonSorted.length - 1];
       const spoonIndices = spoonSorted.map((_, i) => i).filter(i => ranks[i] === worstRank);
       const spoonTied    = spoonIndices.length > 1;
 
-      // Banner: confirmed once R32 complete, provisional ("leading the race") otherwise
+      // Confirmed banner (full name)
       let confirmedBanner = '';
-      const spoonNames = spoonIndices.map(i => spoonSorted[i].name).join(' & ');
       if (r32Complete) {
+        const spoonNames = spoonIndices.map(i => spoonSorted[i].name).join(' & ');
         confirmedBanner = `
           <div style="margin-bottom:16px;padding:12px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.35);border-radius:10px">
             <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#ef4444;letter-spacing:0.05em">
@@ -2133,18 +2242,10 @@
             </div>
             ${spoonTied ? '<div style="font-size:12px;color:var(--text-muted);margin-top:4px">Tied — £10 split.</div>' : ''}
           </div>`;
-      } else {
-        confirmedBanner = `
-          <div style="margin-bottom:16px;padding:12px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.35);border-radius:10px">
-            <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#ef4444;letter-spacing:0.05em">
-              🥄 ${spoonNames} currently leading the Wooden Spoon race
-            </div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Provisional — still ${stillToPlay} to play in R32.${spoonTied ? ' Currently tied — £10 split.' : ''}</div>
-          </div>`;
       }
 
-      // Display: worst (current spoon leader) at top, best at bottom
-      const displayOrder = [...spoonSorted.keys()];
+      // Display: best at top, worst (spoon) at bottom
+      const displayOrder = [...spoonSorted.keys()].reverse();
       const totalCount   = spoonSorted.length;
 
       let html = statusNote + confirmedBanner;
@@ -2160,8 +2261,9 @@
         const p       = spoonSorted[origIdx];
         const rank    = ranks[origIdx];
         const isSpoon = spoonIndices.includes(origIdx);
+        const dispRank = totalCount - rank + 1;
         const isTiedRank = displayOrder.some(oi => oi !== origIdx && ranks[oi] === rank);
-        const rankLabel  = rank + (isTiedRank ? '=' : '');
+        const rankLabel  = dispRank + (isTiedRank ? '=' : '');
         const isBottom   = dispIdx === displayOrder.length - 1;
         const gd         = gdMap[p.player_id] || 0;
         const gdHtml     = gd > 0 ? `<span class="gd-pos">+${gd}</span>` : gd < 0 ? `<span class="gd-neg">${gd}</span>` : `<span class="gd-zero">0</span>`;
@@ -2270,131 +2372,14 @@
         return;
       }
 
-      // Build match kickoff lookup keyed by team_id|round_id (for noPicks sort)
-      const kickoffByTeamRound = {};
-      (completedMatches || []).forEach(m => {
-        if (!m.kickoff) return;
-        if (m.home_team_id) kickoffByTeamRound[m.home_team_id + '|' + m.round_id] = m.kickoff;
-        if (m.away_team_id) kickoffByTeamRound[m.away_team_id + '|' + m.round_id] = m.kickoff;
-      });
-
-      // Build round lookup: id -> { name, sort_order }
-      const roundMap = {};
-      (rounds || []).forEach(r => { roundMap[r.id] = r; });
-
-      // Build match lookup keyed by team_id|round_id
-      const matchByTeam = {};
-      (completedMatches || []).forEach(m => {
-        if (m.home_team_id) matchByTeam[m.home_team_id + '|' + m.round_id] = m;
-        if (m.away_team_id) matchByTeam[m.away_team_id + '|' + m.round_id] = m;
-      });
-
-      // Build picks by player
-      const picksByPlayer = {};
-      (allPicks || []).forEach(p => {
-        if (!picksByPlayer[p.player_id]) picksByPlayer[p.player_id] = [];
-        picksByPlayer[p.player_id].push(p);
-      });
-
-      function getEliminationInfo(player) {
-        const playerPicks = picksByPlayer[player.player_id] || [];
-        const koRoundNames = new Set(['Round of 32','Round of 16','Quarter Finals','Semi Finals','Final']);
-        const koRoundIds = new Set((rounds || []).filter(r => koRoundNames.has(r.name)).map(r => r.id));
-        const losingPick = [...playerPicks].reverse().find(p => {
-          const res = p.pick_results && p.pick_results[0];
-          return res && res.match_result === 'loss' && koRoundIds.has(p.round_id);
-        });
-        if (losingPick) {
-          const match = matchByTeam[losingPick.team_id + '|' + losingPick.round_id] || null;
-          return { pick: losingPick, match, noPicks: false };
-        }
-        // No KO loss — ran out of teams (or finalist)
-        // Find their last pick (by round sort_order) and use that match's kickoff
-        const elimRoundId = player.eliminated_in_round_id ||
-          (playerPicks.length > 0
-            ? [...playerPicks].sort((a, b) =>
-                (roundMap[b.round_id]?.sort_order || 0) - (roundMap[a.round_id]?.sort_order || 0)
-              )[0].round_id
-            : null);
-        // Last pick = highest sort_order pick, use its match kickoff as elimination timestamp
-        const lastPick = playerPicks.length > 0
-          ? [...playerPicks].sort((a, b) =>
-              (roundMap[b.round_id]?.sort_order || 0) - (roundMap[a.round_id]?.sort_order || 0)
-            )[0]
-          : null;
-        const lastPickKickoff = lastPick
-          ? kickoffByTeamRound[lastPick.team_id + '|' + lastPick.round_id] || null
-          : null;
-        return { pick: null, match: null, noPicks: true, elimRoundId, lastPickKickoff };
-      }
-
-      const fallenWithInfo = eliminated.map(p => ({
-        player: p,
-        info: getEliminationInfo(p)
-      }));
-
-      // Sort ascending: first eliminated = rank 1 = displayed at BOTTOM (reversed for display)
-      // Finalists (noPicks + Final win) always sort highest (last)
-      function isFinalistEntry(entry) {
-        if (!entry.info.noPicks) return false;
-        const finalRound = (rounds || []).find(r => r.name === 'Final');
-        if (!finalRound || !finalRound.is_complete) return false;
-        const playerPicks = picksByPlayer[entry.player.player_id] || [];
-        const finalPick = playerPicks.find(p => p.round_id === finalRound.id);
-        const finalRes = finalPick && finalPick.pick_results && finalPick.pick_results[0];
-        return finalPick && finalPick.teams && finalRes && finalRes.match_result === 'win';
-      }
-
-      fallenWithInfo.sort((a, b) => {
-        const aIsFinalist = isFinalistEntry(a);
-        const bIsFinalist = isFinalistEntry(b);
-        // Finalists always sort to the very top (highest rank = last in ascending sort)
-        if (aIsFinalist && !bIsFinalist) return 1;
-        if (bIsFinalist && !aIsFinalist) return -1;
-
-        const aRoundSO = a.info.match
-          ? (roundMap[a.info.match.round_id]?.sort_order || 0)
-          : a.info.elimRoundId ? (roundMap[a.info.elimRoundId]?.sort_order || 0) : 0;
-        const bRoundSO = b.info.match
-          ? (roundMap[b.info.match.round_id]?.sort_order || 0)
-          : b.info.elimRoundId ? (roundMap[b.info.elimRoundId]?.sort_order || 0) : 0;
-        if (aRoundSO !== bRoundSO) return aRoundSO - bRoundSO;
-
-        const aKickoff = a.info.match?.kickoff
-          ? new Date(a.info.match.kickoff).getTime()
-          : a.info.lastPickKickoff ? new Date(a.info.lastPickKickoff).getTime() : 0;
-        const bKickoff = b.info.match?.kickoff
-          ? new Date(b.info.match.kickoff).getTime()
-          : b.info.lastPickKickoff ? new Date(b.info.lastPickKickoff).getTime() : 0;
-        if (aKickoff !== bKickoff) return aKickoff - bKickoff;
-        // Within same kickoff: "ran out of teams" first, then alpha
-        const aNoPick = a.info.noPicks ? 1 : 0;
-        const bNoPick = b.info.noPicks ? 1 : 0;
-        if (aNoPick !== bNoPick) return aNoPick - bNoPick;
-        return (b.player.name || '').localeCompare(a.player.name || '');
-      });
-
-      // Pre-compute sort keys for tie detection
-      const sortKeys = fallenWithInfo.map(({ info }) => {
-        if (info.match?.kickoff) return info.match.kickoff;
-        if (info.lastPickKickoff) return info.lastPickKickoff;
-        if (info.elimRoundId) return 'round:' + info.elimRoundId;
-        return null;
-      });
-
-      // Assign ranks (ascending, ties share rank)
-      const ranks = [];
-      let currentRank = 1;
-      for (let i = 0; i < fallenWithInfo.length; i++) {
-        if (i > 0 && sortKeys[i] !== sortKeys[i - 1]) currentRank = i + 1;
-        ranks.push(currentRank);
-      }
+      // Single source of truth — shared with the Last Man Standing prize calc
+      const ranking = computeFallenRanking(sorted, rounds, allPicks, completedMatches);
+      const { fallenWithInfo, ranks, roundMap } = ranking;
       const hasTie = i => ranks[i] === ranks[i - 1] || ranks[i] === ranks[i + 1];
 
-      // LMS pill — only when everyone is eliminated (comp finished or all out)
-      const compFinished = alive.length === 0;
+      // LMS pill — only once compFinished (alive.length <= 1, i.e. only the champion remains)
       const maxRank = ranks.length > 0 ? Math.max(...ranks) : null;
-      const lastMenIndices = (compFinished && maxRank !== null) ? fallenWithInfo.map((_, i) => i).filter(i => ranks[i] === maxRank) : [];
+      const lastMenIndices = (ranking.compFinished && maxRank !== null) ? fallenWithInfo.map((_, i) => i).filter(i => ranks[i] === maxRank) : [];
       const pillStyle = 'font-family:\'Rajdhani\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.06em;padding:2px 8px;border-radius:20px;white-space:nowrap;text-transform:uppercase;margin-left:8px';
       const lmsPill = lastMenIndices.length > 1
         ? '<span style="' + pillStyle + ';background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4)">💀 Last Men Standing</span>'
