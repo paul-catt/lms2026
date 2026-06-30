@@ -529,15 +529,17 @@
     // ── Match card (today + results archive) ────────────
     // picksVisible: true = show picks, false = hide (window still open)
     function matchCardHtml(match, picks, allPlayers, showVenue, picksVisible) {
-      const isComplete = match.status === 'complete';
-      const isLive     = match.status === 'live';
+      const isComplete  = match.status === 'complete'; // Henry has confirmed this result
+      const apiFinished = (match.api_status || '').indexOf('FINISHED') === 0;
+      const isLive       = match.status === 'live' && !apiFinished;
+      const isPendingFT   = match.status === 'live' && apiFinished; // game's over, not yet confirmed
 
-      const middleHtml = isComplete || isLive
+      const middleHtml = (isComplete || isLive || isPendingFT)
         ? '<span class="match-score-inline">' + (match.home_score ?? '—') + '–' + (match.away_score ?? '—') + '</span>'
         : '<span class="match-vs">vs</span>';
 
       let badgeHtml = '';
-      if (isComplete) {
+      if (isComplete || isPendingFT) {
         badgeHtml = '<span class="match-badge badge-ft">FT</span>';
       } else if (isLive) {
         badgeHtml = '<span class="match-badge badge-live"><span class="live-dot">🔴</span> Live</span>';
@@ -736,7 +738,7 @@
         const MATCH_OVER_BUFFER_MS = 2 * 60 * 60 * 1000; // ~full time; api_status covers ET/pens
         const nowMs = effectiveNow.getTime();
         const matchIsOver = (m) =>
-          m.api_status === 'FINISHED' ||
+          (m.api_status || '').indexOf('FINISHED') === 0 ||
           m.status === 'complete' ||
           (m.kickoff && nowMs >= new Date(m.kickoff).getTime() + MATCH_OVER_BUFFER_MS);
         const todayIsOver = !!(todayMatches && todayMatches.length > 0 && todayMatches.every(matchIsOver));

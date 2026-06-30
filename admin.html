@@ -2885,19 +2885,33 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
     }
 
     // ── Snapshot ──────────────────────────────────────────────
+    function shortNameSnap(fullName) {
+      if (!fullName) return '?';
+      const parts = fullName.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0];
+      return parts[0] + ' ' + parts[parts.length - 1][0];
+    }
+
     async function takeSnapshot(roundId) {
       const [{ data: scores }, { data: gdData }, { data: furthestData }, { data: playersData }] = await Promise.all([
         db.from('player_scores').select('player_id, total_points'),
         db.from('player_gd').select('player_id, gd'),
         db.from('player_furthest_round').select('player_id, furthest_round'),
-        db.from('players').select('id, name, total_goals_prediction, is_bot')
+        db.from('players').select('id, name, display_name, total_goals_prediction, is_bot, is_eliminated')
       ]);
-      const gdMap = {}, furthestMap = {}, nameMap = {}, goalsMap = {};
+      const gdMap = {}, furthestMap = {}, nameMap = {}, goalsMap = {}, displayNameMap = {}, elimMap = {};
       const botIds = new Set((playersData||[]).filter(p => p.is_bot).map(p => p.id));
       const realScores = (scores||[]).filter(s => !botIds.has(s.player_id));
       (gdData||[]).forEach(r => { gdMap[r.player_id] = r.gd; });
       (furthestData||[]).forEach(r => { furthestMap[r.player_id] = r.furthest_round; });
-      (playersData||[]).filter(r => !r.is_bot).forEach(r => { nameMap[r.id] = r.name; goalsMap[r.id] = r.total_goals_prediction; });
+      (playersData||[]).filter(r => !r.is_bot).forEach(r => {
+        nameMap[r.id] = r.name;
+        goalsMap[r.id] = r.total_goals_prediction;
+        displayNameMap[r.id] = r.display_name;
+        elimMap[r.id] = r.is_eliminated;
+      });
+      // Sort name matches leaderboard: display_name if set, else shortName
+      const sortName = id => displayNameMap[id] || shortNameSnap(nameMap[id] || '');
       const round = roundsCache.find(r => r.id === roundId);
       const isKnockout = round && round.round_type === 'knockout';
       // Use same projected total approach as leaderboard — null if no matches played yet
@@ -2909,7 +2923,12 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       }
       const sorted = (realScores||[]).sort((a,b) => {
         if (b.total_points !== a.total_points) return b.total_points - a.total_points;
-        if (isKnockout) { const afr = furthestMap[a.player_id]||0, bfr = furthestMap[b.player_id]||0; if (bfr !== afr) return bfr - afr; }
+        if (isKnockout) {
+          // Alive players get +1 effective furthest (won their current round pick) — matches leaderboard wonCurrentRound logic
+          const aFr = (furthestMap[a.player_id]||0) + (elimMap[a.player_id] ? 0 : 1);
+          const bFr = (furthestMap[b.player_id]||0) + (elimMap[b.player_id] ? 0 : 1);
+          if (bFr !== aFr) return bFr - aFr;
+        }
         const gdDiff = (gdMap[b.player_id]||0) - (gdMap[a.player_id]||0);
         if (gdDiff !== 0) return gdDiff;
         if (projectedTotal !== null) {
@@ -2917,7 +2936,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
           const bDiff = Math.abs((goalsMap[b.player_id]||0) - projectedTotal);
           if (aDiff !== bDiff) return aDiff - bDiff;
         }
-        return (nameMap[a.player_id]||'').localeCompare(nameMap[b.player_id]||'');
+        return sortName(a.player_id).localeCompare(sortName(b.player_id));
       });
       const inserts = sorted.map((p,i) => ({ round_id: roundId, player_id: p.player_id, position: i+1, total_points: p.total_points }));
       const { error } = await db.from('leaderboard_snapshots').upsert(inserts, { onConflict: 'round_id,player_id' });
@@ -3026,9 +3045,11 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       if (!roundMatches) return;
       const playable = roundMatches.filter(m => !m.is_third_place);
       if (playable.length === 0 || !playable.every(m => m.status === 'complete')) return;
-      // Don't overwrite an existing snapshot automatically — use the manual card for that
-      const { data: existing } = await db.from('leaderboard_snapshots').select('id').eq('round_id', roundId).limit(1);
-      if (existing && existing.length > 0) return;
+      // If the round is already marked complete, a deliberate manual snapshot exists — don't overwrite
+      const { data: roundRow } = await db.from('rounds').select('is_complete').eq('id', roundId).single();
+      if (roundRow && roundRow.is_complete) return;
+      // Round just finished — delete any premature manual snapshot so we can write the correct one
+      await db.from('leaderboard_snapshots').delete().eq('round_id', roundId);
       // If this is GP1 completing, first ensure GP0 alphabetical baseline exists
       if (roundId === GP1_ROUND_ID) await writeGP0Snapshot();
       const snapErr = await takeSnapshot(roundId);

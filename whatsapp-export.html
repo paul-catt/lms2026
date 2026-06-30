@@ -420,6 +420,14 @@
 
     <!-- ══ RIP TAB ══ -->
     <div id="tab-rip" style="display:none">
+      <div class="card section-block" style="margin-bottom:16px">
+        <div class="card-title" style="margin-bottom:8px;font-size:12px">📐 Image Top Padding</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Adjust so header lands in WhatsApp's crop. Tune by eye. Applies to all RIP cards.</div>
+        <div>
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">RIP Cards <span id="pad-rip-val" style="color:var(--gold)">0px</span></label>
+          <input type="range" id="pad-rip" min="0" max="600" step="10" value="0" style="width:100%">
+        </div>
+      </div>
       <div class="card section-block">
         <div class="section-header">
           <div class="card-title" style="margin-bottom:0">🪦 RIP Cards</div>
@@ -543,11 +551,17 @@
     });
 
     // ── WA Top Padding sliders ─────────────────────────────────
-    const PAD_KEYS = { bp: 'lms2026_wa_pad_bp', pn2: 'lms2026_wa_pad_pn2', tp2: 'lms2026_wa_pad_tp2', cb2: 'lms2026_wa_pad_cb2', lb2: 'lms2026_wa_pad_lb2', 'ko-pn': 'lms2026_wa_pad_ko_pn', 'ko-tp': 'lms2026_wa_pad_ko_tp', 'ko-lb': 'lms2026_wa_pad_ko_lb' };
+    const PAD_KEYS = { bp: 'lms2026_wa_pad_bp', pn2: 'lms2026_wa_pad_pn2', tp2: 'lms2026_wa_pad_tp2', cb2: 'lms2026_wa_pad_cb2', lb2: 'lms2026_wa_pad_lb2', 'ko-pn': 'lms2026_wa_pad_ko_pn', 'ko-tp': 'lms2026_wa_pad_ko_tp', 'ko-lb': 'lms2026_wa_pad_ko_lb', rip: 'lms2026_wa_pad_rip' };
     function getPad(key) { return parseInt(localStorage.getItem(PAD_KEYS[key]) || '0', 10); }
     function setPad(key, v) { localStorage.setItem(PAD_KEYS[key], v); }
+    // RIP cards have dynamic per-card element IDs (rip-card-0-render, rip-spoon-render, ...)
+    // but share a single padding control, so any id starting with "rip-" maps to the 'rip' key.
+    function resolvePadKey(elId) {
+      const key = elId.replace('-render', '');
+      return key.startsWith('rip-') ? 'rip' : key;
+    }
 
-    ['bp','pn2','tp2','cb2','lb2','ko-pn','ko-tp','ko-lb'].forEach(key => {
+    ['bp','pn2','tp2','cb2','lb2','ko-pn','ko-tp','ko-lb','rip'].forEach(key => {
       const slider = document.getElementById('pad-' + key);
       const label  = document.getElementById('pad-' + key + '-val');
       const saved  = getPad(key);
@@ -3002,7 +3016,7 @@
       btn.disabled = true;
       try {
         const el = document.getElementById(elId);
-        const padKey = elId.replace('-render', '');
+        const padKey = resolvePadKey(elId);
         const padPx = getPad(padKey);
         let spacer = null;
         if (padPx > 0) {
@@ -3048,7 +3062,7 @@
       btn.disabled = true;
       try {
         const el = document.getElementById(elId);
-        const padKey = elId.replace('-render', '');
+        const padKey = resolvePadKey(elId);
         const padPx = getPad(padKey);
         let spacer = null;
         if (padPx > 0) {
@@ -3089,7 +3103,7 @@
         const el = document.getElementById(elId);
 
         // Resolve padding key from element ID (pn-render → pn, lb-render → lb etc.)
-        const padKey = elId.replace('-render', '');
+        const padKey = resolvePadKey(elId);
         const padPx = getPad(padKey);
 
         // Inject top padding spacer into the render element itself (before first child)

@@ -2102,7 +2102,7 @@
         return 0;
       });
 
-      // Assign ranks (rank 1 = worst, displayed at bottom)
+      // Assign ranks (rank 1 = worst, displayed at top)
       const ranks = [];
       let currentRank = 1;
       for (let i = 0; i < spoonSorted.length; i++) {
@@ -2117,14 +2117,15 @@
         ranks.push(currentRank);
       }
 
-      const worstRank    = ranks[spoonSorted.length - 1];
+      // Worst tier = lowest rank number (rank 1, since spoonSorted is ascending/worst-first)
+      const worstRank    = ranks[0];
       const spoonIndices = spoonSorted.map((_, i) => i).filter(i => ranks[i] === worstRank);
       const spoonTied    = spoonIndices.length > 1;
 
-      // Confirmed banner (full name)
+      // Banner: confirmed once R32 complete, provisional ("leading the race") otherwise
       let confirmedBanner = '';
+      const spoonNames = spoonIndices.map(i => spoonSorted[i].name).join(' & ');
       if (r32Complete) {
-        const spoonNames = spoonIndices.map(i => spoonSorted[i].name).join(' & ');
         confirmedBanner = `
           <div style="margin-bottom:16px;padding:12px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.35);border-radius:10px">
             <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#ef4444;letter-spacing:0.05em">
@@ -2132,10 +2133,18 @@
             </div>
             ${spoonTied ? '<div style="font-size:12px;color:var(--text-muted);margin-top:4px">Tied — £10 split.</div>' : ''}
           </div>`;
+      } else {
+        confirmedBanner = `
+          <div style="margin-bottom:16px;padding:12px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.35);border-radius:10px">
+            <div style="font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;color:#ef4444;letter-spacing:0.05em">
+              🥄 ${spoonNames} currently leading the Wooden Spoon race
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Provisional — still ${stillToPlay} to play in R32.${spoonTied ? ' Currently tied — £10 split.' : ''}</div>
+          </div>`;
       }
 
-      // Display: best at top, worst (spoon) at bottom
-      const displayOrder = [...spoonSorted.keys()].reverse();
+      // Display: worst (current spoon leader) at top, best at bottom
+      const displayOrder = [...spoonSorted.keys()];
       const totalCount   = spoonSorted.length;
 
       let html = statusNote + confirmedBanner;
@@ -2151,9 +2160,8 @@
         const p       = spoonSorted[origIdx];
         const rank    = ranks[origIdx];
         const isSpoon = spoonIndices.includes(origIdx);
-        const dispRank = totalCount - rank + 1;
         const isTiedRank = displayOrder.some(oi => oi !== origIdx && ranks[oi] === rank);
-        const rankLabel  = dispRank + (isTiedRank ? '=' : '');
+        const rankLabel  = rank + (isTiedRank ? '=' : '');
         const isBottom   = dispIdx === displayOrder.length - 1;
         const gd         = gdMap[p.player_id] || 0;
         const gdHtml     = gd > 0 ? `<span class="gd-pos">+${gd}</span>` : gd < 0 ? `<span class="gd-neg">${gd}</span>` : `<span class="gd-zero">0</span>`;

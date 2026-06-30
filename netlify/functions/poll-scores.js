@@ -4,10 +4,18 @@
 // No npm dependencies — plain fetch for both football-data and Supabase REST.
 //
 // Writes to matches (unconfirmed only):
-//   home_score / away_score  — current or final score (after ET if applicable;
-//                              for pens, the level after-120 score)
-//   status                   — 'live' while in play, 'complete' when finished
-//                              (football-data.org may return IN_PLAY or LIVE for in-progress matches)
+//   home_score / away_score  — current or final score. For REGULAR/EXTRA_TIME
+//                              this is football-data's fullTime score. For
+//                              PENALTY_SHOOTOUT it is rebuilt from
+//                              regularTime + extraTime (the AET draw score) —
+//                              fullTime is NOT used here, since football-data
+//                              sums penalties into it once a shootout starts.
+//                              Penalty goals are never written to these
+//                              columns; pens_winner_id is set manually by
+//                              Henry when he finalises the result.
+//   status                   — always 'live' for matches this function touches
+//                              (it never sets 'complete' — that's set by
+//                              Henry confirming the result in admin)
 //   api_status               — IN_PLAY | PAUSED | FINISHED | FINISHED_ET |
 //                              FINISHED_PENS_HOME | FINISHED_PENS_AWAY | FINISHED_PENS
 //   elapsed_minutes          — match minute if the API provides it, else null
@@ -149,10 +157,30 @@ exports.handler = async function(event, context) {
     const isFinished = fdStatus === 'FINISHED';
     if (!isLive && !isFinished) continue;
 
-    // Score: fullTime carries the running score while live and the final
-    // (incl. ET) when finished. For pens it's the level after-120 score.
-    const homeGoals = f.score?.fullTime?.home;
-    const awayGoals = f.score?.fullTime?.away;
+    // football-data.org's score/duration tells us how the match has been
+    // decided: REGULAR | EXTRA_TIME | PENALTY_SHOOTOUT (their docs:
+    // https://docs.football-data.org/general/v4/overtime.html).
+    const duration = f.score?.duration || 'REGULAR';
+
+    // Score: fullTime is the running/final score for REGULAR and EXTRA_TIME
+    // matches. BUT for PENALTY_SHOOTOUT, football-data.org's fullTime is
+    // regularTime + extraTime + penalties ALL ADDED TOGETHER (their own
+    // sample: a 1-1 AET draw won 6-5 on pens reports fullTime as 7-6) — it
+    // is NOT the after-extra-time score. We only ever want to show the
+    // after-extra-time (pre-pens) score until the round is finalised, so
+    // for shootouts we rebuild it from regularTime + extraTime ourselves
+    // and never touch fullTime/penalties.
+    let homeGoals, awayGoals;
+    if (duration === 'PENALTY_SHOOTOUT') {
+      const rt = f.score?.regularTime;
+      const et = f.score?.extraTime;
+      if (rt?.home == null || rt?.away == null) continue; // not enough data yet
+      homeGoals = rt.home + (et?.home || 0);
+      awayGoals = rt.away + (et?.away || 0);
+    } else {
+      homeGoals = f.score?.fullTime?.home;
+      awayGoals = f.score?.fullTime?.away;
+    }
     if (homeGoals === null || homeGoals === undefined) continue;
     if (awayGoals === null || awayGoals === undefined) continue;
 
@@ -164,7 +192,6 @@ exports.handler = async function(event, context) {
     // api_status for the client live layer
     let apiStatus;
     if (isFinished) {
-      const duration = f.score?.duration || 'REGULAR';
       if (duration === 'PENALTY_SHOOTOUT') {
         const w = f.score?.winner;
         apiStatus = w === 'HOME_TEAM' ? 'FINISHED_PENS_HOME'
@@ -189,7 +216,15 @@ exports.handler = async function(event, context) {
         {
           home_score: homeGoals,
           away_score: awayGoals,
-          status: isFinished ? 'complete' : 'live',
+          // status is intentionally NEVER set to 'complete' here — that flag
+          // means "Henry has confirmed the result via admin" and drives round
+          // completion, bracket progression, snapshots, GD calc, and the
+          // Results Archive elsewhere in the app. The poller only ever
+          // reflects what the API currently shows; it stays 'live' even once
+          // the API says FINISHED, so the match correctly waits in "Tonight /
+          // Last Night" (with the right score and an FT badge) until you hit
+          // Save Result & Calculate Points.
+          status: 'live',
           api_status: apiStatus,
           elapsed_minutes: isFinished ? null : minute
         }
