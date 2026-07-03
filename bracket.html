@@ -61,17 +61,29 @@
     .bracket-team.my-available.loser-pred .t-name { color: #f5c842 !important; font-weight: 700 !important; }
     .bracket-team .t-name { flex: 1; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .bracket-team .t-odds { font-size: 8px; color: var(--text-muted); flex-shrink: 0; opacity: 0.5; }
+    .bracket-team .t-odds.is-match { color: #3b82f6; opacity: 0.85; font-weight: 600; }
     .bracket-team .t-score { font-size: 10px; font-weight: 700; color: var(--gold); flex-shrink: 0; }
     .bracket-team .t-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
     .tbd-row { display: flex; align-items: center; padding: 4px 7px; min-height: 26px; border-bottom: 1px solid var(--border); font-size: 9px; color: var(--border); font-style: italic; }
     .tbd-row:last-child { border-bottom: none; }
     .bracket-connector { width: 20px; flex-shrink: 0; display: flex; flex-direction: column; align-self: stretch; position: relative; }
     .bracket-connector svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
-    .champion-col { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 90px; padding: 12px 8px; gap: 6px; }
-    .champion-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--gold); }
-    .champion-flag { font-size: 30px; line-height: 1; }
-    .champion-name { font-size: 12px; font-weight: 800; color: var(--gold); text-align: center; }
-    .champion-name.predicted { color: #93c5fd; font-style: italic; font-weight: 600; }
+    .champion-banner {
+      display: flex; align-items: center; gap: 14px; padding: 14px 18px; margin-bottom: 16px;
+      border-radius: 10px; background: var(--surface2);
+      position: sticky; top: 8px; z-index: 5;
+    }
+    .champion-banner.is-actual { border: 1px solid var(--gold); box-shadow: 0 0 0 1px rgba(212,175,55,0.15) inset; }
+    .champion-banner.is-projected { border: 1px dashed #3b82f6; }
+    .champion-banner .cb-flag { font-size: 34px; line-height: 1; flex-shrink: 0; }
+    .champion-banner .cb-body { flex: 1; min-width: 0; }
+    .champion-banner .cb-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 2px; }
+    .champion-banner.is-actual .cb-label { color: var(--gold); }
+    .champion-banner.is-projected .cb-label { color: #93c5fd; }
+    .champion-banner .cb-name { font-size: 18px; font-weight: 800; }
+    .champion-banner.is-actual .cb-name { color: var(--gold); }
+    .champion-banner.is-projected .cb-name { color: #93c5fd; font-style: italic; }
+    .champion-banner .cb-note { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
     .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--text-muted); margin-bottom: 12px; align-items: center; }
     .legend-item { display: flex; align-items: center; gap: 5px; }
     .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
@@ -141,6 +153,7 @@
         <div id="loading" class="loading"><div class="spinner"></div>Loading bracket...</div>
 
         <div id="bracket-content" style="display:none">
+          <div id="champion-banner" style="display:none"></div>
           <div class="view-toggle">
             <button class="view-toggle-btn active" id="btn-all-rounds" onclick="setView('all')">📋 All Rounds</button>
             <button class="view-toggle-btn" id="btn-live-view" onclick="setView('live')">⚡ From Current Round</button>
@@ -168,6 +181,12 @@
               /
               <div class="legend-dot" style="background:#3b82f6"></div>
               <em style="font-size:10px">Predicted</em>
+            </div>
+            <div class="legend-item">
+              <span style="font-size:10px;font-weight:700;color:#3b82f6">5/6</span>
+              Match odds
+              <span style="font-size:10px;color:var(--text-muted);opacity:0.7;margin-left:4px">5/6</span>
+              Tournament odds
             </div>
           </div>
           <div class="scroll-hint">↔ Scroll right to see the full bracket</div>
@@ -333,7 +352,7 @@
           .select(`
             match_number, kickoff, status,
             home_score, away_score, pens_winner_id,
-            home_team_id, away_team_id,
+            home_team_id, away_team_id, odds_home, odds_away,
             home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji),
             away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji)
           `)
@@ -427,6 +446,37 @@
       return h <= a ? 'home' : 'away';
     }
 
+    // Match-specific odds (odds_home/odds_away on the matches row) take priority
+    // over outright tournament-winner odds (team_odds) — a real fixture price is
+    // a far better predictor of that match's result than each team's overall
+    // odds to win the whole tournament. Falls back to team_odds when either side
+    // of the match odds is missing (e.g. odds not fetched yet, or match not real).
+    function getMatchOddsPair(m) {
+      if (!m) return null;
+      const h = (m.odds_home !== null && m.odds_home !== undefined) ? parseFloat(m.odds_home) : NaN;
+      const a = (m.odds_away !== null && m.odds_away !== undefined) ? parseFloat(m.odds_away) : NaN;
+      if (isNaN(h) || isNaN(a)) return null;
+      return { home: h, away: a };
+    }
+
+    function predictedWinnerForMatch(m, homeId, awayId, oddsMap, strict) {
+      const pair = getMatchOddsPair(m);
+      if (pair) {
+        if (pair.home !== pair.away) return pair.home <= pair.away ? 'home' : 'away';
+        // Match odds are tied — break using outright tournament odds instead of
+        // silently defaulting to home.
+        const h = oddsMap[homeId], a = oddsMap[awayId];
+        if (h !== undefined && a !== undefined && h !== a) return h <= a ? 'home' : 'away';
+        // Still tied (or outright odds unavailable) — genuinely can't call it.
+        return strict ? null : 'home';
+      }
+      if (strict) {
+        const h = oddsMap[homeId], a = oddsMap[awayId];
+        if (h !== undefined && a !== undefined && h === a) return null;
+      }
+      return predictedWinnerByOdds(homeId, awayId, oddsMap);
+    }
+
     function actualWinner(match) {
       if (!match || match.status !== 'complete') return null;
       if (match.pens_winner_id) return match.pens_winner_id === match.home_team_id ? 'home' : 'away';
@@ -473,9 +523,9 @@
           return name ? { name, flag, teamId: id, isActual: true } : null;
         }
 
-        // Both teams in DB — predict by odds
+        // Both teams in DB — predict by match odds if available, else outright odds
         if (m && m.home_team_id && m.away_team_id) {
-          const w  = predictedWinnerByOdds(m.home_team_id, m.away_team_id, oddsMap);
+          const w  = predictedWinnerForMatch(m, m.home_team_id, m.away_team_id, oddsMap);
           const t  = w === 'home' ? m.home_team : m.away_team;
           const id = w === 'home' ? m.home_team_id : m.away_team_id;
           const blob = blobTeams[String(matchNum)];
@@ -615,14 +665,9 @@
         }
       });
 
-      // Champion column — only once Final is complete
-      if (roundsToShow.some(r => r.key === 'final')) {
-        const finalNum    = (bracketData['final'] || [])[0] || null;
-        const finalMatch  = finalNum ? matchMap[finalNum] : null;
-        if (finalMatch && finalMatch.status === 'complete') {
-          grid.appendChild(renderChampionCol(finalMatch));
-        }
-      }
+      // Champion banner (top of page, not in the scrolling grid) — actual once
+      // the Final is complete, projected otherwise.
+      updateChampionBanner(bracketData, matchMap, derivedTeams, oddsMap);
     }
 
     // ── Match card ────────────────────────────────────────────────
@@ -669,7 +714,8 @@
       const winner     = isComplete ? actualWinner(dbMatch) : null;
       const homeId     = homeTeam && homeTeam.teamId;
       const awayId     = awayTeam && awayTeam.teamId;
-      const predWinner = !isComplete ? predictedWinnerByOdds(homeId, awayId, oddsMap) : null;
+      const matchOdds  = getMatchOddsPair(dbMatch);
+      const predWinner = !isComplete ? predictedWinnerForMatch(dbMatch, homeId, awayId, oddsMap, true) : null;
 
       const kb = document.createElement('div');
       kb.className = 'bracket-kickoff';
@@ -690,7 +736,8 @@
         isComplete,
         winner === 'home',
         predWinner === 'home',
-        !isComplete && homeId ? oddsMap[homeId] : null
+        !isComplete ? (matchOdds ? matchOdds.home : (homeId ? oddsMap[homeId] : null)) : null,
+        !isComplete ? (matchOdds ? 'match' : 'outright') : null
       ));
 
       wrap.appendChild(buildTeamRow(
@@ -699,14 +746,15 @@
         isComplete,
         winner === 'away',
         predWinner === 'away',
-        !isComplete && awayId ? oddsMap[awayId] : null
+        !isComplete ? (matchOdds ? matchOdds.away : (awayId ? oddsMap[awayId] : null)) : null,
+        !isComplete ? (matchOdds ? 'match' : 'outright') : null
       ));
 
       return wrap;
     }
 
     // ── Team row ──────────────────────────────────────────────────
-    function buildTeamRow(team, score, isComplete, isWinner, isPredWinner, odds) {
+    function buildTeamRow(team, score, isComplete, isWinner, isPredWinner, odds, oddsSource) {
       if (!team) {
         const el = document.createElement('div');
         el.className = 'tbd-row';
@@ -737,8 +785,10 @@
       if (isComplete)                 dotColor = isWinner     ? 'var(--green)' : 'var(--border)';
       else if (isPredWinner !== null) dotColor = isPredWinner ? '#3b82f6'      : 'var(--border)';
 
+      const isMatchOdds = oddsSource === 'match';
+      const srcTitle = isMatchOdds ? 'Odds for this fixture' : 'Outright odds to win the tournament';
       const oddsHtml = (!isComplete && odds !== null && odds !== undefined)
-        ? `<span class="t-odds">${decimalToFractional(odds)}</span>`
+        ? `<span class="t-odds${isMatchOdds ? ' is-match' : ''}" title="${srcTitle}">${decimalToFractional(odds)}</span>`
         : '';
 
       row.innerHTML =
@@ -751,30 +801,58 @@
       return row;
     }
 
-    // ── Champion column ───────────────────────────────────────────
-    function renderChampionCol(finalMatch) {
-      const col = document.createElement('div');
-      col.className = 'champion-col';
+    // ── Champion banner (top of page — visible without scrolling) ──
+    function updateChampionBanner(bracketData, matchMap, derivedTeams, oddsMap) {
+      const banner = document.getElementById('champion-banner');
+      const finalNum   = (bracketData['final'] || [])[0] || null;
+      const finalMatch = finalNum ? matchMap[finalNum] : null;
 
-      const lbl = document.createElement('div');
-      lbl.className = 'champion-label';
-      lbl.textContent = '🏆 Champion';
-      col.appendChild(lbl);
+      if (finalMatch && finalMatch.status === 'complete') {
+        const w         = actualWinner(finalMatch);
+        const champTeam = w === 'home' ? finalMatch.home_team : finalMatch.away_team;
+        if (!champTeam) { banner.style.display = 'none'; return; }
+        banner.className = 'champion-banner is-actual';
+        banner.innerHTML =
+          `<div class="cb-flag">${champTeam.flag_emoji || '❓'}</div>` +
+          `<div class="cb-body">` +
+            `<div class="cb-label">🏆 Champion</div>` +
+            `<div class="cb-name">${champTeam.name || 'TBD'}</div>` +
+          `</div>`;
+        banner.style.display = 'flex';
+        return;
+      }
 
-      const w         = actualWinner(finalMatch);
-      const champTeam = w === 'home' ? finalMatch.home_team : finalMatch.away_team;
+      if (!finalNum) { banner.style.display = 'none'; return; }
+      const derivedFinal = derivedTeams[String(finalNum)];
+      if (!derivedFinal || !derivedFinal.home || !derivedFinal.away) { banner.style.display = 'none'; return; }
 
-      const flagEl = document.createElement('div');
-      flagEl.className = 'champion-flag';
-      flagEl.textContent = champTeam ? (champTeam.flag_emoji || '') : '❓';
-      col.appendChild(flagEl);
+      const homeId = derivedFinal.home.teamId;
+      const awayId = derivedFinal.away.teamId;
+      // strict=true: an exact odds tie shows "too close to call" rather than
+      // silently picking a side.
+      const w = predictedWinnerForMatch(finalMatch, homeId, awayId, oddsMap, true);
 
-      const nameEl = document.createElement('div');
-      nameEl.className = 'champion-name';
-      nameEl.textContent = champTeam ? (champTeam.name || '') : 'TBD';
-      col.appendChild(nameEl);
+      banner.className = 'champion-banner is-projected';
+      if (!w) {
+        banner.innerHTML =
+          `<div class="cb-flag">🔮</div>` +
+          `<div class="cb-body">` +
+            `<div class="cb-label">🔮 Projected Champion</div>` +
+            `<div class="cb-name">Too close to call</div>` +
+          `</div>`;
+        banner.style.display = 'flex';
+        return;
+      }
 
-      return col;
+      const champTeam = w === 'home' ? derivedFinal.home : derivedFinal.away;
+      banner.innerHTML =
+        `<div class="cb-flag">${champTeam.flag || '❓'}</div>` +
+        `<div class="cb-body">` +
+          `<div class="cb-label">🔮 Projected Champion</div>` +
+          `<div class="cb-name">${champTeam.name || 'TBD'}</div>` +
+          `<div class="cb-note">Based on current odds — not final</div>` +
+        `</div>`;
+      banner.style.display = 'flex';
     }
 
     // ── SVG connector lines ───────────────────────────────────────

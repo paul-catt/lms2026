@@ -599,6 +599,7 @@
       <div style="display:flex; gap:6px; margin-bottom:16px; margin-top:4px">
         <button class="btn btn-primary" id="odds-subtab-outright" onclick="switchOddsSubtab('outright')">📈 Outrights</button>
         <button class="btn btn-secondary" id="odds-subtab-match" onclick="switchOddsSubtab('match')">⚽ Match Odds</button>
+        <button class="btn btn-secondary" id="odds-subtab-finalists" onclick="switchOddsSubtab('finalists')">🏆 Finalists</button>
       </div>
       <div id="odds-sub-outright">
         <div class="card">
@@ -612,6 +613,20 @@
           <div class="card-title">⚽ Match Odds</div>
           <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">H2H match odds (William Hill). Updated when you Fetch Odds.</p>
           <div id="match-odds-wrap"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+      <div id="odds-sub-finalists" style="display:none">
+        <div class="card">
+          <div class="card-title">🏆 Finalist Pairing Odds (modelled)</div>
+          <p style="color:var(--text-muted); font-size:13px; margin-bottom:16px">
+            Not a real bookmaker market — no one prices this directly. Computed from tournament outright odds
+            (normalised within each bracket half, since a final is always top-half winner v bottom-half winner),
+            then calibrated against Paddy Power's own "Winner &amp; Runner-Up" specials board so the numbers land
+            close to what a real book would show. Recalculates live every time this tab opens, from current
+            <code>team_odds</code> and <code>teams.bracket_half</code>. Requires <code>bracket_half</code> to be set
+            on the teams table — see admin notes.
+          </p>
+          <div id="finalist-odds-wrap"><div class="loading"><div class="spinner"></div></div></div>
         </div>
       </div>
     </div>
@@ -3299,12 +3314,133 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       wrap.innerHTML = html;
     }
 
+    // ── Finalist pairing odds (modelled, calibrated against Paddy Power specials) ──
+    // Method: outright odds -> implied prob -> normalise WITHIN each bracket half
+    // (exactly one team per half reaches the final, so halves sum to 100% each).
+    // Raw normalised probability is a no-margin "fair" estimate; real books run
+    // heavy margin on exotic specials markets, and that margin isn't flat — it
+    // compounds harder on longshots (favourite-longshot bias). Fitted against 20
+    // Paddy Power lines (both-direction pairs only, R²=0.987):
+    //   PP% ≈ FINALIST_CALIB_K * fair%^FINALIST_CALIB_P
+    // Re-fit this if odds drift a long way from these constants — check by pulling
+    // a fresh PP "Winner & Runner-Up" screenshot and comparing a few pairs.
+    const FINALIST_CALIB_K = 1.9337;
+    const FINALIST_CALIB_P = 0.8255;
+
+    // Separate from _bookieFraction/decimalToFractional (used by Outrights/Match
+    // Odds for real market prices) — this is tuned for modelled odds spanning a
+    // much wider range including deep long-shots, and rounds to how bookmakers
+    // actually coarsen fractions as odds lengthen (half-points under 10/1, whole
+    // points to 50/1, then 5s/10s/25s/50s/100s).
+    function niceModelledFraction(dec) {
+      if (!dec || dec <= 1) return '—';
+      const target = dec - 1;
+      let step;
+      if (target < 10) step = 0.5;
+      else if (target < 50) step = 1;
+      else if (target < 100) step = 5;
+      else if (target < 200) step = 10;
+      else if (target < 500) step = 25;
+      else if (target < 1000) step = 50;
+      else step = 100;
+      let rounded = Math.round(target / step) * step;
+      if (rounded <= 0) rounded = step;
+      if (step === 0.5) {
+        const num = Math.round(rounded * 2), den = 2;
+        const g = _fracGcd(num, den);
+        return `${num / g}/${den / g}`;
+      }
+      return `${rounded}/1`;
+    }
+    function _fracGcd(a, b) { return b === 0 ? a : _fracGcd(b, a % b); }
+
+    async function loadFinalistOdds() {
+      const wrap = document.getElementById('finalist-odds-wrap');
+      if (!wrap) return;
+      wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      const [{ data: teams }, { data: allOdds }] = await Promise.all([
+        db.from('teams').select('id, name, flag_emoji, is_eliminated, bracket_half'),
+        db.from('team_odds').select('team_id, odds_decimal, fetched_at').order('fetched_at', { ascending: false }),
+      ]);
+
+      if (!teams) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">Could not load teams.</p>'; return; }
+
+      const missingHalf = teams.filter(t => !t.is_eliminated && !t.bracket_half);
+      if (missingHalf.length) {
+        wrap.innerHTML = `<p style="color:var(--red);font-size:13px">
+          ${missingHalf.length} remaining team${missingHalf.length!==1?'s':''} missing <code>bracket_half</code>
+          (${missingHalf.map(t=>t.name).join(', ')}). Set this in the Teams tab or via SQL before this can compute.
+        </p>`;
+        return;
+      }
+
+      const latestOddsByTeam = {};
+      (allOdds || []).forEach(r => {
+        if (latestOddsByTeam[r.team_id] === undefined) latestOddsByTeam[r.team_id] = parseFloat(r.odds_decimal);
+      });
+
+      const alive = teams.filter(t => !t.is_eliminated && latestOddsByTeam[t.id] !== undefined);
+      const top = alive.filter(t => t.bracket_half === 'top');
+      const bottom = alive.filter(t => t.bracket_half === 'bottom');
+
+      if (!top.length || !bottom.length) {
+        wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">Need at least one remaining team with odds in each bracket half.</p>';
+        return;
+      }
+
+      function fairProbs(list) {
+        const implied = list.map(t => ({ team: t, p: 1 / latestOddsByTeam[t.id] }));
+        const total = implied.reduce((s, x) => s + x.p, 0);
+        return implied.map(x => ({ team: x.team, fair: x.p / total }));
+      }
+
+      const topFair = fairProbs(top);
+      const bottomFair = fairProbs(bottom);
+
+      const rows = [];
+      topFair.forEach(t => {
+        bottomFair.forEach(b => {
+          const fairPct = t.fair * b.fair * 100;
+          const calibPct = FINALIST_CALIB_K * Math.pow(fairPct, FINALIST_CALIB_P);
+          const cappedPct = Math.min(calibPct, 99);
+          const decOdds = 100 / cappedPct;
+          rows.push({
+            top: t.team, bottom: b.team,
+            decOdds,
+            frac: niceModelledFraction(decOdds),
+          });
+        });
+      });
+      rows.sort((a, b) => a.decOdds - b.decOdds);
+
+      let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+        ${top.length} top-half × ${bottom.length} bottom-half = ${rows.length} possible pairings ·
+        Modelled estimate, not sourced bookmaker odds
+      </div>`;
+      html += `<div class="table-wrap"><table><thead><tr>
+        <th class="left">Top half</th><th class="left">Bottom half</th>
+        <th>Odds</th></tr></thead><tbody>`;
+      rows.forEach(r => {
+        html += `<tr>
+          <td class="left">${r.top.flag_emoji||''} ${r.top.name}</td>
+          <td class="left">${r.bottom.flag_emoji||''} ${r.bottom.name}</td>
+          <td><strong>${r.frac}</strong></td>
+        </tr>`;
+      });
+      html += '</tbody></table></div>';
+      wrap.innerHTML = html;
+    }
+
     function switchOddsSubtab(name) {
-      document.getElementById('odds-sub-outright').style.display = name === 'outright' ? '' : 'none';
-      document.getElementById('odds-sub-match').style.display    = name === 'match'    ? '' : 'none';
-      document.getElementById('odds-subtab-outright').className  = name === 'outright' ? 'btn btn-primary' : 'btn btn-secondary';
-      document.getElementById('odds-subtab-match').className     = name === 'match'    ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('odds-sub-outright').style.display   = name === 'outright'  ? '' : 'none';
+      document.getElementById('odds-sub-match').style.display      = name === 'match'     ? '' : 'none';
+      document.getElementById('odds-sub-finalists').style.display  = name === 'finalists' ? '' : 'none';
+      document.getElementById('odds-subtab-outright').className    = name === 'outright'  ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('odds-subtab-match').className       = name === 'match'     ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('odds-subtab-finalists').className   = name === 'finalists' ? 'btn btn-primary' : 'btn btn-secondary';
       if (name === 'match') loadMatchOddsTable();
+      if (name === 'finalists') loadFinalistOdds();
     }
 
     let _moMatches = null, _moRounds = null, _moSortCol = 'kickoff', _moSortDir = 1, _moFilter = null;

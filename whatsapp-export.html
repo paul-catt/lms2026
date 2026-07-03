@@ -177,7 +177,7 @@
     <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:2px solid var(--border)">
       <button id="tab-btn-group" onclick="switchTab('group')" style="padding:10px 24px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:3px solid var(--gold);margin-bottom:-2px;color:var(--gold);cursor:pointer;font-family:inherit">Group Stage</button>
       <button id="tab-btn-ko" onclick="switchTab('ko')" style="padding:10px 24px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--text-muted);cursor:pointer;font-family:inherit">Knockout</button>
-      <button id="tab-btn-old" onclick="switchTab('old')" style="padding:10px 24px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--text-muted);cursor:pointer;font-family:inherit">Old</button>
+      <button id="tab-btn-old" onclick="switchTab('old')" style="padding:10px 24px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--text-muted);cursor:pointer;font-family:inherit">Text</button>
       <button id="tab-btn-rip" onclick="switchTab('rip')" style="padding:10px 24px;font-size:14px;font-weight:700;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;color:var(--text-muted);cursor:pointer;font-family:inherit">🪦 RIP</button>
     </div>
 
@@ -703,6 +703,12 @@
         roundSelect.style.display = 'inline-block';
 
         processRound(autoSortOrder);
+
+        // Default to the Knockout tab when the auto-detected round is a KO round.
+        // Only fires on initial load — doesn't yank you back if you've manually
+        // switched tabs and then change the round selector.
+        const autoRoundObj = (rounds || []).find(r => r.sort_order === autoSortOrder);
+        if (autoRoundObj && autoRoundObj.round_type === 'knockout') switchTab('ko');
 
       } catch(err) {
         console.error(err);
@@ -1736,8 +1742,14 @@
           <span style="font-size:9px;line-height:1;min-width:16px;text-align:left;padding-left:2px">${priorHtml || ''}</span>
         </div>`;
 
-        // Furthest round label (KO only)
-        const frLabel = !isGroupRound ? (koRoundLabels[p.furthestRound] || '—') : '';
+        // Furthest round label (KO only) — mirrors leaderboard.html: alive players show the
+        // round they're now IN (furthest completed + 1, floored at current round), not the
+        // last round they finished.
+        const frLabel = !isGroupRound
+          ? (p.isOut
+              ? (koRoundLabels[p.furthestRound] || '—')
+              : (koRoundLabels[Math.max((p.furthestRound || 0) + 1, currentRoundSortOrder || 0)] || '—'))
+          : '';
 
         html += `<tr class="${rowClass}" style="${rowStyle}">
           <td>${posCellHtml}</td>
@@ -1840,7 +1852,11 @@
           ? `<span style="font-size:11px;font-weight:700;color:#a0aec0">${p.display_name || shortName(p.name)}</span>${OUT_BADGE}`
           : `<span style="font-size:11px;font-weight:700;color:#1a202c">${p.display_name || shortName(p.name)}</span>${flags ? ' <span style="font-size:13px">' + flags + '</span>' : ''}`;
 
-        const frLabel = !isGroupRound ? (koRoundLabels[p.furthestRound] || '—') : '';
+        const frLabel = !isGroupRound
+          ? (p.isOut
+              ? (koRoundLabels[p.furthestRound] || '—')
+              : (koRoundLabels[Math.max((p.furthestRound || 0) + 1, currentRoundSortOrder || 0)] || '—'))
+          : '';
         const goalsDiff = projectedTotal > 0 ? Math.abs(Math.round((p.goalsPredict||0) - projectedTotal)) : '—';
 
         html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
@@ -2150,11 +2166,11 @@
       let html = makeHeader('LMS WORLD CUP 2026', 'Picks by Player', fullRoundLabel);
       html += `<table style="width:100%;border-collapse:collapse;table-layout:fixed">
         <thead><tr style="background:#2c3e50;border-bottom:1px solid #1a2533">
-          <th style="width:20px;padding:1px 4px 1px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
-          <th style="width:68px;padding:1px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
-          <th style="width:125px;padding:1px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Pick</th>
-          <th style="width:75px;padding:1px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Opponent</th>
-          <th style="width:34px;padding:1px 8px 1px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</th>
+          <th style="width:16px;padding:3px 4px 3px 8px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</th>
+          <th style="width:92px;padding:3px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Name</th>
+          <th style="width:82px;padding:3px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Pick</th>
+          <th style="width:78px;padding:3px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:left">Opponent</th>
+          <th style="width:44px;padding:3px 8px 3px 4px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</th>
         </tr></thead><tbody>`;
 
       sortedPlayers.forEach((p, i) => {
@@ -2183,11 +2199,11 @@
           : `<span style="font-size:10px;color:#cbd5e0">—</span>`;
 
         html += `<tr style="background:${rowBg};border-bottom:1px solid #edf0f5">
-          <td style="padding:1px 4px 1px 8px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
-          <td style="padding:1px 4px">${nameCell}</td>
-          <td style="padding:1px 4px">${pickCell}</td>
-          <td style="padding:1px 4px">${oppCell}</td>
-          <td style="padding:1px 8px 1px 4px;text-align:center">${oddsCell}</td>
+          <td style="padding:3px 4px 3px 8px;font-size:11px;font-weight:700;color:#718096;text-align:center">${posLabel}</td>
+          <td style="padding:3px 4px;white-space:nowrap">${nameCell}</td>
+          <td style="padding:3px 4px;max-width:82px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${pickCell}</td>
+          <td style="padding:3px 4px;max-width:78px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${oppCell}</td>
+          <td style="padding:3px 8px 3px 4px;text-align:center">${oddsCell}</td>
         </tr>`;
       });
 
@@ -2215,11 +2231,11 @@
 
       let html = makeHeader('LMS WORLD CUP 2026', 'Teams Picked', fullRoundLabel);
       html += `<div style="display:flex;align-items:center;background:#2c3e50;border-bottom:1px solid #1a2533;padding:4px 12px">
-        <span style="width:18px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
-        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team</span>
-        <span style="width:80px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Opponent</span>
-        <span style="width:36px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
-        <span style="width:46px;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Picks</span>
+        <span style="width:18px;flex-shrink:0;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">#</span>
+        <span style="width:110px;flex-shrink:0;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Team</span>
+        <span style="width:70px;flex-shrink:0;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0">Opponent</span>
+        <span style="width:36px;flex-shrink:0;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:center">Odds</span>
+        <span style="flex:1;font-size:8px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#e2e8f0;text-align:right">Picks</span>
       </div>`;
 
       sorted.forEach((tid, i) => {
@@ -2234,11 +2250,11 @@
         const opp = teamOpponents[tid] || '?';
 
         html += `<div style="display:flex;align-items:center;padding:7px 12px;background:${rowBg};border-bottom:1px solid #edf0f5">
-          <div style="width:18px;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
-          <div style="flex:1;min-width:0;font-size:12px;font-weight:800;color:#1a202c">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
-          <div style="width:80px;font-size:10px;color:#718096">v ${opp}</div>
-          <div style="width:36px;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? decToFrac(odds) : '<span style="color:#cbd5e0">—</span>'}</div>
-          <div style="width:46px;display:flex;align-items:center;gap:4px;justify-content:flex-end">
+          <div style="width:18px;flex-shrink:0;font-size:10px;font-weight:700;color:#a0aec0;text-align:center">${i+1}</div>
+          <div style="width:110px;flex-shrink:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:12px;font-weight:800;color:#1a202c">${teamFlags[tid]||''} ${teamNames[tid]||'?'}${ls}</div>
+          <div style="width:70px;flex-shrink:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:10px;color:#718096">v ${opp}</div>
+          <div style="width:36px;flex-shrink:0;text-align:center;font-size:11px;font-weight:700;color:#2d3748">${hasOdds ? decToFrac(odds) : '<span style="color:#cbd5e0">—</span>'}</div>
+          <div style="flex:1;display:flex;align-items:center;gap:4px;justify-content:flex-end">
             <div style="width:28px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px"></div></div>
             <span style="font-size:11px;font-weight:800;color:${countColor};min-width:10px;text-align:right">${count}</span>
           </div>
@@ -2322,7 +2338,7 @@
           ? `<span style="font-size:11px;font-weight:700;color:#a0aec0">${p.display_name || shortName(p.name)}</span>${OUT_BADGE}`
           : `<span style="font-size:11px;font-weight:700;color:#1a202c">${p.display_name || shortName(p.name)}</span>${flags ? ' <span style="font-size:13px">' + flags + '</span>' : ''}`;
 
-        const effectiveFR = p.isOut ? (p.furthestRound || 0) : Math.max(p.furthestRound || 0, currentRoundSortOrder);
+        const effectiveFR = p.isOut ? (p.furthestRound || 0) : Math.max((p.furthestRound || 0) + 1, currentRoundSortOrder || 0);
         const frLabel = koRoundLabels[effectiveFR] || '—';
         const goalsDiff = showGoals && projectedTotal > 0 ? Math.abs(Math.round((p.goalsPredict||0) - projectedTotal)) : '—';
 
