@@ -1175,7 +1175,7 @@
       const { data: matches, error: mErr } = await db.from('matches')
         .select('id, kickoff, round_id, status, home_score, away_score, pens_winner_id, is_third_place, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
         .in('round_id', rounds.map(r => r.id))
-        .not('home_team_id', 'is', null)
+        .or('home_team_id.not.is.null,away_team_id.not.is.null')
         .order('kickoff');
 
       if (mErr || !matches) { wrap.innerHTML = '<p style="color:var(--red)">Error loading KO matches.</p>'; return; }

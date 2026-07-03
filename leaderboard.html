@@ -2227,7 +2227,7 @@
         ranks.push(currentRank);
       }
 
-      const worstRank    = ranks[spoonSorted.length - 1];
+      const worstRank    = ranks[0];
       const spoonIndices = spoonSorted.map((_, i) => i).filter(i => ranks[i] === worstRank);
       const spoonTied    = spoonIndices.length > 1;
 
@@ -2244,8 +2244,8 @@
           </div>`;
       }
 
-      // Display: best at top, worst (spoon) at bottom
-      const displayOrder = [...spoonSorted.keys()].reverse();
+      // Display: worst (spoon) at top, best at bottom — rank 1 = wooden spoon winner
+      const displayOrder = [...spoonSorted.keys()];
       const totalCount   = spoonSorted.length;
 
       let html = statusNote + confirmedBanner;
@@ -2261,7 +2261,7 @@
         const p       = spoonSorted[origIdx];
         const rank    = ranks[origIdx];
         const isSpoon = spoonIndices.includes(origIdx);
-        const dispRank = totalCount - rank + 1;
+        const dispRank = rank;
         const isTiedRank = displayOrder.some(oi => oi !== origIdx && ranks[oi] === rank);
         const rankLabel  = dispRank + (isTiedRank ? '=' : '');
         const isBottom   = dispIdx === displayOrder.length - 1;
@@ -2629,13 +2629,50 @@
         }
       }
 
+      // 2b. Replicate the live leaderboard's advancement bonus: a player who wins
+      // their current-round pick (and still has teams left to pick from) is treated
+      // as having reached one round further than their static furthestMap value —
+      // otherwise a simulated win never shows up in the furthest-round tiebreak.
+      const currentSO = currentRound ? currentRound.sort_order : 0;
+      const alivePoolTeams = (_leaderboardData.allTeams || []).filter(t => !t.is_eliminated);
+      const usedByPlayerSim = {};
+      (_leaderboardData.teamsUsed || []).forEach(r => {
+        if (!usedByPlayerSim[r.player_id]) usedByPlayerSim[r.player_id] = new Set();
+        usedByPlayerSim[r.player_id].add(r.team_id);
+      });
+      const wonCurrentRoundSim = new Set();
+      // Real, already-confirmed wins (mirrors production's wonCurrentRound) —
+      // covers players like Anita whose match is already over and therefore
+      // never appears in simScores/playerPickOutcomes at all.
+      roundPicks.forEach(pick => {
+        const res = pick.pick_results && pick.pick_results[0];
+        if (res && res.match_result === 'win') {
+          const used = usedByPlayerSim[pick.player_id] || new Set();
+          const hasTeamsLeft = alivePoolTeams.some(t => !used.has(t.id));
+          if (hasTeamsLeft) wonCurrentRoundSim.add(pick.player_id);
+        }
+      });
+      // Simulated wins from the "what if" scenario being tested right now.
+      Object.entries(playerPickOutcomes).forEach(([playerId, outcomes]) => {
+        if (outcomes.some(o => o.outcome === 'win')) {
+          const used = usedByPlayerSim[playerId] || new Set();
+          const hasTeamsLeft = alivePoolTeams.some(t => !used.has(t.id));
+          if (hasTeamsLeft) wonCurrentRoundSim.add(playerId);
+        }
+      });
+      function effFurthest(p) {
+        if (p.is_eliminated) return furthestMap[p.player_id] || 0;
+        const bonus = wonCurrentRoundSim.has(p.player_id) ? 1 : 0;
+        return Math.max(furthestMap[p.player_id] || 0, currentSO) + bonus;
+      }
+
       // 3. Sort — Points → Furthest round (KO only) → GD → Goals prediction → Alpha
       function sortPlayers(ptsMap, gdMap) {
         return [...realPlayers].sort((a, b) => {
           const pa = ptsMap[a.player_id] || 0, pb = ptsMap[b.player_id] || 0;
           if (pb !== pa) return pb - pa;
           if (isKOSim) {
-            const fa = furthestMap[a.player_id] || 0, fb = furthestMap[b.player_id] || 0;
+            const fa = effFurthest(a), fb = effFurthest(b);
             if (fb !== fa) return fb - fa;
           }
           const gdDiff = (gdMap[b.player_id] || 0) - (gdMap[a.player_id] || 0);
