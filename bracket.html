@@ -313,14 +313,24 @@
 
         const pred        = preds[0];
         const bracketData = pred.data;
-        const progression = bracketData.progression || {};
+
+        // Progression now comes from the ko_progression table — the single
+        // source of truth shared with admin.html — not from this snapshot's
+        // own "progression" blob. The blob's copy can go stale relative to
+        // the table (it did once: match 83/84 → 93 were swapped, producing
+        // a duplicate team on the rendered bracket). bracketData.progression
+        // is intentionally ignored here.
+        const { data: progRows, error: progErr } = await db
+          .from('ko_progression')
+          .select('match_number, next_match_number, slot');
+        if (progErr) throw progErr;
 
         // Build feeders map: matchNum -> { home: feederMatchNum, away: feederMatchNum }
         const feeders = {};
-        Object.entries(progression).forEach(([src, p]) => {
-          const srcNum = parseInt(src);
-          if (!feeders[p.next]) feeders[p.next] = {};
-          feeders[p.next][p.slot] = srcNum;
+        (progRows || []).forEach(row => {
+          const srcNum = row.match_number;
+          if (!feeders[row.next_match_number]) feeders[row.next_match_number] = {};
+          feeders[row.next_match_number][row.slot] = srcNum;
         });
 
         // Derive correct render order by walking progression tree home-first from Final.

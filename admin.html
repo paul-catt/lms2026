@@ -1041,6 +1041,7 @@
     }
 
     async function initAdmin() {
+      await loadKoProgression(); // must complete before any match result can be saved
       loadPlayers();
       loadMatchesForResult();
       loadCompletedMatchesForCorrection();
@@ -2191,43 +2192,33 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       return toEliminate.length;
     }
 
-    const KO_PROGRESSION = {
-      74: { next: 89, slot: 'home' },
-      77: { next: 89, slot: 'away' },
-      73: { next: 90, slot: 'home' },
-      75: { next: 90, slot: 'away' },
-      76: { next: 91, slot: 'home' },
-      78: { next: 91, slot: 'away' },
-      79: { next: 92, slot: 'home' },
-      80: { next: 92, slot: 'away' },
-      83: { next: 93, slot: 'home' },
-      84: { next: 93, slot: 'away' },
-      81: { next: 94, slot: 'home' },
-      82: { next: 94, slot: 'away' },
-      86: { next: 95, slot: 'home' },
-      88: { next: 95, slot: 'away' },
-      85: { next: 96, slot: 'home' },
-      87: { next: 96, slot: 'away' },
-      89: { next: 97, slot: 'home' },
-      90: { next: 97, slot: 'away' },
-      93: { next: 98, slot: 'home' },
-      94: { next: 98, slot: 'away' },
-      91: { next: 99, slot: 'home' },
-      92: { next: 99, slot: 'away' },
-      95: { next: 100, slot: 'home' },
-      96: { next: 100, slot: 'away' },
-      97: { next: 101, slot: 'home' },
-      98: { next: 101, slot: 'away' },
-      99: { next: 102, slot: 'home' },
-      100: { next: 102, slot: 'away' },
-      101: { next: 104, slot: 'home' },
-      102: { next: 104, slot: 'away' },
-    };
+    // KO_PROGRESSION and THIRD_PLACE_LOSERS are loaded from the ko_progression
+    // table (single source of truth, shared with bracket.html) via loadKoProgression()
+    // below — no longer hardcoded here. Do not reintroduce a hardcoded copy of
+    // this map in this file; the two hand-typed copies drifted out of sync once
+    // already (match 83/84 → 93) and produced a duplicate-team bug on the bracket.
+    let KO_PROGRESSION = {};
+    let THIRD_PLACE_LOSERS = {};
+    let _koProgressionLoaded = false;
 
-    const THIRD_PLACE_LOSERS = {
-      101: 'home',
-      102: 'away',
-    };
+    async function loadKoProgression() {
+      const { data, error } = await db.from('ko_progression').select('*');
+      if (error) {
+        console.error('Failed to load ko_progression:', error.message);
+        return;
+      }
+      const prog = {};
+      const thirdLosers = {};
+      (data || []).forEach(row => {
+        prog[row.match_number] = { next: row.next_match_number, slot: row.slot };
+        if (row.loser_next_match_number) {
+          thirdLosers[row.match_number] = row.loser_slot;
+        }
+      });
+      KO_PROGRESSION = prog;
+      THIRD_PLACE_LOSERS = thirdLosers;
+      _koProgressionLoaded = true;
+    }
 
     async function advanceWinnerToNextMatch(matchId, match, homeScore, awayScore, isPens, pensWinnerId) {
       // match_number is included when matchData is passed from bulk/single submit
@@ -2248,6 +2239,10 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       } else {
         winnerId = match.away_team_id;
         loserId  = match.home_team_id;
+      }
+
+      if (!_koProgressionLoaded) {
+        console.error('ko_progression not loaded — winner not advanced to next match. Reload the page and re-save this result.');
       }
 
       const prog = KO_PROGRESSION[mn];
