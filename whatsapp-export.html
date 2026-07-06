@@ -2397,7 +2397,7 @@
 
     function renderRIP() {
       if (!roundData) return;
-      const { players, picks, matches, rounds, rankMap, statsMap, sortedPlayers, currentRoundSortOrder } = roundData;
+      const { players, picks, matches, rounds, rankMap, statsMap, sortedPlayers, currentRoundSortOrder, gdMap, projectedTotal } = roundData;
       const container = document.getElementById('rip-cards-container');
       if (!container) return;
 

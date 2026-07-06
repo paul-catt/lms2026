@@ -227,6 +227,7 @@
         <div style="display:flex; gap:6px; margin-bottom:16px;">
           <button class="btn btn-primary" id="odds-subtab-outright-b" onclick="switchOddsSubtabB('outright')">📈 Outrights</button>
           <button class="btn btn-secondary" id="odds-subtab-match-b" onclick="switchOddsSubtabB('match')">⚽ Match Odds</button>
+          <button class="btn btn-secondary" id="odds-subtab-finalists-b" onclick="switchOddsSubtabB('finalists')">🏆 Finalists</button>
         </div>
         <div id="odds-sub-outright-b">
           <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">Tournament winner odds (William Hill). Indicative — updated periodically.</p>
@@ -235,6 +236,13 @@
         <div id="odds-sub-match-b" style="display:none">
           <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">H2H match odds (William Hill). Indicative — updated periodically.</p>
           <div id="match-odds-wrap-b"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+        <div id="odds-sub-finalists-b" style="display:none">
+          <p style="color:var(--text-muted); font-size:13px; margin-bottom:12px">
+            Modelled from tournament outright odds (normalised within each bracket half, since a final is always
+            top-half winner v bottom-half winner), calibrated against Paddy Power's "Winner &amp; Runner-Up" specials.
+          </p>
+          <div id="finalist-odds-wrap-b"><div class="loading"><div class="spinner"></div></div></div>
         </div>
       </div>
 
@@ -1212,12 +1220,17 @@
     let _oddsLoaded = false;
     let _oddsMatchLoaded = false;
 
+    let _oddsFinalistsLoadedB = false;
+
     function switchOddsSubtabB(name) {
-      document.getElementById('odds-sub-outright-b').style.display = name === 'outright' ? '' : 'none';
-      document.getElementById('odds-sub-match-b').style.display    = name === 'match'    ? '' : 'none';
-      document.getElementById('odds-subtab-outright-b').className  = name === 'outright' ? 'btn btn-primary' : 'btn btn-secondary';
-      document.getElementById('odds-subtab-match-b').className     = name === 'match'    ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('odds-sub-outright-b').style.display   = name === 'outright'  ? '' : 'none';
+      document.getElementById('odds-sub-match-b').style.display      = name === 'match'     ? '' : 'none';
+      document.getElementById('odds-sub-finalists-b').style.display  = name === 'finalists' ? '' : 'none';
+      document.getElementById('odds-subtab-outright-b').className    = name === 'outright'  ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('odds-subtab-match-b').className       = name === 'match'     ? 'btn btn-primary' : 'btn btn-secondary';
+      document.getElementById('odds-subtab-finalists-b').className   = name === 'finalists' ? 'btn btn-primary' : 'btn btn-secondary';
       if (name === 'match' && !_oddsMatchLoaded) loadMatchOddsTabB();
+      if (name === 'finalists' && !_oddsFinalistsLoadedB) { _oddsFinalistsLoadedB = true; loadFinalistOddsB(); }
     }
 
     // ── Bookie fractional odds lookup ─────────────────────────
@@ -1258,15 +1271,28 @@
       return _bookieFraction(dec);
     }
 
+    const ODDS_OUT_ROUND_ABBREV_B = {
+      'Group Phase 3': 'Group', 'Round of 32': 'R32', 'Round of 16': 'R16',
+      'Quarter Finals': 'QF', 'Semi Finals': 'SF', 'Final': 'Final'
+    };
+
     async function loadOddsTabB() {
       _oddsLoaded = true;
       const wrap = document.getElementById('odds-table-wrap-b');
       if (!wrap) return;
-      const { data: allOdds } = await db.from('team_odds').select('team_id, odds_decimal, odds_fractional, fetched_at, teams(flag_emoji, name, is_longshot)').order('fetched_at', { ascending: false });
+      const [{ data: allOdds }, { data: rounds }] = await Promise.all([
+        db.from('team_odds').select('team_id, odds_decimal, odds_fractional, fetched_at, teams(flag_emoji, name, is_longshot, is_eliminated, eliminated_in_round_id)').order('fetched_at', { ascending: false }),
+        db.from('rounds').select('id, name')
+      ]);
       if (!allOdds || allOdds.length === 0) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No odds available yet.</p>'; return; }
+      const roundMapB = {};
+      (rounds || []).forEach(r => { roundMapB[r.id] = r.name; });
       const byTeam = {};
       allOdds.forEach(r => {
-        if (!byTeam[r.team_id]) { byTeam[r.team_id] = { flag: r.teams?.flag_emoji || '', name: r.teams?.name || '?', isLongshot: r.teams?.is_longshot || false, current: parseFloat(r.odds_decimal), currentFrac: r.odds_fractional || decimalToFractionalB(r.odds_decimal), history: [] }; }
+        if (!byTeam[r.team_id]) {
+          const outRoundName = roundMapB[r.teams?.eliminated_in_round_id] || null;
+          byTeam[r.team_id] = { flag: r.teams?.flag_emoji || '', name: r.teams?.name || '?', isLongshot: r.teams?.is_longshot || false, isEliminated: r.teams?.is_eliminated || false, outRound: outRoundName, current: parseFloat(r.odds_decimal), currentFrac: r.odds_fractional || decimalToFractionalB(r.odds_decimal), history: [] };
+        }
         else { byTeam[r.team_id].history.push(parseFloat(r.odds_decimal)); }
       });
       const sorted = Object.values(byTeam).sort((a, b) => a.current - b.current);
@@ -1276,7 +1302,109 @@
       sorted.forEach(t => {
         let oc = '';
         if (t.history.length > 0) { const cd = t.current - t.history[0]; if (cd < -0.01) oc = 'color:var(--green)'; else if (cd > 0.01) oc = 'color:var(--red)'; }
-        html += `<tr><td class="left">${t.flag} <strong>${t.name}</strong>${t.isLongshot ? ' ⭐' : ''}</td><td><strong style="${oc}">${t.currentFrac}</strong></td></tr>`;
+        const outPill = t.isEliminated ? ` <span style="display:inline-flex;align-items:center;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:var(--red);border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;margin-left:4px">OUT${t.outRound ? ' · ' + (ODDS_OUT_ROUND_ABBREV_B[t.outRound] || t.outRound) : ''}</span>` : '';
+        html += `<tr style="${t.isEliminated ? 'opacity:0.55' : ''}"><td class="left">${t.flag} <strong>${t.name}</strong>${t.isLongshot ? ' ⭐' : ''}${outPill}</td><td><strong style="${oc}">${t.currentFrac}</strong></td></tr>`;
+      });
+      html += '</tbody></table></div>';
+      wrap.innerHTML = html;
+    }
+
+    // ── Finalist pairing odds (modelled, calibrated against Paddy Power specials) ──
+    // Same method/calibration as admin.html — see notes there. Recalculates live
+    // every time this tab opens, from current team_odds and teams.bracket_half.
+    const FINALIST_CALIB_K_B = 1.9337;
+    const FINALIST_CALIB_P_B = 0.8255;
+
+    function niceModelledFractionB(dec) {
+      if (!dec || dec <= 1) return '—';
+      const target = dec - 1;
+      let step;
+      if (target < 10) step = 0.5;
+      else if (target < 50) step = 1;
+      else if (target < 100) step = 5;
+      else if (target < 200) step = 10;
+      else if (target < 500) step = 25;
+      else if (target < 1000) step = 50;
+      else step = 100;
+      let rounded = Math.round(target / step) * step;
+      if (rounded <= 0) rounded = step;
+      if (step === 0.5) {
+        const num = Math.round(rounded * 2), den = 2;
+        const g = gcdB(num, den);
+        return `${num / g}/${den / g}`;
+      }
+      return `${rounded}/1`;
+    }
+
+    async function loadFinalistOddsB() {
+      const wrap = document.getElementById('finalist-odds-wrap-b');
+      if (!wrap) return;
+      wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+      const [{ data: teams }, { data: allOdds }] = await Promise.all([
+        db.from('teams').select('id, name, flag_emoji, is_eliminated, bracket_half'),
+        db.from('team_odds').select('team_id, odds_decimal, fetched_at').order('fetched_at', { ascending: false }),
+      ]);
+
+      if (!teams) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">Could not load teams.</p>'; return; }
+
+      const missingHalf = teams.filter(t => !t.is_eliminated && !t.bracket_half);
+      if (missingHalf.length) {
+        wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">Finalist odds not available yet.</p>';
+        return;
+      }
+
+      const latestOddsByTeam = {};
+      (allOdds || []).forEach(r => {
+        if (latestOddsByTeam[r.team_id] === undefined) latestOddsByTeam[r.team_id] = parseFloat(r.odds_decimal);
+      });
+
+      const alive = teams.filter(t => !t.is_eliminated && latestOddsByTeam[t.id] !== undefined);
+      const top = alive.filter(t => t.bracket_half === 'top');
+      const bottom = alive.filter(t => t.bracket_half === 'bottom');
+
+      if (!top.length || !bottom.length) {
+        wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">Need at least one remaining team with odds in each bracket half.</p>';
+        return;
+      }
+
+      function fairProbs(list) {
+        const implied = list.map(t => ({ team: t, p: 1 / latestOddsByTeam[t.id] }));
+        const total = implied.reduce((s, x) => s + x.p, 0);
+        return implied.map(x => ({ team: x.team, fair: x.p / total }));
+      }
+
+      const topFair = fairProbs(top);
+      const bottomFair = fairProbs(bottom);
+
+      const rows = [];
+      topFair.forEach(t => {
+        bottomFair.forEach(b => {
+          const fairPct = t.fair * b.fair * 100;
+          const calibPct = FINALIST_CALIB_K_B * Math.pow(fairPct, FINALIST_CALIB_P_B);
+          const cappedPct = Math.min(calibPct, 99);
+          const decOdds = 100 / cappedPct;
+          rows.push({
+            top: t.team, bottom: b.team,
+            decOdds,
+            frac: niceModelledFractionB(decOdds),
+          });
+        });
+      });
+      rows.sort((a, b) => a.decOdds - b.decOdds);
+
+      let html = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+        ${top.length} top-half × ${bottom.length} bottom-half = ${rows.length} possible pairings
+      </div>`;
+      html += `<div class="table-wrap"><table><thead><tr>
+        <th class="left">Top half</th><th class="left">Bottom half</th>
+        <th>Odds</th></tr></thead><tbody>`;
+      rows.forEach(r => {
+        html += `<tr>
+          <td class="left">${r.top.flag_emoji||''} ${r.top.name}</td>
+          <td class="left">${r.bottom.flag_emoji||''} ${r.bottom.name}</td>
+          <td><strong>${r.frac}</strong></td>
+        </tr>`;
       });
       html += '</tbody></table></div>';
       wrap.innerHTML = html;
@@ -1324,10 +1452,23 @@
         if (name === 'Group Phase 1') return 'GP1';
         if (name === 'Group Phase 2') return 'GP2';
         if (name === 'Group Phase 3') return 'GP3';
-        return 'KO';
+        if (name === 'Round of 32') return 'R32';
+        if (name === 'Round of 16') return 'R16';
+        if (name === 'Quarter Finals') return 'QF';
+        if (name === 'Semi Finals') return 'SF';
+        if (name === 'Final') return 'Final';
+        return null;
       }
+      const KO_ORDER_B = ['R32', 'R16', 'QF', 'SF', 'Final'];
       let visRounds = (_moBRounds || []).filter(r => byRound[r.id] && r.name !== '3rd Place').sort((a,b) => a.sort_order - b.sort_order);
-      if (_moBFilter) visRounds = visRounds.filter(r => roundCat(r.name) === _moBFilter);
+      if (_moBFilter) {
+        if (KO_ORDER_B.includes(_moBFilter)) {
+          const allowed = new Set(KO_ORDER_B.slice(KO_ORDER_B.indexOf(_moBFilter)));
+          visRounds = visRounds.filter(r => allowed.has(roundCat(r.name)));
+        } else {
+          visRounds = visRounds.filter(r => roundCat(r.name) === _moBFilter);
+        }
+      }
       function sortMatches(arr) {
         return [...arr].sort((a,b) => {
           let av, bv;
@@ -1361,7 +1502,7 @@
       }
       let html = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--text-muted)">Filter:</span>
-        ${pillB('GP1','GP1')}${pillB('GP2','GP2')}${pillB('GP3','GP3')}${pillB('KO','KO')}
+        ${pillB('GP1','GP1')}${pillB('GP2','GP2')}${pillB('GP3','GP3')}${pillB('R32','R32')}${pillB('R16','R16')}${pillB('QF','QF')}${pillB('SF','SF')}${pillB('Final','Final')}
       </div>`;
       if (visRounds.length === 0) {
         html += '<p style="color:var(--text-muted);font-size:13px">No fixtures for this filter.</p>';

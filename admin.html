@@ -3271,15 +3271,28 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       btn.disabled = false; btn.textContent = '🔄 Fetch Odds';
     }
 
+    const ODDS_OUT_ROUND_ABBREV = {
+      'Group Phase 3': 'Group', 'Round of 32': 'R32', 'Round of 16': 'R16',
+      'Quarter Finals': 'QF', 'Semi Finals': 'SF', 'Final': 'Final'
+    };
+
     async function loadOddsTable() {
       const wrap = document.getElementById('odds-table-wrap');
       if (!wrap) return;
-      const { data: allOdds } = await db.from('team_odds').select('team_id, odds_decimal, odds_fractional, fetched_at, teams(flag_emoji, name, is_longshot)').order('fetched_at', { ascending: false });
+      const [{ data: allOdds }, { data: rounds }] = await Promise.all([
+        db.from('team_odds').select('team_id, odds_decimal, odds_fractional, fetched_at, teams(flag_emoji, name, is_longshot, is_eliminated, eliminated_in_round_id)').order('fetched_at', { ascending: false }),
+        db.from('rounds').select('id, name')
+      ]);
       if (!allOdds || allOdds.length === 0) { wrap.innerHTML = '<p style="color:var(--text-muted);font-size:13px">No odds fetched yet.</p>'; return; }
+      const roundMapOdds = {};
+      (rounds || []).forEach(r => { roundMapOdds[r.id] = r.name; });
       const latestFetchedAt = allOdds[0].fetched_at;
       const byTeam = {};
       allOdds.forEach(r => {
-        if (!byTeam[r.team_id]) { byTeam[r.team_id] = { flag: r.teams?.flag_emoji || '', name: r.teams?.name || '?', isLongshot: r.teams?.is_longshot || false, current: parseFloat(r.odds_decimal), currentFrac: r.odds_fractional || decimalToFractional(r.odds_decimal), history: [], changedInLatest: r.fetched_at === latestFetchedAt }; }
+        if (!byTeam[r.team_id]) {
+          const outRoundName = roundMapOdds[r.teams?.eliminated_in_round_id] || null;
+          byTeam[r.team_id] = { flag: r.teams?.flag_emoji || '', name: r.teams?.name || '?', isLongshot: r.teams?.is_longshot || false, isEliminated: r.teams?.is_eliminated || false, outRound: outRoundName, current: parseFloat(r.odds_decimal), currentFrac: r.odds_fractional || decimalToFractional(r.odds_decimal), history: [], changedInLatest: r.fetched_at === latestFetchedAt };
+        }
         else { byTeam[r.team_id].history.push(parseFloat(r.odds_decimal)); }
       });
       const sorted = Object.values(byTeam).sort((a,b) => a.current - b.current);
@@ -3301,7 +3314,8 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         if (original !== null) { const totalDiff = curr - original; const sign = totalDiff < 0 ? '▼ ' : totalDiff > 0.01 ? '▲ ' : ''; const col = totalDiff < -0.01 ? 'var(--green)' : totalDiff > 0.01 ? 'var(--red)' : 'var(--text-muted)'; origStyle = `color:${col};font-weight:600`; origDisplay = `${original.toFixed(2)} <span style="font-size:10px;color:${col}">${sign}${Math.abs(totalDiff).toFixed(2)}</span>`; }
         let currCol = '';
         if (t.changedInLatest && hist.length > 0) { const cd = curr - hist[0]; if (cd < -0.01) currCol = 'color:var(--green)'; else if (cd > 0.01) currCol = 'color:var(--red)'; }
-        html += `<tr><td class="left">${t.flag} <strong>${t.name}</strong>${t.isLongshot ? ' ⭐' : ''}</td><td><strong style="${currCol}">${curr.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${t.currentFrac}</span></td>`;
+        const outPill = t.isEliminated ? ` <span style="display:inline-flex;align-items:center;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);color:var(--red);border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700;margin-left:4px">OUT${t.outRound ? ' · ' + (ODDS_OUT_ROUND_ABBREV[t.outRound] || t.outRound) : ''}</span>` : '';
+        html += `<tr style="${t.isEliminated ? 'opacity:0.55' : ''}"><td class="left">${t.flag} <strong>${t.name}</strong>${t.isLongshot ? ' ⭐' : ''}${outPill}</td><td><strong style="${currCol}">${curr.toFixed(2)}</strong> <span style="color:var(--text-muted);font-size:11px">${t.currentFrac}</span></td>`;
         for (let i = 0; i < maxHistory; i++) { const val = hist[i]; html += val !== undefined ? `<td style="color:var(--text-muted);font-size:12px">${val.toFixed(2)}</td>` : `<td style="color:var(--border);font-size:12px">—</td>`; }
         html += `<td>${moveHtml}</td><td style="${origStyle}">${origDisplay}</td></tr>`;
       });
@@ -3479,10 +3493,23 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
         if (name === 'Group Phase 1') return 'GP1';
         if (name === 'Group Phase 2') return 'GP2';
         if (name === 'Group Phase 3') return 'GP3';
-        return 'KO';
+        if (name === 'Round of 32') return 'R32';
+        if (name === 'Round of 16') return 'R16';
+        if (name === 'Quarter Finals') return 'QF';
+        if (name === 'Semi Finals') return 'SF';
+        if (name === 'Final') return 'Final';
+        return null;
       }
+      const KO_ORDER = ['R32', 'R16', 'QF', 'SF', 'Final'];
       let visRounds = (_moRounds || []).filter(r => byRound[r.id] && r.name !== '3rd Place').sort((a,b) => a.sort_order - b.sort_order);
-      if (_moFilter) visRounds = visRounds.filter(r => roundCat(r.name) === _moFilter);
+      if (_moFilter) {
+        if (KO_ORDER.includes(_moFilter)) {
+          const allowed = new Set(KO_ORDER.slice(KO_ORDER.indexOf(_moFilter)));
+          visRounds = visRounds.filter(r => allowed.has(roundCat(r.name)));
+        } else {
+          visRounds = visRounds.filter(r => roundCat(r.name) === _moFilter);
+        }
+      }
       function sortMatches(arr) {
         return [...arr].sort((a,b) => {
           let av, bv;
@@ -3516,7 +3543,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       }
       let html = `<div style="display:flex;gap:6px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--text-muted)">Filter:</span>
-        ${pill('GP1','GP1')}${pill('GP2','GP2')}${pill('GP3','GP3')}${pill('KO','KO')}
+        ${pill('GP1','GP1')}${pill('GP2','GP2')}${pill('GP3','GP3')}${pill('R32','R32')}${pill('R16','R16')}${pill('QF','QF')}${pill('SF','SF')}${pill('Final','Final')}
       </div>`;
       if (visRounds.length === 0) {
         html += '<p style="color:var(--text-muted);font-size:13px">No fixtures for this filter.</p>';
