@@ -1403,6 +1403,25 @@
           usedByPlayer[pick.player_id].add(pick.team_id);
         });
 
+        // --- PRIVACY: display-only "used teams" set ---
+        // usedByPlayer above is the TRUE state and must stay that way — it feeds
+        // wonCurrentRound, noPicksLeft and the OUT branches.
+        // For the Status column we must NOT subtract a team whose round deadline
+        // hasn't passed yet: a missing flag would give the pick away by omission.
+        // A round with no deadline set is treated as "not passed" (hide the pick).
+        const nowMsPriv = now.getTime();
+        const hiddenRoundIds = new Set(
+          (rounds || [])
+            .filter(r => !(r.deadline && new Date(r.deadline).getTime() <= nowMsPriv))
+            .map(r => r.id)
+        );
+        const displayUsedByPlayer = {};
+        (allPicks || []).forEach(pick => {
+          if (hiddenRoundIds.has(pick.round_id)) return; // pick still secret — leave team in the pool
+          if (!displayUsedByPlayer[pick.player_id]) displayUsedByPlayer[pick.player_id] = new Set();
+          displayUsedByPlayer[pick.player_id].add(pick.team_id);
+        });
+
         // --- FIX: pending pick detection ---
         const playerHasPendingPick = {};
         (allPicks || []).forEach(pick => {
@@ -1423,10 +1442,18 @@
           return alivePoolTeams.filter(t => !used.has(t.id));
         }
 
+        // Display-only remaining pool: teams from picks that are still behind their
+        // deadline are added back, so the Status column can't be diffed against the
+        // public pick history to reveal a secret pick.
+        function getPlayerDisplayRemainingTeams(playerId) {
+          const used = displayUsedByPlayer[playerId] || new Set();
+          return alivePoolTeams.filter(t => !used.has(t.id));
+        }
+
         function remainingTeamsHtml(playerId, isQFOrLater) {
-          const remaining = getPlayerRemainingTeams(playerId);
-          if (remaining.length === 0) {
-            if (playerHasPendingPick[playerId]) return '';
+          const remaining = getPlayerRemainingTeams(playerId); // true state — drives the OUT copy
+          const shown     = getPlayerDisplayRemainingTeams(playerId); // what we're allowed to render
+          if (remaining.length === 0 && !playerHasPendingPick[playerId]) {
             const playerPicksR = (allPicks || []).filter(p => p.player_id === playerId);
             const elimRoundId = elimRoundByPlayer[playerId] || (currentRound && currentRound.id);
             const hadPickInElimRound = elimRoundId && playerPicksR.some(p => p.round_id === elimRoundId);
@@ -1435,19 +1462,20 @@
             }
             return '<span class="status-none">OUT · No pick · no pool teams left</span>';
           }
+          if (shown.length === 0) return '';
           if (isQFOrLater) {
-            return remaining.map(t => {
+            return shown.map(t => {
               const b = BAND_COLOUR[t.band] || { css:'#94a3b8' };
               return `<span style="font-size:14px;border-bottom:2px solid ${b.css};margin-right:3px;cursor:pointer" data-team="${t.flag_emoji} ${t.name}">${t.flag_emoji}</span>`;
             }).join('');
           }
           const bandCounts = { favourite:0, dark_horse:0, long_shot:0, no_hoper:0 };
-          remaining.forEach(t => { if (t.band && bandCounts[t.band] !== undefined) bandCounts[t.band]++; });
+          shown.forEach(t => { if (t.band && bandCounts[t.band] !== undefined) bandCounts[t.band]++; });
           const dots = Object.entries(bandCounts).filter(([,n]) => n > 0).map(([band,n]) => {
             const b = BAND_COLOUR[band];
             return `<span style="font-size:10px" title="${band.replace('_',' ')}: ${n}">${b.dot}${n}</span>`;
           }).join(' ');
-          return `<span style="font-size:12px;font-weight:600">${remaining.length}</span> <span style="font-size:11px">${dots}</span>`;
+          return `<span style="font-size:12px;font-weight:600">${shown.length}</span> <span style="font-size:11px">${dots}</span>`;
         }
 
         const isQFOrLater = currentRound && (

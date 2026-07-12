@@ -210,8 +210,14 @@ exports.handler = async function(event, context) {
     const minute = (typeof f.minute === 'number') ? f.minute : null;
 
     try {
+      // The confirmed=eq.false filter makes this write ATOMIC against a
+      // time-of-check/time-of-use race: dbMatch.confirmed was read at the top
+      // of this run, but Henry may have confirmed the result via admin during
+      // the football-data fetch. Filtering the PATCH on confirmed=false too
+      // means PostgREST updates zero rows if the match was confirmed in the
+      // meantime — so the poller can never clobber a confirmed score/status.
       await supabasePatch(
-        'matches?id=eq.' + dbMatch.id,
+        'matches?id=eq.' + dbMatch.id + '&confirmed=eq.false',
         SUPABASE_KEY,
         {
           home_score: homeGoals,

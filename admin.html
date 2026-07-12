@@ -1548,7 +1548,7 @@ Bookmark it — it's the only way in. Log in and make your first picks before 7p
       const { data } = await db
         .from('matches')
         .select('id, kickoff, round_id, home_score, away_score, pens_winner_id, is_third_place, rounds(id, name, round_type), home_team_id, away_team_id, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
-        .eq('status', 'complete')
+        .eq('confirmed', true)
         .not('home_team_id', 'is', null)
         .order('kickoff', { ascending: false });
 
