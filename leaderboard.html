@@ -596,39 +596,38 @@
         return finalPick && finalPick.teams && finalRes && finalRes.match_result === 'win';
       }
 
+      // Helper: the stage (round sort_order) a fallen player was eliminated at.
+      // Beaten on the result → that match's round. Stranded (no teams / missed
+      // deadline / used all teams) → their last pick's round, since the rules
+      // freeze them "after" that round. Kickoff time within a round is irrelevant
+      // for LMS: anyone frozen at the same stage ties, and the pot splits.
+      function elimStageSO(entry) {
+        const info = entry.info;
+        if (info.match) return roundMap[info.match.round_id]?.sort_order || 0;
+        if (info.elimRoundId) return roundMap[info.elimRoundId]?.sort_order || 0;
+        return 0;
+      }
+
       fallenWithInfo.sort((a, b) => {
         const aIsFinalist = isFinalistEntry(a);
         const bIsFinalist = isFinalistEntry(b);
         if (aIsFinalist && !bIsFinalist) return 1;
         if (bIsFinalist && !aIsFinalist) return -1;
 
-        const aRoundSO = a.info.match
-          ? (roundMap[a.info.match.round_id]?.sort_order || 0)
-          : a.info.elimRoundId ? (roundMap[a.info.elimRoundId]?.sort_order || 0) : 0;
-        const bRoundSO = b.info.match
-          ? (roundMap[b.info.match.round_id]?.sort_order || 0)
-          : b.info.elimRoundId ? (roundMap[b.info.elimRoundId]?.sort_order || 0) : 0;
+        const aRoundSO = elimStageSO(a);
+        const bRoundSO = elimStageSO(b);
         if (aRoundSO !== bRoundSO) return aRoundSO - bRoundSO;
 
-        const aKickoff = a.info.match?.kickoff
-          ? new Date(a.info.match.kickoff).getTime()
-          : a.info.lastPickKickoff ? new Date(a.info.lastPickKickoff).getTime() : 0;
-        const bKickoff = b.info.match?.kickoff
-          ? new Date(b.info.match.kickoff).getTime()
-          : b.info.lastPickKickoff ? new Date(b.info.lastPickKickoff).getTime() : 0;
-        if (aKickoff !== bKickoff) return aKickoff - bKickoff;
-        const aNoPick = a.info.noPicks ? 1 : 0;
-        const bNoPick = b.info.noPicks ? 1 : 0;
-        if (aNoPick !== bNoPick) return aNoPick - bNoPick;
+        // Same stage — no further ordering that affects rank. Keep it stable and
+        // deterministic by name so the display order doesn't jump between loads.
         return (b.player.name || '').localeCompare(a.player.name || '');
       });
 
-      const sortKeys = fallenWithInfo.map(({ info }) => {
-        if (info.match?.kickoff) return info.match.kickoff;
-        if (info.lastPickKickoff) return info.lastPickKickoff;
-        if (info.elimRoundId) return 'round:' + info.elimRoundId;
-        return null;
-      });
+      // Rank purely by stage: everyone eliminated in the same round shares a rank
+      // (and therefore splits the prize). A finalist who won the Final sorts last.
+      const sortKeys = fallenWithInfo.map((entry) =>
+        isFinalistEntry(entry) ? 'finalist' : 'stage:' + elimStageSO(entry)
+      );
 
       const ranks = [];
       let currentRank = 1;
@@ -1577,12 +1576,20 @@
         // AND still have eligible teams remaining (safe pick for next round possible).
         // We derive "has picks remaining" directly from pool data rather than trusting
         // is_eliminated, which is set manually and may lag behind live results.
+        // A knockout shootout is stored as match_result 'draw' with matches.pens_winner_id
+        // recording who went through — so a pens survivor has advanced just as surely as
+        // a 90-minute winner, and must get the same bonus or they'll be tied with the
+        // player they just knocked out.
         const wonCurrentRound = new Set();
         if (currentRound && isKnockout) {
           (allPicks || []).forEach(pick => {
             if (pick.round_id !== currentRound.id) return;
             const res = pick.pick_results && pick.pick_results[0];
-            if (res && res.match_result === 'win') {
+            if (!res || !res.match_result) return;
+            const pensWinner = pensWinnerByTeamRound[pick.team_id + '|' + pick.round_id] || null;
+            const advanced = res.match_result === 'win' ||
+                             (res.match_result === 'draw' && pensWinner && pensWinner === pick.team_id);
+            if (advanced) {
               const used = usedByPlayer[pick.player_id] || new Set();
               const hasTeamsLeft = alivePoolTeams.some(t => !used.has(t.id));
               if (hasTeamsLeft) wonCurrentRound.add(pick.player_id);
@@ -1812,12 +1819,20 @@
 
           let statusCellHtml = '';
           if (isKnockout || competitionEnded) {
-            statusCellHtml = p.is_eliminated ? exitReasonHtml(p) : remainingTeamsHtml(p.player_id, isQFOrLater);
+            if (p.is_eliminated) {
+              statusCellHtml = exitReasonHtml(p);
+            } else if (noPicksLeft && !competitionEnded) {
+              // Survived on results, but every remaining team is used or knocked out —
+              // there is no legal pick left to make. Out on picks, not on results.
+              statusCellHtml = '<span style="color:var(--red);font-size:11px;font-weight:600" title="No unused teams left in the pool — no pick available next round">No teams left</span>';
+            } else {
+              statusCellHtml = remainingTeamsHtml(p.player_id, isQFOrLater);
+            }
           }
 
           const row = document.createElement('tr');
-          if (p.is_eliminated && !competitionEnded) row.classList.add('out-row');
-          if (isPlayingToday && !p.is_eliminated) row.classList.add(isLastNight() ? 'last-night-row' : 'playing-row');
+          if (isEffectivelyOut && !competitionEnded) row.classList.add('out-row');
+          if (isPlayingToday && !isEffectivelyOut) row.classList.add(isLastNight() ? 'last-night-row' : 'playing-row');
           if (mySlug && p.slug === mySlug) {
             row.style.outline = '2px solid var(--accent)';
             row.style.outlineOffset = '-2px';
@@ -1827,7 +1842,7 @@
             '<td class="pos">' + pos + (tied ? '=' : '') + '</td>' +
             '<td class="prior">' + arrowHtml + '</td>' +
             '<td class="medal landscape-only">' + medal + '</td>' +
-            '<td class="player-name"><a ' + playerLinkAttrs(p.slug) + '><span class="portrait-only">' + (p.display_name || shortName(p.name)) + '</span><span class="landscape-only">' + (p.name || '?') + '</span></a>' + (competitionEnded ? '' : (p.is_eliminated ? '<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:4px">✕</span>' : (isKnockout && resultInThisRound.has(p.player_id) ? '<span style="color:#10b981;font-size:11px;font-weight:700;margin-left:4px" title="Result in">✔</span>' : ''))) + (competitionEnded ? portraitFinalistBadge(p) : trophyHtml + portraitFinalistBadge(p) + flagHtml) + (competitionEnded && winningsMap[p.player_id] ? '<span style="font-weight:700;color:var(--gold);margin-left:6px">(£' + (winningsMap[p.player_id] % 1 === 0 ? winningsMap[p.player_id] : winningsMap[p.player_id].toFixed(2)) + ')</span>' : '') + '</td>' +
+            '<td class="player-name"><a ' + playerLinkAttrs(p.slug) + '><span class="portrait-only">' + (p.display_name || shortName(p.name)) + '</span><span class="landscape-only">' + (p.name || '?') + '</span></a>' + (competitionEnded ? '' : (p.is_eliminated ? '<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:4px">✕</span>' : (noPicksLeft ? '<span style="color:var(--red);font-size:11px;font-weight:700;margin-left:4px" title="No unused teams left — no pick available next round">✕</span>' : (isKnockout && resultInThisRound.has(p.player_id) ? '<span style="color:#10b981;font-size:11px;font-weight:700;margin-left:4px" title="Result in">✔</span>' : '')))) + (competitionEnded ? portraitFinalistBadge(p) : trophyHtml + portraitFinalistBadge(p) + flagHtml) + (competitionEnded && winningsMap[p.player_id] ? '<span style="font-weight:700;color:var(--gold);margin-left:6px">(£' + (winningsMap[p.player_id] % 1 === 0 ? winningsMap[p.player_id] : winningsMap[p.player_id].toFixed(2)) + ')</span>' : '') + '</td>' +
             '<td style="color:var(--text-muted);text-align:center" class="col-pld' + (isKnockout ? ' hide-portrait-ko' : '') + '">' + effPld(p) + '</td>' +
             (liveMode
               ? '<td class="points tight-col"><span class="pts-num">' + effPts(p) + '</span><span class="pts-zap">' + ((liveByPlayer[p.player_id] && liveByPlayer[p.player_id].delta > 0) ? '⚡' : '') + '</span></td>'
@@ -1850,7 +1865,7 @@
         const finalBanner = document.getElementById('final-table-banner');
         if (finalBanner) finalBanner.style.display = competitionEnded ? '' : 'none';
 
-        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, woodenSpoonPlayers, lastManStandingPlayers, throughPlayers, competitionEnded, allTeams, posMap, currentRound };
+        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, woodenSpoonPlayers, lastManStandingPlayers, throughPlayers, competitionEnded, allTeams, posMap, currentRound, pensWinnerByTeamRound };
         if (document.getElementById('view-picks').classList.contains('active'))  renderPicksView();
         if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
         if (document.getElementById('view-fallen').classList.contains('active')) renderFallenView();
@@ -2743,36 +2758,77 @@
         }
       }
 
-      // 2b. Replicate the live leaderboard's advancement bonus: a player who wins
-      // their current-round pick (and still has teams left to pick from) is treated
-      // as having reached one round further than their static furthestMap value —
-      // otherwise a simulated win never shows up in the furthest-round tiebreak.
+      // 2b. Work out the state of the pool AFTER this scenario, then who's left standing.
       const currentSO = currentRound ? currentRound.sort_order : 0;
       const alivePoolTeams = (_leaderboardData.allTeams || []).filter(t => !t.is_eliminated);
+
       const usedByPlayerSim = {};
       (_leaderboardData.teamsUsed || []).forEach(r => {
         if (!usedByPlayerSim[r.player_id]) usedByPlayerSim[r.player_id] = new Set();
         usedByPlayerSim[r.player_id].add(r.team_id);
       });
+      // This round's pick is spent whether or not it has a result yet — make sure it
+      // counts as used, otherwise we'd offer players a team they've already burned.
+      roundPicks.forEach(pick => {
+        if (!usedByPlayerSim[pick.player_id]) usedByPlayerSim[pick.player_id] = new Set();
+        usedByPlayerSim[pick.player_id].add(pick.team_id);
+      });
+
+      // Teams knocked out of the tournament by this scenario.
+      const simDeadTeams = new Set();
+      if (isKOSim) {
+        for (const [matchId, sc] of Object.entries(simScores)) {
+          const { home, away } = matchTeams[matchId];
+          if (sc.home > sc.away)      simDeadTeams.add(away);
+          else if (sc.away > sc.home) simDeadTeams.add(home);
+          else if (_whatifPens[matchId]) {
+            simDeadTeams.add(_whatifPens[matchId] === home ? away : home);
+          }
+        }
+      }
+      const simAlivePool = alivePoolTeams.filter(t => !simDeadTeams.has(t.id));
+
+      // Is there another round to pick in at all? (3rd Place isn't picked.)
+      const hasNextRound = (_leaderboardData.rounds || [])
+        .some(r => r.name !== '3rd Place' && r.sort_order > currentSO);
+
+      // Out of teams: survived the round, but every remaining team is either already
+      // used or knocked out. No legal pick next round — eliminated.
+      const simNoTeamsLeft = new Set();
+      if (isKOSim && hasNextRound) {
+        realPlayers.forEach(p => {
+          if (p.is_eliminated || simEliminated.has(p.player_id)) return; // already out
+          const used = usedByPlayerSim[p.player_id] || new Set();
+          if (!simAlivePool.some(t => !used.has(t.id))) simNoTeamsLeft.add(p.player_id);
+        });
+      }
+
+      // Advancement bonus: a player who wins their pick AND can still field a team next
+      // round is treated as having reached one round further, so a simulated win shows
+      // up in the furthest-round tiebreak. Anyone out of teams gets no bonus.
+      const hasFuture = (playerId) => {
+        if (!hasNextRound) return true; // final round — nothing left to pick, don't penalise
+        const used = usedByPlayerSim[playerId] || new Set();
+        return simAlivePool.some(t => !used.has(t.id));
+      };
       const wonCurrentRoundSim = new Set();
-      // Real, already-confirmed wins (mirrors production's wonCurrentRound) —
-      // covers players like Anita whose match is already over and therefore
-      // never appears in simScores/playerPickOutcomes at all.
+      // Real, already-confirmed results (mirrors production's wonCurrentRound) —
+      // covers players whose match is already over and therefore never appears
+      // in simScores/playerPickOutcomes. A shootout is stored as match_result
+      // 'draw' with matches.pens_winner_id, so a pens survivor has advanced too.
       roundPicks.forEach(pick => {
         const res = pick.pick_results && pick.pick_results[0];
-        if (res && res.match_result === 'win') {
-          const used = usedByPlayerSim[pick.player_id] || new Set();
-          const hasTeamsLeft = alivePoolTeams.some(t => !used.has(t.id));
-          if (hasTeamsLeft) wonCurrentRoundSim.add(pick.player_id);
-        }
+        if (!res || !res.match_result) return;
+        const pensWinner = (_leaderboardData.pensWinnerByTeamRound || {})[pick.team_id + '|' + pick.round_id] || null;
+        const advanced = res.match_result === 'win' ||
+                         (res.match_result === 'draw' && pensWinner && pensWinner === pick.team_id);
+        if (advanced && hasFuture(pick.player_id)) wonCurrentRoundSim.add(pick.player_id);
       });
-      // Simulated wins from the "what if" scenario being tested right now.
+      // Simulated results. Winning a shootout advances you as surely as winning in 90 —
+      // without this a pens survivor ties with the player they just knocked out.
       Object.entries(playerPickOutcomes).forEach(([playerId, outcomes]) => {
-        if (outcomes.some(o => o.outcome === 'win')) {
-          const used = usedByPlayerSim[playerId] || new Set();
-          const hasTeamsLeft = alivePoolTeams.some(t => !used.has(t.id));
-          if (hasTeamsLeft) wonCurrentRoundSim.add(playerId);
-        }
+        const advanced = outcomes.some(o => o.outcome === 'win' || o.wonPens);
+        if (advanced && hasFuture(playerId)) wonCurrentRoundSim.add(playerId);
       });
       function effFurthest(p) {
         if (p.is_eliminated) return furthestMap[p.player_id] || 0;
@@ -2823,9 +2879,18 @@
         '<th style="text-align:center; padding:6px 8px; color:var(--text-muted); font-size:11px; width:36px">#</th>' +
         '<th style="text-align:center; padding:6px 4px; color:var(--text-muted); font-size:11px; width:40px">Δ</th>' +
         '<th style="text-align:left; padding:6px 8px; color:var(--text-muted); font-size:11px">Player</th>' +
+        '<th style="text-align:center; padding:6px 8px; color:var(--text-muted); font-size:11px; width:44px">Rnd</th>' +
         '<th style="text-align:center; padding:6px 8px; color:var(--text-muted); font-size:11px; width:44px">Pts</th>' +
         '<th style="text-align:center; padding:6px 8px; color:var(--text-muted); font-size:11px; width:44px">GD</th>' +
         '</tr></thead><tbody>';
+
+      // Round-reached labels for the Rnd column.
+      const roundShortBySO = {};
+      (_leaderboardData.rounds || []).forEach(r => { roundShortBySO[r.sort_order] = shortRoundName(r.name); });
+      const maxPickSO = Math.max(...(_leaderboardData.rounds || [])
+        .filter(r => r.name !== '3rd Place').map(r => r.sort_order));
+      // Making a valid pick this round is what puts you in it.
+      const hadPickThisRound = new Set(roundPicks.map(p => p.player_id));
 
       simSorted.forEach((p, i) => {
         const pos      = i + 1;
@@ -2850,16 +2915,36 @@
 
         const nameStr   = p.display_name || shortName(p.name);
         const simOut    = simEliminated.has(p.player_id);
-        const isOut     = p.is_eliminated || simOut;
+        const noTeams   = simNoTeamsLeft.has(p.player_id);
+        const isOut     = p.is_eliminated || simOut || noTeams;
         const elimStyle = isOut ? 'opacity:0.45;' : '';
-        const elimTag   = isOut
-          ? ' <span style="font-size:10px;color:var(--red)"' + (simOut && !p.is_eliminated ? ' title="Knocked out by this scenario"' : '') + '>OUT</span>'
-          : '';
+        let elimTag = '';
+        if (p.is_eliminated) {
+          elimTag = ' <span style="font-size:10px;color:var(--red)">OUT</span>';
+        } else if (simOut) {
+          elimTag = ' <span style="font-size:10px;color:var(--red)" title="Knocked out by this scenario">OUT</span>';
+        } else if (noTeams) {
+          elimTag = ' <span style="font-size:10px;color:var(--red)" title="Survives the round, but has no unused team left to pick next round">OUT — no teams left</span>';
+        }
         const flagsHtml = pickBadges ? ' <span style="font-size:13px;margin-left:4px">' + pickBadges + '</span>' : '';
+
+        // Everyone with a pick this round has reached it, even if this scenario ends them.
+        const reachedSO = Math.max(furthestMap[p.player_id] || 0, hadPickThisRound.has(p.player_id) ? currentSO : 0);
+        let rndHtml = '<span style="color:var(--text-muted)">—</span>';
+        if (isKOSim) {
+          const displaySO = isOut ? reachedSO : Math.min(reachedSO + 1, maxPickSO);
+          const label = roundShortBySO[displaySO];
+          if (label) {
+            const isFinal = !isOut && displaySO === maxPickSO;
+            rndHtml = '<span style="' + (isFinal ? 'color:var(--gold);font-weight:700' : 'color:var(--text-muted)') + '">' + label + '</span>';
+          }
+        }
+
         html += '<tr style="border-bottom:1px solid var(--border);' + elimStyle + '">' +
           '<td style="text-align:center; padding:7px 8px; font-weight:700; color:var(--text-muted)">' + pos + '</td>' +
           '<td style="text-align:center; padding:7px 4px">' + deltaHtml + '</td>' +
           '<td style="padding:7px 8px; font-weight:600">' + nameStr + flagsHtml + elimTag + '</td>' +
+          '<td style="text-align:center; padding:7px 8px; font-size:11px">' + rndHtml + '</td>' +
           '<td style="text-align:center; padding:7px 8px; font-weight:700">' + pts + '</td>' +
           '<td style="text-align:center; padding:7px 8px; color:var(--text-muted)">' + gdStr + '</td>' +
           '</tr>';
