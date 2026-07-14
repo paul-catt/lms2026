@@ -34,13 +34,27 @@ function subtractDays(dateStr: string, n: number): string {
   d.setDate(d.getDate() - n);
   return d.toISOString().split("T")[0];
 }
-function calculateStreak(loggedDates: Set<string>): number {
+function calculateStreak(loggedDates: Set<string>): { count: number; graceUsed: boolean } {
   const today = new Date().toISOString().split("T")[0];
   let start = loggedDates.has(today) ? today : subtractDays(today, 1);
-  if (!loggedDates.has(start)) return 0;
-  let count = 0; let cur = start;
-  while (loggedDates.has(cur)) { count++; cur = subtractDays(cur, 1); }
-  return count;
+  if (!loggedDates.has(start)) return { count: 0, graceUsed: false };
+  let count = 0; let cur = start; let graceUsed = false;
+  while (true) {
+    if (loggedDates.has(cur)) {
+      count++;
+    } else if (!graceUsed) {
+      graceUsed = true; // forgive exactly one missed day per streak
+    } else {
+      break; // a second gap ends the streak
+    }
+    cur = subtractDays(cur, 1);
+  }
+  return { count, graceUsed };
+}
+function daysSince(dateStr: string): number {
+  const a = new Date(dateStr + "T12:00:00").getTime();
+  const b = new Date(new Date().toISOString().split("T")[0] + "T12:00:00").getTime();
+  return Math.round((b - a) / 86400000);
 }
 
 // ── Image resize helper (matches existing manual workflow: 600px max, ~82% JPEG) ─
@@ -57,6 +71,8 @@ function resizeImage(file: File, maxDim = 600, quality = 0.82): Promise<Blob> {
       canvas.width = width; canvas.height = height;
       const ctx = canvas.getContext("2d");
       if (!ctx) { reject(new Error("Canvas context failed")); return; }
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
       ctx.drawImage(img, 0, 0, width, height);
       canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("toBlob failed")), "image/jpeg", quality);
     };
@@ -69,49 +85,6 @@ function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-// ── Duplicate-name matching (used by the "not on the list?" request flow) ──────
-function normalizeName(name: string): string {
-  return name.trim().toLowerCase().replace(/[^a-z\s]/g, "").replace(/\s+/g, " ");
-}
-
-function levenshtein(a: string, b: string): number {
-  const dp: number[][] = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
-  for (let i = 0; i <= a.length; i++) dp[i][0] = i;
-  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
-  for (let i = 1; i <= a.length; i++) {
-    for (let j = 1; j <= b.length; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j - 1], dp[i][j - 1], dp[i - 1][j]);
-    }
-  }
-  return dp[a.length][b.length];
-}
-
-type DuplicateMatch = { name: string; exact: boolean };
-
-// Checks a candidate name against both confirmed birds and existing pending
-// requests. Exact (normalized) matches are unambiguous. Near-matches (typos,
-// minor spelling variants) are flagged but not exact — caller decides whether
-// to hard-block or just warn.
-function findDuplicateBird(input: string, birds: Bird[], pending: PendingBird[]): DuplicateMatch | null {
-  const norm = normalizeName(input);
-  if (!norm) return null;
-
-  const candidates = [...birds.map(b => b.name), ...pending.map(p => p.name)];
-  let bestFuzzy: DuplicateMatch | null = null;
-
-  for (const c of candidates) {
-    const cNorm = normalizeName(c);
-    if (cNorm === norm) return { name: c, exact: true };
-
-    const dist = levenshtein(norm, cNorm);
-    const threshold = Math.max(1, Math.floor(Math.min(norm.length, cNorm.length) * 0.2));
-    if (dist <= threshold && !bestFuzzy) bestFuzzy = { name: c, exact: false };
-  }
-  return bestFuzzy;
-}
-
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const [view, setView]               = useState<"today" | "add" | "history" | "manage">("today");
@@ -121,7 +94,12 @@ export default function App() {
   const [zoomedBird, setZoomedBird]   = useState<AnyBird | null>(null);
   const [saving, setSaving]           = useState(false);
   const [streak, setStreak]           = useState(0);
+  const [streakGraceUsed, setStreakGraceUsed] = useState(false);
   const [heardCounts, setHeardCounts] = useState<Record<string, number>>({});
+  const [heardTimes, setHeardTimes]   = useState<Record<string, string>>({});
+  const [lastHeard, setLastHeard]     = useState<Record<string, string>>({});
+  const [loggedDatesList, setLoggedDatesList] = useState<string[]>([]);
+  const [toast, setToast]             = useState<{ message: string; actionLabel?: string; onAction?: () => void } | null>(null);
   const [session, setSession]         = useState<Session | null>(null);
   const [authReady, setAuthReady]     = useState(false);
   const [birds, setBirds]             = useState<Bird[]>([]);
@@ -131,7 +109,18 @@ export default function App() {
 
   const allPendingRef = useRef<PendingBird[]>([]);
   const touchStartXRef = useRef<number | null>(null);
+  const heardRef = useRef<string[]>([]);
+  const timesRef = useRef<Record<string, string>>({});
+  const saveInFlight = useRef(false);
+  const saveDirty = useRef(false);
+  const toastTimer = useRef<number | null>(null);
   const isAdmin = session?.user?.email === ADMIN_EMAIL;
+
+  function showToast(message: string, actionLabel?: string, onAction?: () => void) {
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    setToast({ message, actionLabel, onAction });
+    toastTimer.current = window.setTimeout(() => setToast(null), 5000);
+  }
 
   // ── Auth ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -150,7 +139,7 @@ export default function App() {
   async function loadFromSupabase() {
     const [birdsRes, logsRes, pendingRes] = await Promise.all([
       supabase.from("birds").select("*").order("name"),
-      supabase.from("logs").select("date, bird_ids").order("date", { ascending: false }),
+      supabase.from("logs").select("date, bird_ids, bird_times").eq("user_id", session!.user.id).order("date", { ascending: false }),
       supabase.from("pending_birds").select("id, name, status, resolved_to"),
     ]);
 
@@ -176,11 +165,16 @@ export default function App() {
     const todayRow = data.find(r => r.date === todayKey);
     const hist: Record<string, string[]> = {};
     const counts: Record<string, number> = {};
+    const lastHeard: Record<string, string> = {};
     const loggedDates = new Set<string>();
     data.forEach(r => {
       if (r.bird_ids?.length > 0) {
         loggedDates.add(r.date);
-        r.bird_ids.forEach((id: string) => { counts[id] = (counts[id] || 0) + 1; });
+        r.bird_ids.forEach((id: string) => {
+          counts[id] = (counts[id] || 0) + 1;
+          // data is date-descending, so the first date we see a bird is its most recent
+          if (!lastHeard[id]) lastHeard[id] = r.date;
+        });
       }
       if (r.date !== todayKey && r.bird_ids?.length > 0) {
         const label = new Date(r.date + "T12:00:00").toLocaleDateString("en-GB", {
@@ -189,10 +183,19 @@ export default function App() {
         hist[label] = r.bird_ids;
       }
     });
-    setHeard(todayRow?.bird_ids ?? []);
+    const todayIds = todayRow?.bird_ids ?? [];
+    const todayTimes = (todayRow?.bird_times as Record<string, string>) ?? {};
+    heardRef.current = todayIds;
+    timesRef.current = todayTimes;
+    setHeard(todayIds);
+    setHeardTimes(todayTimes);
     setHistory(hist);
     setHeardCounts(counts);
-    setStreak(calculateStreak(loggedDates));
+    setLastHeard(lastHeard);
+    setLoggedDatesList([...loggedDates].sort().reverse());
+    const { count, graceUsed } = calculateStreak(loggedDates);
+    setStreak(count);
+    setStreakGraceUsed(graceUsed);
   }
 
   function getAnyBird(id: string): AnyBird | undefined {
@@ -204,25 +207,53 @@ export default function App() {
     return pending;
   }
 
-  async function toggleBird(id: string) {
-    const next = heard.includes(id) ? heard.filter(b => b !== id) : [...heard, id];
-    setHeard(next);
+  // Serialized writer: only one upsert in flight at a time; if more toggles
+  // land while saving, we re-save the latest state once the current save ends.
+  // This prevents rapid taps from clobbering each other (lost-update race).
+  async function persistToday() {
+    if (saveInFlight.current) { saveDirty.current = true; return; }
+    saveInFlight.current = true;
     setSaving(true);
-    await supabase.from("logs").upsert(
-      { date: todayKey, bird_ids: next, user_id: session!.user.id },
-      { onConflict: "date,user_id" }
-    );
-    setSaving(false);
+    try {
+      do {
+        saveDirty.current = false;
+        const { error } = await supabase.from("logs").upsert(
+          { date: todayKey, bird_ids: heardRef.current, bird_times: timesRef.current, user_id: session!.user.id },
+          { onConflict: "date,user_id" }
+        );
+        if (error) {
+          console.error("Save error:", error);
+          showToast("Couldn't save — check your connection");
+          await loadFromSupabase(); // resync to server truth after a failed write
+          break;
+        }
+      } while (saveDirty.current);
+    } finally {
+      saveInFlight.current = false;
+      setSaving(false);
+    }
   }
 
-  async function requestBird(name: string): Promise<{ blocked: DuplicateMatch } | void> {
-    // Re-check against current state at submit time, not just at keystroke time —
-    // closes most of the window where two people request the same bird almost
-    // simultaneously. Doesn't eliminate it (that needs a DB constraint — see
-    // the unique index note), but this is the last checkpoint before the insert.
-    const dup = findDuplicateBird(name, birds, allPendingRef.current);
-    if (dup?.exact) return { blocked: dup };
+  function toggleBird(id: string) {
+    const wasOn = heardRef.current.includes(id);
+    const next = wasOn ? heardRef.current.filter(b => b !== id) : [...heardRef.current, id];
+    const nextTimes = { ...timesRef.current };
+    if (wasOn) { delete nextTimes[id]; }
+    else if (!nextTimes[id]) { nextTimes[id] = new Date().toISOString(); }
 
+    heardRef.current = next;
+    timesRef.current = nextTimes;
+    setHeard(next);
+    setHeardTimes(nextTimes);
+
+    if (wasOn) {
+      const b = getAnyBird(id);
+      showToast(`Removed ${b?.name ?? "bird"}`, "Undo", () => toggleBird(id));
+    }
+    persistToday();
+  }
+
+  async function requestBird(name: string) {
     const { data, error } = await supabase
       .from("pending_birds")
       .insert({ name: name.trim(), requested_by: session!.user.id, status: "pending" })
@@ -269,6 +300,30 @@ export default function App() {
     await loadFromSupabase();
   }
 
+  // ── Replace the image on an already-resolved bird (admin only) ────────────
+  async function replaceImage(birdId: string, file: File) {
+    const resized = await resizeImage(file);
+    const path = `${birdId}.jpg`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from("birds")
+      .upload(path, resized, { upsert: true, contentType: "image/jpeg" });
+    if (uploadErr) { console.error("Upload error:", uploadErr); throw new Error(`[image upload] ${uploadErr.message}`); }
+
+    const { data: pub } = supabase.storage.from("birds").getPublicUrl(path);
+    // Cache-bust: the filename/URL doesn't change on upsert, so without this
+    // query param, browsers (and Supabase's CDN) may keep serving the old image.
+    const imageUrl = `${pub.publicUrl}?v=${Date.now()}`;
+
+    const { error: updateErr } = await supabase
+      .from("birds")
+      .update({ image_url: imageUrl })
+      .eq("id", birdId);
+    if (updateErr) { console.error("Bird update error:", updateErr); throw new Error(`[bird update] ${updateErr.message}`); }
+
+    await loadFromSupabase();
+  }
+
   // ── Remove a pending bird request (admin only) ────────────────────────────
   async function removePendingBird(id: string) {
     const { error } = await supabase.from("pending_birds").delete().eq("id", id);
@@ -278,6 +333,24 @@ export default function App() {
   }
 
   const selectedBirds = heard.map(getAnyBird).filter(Boolean) as AnyBird[];
+
+  // ── Derived summary + insights (U5/U6/U7) ─────────────────────────────────
+  const todayLogged = heard.length > 0;
+  const summary = (() => {
+    const ym = todayKey.slice(0, 7); // YYYY-MM
+    const mornings = loggedDatesList.length;
+    const thisMonth = loggedDatesList.filter(d => d.startsWith(ym)).length;
+    const species = Object.keys(heardCounts).length;
+    let topId = ""; let topN = 0;
+    for (const [id, n] of Object.entries(heardCounts)) if (n > topN) { topN = n; topId = id; }
+    const topBird = topId ? birds.find(b => b.id === topId) : undefined;
+    return { mornings, thisMonth, species, topBird, topN };
+  })();
+  const quietBirds = birds
+    .map(b => ({ bird: b, last: lastHeard[b.id] }))
+    .filter(x => x.last && daysSince(x.last) >= 14)
+    .sort((a, b) => daysSince(b.last!) - daysSince(a.last!))
+    .slice(0, 4);
 
   // ── Auth guard ────────────────────────────────────────────────────────────
   if (!authReady) return <div style={s.shell} />;
@@ -317,6 +390,11 @@ export default function App() {
         {streak > 0 && view === "today" && !historyDay && (
           <div style={s.headerStreak}>· {streak} day streak ·</div>
         )}
+        {streak > 0 && streakGraceUsed && !todayLogged && view === "today" && !historyDay && (
+          <div style={{ fontSize: 8, color: "#a05a2c", letterSpacing: "1px", marginTop: 3 }}>
+            grace day used — log today to keep your streak
+          </div>
+        )}
         <div style={{ fontSize: 8, color: "#8a7a62", letterSpacing: "1px", marginTop: 2, visibility: saving ? "visible" : "hidden" }}>saving…</div>
       </header>
 
@@ -336,7 +414,7 @@ export default function App() {
           />
         )}
         {view === "history" && !historyDay && (
-          <HistoryList history={history} getAnyBird={getAnyBird} onSelect={d => setHistoryDay(d)} />
+          <HistoryList history={history} getAnyBird={getAnyBird} onSelect={d => setHistoryDay(d)} summary={summary} quietBirds={quietBirds} />
         )}
         {view === "history" && historyDay && (
           <div onTouchStart={onHistoryTouchStart} onTouchEnd={onHistoryTouchEnd}>
@@ -348,7 +426,7 @@ export default function App() {
           </div>
         )}
         {view === "manage" && isAdmin && (
-          <ManagePanel pendingBirds={pendingBirds} onResolve={resolvePendingBird} onRemove={removePendingBird} onDone={() => navTo("today")} />
+          <ManagePanel pendingBirds={pendingBirds} birds={birds} onResolve={resolvePendingBird} onRemove={removePendingBird} onReplaceImage={replaceImage} onDone={() => navTo("today")} />
         )}
       </main>
 
@@ -403,6 +481,23 @@ export default function App() {
                   <span style={{ fontWeight: "bold", letterSpacing: "1px", textTransform: "uppercase", fontSize: 8 }}>Did you know · </span>
                   {zoomedBird.fact}
                 </div>
+                {(() => {
+                  const t = heardTimes[zoomedBird.id];
+                  const count = heardCounts[zoomedBird.id] || 0;
+                  const last = lastHeard[zoomedBird.id];
+                  const lastLabel = last
+                    ? (daysSince(last) === 0 ? "today" : new Date(last + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" }))
+                    : null;
+                  const timeLabel = t ? new Date(t).toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit" }) : null;
+                  if (!count && !timeLabel) return null;
+                  return (
+                    <div style={{ fontSize: 9, color: "#8a7a62", fontFamily: "Georgia,serif", letterSpacing: "0.5px", textAlign: "center", marginTop: 10 }}>
+                      {timeLabel && <span>Heard at {timeLabel}</span>}
+                      {timeLabel && count > 0 && <span> · </span>}
+                      {count > 0 && <span>{count}× total{lastLabel && daysSince(last!) > 0 ? ` · last ${lastLabel}` : ""}</span>}
+                    </div>
+                  );
+                })()}
                 <BirdAudio latin={zoomedBird.latin} />
               </>
             )}
@@ -412,12 +507,32 @@ export default function App() {
 
       {/* ── Request bird modal ────────────────────────────────────────────── */}
       {showRequest && (
-        <RequestBirdModal
-          onSubmit={requestBird}
-          onClose={() => setShowRequest(false)}
-          birds={birds}
-          pendingBirds={pendingBirds}
-        />
+        <RequestBirdModal onSubmit={requestBird} onClose={() => setShowRequest(false)} />
+      )}
+
+      {/* ── Toast / snackbar (undo + error surfacing) ─────────────────────── */}
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: 64, left: "50%", transform: "translateX(-50%)",
+          width: "calc(100% - 32px)", maxWidth: 388, zIndex: 1100,
+          background: "#2c2416", color: "#f0ead8", padding: "12px 14px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          fontFamily: "Georgia,serif", fontSize: 12, letterSpacing: "0.5px",
+          boxShadow: "0 3px 12px rgba(0,0,0,0.3)",
+        }}>
+          <span style={{ flex: 1 }}>{toast.message}</span>
+          {toast.actionLabel && (
+            <button
+              onClick={() => { toast.onAction?.(); setToast(null); }}
+              style={{
+                background: "none", border: "none", color: "#e0b878",
+                fontFamily: "Georgia,serif", fontSize: 11, letterSpacing: "1.5px",
+                textTransform: "uppercase", cursor: "pointer", marginLeft: 12, flexShrink: 0,
+              }}>
+              {toast.actionLabel}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -508,39 +623,15 @@ function LoginScreen() {
 }
 
 // ── Request bird modal ────────────────────────────────────────────────────────
-function RequestBirdModal({
-  onSubmit, onClose, birds, pendingBirds,
-}: {
-  onSubmit: (name: string) => Promise<{ blocked: DuplicateMatch } | void>;
-  onClose: () => void;
-  birds: Bird[];
-  pendingBirds: PendingBird[];
-}) {
-  const [name, setName]         = useState("");
-  const [loading, setLoading]   = useState(false);
-  const [forceAdd, setForceAdd] = useState(false); // user dismissed a fuzzy warning once
-
-  const match = findDuplicateBird(name, birds, pendingBirds);
-  // Any edit after a fuzzy override should re-arm the warning.
-  const effectiveMatch = forceAdd ? (match?.exact ? match : null) : match;
-
-  function handleNameChange(v: string) {
-    setName(v);
-    setForceAdd(false);
-  }
+function RequestBirdModal({ onSubmit, onClose }: { onSubmit: (name: string) => Promise<void>; onClose: () => void }) {
+  const [name, setName]       = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handle() {
     if (!name.trim() || loading) return;
-    if (effectiveMatch?.exact) return; // hard block, shouldn't reach here anyway
-    if (effectiveMatch && !forceAdd) { setForceAdd(true); return; } // first Enter/click just surfaces the warning
-
     setLoading(true);
-    const result = await onSubmit(name.trim());
+    await onSubmit(name.trim());
     setLoading(false);
-    if (result?.blocked) {
-      // Someone else's request landed between our check and the insert.
-      setForceAdd(false);
-    }
   }
 
   return (
@@ -553,21 +644,14 @@ function RequestBirdModal({
         </div>
         <input
           autoFocus type="text" value={name}
-          onChange={e => handleNameChange(e.target.value)}
+          onChange={e => setName(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handle()}
           placeholder="e.g. Pied Wagtail"
-          style={{ width: "100%", padding: "12px 14px", marginBottom: effectiveMatch ? 8 : 14, border: `1px solid ${effectiveMatch?.exact ? "#a05a2c" : "#c8b99a"}`, background: "#faf6ec", fontFamily: "Georgia,serif", fontSize: 13, color: "#2c2416", boxSizing: "border-box", outline: "none" }}
+          style={{ width: "100%", padding: "12px 14px", marginBottom: 14, border: "1px solid #c8b99a", background: "#faf6ec", fontFamily: "Georgia,serif", fontSize: 13, color: "#2c2416", boxSizing: "border-box", outline: "none" }}
         />
-        {effectiveMatch && (
-          <div style={{ fontSize: 10.5, color: "#a05a2c", lineHeight: "1.6", marginBottom: 14, fontFamily: "Georgia,serif", fontStyle: "italic" }}>
-            {effectiveMatch.exact
-              ? `"${effectiveMatch.name}" is already on the list.`
-              : `Close to an existing entry: "${effectiveMatch.name}". Tap Add again to add it anyway.`}
-          </div>
-        )}
-        <button onClick={handle} disabled={loading || !name.trim() || !!effectiveMatch?.exact}
-          style={{ width: "100%", padding: "13px", background: "#2c2416", color: "#f0ead8", border: "none", fontFamily: "Georgia,serif", fontSize: 11, letterSpacing: "2px", cursor: loading ? "default" : "pointer", opacity: loading || !name.trim() || effectiveMatch?.exact ? 0.6 : 1 }}>
-          {loading ? "ADDING…" : effectiveMatch && !forceAdd ? "ADD ANYWAY?" : "ADD TO LIST"}
+        <button onClick={handle} disabled={loading || !name.trim()}
+          style={{ width: "100%", padding: "13px", background: "#2c2416", color: "#f0ead8", border: "none", fontFamily: "Georgia,serif", fontSize: 11, letterSpacing: "2px", cursor: loading ? "default" : "pointer", opacity: loading || !name.trim() ? 0.6 : 1 }}>
+          {loading ? "ADDING…" : "ADD TO LIST"}
         </button>
       </div>
     </div>
@@ -576,11 +660,13 @@ function RequestBirdModal({
 
 // ── Admin: manage / resolve pending birds ─────────────────────────────────────
 function ManagePanel({
-  pendingBirds, onResolve, onRemove, onDone,
+  pendingBirds, birds, onResolve, onRemove, onReplaceImage, onDone,
 }: {
   pendingBirds: PendingBird[];
+  birds: Bird[];
   onResolve: (opts: { pendingId: string; name: string; latin: string; color: string; description: string; fact: string; facingRight: boolean; file: File }) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
+  onReplaceImage: (birdId: string, file: File) => Promise<void>;
   onDone: () => void;
 }) {
   const [resolving, setResolving]     = useState<PendingBird | null>(null);
@@ -658,6 +744,67 @@ function ManagePanel({
       {resolving && (
         <ResolveBirdModal pending={resolving} onResolve={onResolve} onClose={() => setResolving(null)} />
       )}
+
+      <div style={{ ...s.selectorHeader, marginTop: 24 }}>
+        <span>Replace an image</span>
+      </div>
+      <div style={{ padding: "10px 0" }}>
+        {birds.map(b => (
+          <ReplaceImageRow key={b.id} bird={b} onReplaceImage={onReplaceImage} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Admin: replace the image on an already-resolved bird ──────────────────────
+function ReplaceImageRow({
+  bird, onReplaceImage,
+}: {
+  bird: Bird;
+  onReplaceImage: (birdId: string, file: File) => Promise<void>;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [status, setStatus] = useState<"idle" | "uploading" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow picking the same file again later
+    if (!file) return;
+    setStatus("uploading"); setError(null);
+    try {
+      await onReplaceImage(bird.id, file);
+      setStatus("idle");
+    } catch (err: any) {
+      setStatus("error");
+      setError(err?.message || "Upload failed");
+    }
+  }
+
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "10px 14px", background: "#f0e8d4", border: "1px solid #d4c5a6",
+      marginBottom: 6, fontFamily: "Georgia,serif",
+    }}>
+      <span style={{ fontSize: 13, color: "#2c2416", flex: 1 }}>{bird.name}</span>
+      {status === "error" && (
+        <span style={{ fontSize: 9, color: "#a05a2c", letterSpacing: "0.5px", marginRight: 10 }}>{error}</span>
+      )}
+      <span
+        onClick={() => status !== "uploading" && inputRef.current?.click()}
+        style={{
+          fontSize: 10, letterSpacing: "1px", color: status === "uploading" ? "#c8b99a" : "#8a7a62",
+          cursor: status === "uploading" ? "default" : "pointer", flexShrink: 0,
+        }}
+      >
+        {status === "uploading" ? "UPLOADING…" : "REPLACE IMAGE →"}
+      </span>
+      <input
+        ref={inputRef} type="file" accept="image/*" onChange={handleFile}
+        style={{ display: "none" }}
+      />
     </div>
   );
 }
@@ -681,6 +828,7 @@ function ResolveBirdModal({
   const [error, setError]             = useState<string | null>(null);
   const [pasteText, setPasteText]     = useState("");
   const [parseOk, setParseOk]         = useState<boolean | null>(null);
+  const [autoResolving, setAutoResolving] = useState(false);
   const pasteBoxRef = useRef<HTMLDivElement>(null);
 
   function handleFile(f: File | null) {
@@ -744,6 +892,32 @@ function ResolveBirdModal({
     }
   }
 
+  async function handleAutoResolve() {
+    if (!name.trim()) {
+      setError("Enter a bird name first.");
+      return;
+    }
+    setAutoResolving(true);
+    setError(null);
+    try {
+      const res = await fetch("/.netlify/functions/resolve-bird", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ birdName: name.trim() }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Request failed (${res.status})`);
+      }
+      const { text } = await res.json();
+      handlePasteParse(text);
+    } catch (e: any) {
+      setError(`Auto-resolve failed: ${e?.message || e}`);
+    } finally {
+      setAutoResolving(false);
+    }
+  }
+
   async function handleSubmit() {
     if (!name.trim() || !latin.trim() || !description.trim() || !fact.trim() || !file) {
       setError("All fields and an image are required.");
@@ -770,9 +944,24 @@ function ResolveBirdModal({
         <button onClick={onClose} style={s.zoomClose}>×</button>
         <div style={{ ...s.zoomName, marginBottom: 16 }}>Resolve Bird</div>
 
-        <label style={labelStyle}>Paste from Claude</label>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <label style={labelStyle}>Paste from Claude</label>
+          <button
+            onClick={handleAutoResolve}
+            disabled={autoResolving || !name.trim()}
+            style={{
+              fontSize: 9, letterSpacing: "1px", textTransform: "uppercase",
+              padding: "4px 10px", border: "1px solid #8a7a62",
+              background: autoResolving ? "#e8dfc9" : "#faf6ec",
+              color: "#5a4d38", cursor: autoResolving || !name.trim() ? "default" : "pointer",
+              fontFamily: "Georgia,serif",
+            }}
+          >
+            {autoResolving ? "Asking Claude…" : "Auto-resolve"}
+          </button>
+        </div>
         <div style={{ fontSize: 10, color: "#8a7a62", lineHeight: "1.5", marginBottom: 6, fontFamily: "Georgia,serif" }}>
-          Ask Claude for the Latin name, description and fact, then paste the whole reply here — it'll fill in the fields below.
+          Ask Claude for the Latin name, description and fact, then paste the whole reply here — or tap Auto-resolve to fetch it automatically — it'll fill in the fields below.
         </div>
         <textarea
           value={pasteText}
@@ -930,22 +1119,31 @@ function BirdAudio({ latin }: { latin: string }) {
 }
 
 // ── Montage canvas ────────────────────────────────────────────────────────────
-// html-to-image serializes the DOM synchronously. If an <img> inside the
-// capture target hasn't finished loading yet — common right after mount, and
-// especially on iOS Safari where decode timing is unpredictable — that tile
-// exports as a blank box even though it renders fine on screen a moment
-// later. Wait for every image to actually load (or fail) before capturing.
-async function waitForImages(container: HTMLElement): Promise<void> {
-  const imgs = Array.from(container.querySelectorAll("img"));
-  await Promise.all(imgs.map(img => {
-    if (img.complete && img.naturalWidth !== 0) return Promise.resolve();
-    return new Promise<void>(resolve => {
-      img.addEventListener("load", () => resolve(), { once: true });
-      img.addEventListener("error", () => resolve(), { once: true }); // don't hang the export on one broken image
-    });
-  }));
-  // Loaded doesn't always mean painted yet on iOS Safari — give it one more frame.
-  await new Promise(r => requestAnimationFrame(() => r(null)));
+
+// Cache of proxied-URL -> data URI, so repeat shares don't re-download.
+const dataUrlCache = new Map<string, string>();
+
+async function toDataUrl(url: string): Promise<string> {
+  const hit = dataUrlCache.get(url);
+  if (hit) return hit;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`image fetch failed: ${url} (${res.status})`);
+
+  const raw = await res.blob();
+  // Force a sane MIME type — the proxy doesn't always set one, and a data URI
+  // with the wrong type won't paint.
+  const blob = raw.type.startsWith("image/") ? raw : new Blob([raw], { type: "image/jpeg" });
+
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload  = () => resolve(fr.result as string);
+    fr.onerror = () => reject(fr.error ?? new Error("FileReader failed"));
+    fr.readAsDataURL(blob);
+  });
+
+  dataUrlCache.set(url, dataUrl);
+  return dataUrl;
 }
 
 function MontageView({ birds, onAdd, onZoom }: { birds: AnyBird[]; onAdd?: () => void; onZoom?: (b: AnyBird) => void }) {
@@ -963,11 +1161,30 @@ function MontageView({ birds, onAdd, onZoom }: { birds: AnyBird[]; onAdd?: () =>
   }, [birds.length]);
 
   async function handleShare() {
-    if (!containerRef.current || sharing) return;
+    const node = containerRef.current;
+    if (!node || sharing) return;
     setSharing(true);
+
+    const imgs      = Array.from(node.querySelectorAll("img"));
+    const originals = imgs.map(el => el.getAttribute("src") ?? "");
+
     try {
-      await waitForImages(containerRef.current);
-      const dataUrl = await toPng(containerRef.current, { pixelRatio: 2, backgroundColor: "#f5edd8", cacheBust: true });
+      // Inline every image as a data URI *before* capture, so html-to-image
+      // never runs its own fetch/inline path (which duplicates images on
+      // desktop and blanks them entirely on iOS).
+      await Promise.all(imgs.map(async (el, i) => {
+        const src = originals[i];
+        if (!src || src.startsWith("data:")) return;
+        el.setAttribute("src", await toDataUrl(src));
+        try { await el.decode(); } catch { /* decode is best-effort */ }
+      }));
+
+      const dataUrl = await toPng(node, {
+        pixelRatio: 2,
+        backgroundColor: "#f5edd8",
+        cacheBust: false, // no longer needed — nothing left for it to fetch
+      });
+
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const file = new File([blob], "heard-today.png", { type: "image/png" });
@@ -983,6 +1200,7 @@ function MontageView({ birds, onAdd, onZoom }: { birds: AnyBird[]; onAdd?: () =>
     } catch (e) {
       console.error("Share failed:", e);
     } finally {
+      imgs.forEach((el, i) => { if (originals[i]) el.setAttribute("src", originals[i]); });
       setSharing(false);
     }
   }
@@ -1118,10 +1336,14 @@ function SelectorView({
   onRequest: () => void;
 }) {
   const allBirds: AnyBird[] = [...birds, ...pendingBirds];
-  const sorted = [...allBirds].sort((a, b) => {
-    const diff = (heardCounts[b.id] || 0) - (heardCounts[a.id] || 0);
-    return diff !== 0 ? diff : a.name.localeCompare(b.name);
-  });
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const sorted = [...allBirds]
+    .filter(b => !q || b.name.toLowerCase().includes(q))
+    .sort((a, b) => {
+      const diff = (heardCounts[b.id] || 0) - (heardCounts[a.id] || 0);
+      return diff !== 0 ? diff : a.name.localeCompare(b.name);
+    });
 
   return (
     <div style={{ paddingBottom: 80 }}>
@@ -1129,6 +1351,16 @@ function SelectorView({
         <span>Which birds did you hear?</span>
         <button onClick={onDone} style={s.doneBtn}>Done</button>
       </div>
+      <input
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Search birds…"
+        style={{
+          width: "100%", padding: "10px 12px", margin: "10px 0 2px",
+          border: "1px solid #c8b99a", background: "#faf6ec", boxSizing: "border-box",
+          fontFamily: "Georgia,serif", fontSize: 14, color: "#2c2416", outline: "none",
+        }}
+      />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, padding: "10px 0" }}>
         {sorted.map(bird => {
           const on      = selected.includes(bird.id);
@@ -1180,24 +1412,62 @@ function SelectorView({
 }
 
 // ── History list ──────────────────────────────────────────────────────────────
+const statCard: React.CSSProperties = { background: "#ede5d0", border: "1px solid #c8b99a", padding: "10px 12px", textAlign: "center" };
+const statNum: React.CSSProperties = { fontSize: 20, fontWeight: "bold", color: "#2c2416", fontFamily: "Georgia,serif", lineHeight: "1.2" };
+const statLabel: React.CSSProperties = { fontSize: 8, letterSpacing: "1px", color: "#8a7a62", textTransform: "uppercase", marginTop: 3 };
 function HistoryList({
-  history, getAnyBird, onSelect,
+  history, getAnyBird, onSelect, summary, quietBirds,
 }: {
   history: Record<string, string[]>;
   getAnyBird: (id: string) => AnyBird | undefined;
   onSelect: (date: string) => void;
+  summary: { mornings: number; thisMonth: number; species: number; topBird?: Bird; topN: number };
+  quietBirds: { bird: Bird; last?: string }[];
 }) {
   const entries = Object.entries(history);
+  const hasData = summary.mornings > 0;
+
+  const StatBlock = (
+    <>
+      {hasData && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+          <div style={statCard}><div style={statNum}>{summary.mornings}</div><div style={statLabel}>mornings logged</div></div>
+          <div style={statCard}><div style={statNum}>{summary.species}</div><div style={statLabel}>species heard</div></div>
+          <div style={statCard}><div style={statNum}>{summary.thisMonth}</div><div style={statLabel}>this month</div></div>
+          <div style={statCard}>
+            <div style={{ ...statNum, fontSize: 13, letterSpacing: "0.5px" }}>{summary.topBird?.name ?? "—"}</div>
+            <div style={statLabel}>most heard{summary.topN ? ` · ${summary.topN}×` : ""}</div>
+          </div>
+        </div>
+      )}
+      {quietBirds.length > 0 && (
+        <div style={{ background: "#ede5d0", border: "1px dashed #b8a98a", padding: 12, marginBottom: 14 }}>
+          <div style={{ fontSize: 9, letterSpacing: "2px", color: "#8a7a62", textTransform: "uppercase", marginBottom: 8 }}>Quiet lately</div>
+          {quietBirds.map(({ bird, last }) => (
+            <div key={bird.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontFamily: "Georgia,serif", fontSize: 12, color: "#2c2416", padding: "3px 0" }}>
+              <span>{bird.name}</span>
+              <span style={{ fontSize: 10, color: "#8a7a62" }}>{last ? `${daysSince(last)} days ago` : ""}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
   if (!entries.length) {
     return (
-      <div style={{ ...s.empty, minHeight: "50vh" }}>
-        <div style={s.emptyTitle}>No history yet</div>
-        <div style={s.emptySub}>Your previous morning logs will appear here</div>
+      <div style={{ padding: "12px 16px", paddingBottom: 80 }}>
+        {StatBlock}
+        <div style={{ ...s.empty, minHeight: hasData ? "20vh" : "50vh" }}>
+          <div style={s.emptyTitle}>No history yet</div>
+          <div style={s.emptySub}>Your previous morning logs will appear here</div>
+        </div>
       </div>
     );
   }
   return (
     <div style={{ padding: "12px 16px", paddingBottom: 80 }}>
+      {StatBlock}
       <div style={{ ...s.selectorHeader, marginBottom: 12 }}><span>Previous days</span></div>
       {entries.map(([date, ids]) => {
         const birds = ids.map(getAnyBird).filter(Boolean) as AnyBird[];

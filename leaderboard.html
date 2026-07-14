@@ -504,6 +504,7 @@
     let _leaderboardData = null;
     let _whatifMatchData = [];
     let _whatifRoundId   = null;
+    let _whatifPens      = {}; // match_id -> team_id that wins the simulated shootout
 
     // Opponent lookup: team_id|round_id -> opposing team object {name, flag_emoji}
     // Built from all fixtures with teams assigned (scheduled / live / complete).
@@ -1059,23 +1060,21 @@
         }
 
         const currentRound = (() => {
-          // Show the round whose matches are currently being played or most recently played.
-          // Switch to the next round only when its first match has kicked off.
+          // A round becomes "current" once its pick deadline passes (one hour before its
+          // first kickoff). Picks are locked at that point, so the round is live for
+          // display, scoring attribution and the What-If simulator — which would
+          // otherwise sit useless in the gap between rounds.
           const nowMs = now.getTime();
           const sortedRounds = (rounds || []).filter(r => r.sort_order > 0 && r.name !== '3rd Place').sort((a, b) => a.sort_order - b.sort_order);
-          // Find the first round whose first match hasn't kicked off yet
+          if (!sortedRounds.length) return null;
+          // Last round whose deadline has passed
+          let current = null;
           for (const r of sortedRounds) {
-            const roundMatches = (firstMatchData || []).filter(m => m.round_id === r.id);
-            if (roundMatches.length === 0) continue;
-            const firstKickoff = Math.min(...roundMatches.map(m => new Date(m.kickoff).getTime()));
-            if (firstKickoff > nowMs) {
-              // This round hasn't started — so current round is the previous one
-              const idx = sortedRounds.indexOf(r);
-              return idx > 0 ? sortedRounds[idx - 1] : r;
-            }
+            if (!r.deadline) continue;
+            if (new Date(r.deadline).getTime() <= nowMs) current = r;
           }
-          // All rounds have started — return the last one
-          return sortedRounds[sortedRounds.length - 1] || null;
+          // Nothing locked yet — fall back to the first round
+          return current || sortedRounds[0];
         })();
         const isKnockout      = currentRound && currentRound.round_type === 'knockout';
         const completedRounds = (rounds || []).filter(r => r.is_complete).sort((a,b) => b.sort_order - a.sort_order);
@@ -2529,6 +2528,7 @@
       runWrap.style.display = 'none';
       msg.textContent = '';
       _whatifRoundId = roundId;
+      _whatifPens = {};
 
       const { data: matches } = await db.from('matches')
         .select('id, kickoff, round_id, home_team_id, away_team_id, is_third_place, home_team:teams!matches_home_team_id_fkey(id, name, flag_emoji, is_longshot), away_team:teams!matches_away_team_id_fkey(id, name, flag_emoji, is_longshot)')
@@ -2548,6 +2548,8 @@
 
       let html = '<div class="table-wrap"><table style="font-size:13px; width:100%; table-layout:fixed"><thead><tr><th class="left" style="width:auto">Match</th><th style="width:58px; text-align:center">H</th><th style="width:58px; text-align:center">A</th></tr></thead><tbody>';
 
+      const isKORound = _leaderboardData.currentRound.round_type === 'knockout';
+
       pending.forEach(m => {
         const ko   = new Date(m.kickoff).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
         const date = new Date(m.kickoff).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
@@ -2558,15 +2560,35 @@
           '</td>' +
           '<td style="text-align:center; padding:4px 2px">' +
             '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="whatif-score-input" id="whatif-h-' + m.id + '" placeholder="—" ' +
-            'onfocus="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')" ' +
+            'onfocus="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g,\'\'); updatePensRow(\'' + m.id + '\')" ' +
             'style="width:50px;text-align:center;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 2px;font-size:18px" />' +
           '</td>' +
           '<td style="text-align:center; padding:4px 2px">' +
             '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="whatif-score-input" id="whatif-a-' + m.id + '" placeholder="—" ' +
-            'onfocus="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')" ' +
+            'onfocus="this.select()" oninput="this.value=this.value.replace(/[^0-9]/g,\'\'); updatePensRow(\'' + m.id + '\')" ' +
             'style="width:50px;text-align:center;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 2px;font-size:18px" />' +
           '</td>' +
           '</tr>';
+
+        // Knockout draws go to extra time and penalties. Both players score 1pt;
+        // the shootout loser's backers are eliminated. Row appears only on a level score.
+        if (isKORound) {
+          html += '<tr class="whatif-pens-row" id="whatif-pens-row-' + m.id + '" style="display:none">' +
+            '<td colspan="3" style="padding:2px 4px 10px 4px">' +
+              '<div style="border-left:3px solid var(--gold); padding:6px 10px; background:rgba(234,179,8,0.07); border-radius:0 8px 8px 0">' +
+                '<div style="font-size:11px; color:var(--text-muted); margin-bottom:6px">Level after 90 — who wins the shootout?</div>' +
+                '<div style="display:flex; gap:8px; flex-wrap:wrap">' +
+                  '<button type="button" class="whatif-pens-btn" data-match="' + m.id + '" data-team="' + m.home_team_id + '" onclick="setPensWinner(\'' + m.id + '\',\'' + m.home_team_id + '\')" ' +
+                    'style="flex:1; min-width:110px; cursor:pointer; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 6px; font-size:12px; font-weight:600">' +
+                    m.home_team.flag_emoji + ' ' + m.home_team.name + '</button>' +
+                  '<button type="button" class="whatif-pens-btn" data-match="' + m.id + '" data-team="' + m.away_team_id + '" onclick="setPensWinner(\'' + m.id + '\',\'' + m.away_team_id + '\')" ' +
+                    'style="flex:1; min-width:110px; cursor:pointer; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 6px; font-size:12px; font-weight:600">' +
+                    m.away_team.flag_emoji + ' ' + m.away_team.name + '</button>' +
+                '</div>' +
+              '</div>' +
+            '</td>' +
+          '</tr>';
+        }
       });
 
       html += '</tbody></table></div>';
@@ -2576,9 +2598,41 @@
       document.getElementById('btn-run-whatif').onclick = runWhatIf;
       document.getElementById('btn-clear-whatif').onclick = () => {
         document.querySelectorAll('#whatif-matches-wrap .whatif-score-input').forEach(i => { i.value = ''; });
+        _whatifPens = {};
+        document.querySelectorAll('#whatif-matches-wrap .whatif-pens-row').forEach(r => { r.style.display = 'none'; });
+        document.querySelectorAll('#whatif-matches-wrap .whatif-pens-btn').forEach(b => paintPensBtn(b, false));
         document.getElementById('whatif-results-card').style.display = 'none';
         msg.textContent = '';
       };
+    }
+
+    // --- Penalty shootout helpers (What-If only — nothing is persisted) ---
+    function paintPensBtn(btn, on) {
+      btn.style.background   = on ? 'var(--gold)' : 'var(--surface)';
+      btn.style.color        = on ? '#1a1a1a'     : 'var(--text)';
+      btn.style.borderColor  = on ? 'var(--gold)' : 'var(--border)';
+    }
+
+    function setPensWinner(matchId, teamId) {
+      // Tapping the selected team again clears it.
+      _whatifPens[matchId] = (_whatifPens[matchId] === teamId) ? null : teamId;
+      document.querySelectorAll('.whatif-pens-btn[data-match="' + matchId + '"]').forEach(b => {
+        paintPensBtn(b, b.dataset.team === _whatifPens[matchId]);
+      });
+    }
+
+    function updatePensRow(matchId) {
+      const row = document.getElementById('whatif-pens-row-' + matchId);
+      if (!row) return; // group round — no shootouts
+      const h = document.getElementById('whatif-h-' + matchId)?.value;
+      const a = document.getElementById('whatif-a-' + matchId)?.value;
+      const bothFilled = h !== '' && a !== '' && !isNaN(parseInt(h)) && !isNaN(parseInt(a));
+      const isDraw = bothFilled && parseInt(h) === parseInt(a);
+      row.style.display = isDraw ? '' : 'none';
+      if (!isDraw && _whatifPens[matchId]) {
+        _whatifPens[matchId] = null;
+        document.querySelectorAll('.whatif-pens-btn[data-match="' + matchId + '"]').forEach(b => paintPensBtn(b, false));
+      }
     }
 
     async function runWhatIf() {
@@ -2606,6 +2660,23 @@
 
       const currentRound   = _leaderboardData.currentRound;
       const isKOSim         = currentRound.round_type === 'knockout';
+
+      // A level knockout score goes to a shootout — the sim can't guess it, so make
+      // the user call it. Without this we'd have no way to know who goes out.
+      if (isKOSim) {
+        const undecided = Object.keys(simScores).filter(id =>
+          simScores[id].home === simScores[id].away && !_whatifPens[id]
+        );
+        if (undecided.length) {
+          const m = _whatifMatchData.find(x => x.id === undecided[0]);
+          msg.style.color = 'var(--red)';
+          msg.textContent = undecided.length === 1
+            ? 'Pick a shootout winner for ' + m.home_team.name + ' vs ' + m.away_team.name + '.'
+            : 'Pick a shootout winner for all ' + undecided.length + ' level matches.';
+          return;
+        }
+      }
+
       const realPlayers     = _leaderboardData.scores; // already human-only
       const projectedTotal  = _leaderboardData.projectedTotal;
       const basePoints      = {};
@@ -2634,11 +2705,13 @@
       const simPts = Object.assign({}, basePoints);
       const simGd  = Object.assign({}, baseGd);
       const playerPickOutcomes = {}; // player_id -> array of { pts, outcome, flag }
+      const simEliminated = new Set(); // players knocked out by this scenario (knockout only)
 
       for (const [matchId, sc] of Object.entries(simScores)) {
         const { home: homeTeamId, away: awayTeamId } = matchTeams[matchId];
         const { home: hGoals, away: aGoals } = sc;
         const matchPicks = roundPicks.filter(p => p.team_id === homeTeamId || p.team_id === awayTeamId);
+        const pensWinnerId = (hGoals === aGoals) ? _whatifPens[matchId] : null;
 
         for (const pick of matchPicks) {
           const isHome   = pick.team_id === homeTeamId;
@@ -2649,11 +2722,24 @@
           if (myGoals > oppGoals)        { pts = pick.multiplier + (isLong ? 1 : 0); outcome = 'win'; }
           else if (myGoals === oppGoals) { pts = 1; outcome = 'draw'; }
           else                            { pts = 0; outcome = 'loss'; }
+
+          // Knockout elimination: your team leaves the tournament, you leave with it.
+          // 90-min defeat, or losing the shootout. Group rounds are points-only.
+          let wonPens = false, lostPens = false;
+          if (isKOSim) {
+            if (outcome === 'loss') {
+              simEliminated.add(pick.player_id);
+            } else if (outcome === 'draw' && pensWinnerId) {
+              if (pick.team_id === pensWinnerId) { wonPens = true; }
+              else                               { lostPens = true; simEliminated.add(pick.player_id); }
+            }
+          }
+
           simPts[pick.player_id] = (simPts[pick.player_id] || 0) + pts;
           const myGd = isHome ? (hGoals - aGoals) : (aGoals - hGoals);
           simGd[pick.player_id] = (simGd[pick.player_id] || 0) + myGd;
           if (!playerPickOutcomes[pick.player_id]) playerPickOutcomes[pick.player_id] = [];
-          playerPickOutcomes[pick.player_id].push({ pts, outcome, flag: teamFlagMap[pick.team_id] || '' });
+          playerPickOutcomes[pick.player_id].push({ pts, outcome, wonPens, lostPens, flag: teamFlagMap[pick.team_id] || '' });
         }
       }
 
@@ -2723,7 +2809,12 @@
       const matchNames = Object.keys(simScores).map(id => {
         const m  = _whatifMatchData.find(x => x.id === id);
         const sc = simScores[id];
-        return m.home_team.flag_emoji + m.home_team.name + ' ' + sc.home + '–' + sc.away + ' ' + m.away_team.flag_emoji + m.away_team.name;
+        let s = m.home_team.flag_emoji + m.home_team.name + ' ' + sc.home + '–' + sc.away + ' ' + m.away_team.flag_emoji + m.away_team.name;
+        if (sc.home === sc.away && _whatifPens[id]) {
+          const winner = _whatifPens[id] === m.home_team_id ? m.home_team : m.away_team;
+          s += ' (' + winner.name + ' on pens)';
+        }
+        return s;
       });
       sub.textContent = 'If: ' + matchNames.join(' · ');
 
@@ -2752,14 +2843,18 @@
         const pickBadges = outcomes.map(o => {
           let colour, label;
           if (o.outcome === 'win')       { colour = 'var(--green)'; label = '+' + o.pts; }
-          else if (o.outcome === 'draw') { colour = 'var(--gold)';  label = '+1'; }
+          else if (o.outcome === 'draw') { colour = 'var(--gold)';  label = '+1' + (o.wonPens ? ' P✓' : o.lostPens ? ' P✗' : ''); }
           else                            { colour = 'var(--red)';   label = '0'; }
           return o.flag + '<span style="color:' + colour + ';font-weight:700;font-size:11px;margin-left:1px">' + label + '</span>';
         }).join(' ');
 
         const nameStr   = p.display_name || shortName(p.name);
-        const elimStyle = p.is_eliminated ? 'opacity:0.45;' : '';
-        const elimTag   = p.is_eliminated ? ' <span style="font-size:10px;color:var(--red)">OUT</span>' : '';
+        const simOut    = simEliminated.has(p.player_id);
+        const isOut     = p.is_eliminated || simOut;
+        const elimStyle = isOut ? 'opacity:0.45;' : '';
+        const elimTag   = isOut
+          ? ' <span style="font-size:10px;color:var(--red)"' + (simOut && !p.is_eliminated ? ' title="Knocked out by this scenario"' : '') + '>OUT</span>'
+          : '';
         const flagsHtml = pickBadges ? ' <span style="font-size:13px;margin-left:4px">' + pickBadges + '</span>' : '';
         html += '<tr style="border-bottom:1px solid var(--border);' + elimStyle + '">' +
           '<td style="text-align:center; padding:7px 8px; font-weight:700; color:var(--text-muted)">' + pos + '</td>' +
