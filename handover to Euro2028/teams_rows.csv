@@ -1,0 +1,49 @@
+id,name,flag_emoji,is_longshot,odds_rank,created_at,pot,is_eliminated,band,eliminated_in_round_id,bracket_half
+1270b02b-ff92-4068-a52e-ae90bcae805b,Cape Verde,🇨🇻,true,46,2026-04-08 22:32:34.951662+00,4,true,no_hoper,5f39c536-340b-4981-b59a-4a9d7aff9e1e,bottom
+151a98cf-99e8-4e7a-ab57-396a13db4a72,Senegal,🇸🇳,false,18,2026-04-06 07:37:04.039369+00,2,true,dark_horse,5f39c536-340b-4981-b59a-4a9d7aff9e1e,top
+1b2fe4cc-3105-4e0b-b1ff-06f91c466ef7,England,🏴󠁧󠁢󠁥󠁮󠁧󠁿,false,3,2026-04-06 07:37:04.039369+00,1,true,favourite,6aa7c75c-0fc8-46f0-8219-84f969510a0e,bottom
+20160ec3-c507-4fb3-b19d-89cb66c59a98,South Korea,🇰🇷,true,23,2026-04-06 07:37:04.039369+00,2,true,long_shot,5b9456a0-db45-445f-87a0-58737bb89313,
+2044181c-c7e7-4759-8101-4779166812e3,Netherlands,🇳🇱,false,8,2026-04-06 07:37:04.039369+00,1,true,favourite,5f39c536-340b-4981-b59a-4a9d7aff9e1e,top
+20e98c7a-4548-44f8-964d-7aba42ae7624,Norway,🇳🇴,false,9,2026-04-08 22:32:34.951662+00,3,true,dark_horse,aa9754bd-50eb-4785-8698-e56c6d3cb661,bottom
+4976e7fd-9b45-4cc7-b741-fe801fcee2d0,Bosnia/Herzeg,🇧🇦,true,31,2026-04-08 22:32:34.951662+00,4,true,long_shot,5f39c536-340b-4981-b59a-4a9d7aff9e1e,top
+4f0f3776-f99f-4c06-9eb4-0acd2825d8c2,Canada,🇨🇦,false,46,2026-04-06 07:37:04.039369+00,1,true,long_shot,27ce4fc5-3de9-4cf0-bfc5-5fa0addb7081,top
+52eaa3b4-081b-4393-b291-d69c644c612e,Austria,🇦🇹,false,22,2026-04-06 07:37:04.039369+00,2,true,long_shot,5f39c536-340b-4981-b59a-4a9d7aff9e1e,top
+52f066d8-0a7a-42c5-8a6b-103ec4ba2c91,Scotland,🏴󠁧󠁢󠁳󠁣󠁴󠁿,false,26,2026-04-08 22:32:34.951662+00,3,true,long_shot,5b9456a0-db45-445f-87a0-58737bb89313,
+54ef8b7c-5afd-4a48-a3b9-d6701dd757f9,Ivory Coast,🇨🇮,false,37,2026-04-06 07:37:04.039369+00,3,true,long_shot,5f39c536-340b-4981-b59a-4a9d7aff9e1e,bottom
+600575e1-d737-452a-abec-c6e22da92787,Qatar,🇶🇦,true,47,2026-04-06 07:37:04.039369+00,3,true,no_hoper,5b9456a0-db45-445f-87a0-58737bb89313,
+61d8b501-96d1-4043-a2b7-de27e9b137d7,Ghana,🇬🇭,true,38,2026-04-06 07:37:04.039369+00,4,true,long_shot,5f39c536-340b-4981-b59a-4a9d7aff9e1e,bottom
+622bb3ef-bc6e-4c9a-9efe-aae4d0f95822,Saudi Arabia,🇸🇦,true,33,2026-04-06 07:37:04.039369+00,3,true,no_hoper,5b9456a0-db45-445f-87a0-58737bb89313,
+6527ec07-bc6b-4b53-8bff-90b6f622aece,USA,🇺🇸,false,14,2026-04-06 07:37:04.039369+00,1,true,dark_horse,27ce4fc5-3de9-4cf0-bfc5-5fa0addb7081,top
+666ba168-4d8b-4060-8e4b-e1dd7b2a7503,Curaçao,🇨🇼,true,45,2026-04-08 22:32:34.951662+00,4,true,no_hoper,5b9456a0-db45-445f-87a0-58737bb89313,
+66a8014f-0009-400e-928c-6b28cb8dab1f,Japan,🇯🇵,false,16,2026-04-06 07:37:04.039369+00,2,true,dark_horse,5f39c536-340b-4981-b59a-4a9d7aff9e1e,bottom
+6ea9375b-d599-463f-96e6-c87d9209e9b2,Spain,🇪🇸,false,4,2026-04-06 07:37:04.039369+00,1,false,favourite,,top
+7f560d60-00fc-46e1-b81b-4e7234b7cb04,Haiti,🇭🇹,true,44,2026-04-08 22:32:34.951662+00,4,true,no_hoper,5b9456a0-db45-445f-87a0-58737bb89313,
+8682004e-e186-4705-aa29-9704b2815dc4,Belgium,🇧🇪,false,9,2026-04-06 07:37:04.039369+00,1,true,dark_horse,aa9754bd-50eb-4785-8698-e56c6d3cb661,top
+87881cf2-7a14-4afa-9912-0ef5b2672387,Turkey,🇹🇷,false,26,2026-04-06 07:37:04.039369+00,4,true,long_shot,5b9456a0-db45-445f-87a0-58737bb89313,
+8cccecd8-b1ab-4159-bf35-29ef0db369c4,Croatia,🇭🇷,false,13,2026-04-06 07:37:04.039369+00,2,true,dark_horse,5f39c536-340b-4981-b59a-4a9d7aff9e1e,top
+8d109cbf-133f-496a-b5b7-3f75a0ec1dcd,Panama,🇵🇦,true,45,2026-04-06 07:37:04.039369+00,3,true,no_hoper,5b9456a0-db45-445f-87a0-58737bb89313,
+910a4a31-591d-4c32-8b57-b0d0bbde5a26,Sweden,🇸🇪,false,24,2026-04-06 07:37:04.039369+00,4,true,long_shot,5f39c536-340b-4981-b59a-4a9d7aff9e1e,top
+9507020f-6157-4043-ae5b-72ca12dea41e,South Africa,🇿🇦,true,48,2026-04-08 22:32:34.951662+00,4,true,no_hoper,5f39c536-340b-4981-b59a-4a9d7aff9e1e,top
+95b1e39e-97c3-4d45-9714-3f507d7c52f1,Argentina,🇦🇷,false,5,2026-04-06 07:37:04.039369+00,1,true,favourite,b9bd6954-7f07-432a-af76-2dc2d3e9ab1f,bottom
+a1cbc3f2-826a-4c04-803b-b5c2930d3c42,Tunisia,🇹🇳,true,40,2026-04-06 07:37:04.039369+00,3,true,long_shot,5b9456a0-db45-445f-87a0-58737bb89313,
+a681c714-630a-487f-b167-9cefea486591,DR Congo,🇨🇩,true,38,2026-04-08 22:32:34.951662+00,4,true,no_hoper,5f39c536-340b-4981-b59a-4a9d7aff9e1e,bottom
+a760ffb3-5775-4d7d-b803-cf0087525d91,New Zealand,🇳🇿,true,42,2026-04-06 07:37:04.039369+00,4,true,no_hoper,5b9456a0-db45-445f-87a0-58737bb89313,
+aa0baf4e-af82-4020-9093-715971d63105,Jordan,🇯🇴,true,40,2026-04-08 22:32:34.951662+00,4,true,no_hoper,5b9456a0-db45-445f-87a0-58737bb89313,
+acfbd82a-7005-41b9-9613-606ceefc857e,Switzerland,🇨🇭,false,20,2026-04-06 07:37:04.039369+00,2,true,dark_horse,aa9754bd-50eb-4785-8698-e56c6d3cb661,bottom
+b6afbe52-5067-4263-a750-6101f6efedc0,Algeria,🇩🇿,false,39,2026-04-06 07:37:04.039369+00,3,true,long_shot,5f39c536-340b-4981-b59a-4a9d7aff9e1e,bottom
+c8e5c035-af92-4497-b96c-82f2c0a15214,Paraguay,🇵🇾,false,27,2026-04-08 22:32:34.951662+00,4,true,long_shot,27ce4fc5-3de9-4cf0-bfc5-5fa0addb7081,top
+cba2c884-3603-4b90-976e-49389b04f562,Brazil,🇧🇷,false,1,2026-04-06 07:37:04.039369+00,1,true,favourite,27ce4fc5-3de9-4cf0-bfc5-5fa0addb7081,bottom
+cd984ce3-2f2c-41d5-a7ba-137060caf8ae,Ecuador,🇪🇨,false,19,2026-04-06 07:37:04.039369+00,2,true,dark_horse,5f39c536-340b-4981-b59a-4a9d7aff9e1e,bottom
+cffa413c-8c76-45a6-843e-87c34e78e45a,Germany,🇩🇪,false,6,2026-04-06 07:37:04.039369+00,1,true,favourite,5f39c536-340b-4981-b59a-4a9d7aff9e1e,top
+d6209663-7a5c-4736-b346-cde299b554b2,Czech Rep,🇨🇿,true,28,2026-04-08 22:32:34.951662+00,3,true,long_shot,5b9456a0-db45-445f-87a0-58737bb89313,
+ddd77a2f-eb9f-4a20-8ae4-e1ca55c21893,Egypt,🇪🇬,false,34,2026-04-06 07:37:04.039369+00,3,true,long_shot,27ce4fc5-3de9-4cf0-bfc5-5fa0addb7081,bottom
+e171e736-56f2-44fa-92b5-b0653ea2ce2a,Colombia,🇨🇴,false,12,2026-04-06 07:37:04.039369+00,2,true,dark_horse,27ce4fc5-3de9-4cf0-bfc5-5fa0addb7081,bottom
+e176dd2c-4446-4811-b4cc-fc28e9c2ab25,Mexico,🇲🇽,false,15,2026-04-06 07:37:04.039369+00,1,true,dark_horse,27ce4fc5-3de9-4cf0-bfc5-5fa0addb7081,bottom
+eaca3063-d90c-4007-b3d8-ba829b3ee14e,Portugal,🇵🇹,false,7,2026-04-06 07:37:04.039369+00,1,true,favourite,27ce4fc5-3de9-4cf0-bfc5-5fa0addb7081,top
+ee8ecff9-d0b1-4aa8-ab21-da08a6c9229a,Uruguay,🇺🇾,false,11,2026-04-06 07:37:04.039369+00,2,true,dark_horse,5b9456a0-db45-445f-87a0-58737bb89313,
+ef919163-49fb-4cc5-ab4e-f55d9419d806,Uzbekistan,🇺🇿,true,39,2026-04-08 22:32:34.951662+00,4,true,no_hoper,5b9456a0-db45-445f-87a0-58737bb89313,
+f27875c8-4818-4323-8d45-333b7f82cf57,Iraq,🇮🇶,true,42,2026-04-08 22:32:34.951662+00,4,true,no_hoper,5b9456a0-db45-445f-87a0-58737bb89313,
+f2c7a0c3-9a4c-4e3f-92a3-39abff0ce8e2,France,🇫🇷,false,2,2026-04-06 07:37:04.039369+00,1,true,favourite,6aa7c75c-0fc8-46f0-8219-84f969510a0e,top
+f959649f-d7be-48e3-9129-58e7fc519606,Iran,🇮🇷,false,32,2026-04-06 07:37:04.039369+00,2,true,no_hoper,5b9456a0-db45-445f-87a0-58737bb89313,
+f99d6725-238c-4d95-8502-9d25b4a6e89e,Australia,🇦🇺,true,25,2026-04-06 07:37:04.039369+00,2,true,long_shot,5f39c536-340b-4981-b59a-4a9d7aff9e1e,bottom
+fcc03c57-8857-4986-98b0-0e30fb42ab2a,Morocco,🇲🇦,false,17,2026-04-06 07:37:04.039369+00,2,true,dark_horse,aa9754bd-50eb-4785-8698-e56c6d3cb661,top

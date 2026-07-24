@@ -638,15 +638,35 @@
 
       const compFinished = alive.length <= 1;
       const maxRank = ranks.length > 0 ? Math.max(...ranks) : null;
-      // Always the current leader (provisional until compFinished — callers label it accordingly)
-      const lastManStandingPlayers = maxRank !== null
+      const maxRankStageSO = maxRank !== null
+        ? elimStageSO(fallenWithInfo[ranks.findIndex((r) => r === maxRank)])
+        : null;
+      const maxRankRound = maxRankStageSO !== null
+        ? (rounds || []).find(r => r.sort_order === maxRankStageSO)
+        : null;
+      // True once Last Man Standing can be called with no risk of a future tie:
+      // either literally everyone is out, or exactly one player remains AND the round
+      // the current top group went out in has fully finished. That second condition
+      // matters — if that round is still in progress, the sole survivor's own pick in
+      // it hasn't been decided yet, and if they lose it they'll be eliminated at the
+      // SAME stage as that group and tie with them (splitting the prize), not beat them.
+      // Once that round is complete and this player is still alive, they've already
+      // won their own pick in it, so a tie with that group is no longer possible.
+      const lastManConfirmed = alive.length === 0 ||
+        (alive.length === 1 && (maxRank === null || (maxRankRound && maxRankRound.is_complete)));
+      // Always the current leader (provisional until lastManConfirmed — callers label it
+      // accordingly). Only swap in the sole survivor once lastManConfirmed is actually true.
+      let lastManStandingPlayers = maxRank !== null
         ? fallenWithInfo.filter((_, i) => ranks[i] === maxRank).map(e => e.player)
         : [];
+      if (lastManConfirmed && alive.length === 1) {
+        lastManStandingPlayers = [alive[0]];
+      }
       const firstOutPlayers = fallenWithInfo.length > 0
         ? fallenWithInfo.filter((_, i) => ranks[i] === 1).map(e => e.player)
         : [];
 
-      return { eliminated, alive, compFinished, fallenWithInfo, ranks, roundMap, kickoffByTeamRound, matchByTeam, picksByPlayer, lastManStandingPlayers, firstOutPlayers };
+      return { eliminated, alive, compFinished, lastManConfirmed, fallenWithInfo, ranks, roundMap, kickoffByTeamRound, matchByTeam, picksByPlayer, lastManStandingPlayers, firstOutPlayers };
     }
 
     function shortName(fullName) {
@@ -1191,7 +1211,7 @@
               // KO, in play
               if (ps > os)      { delta = inET ? 1 : 2; }
               else if (ps < os) { delta = 0; danger = true; showDelta = false; }
-              else              { delta = 0; showDelta = false; } // level: outcome unknowable, no badge
+              else              { delta = 1; showDelta = true; } // level: guaranteed 1pt floor via ET/pens if it stays level
             }
 
             // Build the LIVE-cell line
@@ -1646,6 +1666,7 @@
         let firstOutPlayers = [];
         let woodenSpoonPlayers = []; // R32 worst performers — get the £10
         let lastManStandingPlayers = []; // last player(s) eliminated — get the £10
+        let lmsResolved = false; // true once only the champion remains (alive.length <= 1) — independent of competitionEnded, which covers the whole pool
         let throughPlayers = []; // already won their pick in the current live round
         {
           const totalPlayers = (scores || []).length;
@@ -1699,8 +1720,12 @@
           }
 
           // ── Determine Last Man Standing — eliminated last, get the £10 ──
-          // Confirmed only once compFinished (alive.length <= 1, i.e. only the champion remains).
+          // Confirmed once lastManConfirmed is true — either everyone's out, or exactly
+          // one player remains AND the round the previous leaders went out in has fully
+          // finished (so there's no chance that survivor still ties them). Does not need
+          // to wait for the whole pool/competition to be marked as ended.
           lastManStandingPlayers = fallenRanking.lastManStandingPlayers;
+          lmsResolved = fallenRanking.lastManConfirmed;
           if (lastManStandingPlayers.length > 0) {
             const lmsShare = Math.round((LAST_MAN_STANDING_PRIZE / lastManStandingPlayers.length) * 100) / 100;
             lastManStandingPlayers.forEach(p => { winningsMap[p.player_id] = (winningsMap[p.player_id] || 0) + lmsShare; });
@@ -1865,7 +1890,7 @@
         const finalBanner = document.getElementById('final-table-banner');
         if (finalBanner) finalBanner.style.display = competitionEnded ? '' : 'none';
 
-        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, woodenSpoonPlayers, lastManStandingPlayers, throughPlayers, competitionEnded, allTeams, posMap, currentRound, pensWinnerByTeamRound };
+        _leaderboardData = { sorted, projectedTotal, allPicks, todayMatchRows, windowStart, windowEnd, scores, gdMap, furthestMap, formMap, rounds, completedMatches, firstMatchData, teamsUsed, winningsMap, firstOutPlayers, woodenSpoonPlayers, lastManStandingPlayers, lmsResolved, throughPlayers, competitionEnded, allTeams, posMap, currentRound, pensWinnerByTeamRound };
         if (document.getElementById('view-picks').classList.contains('active'))  renderPicksView();
         if (document.getElementById('view-matrix').classList.contains('active')) renderMatrixView();
         if (document.getElementById('view-fallen').classList.contains('active')) renderFallenView();
@@ -2058,7 +2083,7 @@
       if (!data) return;
       const wrap = document.getElementById('lb-prizes-wrap');
       if (!wrap) return;
-      const { scores, gdMap, furthestMap, competitionEnded, winningsMap: wm, firstOutPlayers, woodenSpoonPlayers, lastManStandingPlayers, throughPlayers, sorted, posMap, rounds, currentRound } = data;
+      const { scores, gdMap, furthestMap, competitionEnded, winningsMap: wm, firstOutPlayers, woodenSpoonPlayers, lastManStandingPlayers, lmsResolved, throughPlayers, sorted, posMap, rounds, currentRound } = data;
       const totalPlayers = (scores || []).length;
       const pot = totalPlayers * 10;
       const WOODEN_SPOON_PRIZE = 10;
@@ -2106,10 +2131,10 @@
       const lmsShare = (lastManStandingPlayers||[]).length > 0 ? Math.round((LAST_MAN_STANDING_PRIZE / lastManStandingPlayers.length) * 100) / 100 : 0;
       html += '<div style="margin-bottom:16px;padding:10px 14px;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.25);border-radius:10px">';
       html += '<div style="font-size:14px;font-weight:700;color:#8b5cf6;margin-bottom:6px">';
-      html += '&#x1F3C6; Last Man Standing &#x2014; &#xa3;' + LAST_MAN_STANDING_PRIZE + ((competitionEnded && (lastManStandingPlayers||[]).length > 1) ? ' split' : '') + '</div>';
-      html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">' + (competitionEnded ? '✅ Confirmed.' : '⏳ Provisional — goes to whoever is eliminated last.') + '</div>';
+      html += '&#x1F3C6; Last Man Standing &#x2014; &#xa3;' + LAST_MAN_STANDING_PRIZE + ((lmsResolved && (lastManStandingPlayers||[]).length > 1) ? ' split' : '') + '</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">' + (lmsResolved ? '✅ Confirmed.' : '⏳ Provisional — goes to whoever is eliminated last.') + '</div>';
 
-      if (competitionEnded) {
+      if (lmsResolved) {
         if (!(lastManStandingPlayers||[]).length) {
           html += '<div style="font-size:13px;color:var(--text-muted)">No eliminations recorded.</div>';
         } else {
@@ -2419,9 +2444,14 @@
       const { fallenWithInfo, ranks, roundMap } = ranking;
       const hasTie = i => ranks[i] === ranks[i - 1] || ranks[i] === ranks[i + 1];
 
-      // LMS pill — only once compFinished (alive.length <= 1, i.e. only the champion remains)
+      // LMS pill — only once everyone is actually eliminated. Note: this tab only lists
+      // eliminated players, so if exactly one player is still alive (even once that's
+      // provably the confirmed Last Man Standing winner — see lastManConfirmed in
+      // computeFallenRanking), that survivor is the real winner and won't appear here.
+      // Badging the previously-eliminated group in that case would be wrong — they may
+      // yet be overtaken, or already have been.
       const maxRank = ranks.length > 0 ? Math.max(...ranks) : null;
-      const lastMenIndices = (ranking.compFinished && maxRank !== null) ? fallenWithInfo.map((_, i) => i).filter(i => ranks[i] === maxRank) : [];
+      const lastMenIndices = (ranking.alive.length === 0 && maxRank !== null) ? fallenWithInfo.map((_, i) => i).filter(i => ranks[i] === maxRank) : [];
       const pillStyle = 'font-family:\'Rajdhani\',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.06em;padding:2px 8px;border-radius:20px;white-space:nowrap;text-transform:uppercase;margin-left:8px';
       const lmsPill = lastMenIndices.length > 1
         ? '<span style="' + pillStyle + ';background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4)">💀 Last Men Standing</span>'
