@@ -5,8 +5,11 @@
   directory = "netlify/functions"
   node_bundler = "esbuild"
 
-[functions."poll-scores"]
-  schedule = "* * * * *"
-
-[functions."send-reminders"]
-  schedule = "0 * * * *"
+# World Cup 2026 is over. Schedules disabled on 2026-10-24 to stop Netlify
+# functions compute usage. Re-enable by uncommenting the lines below.
+#
+# [functions."poll-scores"]
+#   schedule = "* * * * *"
+#
+# [functions."send-reminders"]
+#   schedule = "0 * * * *"
